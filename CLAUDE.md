@@ -47,14 +47,15 @@ src/
 
 ## Documentación del proyecto
 
-Antes de implementar features, leer los docs relevantes:
+Antes de implementar features, leer **on-demand** (con Read) los docs relevantes — NO están auto-importados al contexto:
 
-- @Docs/00-fundamentos-segundo-cerebro.md — Principios teóricos: CODE (Tiago Forte), notas atómicas Zettelkasten, flujo captura→proceso→uso, 10 principios de diseño
-- @Docs/01-arquitectura-hibrida-progresiva.md — Stack completo, modelo de datos Firestore (schemas de notes, links, tasks, projects, inbox, embeddings), flujos clave, fases de desarrollo, decisiones de diseño
-- @Docs/02-flujos-ux-y-pantallas.md — 14 pantallas con wireframes, 5 flujos de usuario, componentes globales, shortcuts, breakpoints responsive
-- @Docs/03-convenciones-y-patrones.md — Naming, estructura de componentes, patrones TinyBase, TypeScript, Tailwind, errores, Git, Cloud Functions, Firestore
+- `Docs/00-fundamentos-segundo-cerebro.md` — Principios teóricos: CODE (Tiago Forte), notas atómicas Zettelkasten, flujo captura→proceso→uso, 10 principios de diseño
+- `Docs/01-arquitectura-hibrida-progresiva.md` — Stack completo, modelo de datos Firestore (schemas de notes, links, tasks, projects, inbox, embeddings), flujos clave, fases de desarrollo, decisiones de diseño
+- `Docs/02-flujos-ux-y-pantallas.md` — 14 pantallas con wireframes, 5 flujos de usuario, componentes globales, shortcuts, breakpoints responsive
+- `Docs/03-convenciones-y-patrones.md` — Naming, estructura de componentes, patrones TinyBase, TypeScript, Tailwind, errores, Git, Cloud Functions, Firestore
+- `Spec/SPEC-fase-0.1-toolkit.md` — SPEC de toolkit de desarrollo (MCPs, plugins, hooks, VS Code)
 
-IMPORTANT: Siempre consultar el doc de arquitectura (01) para schemas de datos y el doc de convenciones (03) para patrones de código antes de escribir código nuevo.
+IMPORTANT: Siempre consultar el doc de arquitectura (01) para schemas de datos y el doc de convenciones (03) para patrones de código antes de escribir código nuevo. Lee solo los que apliquen a la tarea — evita cargar los 4 si no los necesitas.
 
 ## Reglas críticas
 
@@ -140,7 +141,7 @@ IMPORTANT: Siempre consultar el doc de arquitectura (01) para schemas de datos y
 ## Fases de desarrollo
 
 - **Fase 0 (Setup):** Vite + React 19 + TS + Tailwind + Firebase + TinyBase + estructura base
-- **Fase 0.1 (Toolkit):** MCPs + plugins + hooks + configuración VS Code. Ver @Spec/SPEC-fase-0.1-toolkit.md
+- **Fase 0.1 (Toolkit):** MCPs + plugins + hooks + configuración VS Code. Ver `Spec/SPEC-fase-0.1-toolkit.md`
 - **Fase 1 (MVP):** Quick Capture + TipTap editor con WikiLinks + Lista de notas + Backlinks + Inbox + Dashboard mínimo
 - **Fase 2 (Ejecución):** Tareas + Proyectos + Objetivos + Habit Tracker
 - **Fase 3 (AI):** Claude Haiku inbox processing + InboxProcessor UI + Command Palette (⌘K)
