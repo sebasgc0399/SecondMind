@@ -1,0 +1,142 @@
+# SecondMind
+
+Sistema de productividad y conocimiento personal construido desde código. Combina ejecución (tareas, proyectos, hábitos) con conocimiento vivo (notas atómicas Zettelkasten, links bidireccionales, grafo, AI copilot).
+
+## Stack
+
+- **UI:** React 19 + TypeScript strict + Vite + Tailwind CSS + shadcn/ui
+- **Editor:** TipTap (ProseMirror) con extensiones custom (wikilinks, slash commands, tags)
+- **State:** TinyBase (13KB, store reactivo con persister Firestore)
+- **Search:** Orama (FTS client-side, TypeScript-native)
+- **Graph:** Reagraph (MVP) → Sigma.js + Graphology (v2)
+- **Backend:** Firebase (Firestore + Cloud Functions v2 + Auth + Storage)
+- **AI:** Claude Haiku (inbox processing) + OpenAI embeddings (v1.1)
+- **Deploy:** Firebase Hosting
+
+## Comandos
+
+```bash
+npm run dev          # Servidor de desarrollo (Vite)
+npm run build        # Build producción (tsc + vite build)
+npm run lint         # ESLint sobre src/
+npm run preview      # Preview del build local
+npm run deploy       # Deploy a Firebase Hosting
+npm run deploy:functions  # Deploy solo Cloud Functions
+```
+
+## Estructura del proyecto
+
+```
+src/
+├── app/             # Rutas y layouts (React Router)
+├── components/      # Componentes agrupados por FEATURE, no por tipo
+│   ├── ui/          # shadcn/ui — NO editar manualmente
+│   ├── editor/      # TipTap: editor + extensions/ + menus/
+│   ├── graph/       # Visualización del knowledge graph
+│   ├── capture/     # Quick Capture modal, Inbox Processor
+│   ├── dashboard/   # Cards del dashboard
+│   └── layout/      # Sidebar, CommandPalette, Breadcrumbs
+├── stores/          # TinyBase stores (1 archivo por entidad)
+├── hooks/           # Custom hooks (1 archivo por hook)
+├── lib/             # Configs (firebase.ts, tinybase.ts, orama.ts) + utils
+├── types/           # Interfaces TypeScript (1 archivo por entidad)
+└── functions/       # Cloud Functions v2 (deploy separado)
+```
+
+## Documentación del proyecto
+
+Antes de implementar features, leer los docs relevantes:
+
+- @Docs/00-fundamentos-segundo-cerebro.md — Principios teóricos: CODE (Tiago Forte), notas atómicas Zettelkasten, flujo captura→proceso→uso, 10 principios de diseño
+- @Docs/01-arquitectura-hibrida-progresiva.md — Stack completo, modelo de datos Firestore (schemas de notes, links, tasks, projects, inbox, embeddings), flujos clave, fases de desarrollo, decisiones de diseño
+- @Docs/02-flujos-ux-y-pantallas.md — 14 pantallas con wireframes, 5 flujos de usuario, componentes globales, shortcuts, breakpoints responsive
+- @Docs/03-convenciones-y-patrones.md — Naming, estructura de componentes, patrones TinyBase, TypeScript, Tailwind, errores, Git, Cloud Functions, Firestore
+
+IMPORTANT: Siempre consultar el doc de arquitectura (01) para schemas de datos y el doc de convenciones (03) para patrones de código antes de escribir código nuevo.
+
+## Reglas críticas
+
+### Componentes
+- Export default siempre: `export default function NoteCard() {}`
+- Props como interface: `interface NoteCardProps { noteId: string; }`
+- Lógica en hooks, no en componentes. Si tiene >10 líneas de lógica → extraer a hook
+- Un componente por archivo. El archivo se llama como el componente
+
+### TinyBase (state management)
+- TinyBase es la fuente de verdad del UI. Nunca leer de Firestore directo en componentes
+- Usar hooks reactivos: `useCell('notes', noteId, 'title')` — NO getters directos
+- Stores separados por dominio: notesStore, tasksStore, linksStore, inboxStore
+- Content largo de notas (TipTap JSON) va directo a Firestore, NO en TinyBase
+
+### TypeScript
+- `interface` para shapes de objetos, `type` para unions y aliases
+- Nunca `any`. Usar `unknown` + type guard
+- Tipos de dominio en `types/[entidad].ts`, props en el mismo archivo del componente
+
+### Tailwind
+- Mobile-first siempre: estilos base son mobile, breakpoints agregan
+- Usar variables semánticas de shadcn/ui: `text-foreground`, `bg-background`, `border-border`
+- NO usar `@apply`. Si se repite un patrón → extraer a componente
+
+### Imports
+- Absolutos con `@/` alias: `import NoteCard from '@/components/editor/NoteCard'`
+- Sin barrel exports (index.ts). Import directo al archivo
+- Orden: React → Libs externas → Componentes → Hooks → Libs/utils → Types
+
+### Naming
+- Hooks: `use[Entidad][Acción]` → `useNoteSearch`, `useBacklinks`, `useQuickCapture`
+- Handlers: `handle[Acción]` → `handleSave`, `handleCapture`
+- Booleanos: `is/has/can/should` → `isArchived`, `hasBacklinks`
+- Entidades: nunca abreviar. `project` NO `proj`, `objective` NO `obj`
+
+### Firestore
+- Paths: `users/{userId}/[collection]/{docId}`
+- IDs auto-generados por Firestore (excepto embeddings que usa noteId)
+- Timestamps: siempre `serverTimestamp()` para createdAt/updatedAt
+- Security rules: solo el dueño lee/escribe sus datos
+
+### Cloud Functions v2
+- Un archivo = un trigger = una responsabilidad
+- Siempre loggear con contexto: `{ userId, entityId }`
+- Timeout y retry configurados explícitamente, nunca defaults
+
+### Git
+- Conventional Commits en español: `feat(editor): agregar extensión wikilinks`
+- Commits atómicos: si necesita "y", son dos commits
+- Ramas: `feat/[feature]`, `fix/[bug]`
+
+## Entidades del dominio
+
+| Entidad | Singular | Plural | ID | Firestore Path |
+|---|---|---|---|---|
+| Nota | note | notes | noteId | users/{uid}/notes/{noteId} |
+| Link | noteLink | noteLinks | linkId | users/{uid}/links/{linkId} |
+| Tarea | task | tasks | taskId | users/{uid}/tasks/{taskId} |
+| Proyecto | project | projects | projectId | users/{uid}/projects/{projectId} |
+| Objetivo | objective | objectives | objectiveId | users/{uid}/objectives/{objectiveId} |
+| Área | area | areas | areaId | users/{uid}/areas/{areaId} |
+| Inbox item | inboxItem | inboxItems | itemId | users/{uid}/inbox/{itemId} |
+| Tag | tag | tags | tagId | users/{uid}/tags/{tagId} |
+| Hábito | habit | habits | habitId | users/{uid}/habits/{habitId} |
+| Embedding | embedding | embeddings | noteId | users/{uid}/embeddings/{noteId} |
+
+## Gotchas
+
+- **shadcn/ui en `components/ui/`**: NO editar estos archivos. Si necesitas customizar, crea un wrapper en la carpeta feature correspondiente.
+- **TipTap WikiLinks son Nodes, no Marks.** Tienen attrs `{ noteId, noteTitle }` y se renderizan inline. Ver extensión en `components/editor/extensions/wikilink.ts`.
+- **extractLinks() se ejecuta en cada save** del editor. Parsea el doc TipTap JSON y sincroniza la colección `links/` con los wikilinks encontrados.
+- **El Quick Capture modal NO tiene selector de tipo, tags, ni proyecto.** Todo va al Inbox sin clasificar. La clasificación es post-captura (AI o manual).
+- **Auto-save del editor: debounce de 2 segundos.** La constante es `AUTOSAVE_DEBOUNCE_MS = 2000`.
+- **Loading states: skeleton siempre, spinner nunca.** Los skeletons mantienen el layout.
+- **Optimistic updates** para acciones inmediatas (toggle checkbox, favorito, archivar). TinyBase actualiza local → persister sincroniza a Firestore async.
+
+## Fases de desarrollo
+
+- **Fase 0 (Setup):** Vite + React 19 + TS + Tailwind + Firebase + TinyBase + estructura base
+- **Fase 1 (MVP):** Quick Capture + TipTap editor con WikiLinks + Lista de notas + Backlinks + Inbox + Dashboard mínimo
+- **Fase 2 (Ejecución):** Tareas + Proyectos + Objetivos + Habit Tracker
+- **Fase 3 (AI):** Claude Haiku inbox processing + InboxProcessor UI + Command Palette (⌘K)
+- **Fase 4 (Grafo + Resurfacing):** Knowledge graph + Embeddings + FSRS resurfacing + Daily Digest
+- **Fase 5 (Multi-plataforma):** PWA + Tauri (desktop) + Capacitor (mobile) + Chrome extension
+
+When compacting, preserve: current phase, modified files list, pending tasks, and any architectural decisions made during the conversation.
