@@ -23,10 +23,12 @@ dist-ssr
 *.sln
 *.sw?
 
-# Firebase
+# Firebase (solo el cache local, no la config del proyecto)
 .firebase
-.firebaserc
 
 # Environment
 .env.local
 .env.*.local
+
+# Claude Code (config local de la máquina, no compartir)
+.claude/settings.local.json

@@ -2,6 +2,8 @@
 
 Sistema de productividad y conocimiento personal construido desde código. Combina ejecución (tareas, proyectos, hábitos) con conocimiento vivo (notas atómicas Zettelkasten, links bidireccionales, grafo, AI copilot).
 
+**Producción:** https://secondmind.web.app
+
 ## Stack
 
 - **UI:** React 19 + TypeScript strict + Vite + Tailwind CSS + shadcn/ui
@@ -63,8 +65,10 @@ IMPORTANT: Siempre consultar el doc de arquitectura (01) para schemas de datos y
 - Un componente por archivo. El archivo se llama como el componente
 
 ### TinyBase (state management)
+- **v8 — sin persister-firestore nativo**: `tinybase/persisters/persister-firestore` fue removido en v8. Se usa `createCustomPersister` de `tinybase/persisters` con `getDocs`/`setDoc`/`onSnapshot`. Implementación en `src/lib/tinybase.ts`
 - TinyBase es la fuente de verdad del UI. Nunca leer de Firestore directo en componentes
 - Usar hooks reactivos: `useCell('notes', noteId, 'title')` — NO getters directos
+- Los hooks reactivos requieren `<Provider store={notesStore}>` en el árbol (está en `src/main.tsx`)
 - Stores separados por dominio: notesStore, tasksStore, linksStore, inboxStore
 - Content largo de notas (TipTap JSON) va directo a Firestore, NO en TinyBase
 
@@ -74,6 +78,7 @@ IMPORTANT: Siempre consultar el doc de arquitectura (01) para schemas de datos y
 - Tipos de dominio en `types/[entidad].ts`, props en el mismo archivo del componente
 
 ### Tailwind
+- **Tailwind v4 CSS-first**: no existe `tailwind.config.ts`. La configuración (tokens, variables CSS, custom variants) está en `src/index.css` con `@theme inline { ... }`
 - Mobile-first siempre: estilos base son mobile, breakpoints agregan
 - Usar variables semánticas de shadcn/ui: `text-foreground`, `bg-background`, `border-border`
 - NO usar `@apply`. Si se repite un patrón → extraer a componente
@@ -122,6 +127,8 @@ IMPORTANT: Siempre consultar el doc de arquitectura (01) para schemas de datos y
 
 ## Gotchas
 
+- **Tailwind v4 CSS-first**: No existe `tailwind.config.ts`. Agregar tokens o custom utilities directamente en `src/index.css` bajo `@theme inline { ... }`. Los docs de Tailwind v3 no aplican para la API de configuración.
+- **ESLint flat config**: El proyecto usa `eslint.config.js` (formato flat de ESLint 9), no `.eslintrc.cjs`. Al agregar plugins o reglas, usar la sintaxis de flat config (`defineConfig([...])`, no `module.exports = { extends: [...] }`). `src/components/ui/` está excluido del linting (archivos auto-generados por shadcn).
 - **shadcn/ui en `components/ui/`**: NO editar estos archivos. Si necesitas customizar, crea un wrapper en la carpeta feature correspondiente.
 - **TipTap WikiLinks son Nodes, no Marks.** Tienen attrs `{ noteId, noteTitle }` y se renderizan inline. Ver extensión en `components/editor/extensions/wikilink.ts`.
 - **extractLinks() se ejecuta en cada save** del editor. Parsea el doc TipTap JSON y sincroniza la colección `links/` con los wikilinks encontrados.
@@ -133,6 +140,7 @@ IMPORTANT: Siempre consultar el doc de arquitectura (01) para schemas de datos y
 ## Fases de desarrollo
 
 - **Fase 0 (Setup):** Vite + React 19 + TS + Tailwind + Firebase + TinyBase + estructura base
+- **Fase 0.1 (Toolkit):** MCPs + plugins + hooks + configuración VS Code. Ver @Spec/SPEC-fase-0.1-toolkit.md
 - **Fase 1 (MVP):** Quick Capture + TipTap editor con WikiLinks + Lista de notas + Backlinks + Inbox + Dashboard mínimo
 - **Fase 2 (Ejecución):** Tareas + Proyectos + Objetivos + Habit Tracker
 - **Fase 3 (AI):** Claude Haiku inbox processing + InboxProcessor UI + Command Palette (⌘K)
