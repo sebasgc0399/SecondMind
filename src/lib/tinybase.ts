@@ -1,11 +1,5 @@
 import { createCustomPersister } from 'tinybase/persisters';
-import {
-  collection,
-  doc,
-  getDocs,
-  onSnapshot,
-  setDoc,
-} from 'firebase/firestore';
+import { collection, doc, getDocs, onSnapshot, setDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { notesStore } from '@/stores/notesStore';
 
@@ -34,9 +28,7 @@ export async function initPersister(userId: string) {
     async (getContent) => {
       const [tables] = getContent();
       const rows = (tables as Record<string, Record<string, NoteRow>>)['notes'] ?? {};
-      await Promise.all(
-        Object.entries(rows).map(([id, row]) => setDoc(doc(notesCol, id), row)),
-      );
+      await Promise.all(Object.entries(rows).map(([id, row]) => setDoc(doc(notesCol, id), row)));
     },
 
     // addPersisterListener: set up real-time Firestore listener

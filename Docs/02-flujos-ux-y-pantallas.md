@@ -66,11 +66,11 @@ Overlays globales (accesibles desde cualquier pantalla):
 
 ### Navegación por plataforma
 
-| Plataforma | Patrón | Detalles |
-|---|---|---|
-| Desktop (>1024px) | Sidebar fija (240px) + content area | Sidebar colapsable a iconos (64px) con ⌘+B |
-| Tablet (768-1024px) | Sidebar colapsada por defecto | Se expande con hamburger o swipe derecho |
-| Mobile (<768px) | Bottom nav (5 items) + FAB | Drawer para secciones secundarias |
+| Plataforma          | Patrón                              | Detalles                                   |
+| ------------------- | ----------------------------------- | ------------------------------------------ |
+| Desktop (>1024px)   | Sidebar fija (240px) + content area | Sidebar colapsable a iconos (64px) con ⌘+B |
+| Tablet (768-1024px) | Sidebar colapsada por defecto       | Se expande con hamburger o swipe derecho   |
+| Mobile (<768px)     | Bottom nav (5 items) + FAB          | Drawer para secciones secundarias          |
 
 ---
 
@@ -124,26 +124,26 @@ Overlays globales (accesibles desde cualquier pantalla):
 
 #### Elementos
 
-| Elemento | Tipo | Comportamiento |
-|---|---|---|
-| Saludo | H1 dinámico | "Buenos días/tardes/noches" + nombre |
-| Tareas de hoy | Card con lista | Top 5 tareas con fecha = hoy. Click → editor tarea |
-| Inbox badge | Card con contador | Últimos 3 items. Click → Inbox completo |
-| Proyectos activos | Card con lista | Proyectos status = In Progress. Click → detalle |
-| Daily Digest | Card con notas | 2-3 notas resurfaceadas por FSRS [Fase 1.1] |
-| Hábitos de hoy | Card inline | Checkboxes directamente clickeables. Barra de progreso |
-| Botón captura | Icon button | Abre Quick Capture modal |
-| Command palette | Icon button | Abre ⌘K |
+| Elemento          | Tipo              | Comportamiento                                         |
+| ----------------- | ----------------- | ------------------------------------------------------ |
+| Saludo            | H1 dinámico       | "Buenos días/tardes/noches" + nombre                   |
+| Tareas de hoy     | Card con lista    | Top 5 tareas con fecha = hoy. Click → editor tarea     |
+| Inbox badge       | Card con contador | Últimos 3 items. Click → Inbox completo                |
+| Proyectos activos | Card con lista    | Proyectos status = In Progress. Click → detalle        |
+| Daily Digest      | Card con notas    | 2-3 notas resurfaceadas por FSRS [Fase 1.1]            |
+| Hábitos de hoy    | Card inline       | Checkboxes directamente clickeables. Barra de progreso |
+| Botón captura     | Icon button       | Abre Quick Capture modal                               |
+| Command palette   | Icon button       | Abre ⌘K                                                |
 
 #### Estados
 
-| Estado | Qué se muestra |
-|---|---|
+| Estado             | Qué se muestra                                                                                                  |
+| ------------------ | --------------------------------------------------------------------------------------------------------------- |
 | Vacío (primer uso) | Onboarding: "Bienvenido a SecondMind" + 3 pasos: captura tu primera nota, crea un proyecto, configura tus áreas |
-| Cargando | Skeleton en cada card (mantener layout) |
-| Con datos | Layout completo como wireframe |
-| Error | Toast: "Error cargando datos" + retry. Datos cacheados si hay |
-| Offline | Datos del último sync + badge "Offline" en header |
+| Cargando           | Skeleton en cada card (mantener layout)                                                                         |
+| Con datos          | Layout completo como wireframe                                                                                  |
+| Error              | Toast: "Error cargando datos" + retry. Datos cacheados si hay                                                   |
+| Offline            | Datos del último sync + badge "Offline" en header                                                               |
 
 #### Interacciones
 
@@ -185,22 +185,22 @@ Overlays globales (accesibles desde cualquier pantalla):
 
 #### Elementos
 
-| Elemento | Tipo | Comportamiento |
-|---|---|---|
-| Textarea | Autosize textarea | Enfocado automáticamente al abrir. Crece con contenido. Min 1 línea, max 10 |
-| Botón cerrar | ✕ icon | Cierra sin guardar (también Escape) |
-| Hint "Enter" | Texto sutil | Indica que Enter guarda |
+| Elemento     | Tipo              | Comportamiento                                                              |
+| ------------ | ----------------- | --------------------------------------------------------------------------- |
+| Textarea     | Autosize textarea | Enfocado automáticamente al abrir. Crece con contenido. Min 1 línea, max 10 |
+| Botón cerrar | ✕ icon            | Cierra sin guardar (también Escape)                                         |
+| Hint "Enter" | Texto sutil       | Indica que Enter guarda                                                     |
 
 #### Estados
 
-| Estado | Qué se muestra |
-|---|---|
-| Abierto (default) | Textarea vacío, enfocado, listo para escribir |
-| Escribiendo | Texto en textarea, hint de Enter visible |
-| Guardando | Textarea se deshabilita brevemente, check ✓ aparece |
-| Guardado | Modal se cierra automáticamente tras 300ms con ✓ |
-| Error | Toast debajo: "No se pudo guardar" + retry automático |
-| Offline | Guarda local (TinyBase) + badge "Se sincronizará" |
+| Estado            | Qué se muestra                                        |
+| ----------------- | ----------------------------------------------------- |
+| Abierto (default) | Textarea vacío, enfocado, listo para escribir         |
+| Escribiendo       | Texto en textarea, hint de Enter visible              |
+| Guardando         | Textarea se deshabilita brevemente, check ✓ aparece   |
+| Guardado          | Modal se cierra automáticamente tras 300ms con ✓      |
+| Error             | Toast debajo: "No se pudo guardar" + retry automático |
+| Offline           | Guarda local (TinyBase) + badge "Se sincronizará"     |
 
 #### Interacciones
 
@@ -212,6 +212,7 @@ Overlays globales (accesibles desde cualquier pantalla):
 - Si hay texto sin guardar al cerrar → NO preguntar confirmación (es captura rápida, la fricción mata)
 
 #### Decisión de diseño
+
 El modal NO tiene selector de tipo (nota/tarea/proyecto), NO tiene tags, NO tiene campo de proyecto. Todo va al Inbox sin clasificar. La clasificación la hace la AI después o el usuario en el Inbox Processor. Esto es lo que garantiza captura < 3 segundos.
 
 ---
@@ -267,26 +268,26 @@ El modal NO tiene selector de tipo (nota/tarea/proyecto), NO tiene tags, NO tien
 
 #### Elementos
 
-| Elemento | Tipo | Comportamiento |
-|---|---|---|
-| Header | H1 + contador | Muestra cantidad de items pendientes |
-| Botón "Procesar" | Button primary | Abre Inbox Processor (vista one-by-one) |
-| Item card | Card expandible | Muestra contenido crudo + sugerencia AI |
-| Fuente | Badge | De dónde vino (quick-capture, web-clip, voice) |
-| Sugerencia AI | Sección dentro de card | Tipo sugerido, tags, área. Visible cuando aiProcessed = true |
-| Acciones | 3 botones | Aceptar (crea con sugerencia), Editar (modifica antes), Descartar (elimina) |
+| Elemento         | Tipo                   | Comportamiento                                                              |
+| ---------------- | ---------------------- | --------------------------------------------------------------------------- |
+| Header           | H1 + contador          | Muestra cantidad de items pendientes                                        |
+| Botón "Procesar" | Button primary         | Abre Inbox Processor (vista one-by-one)                                     |
+| Item card        | Card expandible        | Muestra contenido crudo + sugerencia AI                                     |
+| Fuente           | Badge                  | De dónde vino (quick-capture, web-clip, voice)                              |
+| Sugerencia AI    | Sección dentro de card | Tipo sugerido, tags, área. Visible cuando aiProcessed = true                |
+| Acciones         | 3 botones              | Aceptar (crea con sugerencia), Editar (modifica antes), Descartar (elimina) |
 
 #### Estados
 
-| Estado | Qué se muestra |
-|---|---|
-| Vacío | Ilustración + "Inbox limpio 🎉" + "Usa ⌘+Shift+N para capturar ideas" |
-| Cargando | Skeleton cards (3) |
-| Con datos (sin AI) | Cards con contenido crudo, sin sugerencias [MVP] |
-| Con datos (con AI) | Cards con contenido + sugerencias AI [Fase 3] |
-| Item procesándose | Spinner + "Procesando con AI..." en el item |
-| Error | Toast + retry por item |
-| Offline | Items locales visibles, badge "AI offline — procesar manualmente" |
+| Estado             | Qué se muestra                                                        |
+| ------------------ | --------------------------------------------------------------------- |
+| Vacío              | Ilustración + "Inbox limpio 🎉" + "Usa ⌘+Shift+N para capturar ideas" |
+| Cargando           | Skeleton cards (3)                                                    |
+| Con datos (sin AI) | Cards con contenido crudo, sin sugerencias [MVP]                      |
+| Con datos (con AI) | Cards con contenido + sugerencias AI [Fase 3]                         |
+| Item procesándose  | Spinner + "Procesando con AI..." en el item                           |
+| Error              | Toast + retry por item                                                |
+| Offline            | Items locales visibles, badge "AI offline — procesar manualmente"     |
 
 #### Interacciones
 
@@ -344,25 +345,25 @@ El modal NO tiene selector de tipo (nota/tarea/proyecto), NO tiene tags, NO tien
 
 #### Elementos
 
-| Elemento | Tipo | Comportamiento |
-|---|---|---|
-| Contador | Texto | "N de M" — progreso del batch |
-| Contenido original | Card readonly | El texto crudo tal como se capturó |
-| Campos editables | Form | Tipo, Título, Área, Tags — pre-llenados por AI |
-| Tipo dropdown | Select | Nota / Tarea / Proyecto / Referencia / Descartar |
-| Tags | Tag input | Chips editables, autocompletado de tags existentes |
-| Botón "Crear" | Button primary | Crea la entidad y pasa al siguiente item |
-| Botón "Descartar" | Button secondary | Elimina y pasa al siguiente |
-| Dots de progreso | Indicador | Muestra cuántos items faltan |
+| Elemento           | Tipo             | Comportamiento                                     |
+| ------------------ | ---------------- | -------------------------------------------------- |
+| Contador           | Texto            | "N de M" — progreso del batch                      |
+| Contenido original | Card readonly    | El texto crudo tal como se capturó                 |
+| Campos editables   | Form             | Tipo, Título, Área, Tags — pre-llenados por AI     |
+| Tipo dropdown      | Select           | Nota / Tarea / Proyecto / Referencia / Descartar   |
+| Tags               | Tag input        | Chips editables, autocompletado de tags existentes |
+| Botón "Crear"      | Button primary   | Crea la entidad y pasa al siguiente item           |
+| Botón "Descartar"  | Button secondary | Elimina y pasa al siguiente                        |
+| Dots de progreso   | Indicador        | Muestra cuántos items faltan                       |
 
 #### Estados
 
-| Estado | Qué se muestra |
-|---|---|
-| Procesando | Item actual con campos editables |
-| Último item | Misma vista, botón dice "Crear y terminar" |
-| Completado | "¡Inbox limpio! 🎉" + resumen: "Creaste 3 notas, 1 tarea, descartaste 1" + botón "Volver al Dashboard" |
-| Error al crear | Toast + retry sin perder los datos editados |
+| Estado         | Qué se muestra                                                                                         |
+| -------------- | ------------------------------------------------------------------------------------------------------ |
+| Procesando     | Item actual con campos editables                                                                       |
+| Último item    | Misma vista, botón dice "Crear y terminar"                                                             |
+| Completado     | "¡Inbox limpio! 🎉" + resumen: "Creaste 3 notas, 1 tarea, descartaste 1" + botón "Volver al Dashboard" |
+| Error al crear | Toast + retry sin perder los datos editados                                                            |
 
 #### Interacciones
 
@@ -426,25 +427,25 @@ El modal NO tiene selector de tipo (nota/tarea/proyecto), NO tiene tags, NO tien
 
 #### Elementos
 
-| Elemento | Tipo | Comportamiento |
-|---|---|---|
-| Búsqueda | Input con icono | Powered by Orama. Busca en título + contenido. Resultados instant (<50ms) |
-| Filtros | Dropdowns | PARA type, note type (fleeting/literature/permanent), área, tags. Combinables |
-| Note card | Card clickeable | Título, metadata (tipo, área, link count), fecha relativa |
-| Link count | Badge | Número de conexiones bidireccionales |
-| Botón grafo | Button secondary | Navega a `/notes/graph` |
-| Nueva nota | Button primary | Crea nota vacía y navega al editor |
+| Elemento    | Tipo             | Comportamiento                                                                |
+| ----------- | ---------------- | ----------------------------------------------------------------------------- |
+| Búsqueda    | Input con icono  | Powered by Orama. Busca en título + contenido. Resultados instant (<50ms)     |
+| Filtros     | Dropdowns        | PARA type, note type (fleeting/literature/permanent), área, tags. Combinables |
+| Note card   | Card clickeable  | Título, metadata (tipo, área, link count), fecha relativa                     |
+| Link count  | Badge            | Número de conexiones bidireccionales                                          |
+| Botón grafo | Button secondary | Navega a `/notes/graph`                                                       |
+| Nueva nota  | Button primary   | Crea nota vacía y navega al editor                                            |
 
 #### Estados
 
-| Estado | Qué se muestra |
-|---|---|
-| Vacío | "Aún no tienes notas" + "Captura tu primera idea con ⌘+Shift+N o crea una nota" |
-| Cargando | 5 skeleton cards |
-| Con datos | Lista de cards con scroll infinito |
-| Búsqueda sin resultados | "Sin resultados para '[query]'" + sugerencia de quitar filtros |
-| Error | Toast con retry |
-| Offline | Notas cacheadas del TinyBase store |
+| Estado                  | Qué se muestra                                                                  |
+| ----------------------- | ------------------------------------------------------------------------------- |
+| Vacío                   | "Aún no tienes notas" + "Captura tu primera idea con ⌘+Shift+N o crea una nota" |
+| Cargando                | 5 skeleton cards                                                                |
+| Con datos               | Lista de cards con scroll infinito                                              |
+| Búsqueda sin resultados | "Sin resultados para '[query]'" + sugerencia de quitar filtros                  |
+| Error                   | Toast con retry                                                                 |
+| Offline                 | Notas cacheadas del TinyBase store                                              |
 
 #### Interacciones
 
@@ -503,29 +504,29 @@ El modal NO tiene selector de tipo (nota/tarea/proyecto), NO tiene tags, NO tien
 
 #### Elementos
 
-| Elemento | Tipo | Comportamiento |
-|---|---|---|
-| Breadcrumb "← Notas" | Link | Vuelve a lista de notas |
-| Favorito ⭐ | Toggle icon | Marca/desmarca favorito |
-| PARA select | Dropdown | project / area / resource / archive |
-| Menú "⋮ Más" | Dropdown menu | Archivar, Eliminar, Exportar MD, Ver historial |
-| Editor TipTap | Rich text editor | Título es la primera línea (H1 auto). Body con Markdown shortcuts |
-| `[[wikilink]]` | Custom node TipTap | Al escribir `[[` aparece autocompletado de notas existentes |
-| `#tag` | Custom mark TipTap | Al escribir `#` aparece autocompletado de tags existentes |
-| Sidebar - Backlinks | Lista de links | Notas que apuntan a esta nota. Click → navega a esa nota |
-| Sidebar - Info | Metadata panel | Tipo, área, tags, fechas, conteo de links, nivel de destilación |
+| Elemento             | Tipo               | Comportamiento                                                    |
+| -------------------- | ------------------ | ----------------------------------------------------------------- |
+| Breadcrumb "← Notas" | Link               | Vuelve a lista de notas                                           |
+| Favorito ⭐          | Toggle icon        | Marca/desmarca favorito                                           |
+| PARA select          | Dropdown           | project / area / resource / archive                               |
+| Menú "⋮ Más"         | Dropdown menu      | Archivar, Eliminar, Exportar MD, Ver historial                    |
+| Editor TipTap        | Rich text editor   | Título es la primera línea (H1 auto). Body con Markdown shortcuts |
+| `[[wikilink]]`       | Custom node TipTap | Al escribir `[[` aparece autocompletado de notas existentes       |
+| `#tag`               | Custom mark TipTap | Al escribir `#` aparece autocompletado de tags existentes         |
+| Sidebar - Backlinks  | Lista de links     | Notas que apuntan a esta nota. Click → navega a esa nota          |
+| Sidebar - Info       | Metadata panel     | Tipo, área, tags, fechas, conteo de links, nivel de destilación   |
 
 #### Estados
 
-| Estado | Qué se muestra |
-|---|---|
-| Nota nueva | Editor vacío con placeholder "Escribe una idea..." Cursor en título |
-| Editando | Editor con contenido. Auto-save cada 2s de inactividad |
-| Guardando | Indicador sutil "Guardando..." en header (desaparece en 500ms) |
-| Guardado | Indicador "✓ Guardado" (desaparece en 1s) |
-| Error al guardar | Banner rojo "No se pudo guardar" + retry. Datos NO se pierden (TinyBase local) |
-| Offline | Edición normal. Badge "Offline — se sincronizará". Guardar funciona local |
-| Sin backlinks | Sidebar muestra "Sin backlinks aún" + tip: "Linkea esta nota desde otra usando [[título]]" |
+| Estado           | Qué se muestra                                                                             |
+| ---------------- | ------------------------------------------------------------------------------------------ |
+| Nota nueva       | Editor vacío con placeholder "Escribe una idea..." Cursor en título                        |
+| Editando         | Editor con contenido. Auto-save cada 2s de inactividad                                     |
+| Guardando        | Indicador sutil "Guardando..." en header (desaparece en 500ms)                             |
+| Guardado         | Indicador "✓ Guardado" (desaparece en 1s)                                                  |
+| Error al guardar | Banner rojo "No se pudo guardar" + retry. Datos NO se pierden (TinyBase local)             |
+| Offline          | Edición normal. Badge "Offline — se sincronizará". Guardar funciona local                  |
+| Sin backlinks    | Sidebar muestra "Sin backlinks aún" + tip: "Linkea esta nota desde otra usando [[título]]" |
 
 #### Interacciones
 
@@ -605,25 +606,25 @@ Filtros (panel expandible):
 
 #### Elementos
 
-| Elemento | Tipo | Comportamiento |
-|---|---|---|
-| Canvas del grafo | Reagraph / Sigma.js | Nodos = notas, Edges = links. Force-directed layout |
-| Nodos | Círculos | Tamaño proporcional a linkCount. Color por área. Label = título truncado |
-| Edges | Líneas | Grosor por strength (si AI). Color sutil |
-| Panel de nodo | Card flotante | Aparece al click en nodo: título, tipo, link count, botón abrir |
-| Filtros | Panel desplegable | Filtrar nodos por área, tipo, rango de links, fecha |
-| Fullscreen | Toggle | Expande grafo a pantalla completa |
+| Elemento         | Tipo                | Comportamiento                                                           |
+| ---------------- | ------------------- | ------------------------------------------------------------------------ |
+| Canvas del grafo | Reagraph / Sigma.js | Nodos = notas, Edges = links. Force-directed layout                      |
+| Nodos            | Círculos            | Tamaño proporcional a linkCount. Color por área. Label = título truncado |
+| Edges            | Líneas              | Grosor por strength (si AI). Color sutil                                 |
+| Panel de nodo    | Card flotante       | Aparece al click en nodo: título, tipo, link count, botón abrir          |
+| Filtros          | Panel desplegable   | Filtrar nodos por área, tipo, rango de links, fecha                      |
+| Fullscreen       | Toggle              | Expande grafo a pantalla completa                                        |
 
 #### Estados
 
-| Estado | Qué se muestra |
-|---|---|
-| Vacío (<3 notas) | Mensaje: "El grafo cobra vida con más notas y conexiones" + crear nota |
-| Cargando | Spinner centrado sobre canvas |
-| Con datos | Grafo interactivo con force layout |
-| Muchos nodos (>500) | Advertencia de rendimiento + sugerencia de filtrar |
-| Error | Toast + retry |
-| Offline | Grafo con datos cacheados |
+| Estado              | Qué se muestra                                                         |
+| ------------------- | ---------------------------------------------------------------------- |
+| Vacío (<3 notas)    | Mensaje: "El grafo cobra vida con más notas y conexiones" + crear nota |
+| Cargando            | Spinner centrado sobre canvas                                          |
+| Con datos           | Grafo interactivo con force layout                                     |
+| Muchos nodos (>500) | Advertencia de rendimiento + sugerencia de filtrar                     |
+| Error               | Toast + retry                                                          |
+| Offline             | Grafo con datos cacheados                                              |
 
 #### Interacciones
 
@@ -683,25 +684,25 @@ Filtros (panel expandible):
 
 #### Elementos
 
-| Elemento | Tipo | Comportamiento |
-|---|---|---|
-| Tabs | Tab group | Hoy, Pronto (próx 7 días), Esperando, Completadas |
-| Task card | Card | Checkbox + nombre + prioridad + proyecto + fecha |
-| Checkbox | Toggle | Marca completada con animación (strikethrough + slide out tras 1s) |
-| Prioridad | Badge color | Rojo=urgente, Naranja=alta, Amarillo=media, Verde=baja |
-| Proyecto link | Badge clickeable | Navega al proyecto |
-| Agrupación | Section headers | Agrupadas por fecha en vista "Hoy" y "Pronto" |
+| Elemento      | Tipo             | Comportamiento                                                     |
+| ------------- | ---------------- | ------------------------------------------------------------------ |
+| Tabs          | Tab group        | Hoy, Pronto (próx 7 días), Esperando, Completadas                  |
+| Task card     | Card             | Checkbox + nombre + prioridad + proyecto + fecha                   |
+| Checkbox      | Toggle           | Marca completada con animación (strikethrough + slide out tras 1s) |
+| Prioridad     | Badge color      | Rojo=urgente, Naranja=alta, Amarillo=media, Verde=baja             |
+| Proyecto link | Badge clickeable | Navega al proyecto                                                 |
+| Agrupación    | Section headers  | Agrupadas por fecha en vista "Hoy" y "Pronto"                      |
 
 #### Estados
 
-| Estado | Qué se muestra |
-|---|---|
-| Vacío (tab Hoy) | "Nada para hoy 🎉" + "Crea una tarea o revisa Pronto" |
-| Vacío (tab Completadas) | "Aún no completas tareas — ¡a darle!" |
-| Cargando | Skeleton cards |
-| Con datos | Lista agrupada por fecha |
-| Error | Toast con retry |
-| Offline | Tareas cacheadas, checkbox funciona local |
+| Estado                  | Qué se muestra                                        |
+| ----------------------- | ----------------------------------------------------- |
+| Vacío (tab Hoy)         | "Nada para hoy 🎉" + "Crea una tarea o revisa Pronto" |
+| Vacío (tab Completadas) | "Aún no completas tareas — ¡a darle!"                 |
+| Cargando                | Skeleton cards                                        |
+| Con datos               | Lista agrupada por fecha                              |
+| Error                   | Toast con retry                                       |
+| Offline                 | Tareas cacheadas, checkbox funciona local             |
 
 #### Interacciones
 
@@ -750,22 +751,22 @@ Filtros (panel expandible):
 
 #### Elementos
 
-| Elemento | Tipo | Comportamiento |
-|---|---|---|
-| Vista toggle | Tabs | Board (kanban) / Lista (tabla) |
-| Columnas kanban | Drag containers | Not Started, In Progress, On Hold, Completed |
-| Project card | Card draggable | Nombre, prioridad badge, count de tareas pendientes |
-| Nuevo proyecto | Button | Abre form: nombre, área, prioridad, objetivo |
+| Elemento        | Tipo            | Comportamiento                                      |
+| --------------- | --------------- | --------------------------------------------------- |
+| Vista toggle    | Tabs            | Board (kanban) / Lista (tabla)                      |
+| Columnas kanban | Drag containers | Not Started, In Progress, On Hold, Completed        |
+| Project card    | Card draggable  | Nombre, prioridad badge, count de tareas pendientes |
+| Nuevo proyecto  | Button          | Abre form: nombre, área, prioridad, objetivo        |
 
 #### Estados
 
-| Estado | Qué se muestra |
-|---|---|
-| Vacío | "Sin proyectos aún" + CTA crear + importar de Notion (si aplica) |
-| Cargando | Skeleton columns |
-| Con datos | Kanban o lista según vista |
-| Error | Toast + retry |
-| Offline | Datos cacheados, drag funciona local |
+| Estado    | Qué se muestra                                                   |
+| --------- | ---------------------------------------------------------------- |
+| Vacío     | "Sin proyectos aún" + CTA crear + importar de Notion (si aplica) |
+| Cargando  | Skeleton columns                                                 |
+| Con datos | Kanban o lista según vista                                       |
+| Error     | Toast + retry                                                    |
+| Offline   | Datos cacheados, drag funciona local                             |
 
 #### Interacciones
 
@@ -973,14 +974,14 @@ Filtros (panel expandible):
 
 #### Secciones
 
-| Sección | Contenido |
-|---|---|
-| Cuenta | Nombre, email, avatar, sign out |
-| Áreas | CRUD de áreas de responsabilidad |
-| Tags | Gestión de tags/temas |
-| Hábitos | Agregar/editar/reordenar hábitos |
-| Apariencia | Tema claro/oscuro, sidebar compacta |
-| Datos | Exportar todo como JSON/MD, importar, danger zone (borrar cuenta) |
+| Sección    | Contenido                                                         |
+| ---------- | ----------------------------------------------------------------- |
+| Cuenta     | Nombre, email, avatar, sign out                                   |
+| Áreas      | CRUD de áreas de responsabilidad                                  |
+| Tags       | Gestión de tags/temas                                             |
+| Hábitos    | Agregar/editar/reordenar hábitos                                  |
+| Apariencia | Tema claro/oscuro, sidebar compacta                               |
+| Datos      | Exportar todo como JSON/MD, importar, danger zone (borrar cuenta) |
 
 ---
 
@@ -1253,6 +1254,7 @@ Colapsada (64px):
 ```
 
 **Comportamiento:**
+
 - Desktop: fija, 240px. ⌘+B para toggle collapse (64px iconos)
 - Tablet: colapsada por defecto. Hamburger o swipe para expandir
 - Mobile: no visible (reemplazada por bottom nav)
@@ -1284,6 +1286,7 @@ Colapsada (64px):
 **Dónde aparece:** Cualquier pantalla, esquina inferior derecha (desktop) / top (mobile)
 
 Tipos:
+
 - **Success**: ✓ verde, auto-dismiss 3s. "Nota creada", "Tarea completada"
 - **Error**: ✕ rojo, persiste hasta dismiss o retry. "Error al guardar"
 - **Info**: ℹ azul, auto-dismiss 5s. "Sincronizando...", "3 items en inbox"
@@ -1314,27 +1317,27 @@ Cada sección tiene su propio copy. Nunca mostrar una lista vacía sin contexto.
 
 ## 5. Shortcuts y atajos
 
-| Shortcut | Acción | Contexto |
-|---|---|---|
-| ⌘+K | Command Palette | Global |
-| ⌘+Shift+N | Quick Capture | Global |
-| ⌘+B | Toggle sidebar | Global |
-| ⌘+S | Forzar guardado | Editor de nota |
-| ⌘+Enter | Guardar y cerrar | Modales |
-| Escape | Cerrar modal/palette | Modales |
-| `[[` | Autocompletado wikilinks | Editor de nota |
-| `/` | Slash commands | Editor de nota |
-| `#` | Autocompletado tags | Editor de nota |
+| Shortcut  | Acción                   | Contexto       |
+| --------- | ------------------------ | -------------- |
+| ⌘+K       | Command Palette          | Global         |
+| ⌘+Shift+N | Quick Capture            | Global         |
+| ⌘+B       | Toggle sidebar           | Global         |
+| ⌘+S       | Forzar guardado          | Editor de nota |
+| ⌘+Enter   | Guardar y cerrar         | Modales        |
+| Escape    | Cerrar modal/palette     | Modales        |
+| `[[`      | Autocompletado wikilinks | Editor de nota |
+| `/`       | Slash commands           | Editor de nota |
+| `#`       | Autocompletado tags      | Editor de nota |
 
 ---
 
 ## 6. Responsive breakpoints
 
-| Breakpoint | Rango | Cambios principales |
-|---|---|---|
-| Mobile | <768px | Bottom nav, FAB, stacked layouts, drawer para secciones secundarias, swipe gestures |
-| Tablet | 768-1024px | Sidebar colapsada, 2 columnas donde aplique, touch-friendly |
-| Desktop | >1024px | Sidebar fija expandida, layouts completos, hover states, keyboard shortcuts |
+| Breakpoint | Rango      | Cambios principales                                                                 |
+| ---------- | ---------- | ----------------------------------------------------------------------------------- |
+| Mobile     | <768px     | Bottom nav, FAB, stacked layouts, drawer para secciones secundarias, swipe gestures |
+| Tablet     | 768-1024px | Sidebar colapsada, 2 columnas donde aplique, touch-friendly                         |
+| Desktop    | >1024px    | Sidebar fija expandida, layouts completos, hover states, keyboard shortcuts         |
 
 ### Reglas responsive globales
 
