@@ -1,375 +1,111 @@
-# SPEC — SecondMind · Fase 0.1: Toolkit de Desarrollo
+# SPEC — SecondMind · Fase 0.1: Toolkit de Desarrollo (Completada)
 
-> Alcance: Claude Code configurado con MCPs, plugins, skills, hooks y VS Code optimizado para el stack del proyecto
-> Dependencias: Fase 0 completada (proyecto compilando, Git inicializado)
-> Estimado: 1-2 horas
-> Stack relevante: Claude Code + VS Code + Firebase CLI + GitHub
+> Registro del toolkit configurado para Claude Code + VS Code.
+> Completada: Abril 2026
 
 ---
 
 ## Objetivo
 
-Al terminar esta fase, Claude Code tiene acceso directo a Firebase, GitHub, y documentación actualizada de todas las librerías del proyecto. Los archivos se auto-formatean y lintean en cada edición. VS Code muestra errores de TypeScript inline y autocompleta clases de Tailwind. El CLAUDE.md se actualiza para referenciar las nuevas herramientas. Todo listo para codear sin fricción.
+Claude Code con acceso directo a Firebase, docs actualizadas de librerías, auto-format en cada edición, protección de rama `main`, LSP de TypeScript y skills de calidad de código. VS Code con extensiones del stack preconfiguradas.
 
 ---
 
-## Features
+## Features implementadas
 
-### F1: MCP Servers — Firebase + GitHub + Context7
+### F1-F2: MCP Servers
 
-**Qué:** Instalar los 3 MCP servers críticos que Claude Code necesita para interactuar con el stack del proyecto.
+- **Firebase MCP** conectado al proyecto `secondmindv1`. Expone Firestore, Auth, security rules, storage. Configurado en `.mcp.json` invocando `node node_modules/firebase-tools/lib/bin/firebase.js experimental:mcp` (usa el CLI local, no `npx`).
+- **Context7 MCP** para docs actualizadas de React, TinyBase, TipTap, Firebase, Tailwind, shadcn/ui.
+- **Playwright MCP** para testing visual y navegación bajo demanda.
+- **Brave Search MCP** para búsqueda web con `BRAVE_API_KEY` en variable de sistema.
 
-**Criterio de done:**
+### F3: TypeScript LSP
 
-- [ ] Firebase MCP instalado y conectado al proyecto `secondmind-app`
-- [ ] Desde Claude Code, se puede hacer una query a Firestore (ej: listar colecciones)
-- [ ] GitHub MCP instalado y autenticado con PAT
-- [ ] Desde Claude Code, se pueden listar issues/PRs del repo `sebasgc0399/SecondMind`
-- [ ] Context7 MCP instalado y funcionando
-- [ ] Al escribir "use context7" en un prompt, Claude obtiene docs actualizadas
+Plugin `typescript-lsp@claude-plugins-official` instalado con `typescript-language-server` global. Habilitado via `enabledPlugins` en `~/.claude/settings.json`. Requirió patch manual del `marketplace.json` global para funcionar en Windows (ver sección "Decisiones técnicas").
 
-**Archivos a crear/modificar:**
+### F4: Skills
 
-- `.mcp.json` (raíz del proyecto) — Configuración de los 3 MCPs
+Instalados desde marketplaces comunitarios agregados en `~/.claude/settings.json` bajo `extraKnownMarketplaces`:
 
-**Notas de implementación:**
+- `frontend-design@claude-plugins-official` — calidad visual, evita "AI slop"
+- `tailwind-v4-shadcn@claude-skills` — patrones `@theme inline` y CSS variables
+- `react-composition-patterns@claude-skills` — compound components, lift state, evitar boolean props
+- `react-best-practices@claude-skills` — rerender/memo/bundle optimization
 
-Firebase MCP — instalar como plugin oficial:
+### F5: Hooks
 
-```bash
-/plugin install firebase@claude-plugins-official
-```
+`.claude/settings.json` del proyecto con:
 
-Si Claude Code cuelga al iniciar, agregar variable de entorno `METADATA_SERVER_DETECTION: "none"` en la config del MCP (bug conocido en entornos sin GCP).
+- **PostToolUse** (Write/Edit/MultiEdit): `prettier --write` + `eslint --fix` sobre el archivo editado
+- **PreToolUse** (Edit/Write): bloquea operaciones si la rama actual es `main`
 
-GitHub MCP — instalar vía HTTP remoto:
+### F6: VS Code
 
-```bash
-claude mcp add --transport http github \
-  https://api.githubcopilot.com/mcp/ \
-  --header "Authorization: Bearer YOUR_GITHUB_PAT"
-```
+`.vscode/extensions.json` con 9 extensiones recomendadas: Tailwind IntelliSense, ESLint, Prettier, Error Lens, Pretty TS Errors, Claude Code, GitLens, Vitest Explorer, Firebase rules. `.vscode/settings.json` local (gitignored) con formatOnSave, eslint validate, tsdk local.
 
-Crear un PAT en GitHub con permisos: `repo`, `read:org`, `read:user`. Guardar el token de forma segura — no commitear.
+### F7: CLAUDE.md
 
-Context7 MCP:
-
-```bash
-claude mcp add context7 -- npx -y @upstash/context7-mcp@latest
-```
-
-Verificar con: pedirle a Claude "use context7 para buscar la API de TinyBase createStore".
+Nueva sección "Toolkit Claude Code (Fase 0.1)" entre "Comandos" y "Estructura del proyecto". Documenta MCPs activos, skills, hooks y el procedimiento del patch LSP Windows. Gotcha del LSP agregado a la lista general.
 
 ---
 
-### F2: MCP Servers — Bajo demanda (Playwright + Brave Search)
+## Decisiones técnicas que cambiaron vs lo planeado
 
-**Qué:** Instalar los 2 MCPs secundarios que se activan solo cuando se necesitan.
-
-**Criterio de done:**
-
-- [ ] Playwright MCP instalado
-- [ ] Brave Search MCP instalado con API key configurada
-- [ ] Ambos funcionan cuando se invocan (verificar con un test simple)
-
-**Archivos a modificar:**
-
-- `.mcp.json` — Agregar Playwright y Brave Search
-
-**Notas de implementación:**
-
-Playwright MCP:
-
-```bash
-claude mcp add playwright -- npx @playwright/mcp@latest
-```
-
-Brave Search MCP (requiere API key gratuita de https://brave.com/search/api/):
-
-```bash
-claude mcp add brave-search -e BRAVE_API_KEY=tu_key -- npx -y @brave/brave-search-mcp-server
-```
-
-Estos MCPs consumen tokens extra (~8K y ~5K respectivamente). Si el contexto se siente lento, desactivarlos cuando no se usen.
+| Planeado                                     | Implementado                                           | Razón                                                                                                                                                                                                                                            |
+| -------------------------------------------- | ------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| GitHub MCP con PAT                           | Omitido                                                | Decisión del usuario: se configurará después si hace falta. No bloqueante para Fase 1                                                                                                                                                            |
+| Firebase MCP via `npx firebase-tools@latest` | `node` directo al CLI local                            | `npx` con `@latest` fallaba con "Invalid Version" en este entorno. Se usa el binario local ya instalado como devDependency                                                                                                                       |
+| Skill `react-patterns@claude-skills`         | `react-composition-patterns` + `react-best-practices`  | `react-patterns` no existe en el marketplace `jezweb/claude-skills`. Se optó por dos skills de `secondsky/claude-skills`: composition-patterns (arquitectura) + best-practices (performance). Relevantes ~100% y ~65% para SecondMind (Vite)     |
+| TypeScript LSP funciona out-of-the-box       | Requiere patch manual en Windows                       | Bug del plugin: `child_process.spawn()` sin `shell: true` no resuelve wrappers `.cmd` de npm global. Se parchea `marketplace.json` global cambiando `command: "typescript-language-server"` por `command: "node"` con ruta absoluta al `cli.mjs` |
+| `.vscode/settings.json` versionado           | Gitignored, solo `.vscode/extensions.json` se commitea | El `.gitignore` del proyecto excluye `.vscode/*` excepto `extensions.json`. Convención estándar: settings pueden tener overrides personales                                                                                                      |
 
 ---
 
-### F3: Plugin TypeScript LSP
+## Archivos creados
 
-**Qué:** Instalar el plugin que da a Claude Code feedback en tiempo real de errores de tipo TypeScript.
+**Raíz del proyecto:**
 
-**Criterio de done:**
+- `.mcp.json` — 4 MCP servers (firebase, context7, playwright, brave-search)
+- `.claude/settings.json` — permisos + enabledPlugins + hooks
+- `.vscode/extensions.json` — 9 extensiones recomendadas
+- `.vscode/settings.json` — local, gitignored (Tailwind IntelliSense, formatOnSave, ESLint validate, tsdk local)
 
-- [ ] Plugin typescript-lsp instalado y activo
-- [ ] Al editar un archivo .ts/.tsx con error de tipo, Claude lo detecta y corrige en el mismo turno
-- [ ] `typescript-language-server` instalado globalmente como prerequisito
+**Actualizados:**
 
-**Notas de implementación:**
+- `CLAUDE.md` — nueva sección "Toolkit Claude Code" + gotcha LSP Windows
 
-```bash
-# Prerequisito global
-npm install -g typescript-language-server
+**Config global del usuario (fuera del repo):**
 
-# Instalar plugin
-/plugin install typescript-lsp@claude-plugins-official
-```
-
-Este plugin es el de mayor impacto para TypeScript strict. Convierte a Claude en un dev que realmente verifica tipos después de cada edición.
-
----
-
-### F4: Skills — Frontend Design + Tailwind v4 + React Patterns
-
-**Qué:** Instalar skills que mejoran la calidad del output visual y de código de Claude.
-
-**Criterio de done:**
-
-- [ ] Skill `frontend-design` activo (se auto-activa al pedir interfaces)
-- [ ] Skill `tailwind-v4-shadcn` instalado desde marketplace `secondsky/claude-skills`
-- [ ] Skill `react-patterns` instalado desde marketplace `jezweb/claude-skills`
-- [ ] Al pedir un componente React con Tailwind, Claude genera código con mejor calidad visual que antes
-
-**Notas de implementación:**
-
-```bash
-# frontend-design viene preinstalado en Claude Code reciente
-# Verificar con: /plugin list
-
-# Agregar marketplaces comunitarios
-/plugin marketplace add secondsky/claude-skills
-/plugin marketplace add jezweb/claude-skills
-
-# Instalar skills
-/plugin install tailwind-v4-shadcn@claude-skills
-/plugin install react-patterns@claude-skills
-```
-
-El skill `frontend-design` evita la estética genérica "AI slop". El skill `tailwind-v4-shadcn` cubre el patrón `@theme` inline y CSS variables de shadcn/ui — directamente alineado con nuestro stack.
-
----
-
-### F5: Hooks — Auto-format + Lint + Protección de main
-
-**Qué:** Configurar hooks de Claude Code que automatizan formatting y protegen la rama main.
-
-**Criterio de done:**
-
-- [ ] Cada archivo que Claude edita se auto-formatea con Prettier
-- [ ] Cada archivo que Claude edita pasa ESLint --fix automáticamente
-- [ ] Si Claude intenta editar en la rama `main`, el hook lo bloquea
-- [ ] Los hooks funcionan silenciosamente sin intervención del usuario
-
-**Archivos a crear:**
-
-- `.claude/settings.json` — Configuración de hooks
-
-**Notas de implementación:**
-
-Crear `.claude/settings.json`:
-
-```json
-{
-  "hooks": {
-    "PostToolUse": [
-      {
-        "matcher": "Write|Edit|MultiEdit",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "npx prettier --write \"$CLAUDE_TOOL_INPUT_FILE_PATH\""
-          },
-          {
-            "type": "command",
-            "command": "npx eslint --fix \"$CLAUDE_TOOL_INPUT_FILE_PATH\" 2>/dev/null || true"
-          }
-        ]
-      }
-    ],
-    "PreToolUse": [
-      {
-        "matcher": "Edit|Write",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "[ \"$(git branch --show-current)\" != \"main\" ] || exit 2"
-          }
-        ]
-      }
-    ]
-  }
-}
-```
-
-El `2>/dev/null || true` en ESLint evita que errores de lint bloqueen la edición — solo aplica auto-fixes silenciosamente. El hook de PreToolUse sale con código 2 si estamos en main, lo que cancela la operación.
-
-IMPORTANT: Prettier y ESLint deben estar instalados en el proyecto (ya lo están si Fase 0 está completa).
-
----
-
-### F6: VS Code — Extensiones y Settings
-
-**Qué:** Instalar las extensiones de VS Code esenciales para el stack y configurar settings.json optimizado.
-
-**Criterio de done:**
-
-- [ ] Tailwind CSS IntelliSense funciona: autocomplete de clases, hover preview, lint de clases inválidas
-- [ ] ESLint + Prettier: Format on Save funciona, clases Tailwind se ordenan automáticamente
-- [ ] Error Lens + Pretty TS Errors: errores de TypeScript visibles inline junto al código
-- [ ] Claude Code extension: sidebar funcional con diffs inline
-- [ ] GitLens: blame inline visible en archivos
-- [ ] Firebase rules syntax highlighting en `firestore.rules`
-
-**Extensiones a instalar (8 imprescindibles):**
-
-```
-bradlc.vscode-tailwindcss          # Tailwind CSS IntelliSense
-dbaeumer.vscode-eslint              # ESLint
-esbenp.prettier-vscode              # Prettier
-usernamehw.errorlens                # Error Lens
-yoavbls.pretty-ts-errors            # Pretty TypeScript Errors
-anthropic.claude-code               # Claude Code
-eamodio.gitlens                     # GitLens
-vitest.explorer                     # Vitest Explorer
-```
-
-**Extensiones recomendadas (5 adicionales):**
-
-```
-GitHub.vscode-pull-request-github   # GitHub PRs
-formulahendry.auto-rename-tag       # Auto Rename Tag (JSX)
-christian-kohler.path-intellisense  # Path autocomplete
-Gruntfuggly.todo-tree               # TODO tracker
-toba.vsfire                         # Firebase rules syntax
-```
-
-**Archivos a crear/modificar:**
-
-- `.vscode/settings.json` — Settings del proyecto
-- `.vscode/extensions.json` — Extensiones recomendadas (para que VS Code sugiera instalarlas)
-
-**Notas de implementación:**
-
-Crear `.vscode/settings.json`:
-
-```json
-{
-  "tailwindCSS.classFunctions": ["cva", "cn"],
-  "files.associations": { "*.css": "tailwindcss" },
-  "editor.quickSuggestions": { "strings": "on" },
-  "editor.defaultFormatter": "esbenp.prettier-vscode",
-  "editor.formatOnSave": true,
-  "editor.codeActionsOnSave": {
-    "source.fixAll.eslint": "explicit"
-  },
-  "eslint.validate": ["javascript", "javascriptreact", "typescript", "typescriptreact"],
-  "typescript.tsdk": "node_modules/typescript/lib"
-}
-```
-
-Crear `.vscode/extensions.json`:
-
-```json
-{
-  "recommendations": [
-    "bradlc.vscode-tailwindcss",
-    "dbaeumer.vscode-eslint",
-    "esbenp.prettier-vscode",
-    "usernamehw.errorlens",
-    "yoavbls.pretty-ts-errors",
-    "anthropic.claude-code",
-    "eamodio.gitlens",
-    "vitest.explorer",
-    "toba.vsfire"
-  ]
-}
-```
-
-NO instalar: Live Server (Vite ya tiene HMR), Bracket Pair Colorizer (nativo en VS Code), ES7 Snippets (Claude Code genera componentes más rápido), GitHub Copilot (valor marginal si ya pagas Claude Code).
-
----
-
-### F7: Actualizar CLAUDE.md
-
-**Qué:** Actualizar el CLAUDE.md del proyecto para referenciar las herramientas instaladas y agregar instrucciones de uso.
-
-**Criterio de done:**
-
-- [ ] CLAUDE.md incluye referencia a Context7 ("usar `use context7` para docs actualizadas")
-- [ ] CLAUDE.md incluye referencia al Firebase MCP para operaciones de Firestore
-- [ ] CLAUDE.md menciona que los hooks auto-formatean cada archivo editado
-- [ ] CLAUDE.md indica que ediciones en `main` están bloqueadas por hook
-
-**Archivos a modificar:**
-
-- `CLAUDE.md` — Agregar sección de herramientas disponibles
-
-**Notas de implementación:**
-
-Agregar después de la sección "Comandos" en CLAUDE.md:
-
-```markdown
-## Herramientas disponibles
-
-- **Firebase MCP:** Acceso directo a Firestore, Auth, Functions, Hosting desde Claude Code
-- **GitHub MCP:** Gestión de PRs, issues, code search del repo
-- **Context7:** Usar `use context7` en prompts para obtener docs actualizadas de React, TinyBase, TipTap, Firebase, Tailwind, shadcn/ui
-- **Playwright:** Disponible para testing visual bajo demanda
-- **Brave Search:** Disponible para búsqueda web bajo demanda
-
-## Automatización (hooks)
-
-- Cada archivo editado se auto-formatea con Prettier y pasa ESLint --fix
-- Ediciones en rama `main` están bloqueadas — crear branch primero
-- NO necesitas correr prettier/eslint manualmente después de editar
-```
-
----
-
-## Orden de implementación
-
-1. **F1: MCPs críticos** → Base para que Claude Code acceda a Firebase y docs
-2. **F2: MCPs bajo demanda** → Complementarios, se pueden posponer si hay prisa
-3. **F3: TypeScript LSP** → Feedback de tipos en tiempo real
-4. **F4: Skills** → Mejora calidad de output visual y de código
-5. **F5: Hooks** → Automatización de formatting y protección de main
-6. **F6: VS Code** → Experiencia de desarrollo optimizada
-7. **F7: CLAUDE.md** → Documentar todo lo instalado
-
-F1-F5 son Claude Code. F6 es VS Code. F7 es documentación. Se pueden hacer en paralelo las de Claude Code y VS Code.
-
----
-
-## Estructura de archivos nuevos
-
-```
-SecondMind/
-├── .mcp.json                     # Configuración de MCP servers
-├── .claude/
-│   └── settings.json             # Hooks de Claude Code
-├── .vscode/
-│   ├── settings.json             # Settings del proyecto
-│   └── extensions.json           # Extensiones recomendadas
-└── CLAUDE.md                     # Actualizado con herramientas
-```
+- `~/.claude/settings.json` — `enabledPlugins` con typescript-lsp y los 3 skills instalados, `extraKnownMarketplaces` con `secondsky/claude-skills` y `jezweb/claude-skills`
+- `~/.claude/plugins/marketplaces/claude-plugins-official/.claude-plugin/marketplace.json` — patcheado para el LSP Windows
 
 ---
 
 ## Checklist de completado
 
-Al terminar, TODAS estas condiciones deben ser verdaderas:
+- [x] Firebase MCP lista colecciones de Firestore (`secondmindv1`)
+- [x] Context7 MCP disponible para docs de librerías
+- [x] Playwright y Brave Search MCP conectados
+- [x] `typescript-lsp` plugin activo con LSP funcional (tras patch Windows)
+- [x] 4 skills instalados y habilitados (frontend-design, tailwind-v4-shadcn, react-composition-patterns, react-best-practices)
+- [x] Hook PostToolUse corre Prettier + ESLint automáticamente tras Write/Edit
+- [x] Hook PreToolUse bloquea ediciones en rama `main`
+- [x] `.vscode/extensions.json` commiteado, settings locales gitignored
+- [x] CLAUDE.md documenta todo el toolkit + caveat Windows
+- [x] Commits limpios con Conventional Commits en español
 
-- [ ] `claude mcp list` muestra Firebase, GitHub, Context7, Playwright, Brave Search
-- [ ] Desde Claude Code, una query a Firestore funciona (Firebase MCP)
-- [ ] "use context7" en un prompt retorna docs actualizadas (Context7 MCP)
-- [ ] `/plugin list` muestra typescript-lsp, frontend-design, tailwind-v4-shadcn
-- [ ] Al editar un archivo, Prettier + ESLint corren automáticamente (hooks)
-- [ ] Intentar editar en `main` es bloqueado por el hook
-- [ ] Tailwind IntelliSense autocompleta clases en VS Code
-- [ ] Errores de TypeScript se muestran inline (Error Lens + Pretty TS Errors)
-- [ ] CLAUDE.md documenta todas las herramientas disponibles
+---
+
+## Gotchas conocidos para re-setup en otro PC
+
+1. **Firebase MCP requiere `firebase login`** previo via `firebase-tools` CLI
+2. **Brave Search** necesita `BRAVE_API_KEY` como variable de sistema Windows (no en `.env.local`)
+3. **TypeScript LSP Windows** requiere: `npm install -g typescript-language-server`, agregar `C:\Users\<user>\AppData\Roaming\npm` al PATH del sistema, parchear `marketplace.json` y habilitar el plugin en `~/.claude/settings.json`. Ver CLAUDE.md sección "Toolkit Claude Code → TypeScript LSP" para procedimiento completo
+4. **Marketplaces comunitarios** (`secondsky/claude-skills`, `jezweb/claude-skills`) se agregan via `extraKnownMarketplaces` en `~/.claude/settings.json`, los skills se instalan luego desde el UI de plugins de la extensión VS Code
 
 ---
 
 ## Siguiente fase
 
-Volver a **Fase 0** si no está completada, o continuar con **Fase 1 (MVP):** Quick Capture + Editor TipTap con WikiLinks + Lista de notas + Backlinks + Inbox + Dashboard mínimo. El toolkit configurado aquí hace que la implementación de Fase 1 sea significativamente más rápida y con mejor calidad de output.
+Continuar con **Fase 1 (MVP):** Quick Capture + Editor TipTap con WikiLinks + Lista de notas + Backlinks + Inbox + Dashboard mínimo. El toolkit configurado aquí hace que la implementación sea significativamente más rápida: Context7 resuelve dudas de APIs actualizadas, los skills de React/Tailwind guían la calidad del output, el LSP detecta errores de tipo en cada edición, y Prettier/ESLint mantienen el código consistente sin intervención manual.
