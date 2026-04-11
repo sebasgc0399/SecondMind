@@ -26,6 +26,44 @@ npm run deploy       # Deploy a Firebase Hosting
 npm run deploy:functions  # Deploy solo Cloud Functions
 ```
 
+## Toolkit Claude Code (Fase 0.1)
+
+### MCPs disponibles
+
+- **Firebase** — Acceso directo a Firestore, Auth, security rules del proyecto `secondmindv1`. Usar para inspeccionar colecciones, validar rules, consultar docs. Configurado en `.mcp.json` con `node` directo al CLI local (no `npx`).
+- **Context7** — Docs actualizadas de React, TinyBase, TipTap, Firebase, Tailwind, shadcn/ui. Invocar con `use context7` en el prompt cuando se necesite verificar API/sintaxis de alguna librería del stack.
+- **Playwright** — Testing visual y navegación automatizada, bajo demanda.
+- **Brave Search** — Búsqueda web, bajo demanda (requiere `BRAVE_API_KEY` como variable de sistema).
+
+### Skills activos
+
+- `frontend-design` — calidad visual, evita estética genérica "AI slop"
+- `tailwind-v4-shadcn` — patrones `@theme inline` y CSS variables
+- `react-composition-patterns` — compound components, lift state, evitar boolean props
+- `react-best-practices` — rerender/memo/bundle optimization (reglas SSR-específicas no aplican a Vite)
+
+### Automatización (hooks)
+
+Configurados en `.claude/settings.json`. Se ejecutan automáticamente sin intervención:
+
+- **PostToolUse** (tras Write/Edit/MultiEdit): Prettier + ESLint --fix sobre el archivo editado. NO correr manualmente.
+- **PreToolUse** (antes de Edit/Write): si la rama actual es `main`, la operación se bloquea con `exit 2`. Crear branch `feat/[x]` antes de codear.
+
+### TypeScript LSP (plugin Anthropic)
+
+El plugin `typescript-lsp@claude-plugins-official` funciona en Windows SOLO con un patch manual al `marketplace.json` global. Requisitos para que funcione al clonar el repo en otro PC:
+
+1. Instalar global: `npm install -g typescript-language-server`
+2. Agregar `C:\Users\<user>\AppData\Roaming\npm` al **PATH del sistema**
+3. Parchear `~/.claude/plugins/marketplaces/claude-plugins-official/.claude-plugin/marketplace.json`, buscar la entrada `typescript-lsp` y cambiar:
+   ```json
+   "command": "node",
+   "args": ["<ruta absoluta a typescript-language-server/lib/cli.mjs>", "--stdio"]
+   ```
+4. Habilitar en `~/.claude/settings.json`: `"typescript-lsp@claude-plugins-official": true`
+
+Si Claude Code actualiza el marketplace, este patch puede perderse y hay que reaplicarlo.
+
 ## Estructura del proyecto
 
 ```
@@ -60,12 +98,14 @@ IMPORTANT: Siempre consultar el doc de arquitectura (01) para schemas de datos y
 ## Reglas críticas
 
 ### Componentes
+
 - Export default siempre: `export default function NoteCard() {}`
 - Props como interface: `interface NoteCardProps { noteId: string; }`
 - Lógica en hooks, no en componentes. Si tiene >10 líneas de lógica → extraer a hook
 - Un componente por archivo. El archivo se llama como el componente
 
 ### TinyBase (state management)
+
 - **v8 — sin persister-firestore nativo**: `tinybase/persisters/persister-firestore` fue removido en v8. Se usa `createCustomPersister` de `tinybase/persisters` con `getDocs`/`setDoc`/`onSnapshot`. Implementación en `src/lib/tinybase.ts`
 - TinyBase es la fuente de verdad del UI. Nunca leer de Firestore directo en componentes
 - Usar hooks reactivos: `useCell('notes', noteId, 'title')` — NO getters directos
@@ -74,57 +114,64 @@ IMPORTANT: Siempre consultar el doc de arquitectura (01) para schemas de datos y
 - Content largo de notas (TipTap JSON) va directo a Firestore, NO en TinyBase
 
 ### TypeScript
+
 - `interface` para shapes de objetos, `type` para unions y aliases
 - Nunca `any`. Usar `unknown` + type guard
 - Tipos de dominio en `types/[entidad].ts`, props en el mismo archivo del componente
 
 ### Tailwind
+
 - **Tailwind v4 CSS-first**: no existe `tailwind.config.ts`. La configuración (tokens, variables CSS, custom variants) está en `src/index.css` con `@theme inline { ... }`
 - Mobile-first siempre: estilos base son mobile, breakpoints agregan
 - Usar variables semánticas de shadcn/ui: `text-foreground`, `bg-background`, `border-border`
 - NO usar `@apply`. Si se repite un patrón → extraer a componente
 
 ### Imports
+
 - Absolutos con `@/` alias: `import NoteCard from '@/components/editor/NoteCard'`
 - Sin barrel exports (index.ts). Import directo al archivo
 - Orden: React → Libs externas → Componentes → Hooks → Libs/utils → Types
 
 ### Naming
+
 - Hooks: `use[Entidad][Acción]` → `useNoteSearch`, `useBacklinks`, `useQuickCapture`
 - Handlers: `handle[Acción]` → `handleSave`, `handleCapture`
 - Booleanos: `is/has/can/should` → `isArchived`, `hasBacklinks`
 - Entidades: nunca abreviar. `project` NO `proj`, `objective` NO `obj`
 
 ### Firestore
+
 - Paths: `users/{userId}/[collection]/{docId}`
 - IDs auto-generados por Firestore (excepto embeddings que usa noteId)
 - Timestamps: siempre `serverTimestamp()` para createdAt/updatedAt
 - Security rules: solo el dueño lee/escribe sus datos
 
 ### Cloud Functions v2
+
 - Un archivo = un trigger = una responsabilidad
 - Siempre loggear con contexto: `{ userId, entityId }`
 - Timeout y retry configurados explícitamente, nunca defaults
 
 ### Git
+
 - Conventional Commits en español: `feat(editor): agregar extensión wikilinks`
 - Commits atómicos: si necesita "y", son dos commits
 - Ramas: `feat/[feature]`, `fix/[bug]`
 
 ## Entidades del dominio
 
-| Entidad | Singular | Plural | ID | Firestore Path |
-|---|---|---|---|---|
-| Nota | note | notes | noteId | users/{uid}/notes/{noteId} |
-| Link | noteLink | noteLinks | linkId | users/{uid}/links/{linkId} |
-| Tarea | task | tasks | taskId | users/{uid}/tasks/{taskId} |
-| Proyecto | project | projects | projectId | users/{uid}/projects/{projectId} |
-| Objetivo | objective | objectives | objectiveId | users/{uid}/objectives/{objectiveId} |
-| Área | area | areas | areaId | users/{uid}/areas/{areaId} |
-| Inbox item | inboxItem | inboxItems | itemId | users/{uid}/inbox/{itemId} |
-| Tag | tag | tags | tagId | users/{uid}/tags/{tagId} |
-| Hábito | habit | habits | habitId | users/{uid}/habits/{habitId} |
-| Embedding | embedding | embeddings | noteId | users/{uid}/embeddings/{noteId} |
+| Entidad    | Singular  | Plural     | ID          | Firestore Path                       |
+| ---------- | --------- | ---------- | ----------- | ------------------------------------ |
+| Nota       | note      | notes      | noteId      | users/{uid}/notes/{noteId}           |
+| Link       | noteLink  | noteLinks  | linkId      | users/{uid}/links/{linkId}           |
+| Tarea      | task      | tasks      | taskId      | users/{uid}/tasks/{taskId}           |
+| Proyecto   | project   | projects   | projectId   | users/{uid}/projects/{projectId}     |
+| Objetivo   | objective | objectives | objectiveId | users/{uid}/objectives/{objectiveId} |
+| Área       | area      | areas      | areaId      | users/{uid}/areas/{areaId}           |
+| Inbox item | inboxItem | inboxItems | itemId      | users/{uid}/inbox/{itemId}           |
+| Tag        | tag       | tags       | tagId       | users/{uid}/tags/{tagId}             |
+| Hábito     | habit     | habits     | habitId     | users/{uid}/habits/{habitId}         |
+| Embedding  | embedding | embeddings | noteId      | users/{uid}/embeddings/{noteId}      |
 
 ## Gotchas
 
@@ -137,11 +184,12 @@ IMPORTANT: Siempre consultar el doc de arquitectura (01) para schemas de datos y
 - **Auto-save del editor: debounce de 2 segundos.** La constante es `AUTOSAVE_DEBOUNCE_MS = 2000`.
 - **Loading states: skeleton siempre, spinner nunca.** Los skeletons mantienen el layout.
 - **Optimistic updates** para acciones inmediatas (toggle checkbox, favorito, archivar). TinyBase actualiza local → persister sincroniza a Firestore async.
+- **TypeScript LSP plugin requiere patch en Windows:** El plugin `typescript-lsp@claude-plugins-official` no funciona out-of-the-box en Windows por un bug de `spawn()` con wrappers `.cmd`. Ver sección "Toolkit Claude Code → TypeScript LSP" arriba. Si el LSP devuelve `ENOENT: uv_spawn 'typescript-language-server'`, el patch del marketplace.json fue revertido por una actualización.
 
 ## Fases de desarrollo
 
 - **Fase 0 (Setup):** Vite + React 19 + TS + Tailwind + Firebase + TinyBase + estructura base
-- **Fase 0.1 (Toolkit):** MCPs + plugins + hooks + configuración VS Code. Ver `Spec/SPEC-fase-0.1-toolkit.md`
+- **Fase 0.1 (Toolkit) ✅:** MCPs + plugins + hooks + VS Code configurados. Ver `Spec/SPEC-fase-0.1-toolkit.md` y sección "Toolkit Claude Code" arriba.
 - **Fase 1 (MVP):** Quick Capture + TipTap editor con WikiLinks + Lista de notas + Backlinks + Inbox + Dashboard mínimo
 - **Fase 2 (Ejecución):** Tareas + Proyectos + Objetivos + Habit Tracker
 - **Fase 3 (AI):** Claude Haiku inbox processing + InboxProcessor UI + Command Palette (⌘K)

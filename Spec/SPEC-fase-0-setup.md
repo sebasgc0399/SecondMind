@@ -41,12 +41,12 @@ Deploy funcional en Firebase Hosting (site: `secondmind`). SPA rewrite configura
 
 ## Decisiones tecnicas que cambiaron vs lo planeado
 
-| Planeado | Implementado | Razon |
-|---|---|---|
-| `.eslintrc.cjs` (legacy config) | `eslint.config.js` (flat config) | ESLint 9+ depreca el formato legacy. Flat config con `defineConfig()`, plugins de typescript-eslint, react-hooks, react-refresh, import order |
-| `tailwind.config.ts` + PostCSS clasico | Tailwind v4 CSS-first (`@import 'tailwindcss'` en index.css) | Tailwind v4 elimina el archivo de config JS. Tema definido con `@theme inline` y CSS variables en oklch(). PostCSS usa `@tailwindcss/postcss` |
-| shadcn/ui sobre Radix UI | shadcn/ui sobre Base UI (`@base-ui/react`) | Estilo `base-nova` de shadcn usa Base UI en vez de Radix. Solo componente Button instalado en esta fase |
-| TinyBase persister oficial de Firestore | Custom persister con `createCustomPersister()` | TinyBase v8 requirio persister custom: `getPersisted()` lee coleccion, `setPersisted()` escribe docs individuales, `addPersisterListener()` usa `onSnapshot()` para sync real-time |
+| Planeado                                | Implementado                                                 | Razon                                                                                                                                                                              |
+| --------------------------------------- | ------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `.eslintrc.cjs` (legacy config)         | `eslint.config.js` (flat config)                             | ESLint 9+ depreca el formato legacy. Flat config con `defineConfig()`, plugins de typescript-eslint, react-hooks, react-refresh, import order                                      |
+| `tailwind.config.ts` + PostCSS clasico  | Tailwind v4 CSS-first (`@import 'tailwindcss'` en index.css) | Tailwind v4 elimina el archivo de config JS. Tema definido con `@theme inline` y CSS variables en oklch(). PostCSS usa `@tailwindcss/postcss`                                      |
+| shadcn/ui sobre Radix UI                | shadcn/ui sobre Base UI (`@base-ui/react`)                   | Estilo `base-nova` de shadcn usa Base UI en vez de Radix. Solo componente Button instalado en esta fase                                                                            |
+| TinyBase persister oficial de Firestore | Custom persister con `createCustomPersister()`               | TinyBase v8 requirio persister custom: `getPersisted()` lee coleccion, `setPersisted()` escribe docs individuales, `addPersisterListener()` usa `onSnapshot()` para sync real-time |
 
 ---
 
@@ -55,6 +55,7 @@ Deploy funcional en Firebase Hosting (site: `secondmind`). SPA rewrite configura
 **Config raiz:** `vite.config.ts`, `tsconfig.json`, `tsconfig.app.json`, `eslint.config.js`, `.prettierrc`, `postcss.config.js`, `firebase.json`, `firestore.rules`, `.firebaserc`, `components.json`, `.env.example`
 
 **Aplicacion:**
+
 - `src/main.tsx` — Entry point con TinyBase Provider
 - `src/index.css` — Tailwind v4 theme + variables CSS shadcn/ui
 - `src/lib/firebase.ts` — Firebase singleton (auth + db)

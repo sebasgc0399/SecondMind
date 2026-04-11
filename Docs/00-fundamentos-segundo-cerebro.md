@@ -10,6 +10,7 @@
 Tu cerebro es excelente para **tener ideas**, pésimo para **almacenarlas**.
 
 Sin un sistema externo:
+
 - Las ideas se pierden minutos después de tenerlas
 - La información que consumes (libros, podcasts, reuniones, conversaciones) se evapora
 - Repites investigaciones que ya hiciste
@@ -25,6 +26,7 @@ Un segundo cerebro no es un archivo — es una **extensión funcional de tu pens
 El ciclo completo de gestión del conocimiento personal:
 
 ### Capture (Capturar)
+
 > "Tu trabajo no es crear — es capturar lo que resuena."
 
 - Captura todo lo que te genera una reacción: sorpresa, utilidad, curiosidad, desacuerdo
@@ -33,6 +35,7 @@ El ciclo completo de gestión del conocimiento personal:
 - Fuentes: conversaciones, lecturas, podcasts, ideas propias, transcripciones, código, errores resueltos
 
 ### Organize (Organizar)
+
 > "No organices por tema. Organiza por accionabilidad."
 
 - **PARA**: Projects, Areas, Resources, Archive
@@ -45,6 +48,7 @@ El ciclo completo de gestión del conocimiento personal:
 - Organizar no es categorizar por tema — es decidir dónde será útil
 
 ### Distill (Destilar)
+
 > "Una nota que no puedes escanear en 30 segundos es una nota muerta."
 
 - **Progressive Summarization**: cada vez que revisitas una nota, la resumes más
@@ -56,6 +60,7 @@ El ciclo completo de gestión del conocimiento personal:
 - El objetivo es que tu "yo del futuro" pueda usar la nota en 30 segundos
 
 ### Express (Expresar)
+
 > "El conocimiento solo tiene valor cuando se usa."
 
 - El segundo cerebro no es para acumular — es para **producir**
@@ -68,9 +73,11 @@ El ciclo completo de gestión del conocimiento personal:
 ## 3. Notas Atómicas (Zettelkasten)
 
 ### Principio fundamental
+
 > Una nota = una idea. No más.
 
 ### Reglas
+
 1. **Atómica**: cada nota contiene UNA sola idea o concepto
 2. **Autónoma**: se entiende sin necesidad de leer otra nota
 3. **Título = la idea**: el título debe expresar la idea, no el tema
@@ -81,11 +88,13 @@ El ciclo completo de gestión del conocimiento personal:
 6. **Fechada y atribuida**: cuándo la creaste, de dónde viene la idea
 
 ### Tipos de notas en Zettelkasten
+
 - **Fleeting notes**: captura rápida, sin procesar (inbox)
 - **Literature notes**: resúmenes de lo que consumes (libros, podcasts, artículos)
 - **Permanent notes**: ideas destiladas, en tus palabras, atómicas y conectadas
 
 ### El poder de los links
+
 - Los links bidireccionales crean un **grafo de conocimiento**
 - Las ideas se descubren por proximidad — "¿qué otras notas linkeé desde aquí?"
 - Con el tiempo, emergen **clusters** de conocimiento que no planeaste
@@ -119,6 +128,7 @@ USO (expresar, producir, decidir)
 ```
 
 ### El rol de la AI en este flujo
+
 - **Captura**: transcribir reuniones, extraer ideas clave de textos largos
 - **Procesamiento**: sugerir clasificación, detectar conexiones con notas existentes, generar resúmenes
 - **Resurfacing**: "Basado en lo que estás trabajando hoy, estas 3 notas podrían ser relevantes"
@@ -131,33 +141,43 @@ USO (expresar, producir, decidir)
 Estos principios deben guiar TODA decisión de diseño del software:
 
 ### P1: Captura en menos de 5 segundos
+
 Si capturar una idea toma más de 5 segundos, el sistema falla. La captura rápida es la feature más importante.
 
 ### P2: El Inbox es sagrado
+
 Todo entra por el Inbox. Nada se organiza al momento de capturar. Capturar y organizar son dos momentos distintos.
 
 ### P3: Las notas son ciudadanos de primera clase
+
 No son adjuntos de tareas ni comentarios en proyectos. Las notas VIVEN por sí solas, se conectan entre sí, y se vinculan a proyectos/áreas cuando aplica.
 
 ### P4: Links sobre carpetas
+
 La estructura principal es el grafo de conexiones, no una jerarquía de carpetas. PARA es para accionabilidad, los links son para conocimiento.
 
 ### P5: Destilación progresiva
+
 Las notas mejoran con el uso, no al crearlas. El sistema debe facilitar resumir y refinar cada vez que tocas una nota.
 
 ### P6: AI como copiloto, no como piloto
+
 La AI sugiere, conecta, resume y resurfacea. El humano decide, edita y crea. Nunca automatizar la decisión final.
 
 ### P7: Simplicidad radical
+
 Cada feature debe pasar el test: "¿Lo voy a usar todos los días?" Si la respuesta es no, no entra en v1.
 
 ### P8: Offline-first mindset
+
 Las ideas llegan sin wifi. La captura debe funcionar siempre — sync después.
 
 ### P9: El sistema se adapta al usuario
+
 No al revés. Si algo no se usa después de 2 semanas, se elimina.
 
 ### P10: Producir > Acumular
+
 El sistema debe facilitar USAR las notas, no solo guardarlas. Si las notas no vuelven a ti, el sistema fracasó.
 
 ---
@@ -167,12 +187,14 @@ El sistema debe facilitar USAR las notas, no solo guardarlas. Si las notas no vu
 Después de meses usando un Segundo Cerebro en Notion, estas son las lecciones que deben informar el nuevo sistema:
 
 ### Lo que funcionó
+
 - Estructura PARA para organizar proyectos y tareas
 - Dashboard centralizado como punto de entrada único
 - Habit Tracker con checks diarios
 - Vincular tareas a proyectos y áreas
 
 ### Lo que no funcionó
+
 - Las notas entran y mueren — no hay resurfacing
 - No hay conexiones entre notas (solo relaciones a proyectos)
 - La captura en Notion es lenta (abrir app → navegar → crear)
@@ -181,6 +203,7 @@ Después de meses usando un Segundo Cerebro en Notion, estas son las lecciones q
 - No hay forma de "pensar" con las notas — solo almacenarlas
 
 ### Lo que el nuevo sistema debe resolver
+
 - Captura instantánea desde cualquier contexto
 - Notas conectadas entre sí (grafo, no carpetas)
 - AI que procese el inbox automáticamente
