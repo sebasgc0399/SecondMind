@@ -38,7 +38,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "[ \"$(git branch --show-current)\" != \"main\" ] || exit 2"
+            "command": "case \"$CLAUDE_TOOL_INPUT_FILE_PATH\" in *\"Proyectos VS CODE\"*\"SecondMind\"*) [ \"$(git branch --show-current)\" != \"main\" ] || exit 2 ;; esac"
           }
         ]
       }
