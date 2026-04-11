@@ -16,9 +16,19 @@
       "Bash(python \"C:/Users/sebas/.claude/plugins/cache/ui-ux-pro-max-skill/ui-ux-pro-max/2.5.0/src/ui-ux-pro-max/scripts/search.py\" \"productivity knowledge management dark minimal\" --design-system -p \"SecondMind\" -f markdown --persist)",
       "Bash(python \"C:/Users/sebas/.claude/plugins/cache/ui-ux-pro-max-skill/ui-ux-pro-max/2.5.0/src/ui-ux-pro-max/scripts/search.py\" \"dark mode minimal productivity\" --domain style)",
       "Bash(python \"C:/Users/sebas/.claude/plugins/cache/ui-ux-pro-max-skill/ui-ux-pro-max/2.5.0/src/ui-ux-pro-max/scripts/search.py\" \"productivity saas dashboard\" --domain color)",
-      "Bash(python \"C:/Users/sebas/.claude/plugins/cache/ui-ux-pro-max-skill/ui-ux-pro-max/2.5.0/src/ui-ux-pro-max/scripts/search.py\" \"clean modern readable\" --domain typography)"
+      "Bash(python \"C:/Users/sebas/.claude/plugins/cache/ui-ux-pro-max-skill/ui-ux-pro-max/2.5.0/src/ui-ux-pro-max/scripts/search.py\" \"clean modern readable\" --domain typography)",
+      "mcp__playwright__browser_navigate",
+      "mcp__playwright__browser_snapshot",
+      "mcp__playwright__browser_click",
+      "mcp__playwright__browser_tabs",
+      "mcp__playwright__browser_console_messages",
+      "mcp__playwright__browser_evaluate",
+      "mcp__firebase__firestore_get_document",
+      "mcp__firebase__firestore_delete_document"
     ],
-    "additionalDirectories": ["C:\\Users\\sebas\\.claude"]
+    "additionalDirectories": [
+      "C:\\Users\\sebas\\.claude"
+    ]
   },
   "hooks": {
     "PostToolUse": [
