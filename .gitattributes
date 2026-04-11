@@ -1,0 +1,44 @@
+# Normaliza line endings a LF en el repo, auto-convertidos por Git
+# en el working directory según el SO del usuario.
+# Convención estándar para proyectos web modernos.
+
+# Default: archivos de texto con LF en el repo
+* text=auto eol=lf
+
+# Código fuente y configs — LF siempre
+*.ts        text eol=lf
+*.tsx       text eol=lf
+*.js        text eol=lf
+*.jsx       text eol=lf
+*.mjs       text eol=lf
+*.cjs       text eol=lf
+*.json      text eol=lf
+*.md        text eol=lf
+*.yml       text eol=lf
+*.yaml      text eol=lf
+*.html      text eol=lf
+*.css       text eol=lf
+*.scss      text eol=lf
+*.svg       text eol=lf
+*.sh        text eol=lf
+
+# Windows-only scripts — CRLF obligatorio
+*.bat       text eol=crlf
+*.cmd       text eol=crlf
+*.ps1       text eol=crlf
+
+# Binarios — nunca tocar
+*.png       binary
+*.jpg       binary
+*.jpeg      binary
+*.gif       binary
+*.ico       binary
+*.webp      binary
+*.avif      binary
+*.woff      binary
+*.woff2     binary
+*.ttf       binary
+*.eot       binary
+*.pdf       binary
+*.zip       binary
+*.gz        binary
