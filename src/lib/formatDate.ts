@@ -1,5 +1,6 @@
-// Helper compartido de fecha relativa en español. Usa Intl nativo — sin
-// deps de date-fns. Consumidores: NoteCard (F6), InboxItem (F8).
+// Helpers compartidos de fecha. Usa Intl nativo — sin deps de date-fns.
+// Consumidores: NoteCard (F6), InboxItem (F8), useTasks/TasksPage (F3 fase 2).
+
 export function formatRelative(ms: number): string {
   if (!ms) return '';
   const rtf = new Intl.RelativeTimeFormat('es', { numeric: 'auto' });
@@ -14,4 +15,14 @@ export function formatRelative(ms: number): string {
   if (day < 30) return rtf.format(-Math.floor(day / 7), 'week');
   if (day < 365) return rtf.format(-Math.floor(day / 30), 'month');
   return rtf.format(-Math.floor(day / 365), 'year');
+}
+
+export function startOfDay(ms: number): number {
+  const d = new Date(ms);
+  d.setHours(0, 0, 0, 0);
+  return d.getTime();
+}
+
+export function isSameDay(a: number, b: number): boolean {
+  return startOfDay(a) === startOfDay(b);
 }
