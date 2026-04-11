@@ -11,6 +11,7 @@ import {
   LogOut,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { usePendingInboxCount } from '@/hooks/useInbox';
 import type { User } from 'firebase/auth';
 import type { LucideIcon } from 'lucide-react';
 
@@ -43,6 +44,8 @@ const inactiveClass =
 const activeClass = 'bg-sidebar-accent text-sidebar-accent-foreground';
 
 export default function Sidebar({ user, onSignOut }: SidebarProps) {
+  const pendingInboxCount = usePendingInboxCount();
+
   return (
     <aside className="flex h-screen w-64 flex-col border-r border-sidebar-border bg-sidebar text-sidebar-foreground">
       <div className="flex items-center gap-3 border-b border-sidebar-border p-4">
@@ -74,6 +77,11 @@ export default function Sidebar({ user, onSignOut }: SidebarProps) {
             >
               <item.icon className="h-4 w-4" />
               {item.label}
+              {item.to === '/inbox' && pendingInboxCount > 0 && (
+                <span className="ml-auto rounded-full bg-primary px-1.5 py-0.5 text-[10px] font-semibold text-primary-foreground">
+                  {pendingInboxCount}
+                </span>
+              )}
             </NavLink>
           ) : (
             <button
