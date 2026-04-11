@@ -50,7 +50,12 @@ export function createFirestorePersister({
     async (getContent) => {
       const [tables] = getContent();
       const rows = (tables as Record<string, Record<string, StoreRow>>)[tableName] ?? {};
-      await Promise.all(Object.entries(rows).map(([id, row]) => setDoc(doc(col, id), row)));
+      // merge: true preserva campos escritos fuera de TinyBase (ej. `content`
+      // en notas, que se escribe directo con updateDoc desde useNoteSave).
+      // Sin merge, setDoc sobrescribiría el doc completo borrando esos campos.
+      await Promise.all(
+        Object.entries(rows).map(([id, row]) => setDoc(doc(col, id), row, { merge: true })),
+      );
     },
 
     (didChange) => {
