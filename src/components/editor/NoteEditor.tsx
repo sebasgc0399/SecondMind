@@ -11,9 +11,10 @@ import useNoteSave, { type SaveStatus } from '@/hooks/useNoteSave';
 interface NoteEditorProps {
   noteId: string;
   initialContent: JSONContent | null;
+  headerSlot?: React.ReactNode;
 }
 
-export default function NoteEditor({ noteId, initialContent }: NoteEditorProps) {
+export default function NoteEditor({ noteId, initialContent, headerSlot }: NoteEditorProps) {
   const navigate = useNavigate();
   const editor = useEditor({
     extensions: [
@@ -41,7 +42,8 @@ export default function NoteEditor({ noteId, initialContent }: NoteEditorProps) 
 
   return (
     <div className="flex flex-col">
-      <div className="mx-auto flex w-full max-w-180 items-center justify-end px-4 py-3">
+      <div className="mx-auto flex w-full max-w-180 items-center justify-end gap-3 px-4 py-3">
+        {headerSlot}
         <SaveIndicator status={status} />
       </div>
       <div className="note-editor px-4" onClick={handleClick}>
