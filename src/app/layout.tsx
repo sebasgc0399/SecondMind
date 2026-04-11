@@ -1,14 +1,10 @@
+import { Navigate, Outlet } from 'react-router';
 import useAuth from '@/hooks/useAuth';
 import useStoreInit from '@/hooks/useStoreInit';
 import Sidebar from '@/components/layout/Sidebar';
-import LoginPage from '@/app/login/page';
 
-interface LayoutProps {
-  children: React.ReactNode;
-}
-
-export default function Layout({ children }: LayoutProps) {
-  const { user, isLoading, signIn, signOut } = useAuth();
+export default function Layout() {
+  const { user, isLoading, signOut } = useAuth();
   useStoreInit(user?.uid ?? null);
 
   if (isLoading) {
@@ -20,13 +16,15 @@ export default function Layout({ children }: LayoutProps) {
   }
 
   if (!user) {
-    return <LoginPage onSignIn={signIn} />;
+    return <Navigate to="/login" replace />;
   }
 
   return (
     <div className="flex h-screen bg-background text-foreground">
       <Sidebar user={user} onSignOut={signOut} />
-      <main className="flex-1 overflow-auto p-6">{children}</main>
+      <main className="flex-1 overflow-auto p-6">
+        <Outlet />
+      </main>
     </div>
   );
 }

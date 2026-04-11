@@ -1,10 +1,26 @@
+import { useEffect } from 'react';
+import { useNavigate } from 'react-router';
+import useAuth from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 
-interface LoginPageProps {
-  onSignIn: () => Promise<void>;
-}
+export default function LoginPage() {
+  const { user, isLoading, signIn } = useAuth();
+  const navigate = useNavigate();
 
-export default function LoginPage({ onSignIn }: LoginPageProps) {
+  useEffect(() => {
+    if (user) {
+      navigate('/', { replace: true });
+    }
+  }, [user, navigate]);
+
+  if (isLoading || user) {
+    return (
+      <div className="flex h-screen items-center justify-center bg-background">
+        <p className="text-muted-foreground">Cargando...</p>
+      </div>
+    );
+  }
+
   return (
     <div className="flex h-screen items-center justify-center bg-background">
       <div className="flex flex-col items-center gap-6">
@@ -12,7 +28,7 @@ export default function LoginPage({ onSignIn }: LoginPageProps) {
           <h1 className="text-3xl font-bold tracking-tight">SecondMind</h1>
           <p className="text-muted-foreground">Tu segundo cerebro digital</p>
         </div>
-        <Button onClick={onSignIn} size="lg" className="gap-2">
+        <Button onClick={signIn} size="lg" className="gap-2">
           Sign in with Google
         </Button>
       </div>
