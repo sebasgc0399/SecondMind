@@ -41,6 +41,7 @@ npm run deploy:functions  # Deploy solo Cloud Functions
 - `tailwind-v4-shadcn` — patrones `@theme inline` y CSS variables
 - `react-composition-patterns` — compound components, lift state, evitar boolean props
 - `react-best-practices` — rerender/memo/bundle optimization (reglas SSR-específicas no aplican a Vite)
+- `ui-ux-pro-max` — bases de datos buscables de 50+ estilos, 161 paletas, 57 combinaciones tipográficas, 161 tipos de producto, 99 guidelines UX, 25 tipos de gráfico. Se activa automáticamente en tareas UI/UX. Requiere Python 3 para los scripts internos (search.py usa BM25 + regex)
 
 ### Automatización (hooks)
 
@@ -185,6 +186,7 @@ IMPORTANT: Siempre consultar el doc de arquitectura (01) para schemas de datos y
 - **Loading states: skeleton siempre, spinner nunca.** Los skeletons mantienen el layout.
 - **Optimistic updates** para acciones inmediatas (toggle checkbox, favorito, archivar). TinyBase actualiza local → persister sincroniza a Firestore async.
 - **TypeScript LSP plugin requiere patch en Windows:** El plugin `typescript-lsp@claude-plugins-official` no funciona out-of-the-box en Windows por un bug de `spawn()` con wrappers `.cmd`. Ver sección "Toolkit Claude Code → TypeScript LSP" arriba. Si el LSP devuelve `ENOENT: uv_spawn 'typescript-language-server'`, el patch del marketplace.json fue revertido por una actualización.
+- **ui-ux-pro-max symlinks rotos en Windows:** El skill instala symlinks en `~/.claude/plugins/cache/ui-ux-pro-max-skill/.../skills/ui-ux-pro-max/scripts` y `/data` que apuntan a `src/ui-ux-pro-max/`. En Windows sin Developer Mode (o `git config core.symlinks false`), git clona los symlinks como archivos de texto con el path, rompiendo la ejecución. Los scripts reales viven en `src/ui-ux-pro-max/scripts/search.py`. Fix permanente: activar Developer Mode de Windows + `git config --global core.symlinks true` + reinstalar el plugin.
 
 ## Fases de desarrollo
 
