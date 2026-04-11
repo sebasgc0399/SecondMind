@@ -1,14 +1,49 @@
-import { useParams } from 'react-router';
+import { useEffect } from 'react';
+import { useNavigate, useParams } from 'react-router';
+import { useRow } from 'tinybase/ui-react';
+import NoteEditor from '@/components/editor/NoteEditor';
+import useNote from '@/hooks/useNote';
 
 export default function NoteDetailPage() {
-  // TODO F4: validar noteId contra notesStore y redirect a /notes si no existe
   const { noteId } = useParams<{ noteId: string }>();
+  const navigate = useNavigate();
+  const row = useRow('notes', noteId ?? '');
+  const { initialContent, isLoading, error, notFound } = useNote(noteId);
 
+  const existsInStore = noteId && Object.keys(row).length > 0;
+
+  useEffect(() => {
+    if (!noteId) {
+      navigate('/notes', { replace: true });
+      return;
+    }
+    if (!isLoading && (notFound || !existsInStore)) {
+      navigate('/notes', { replace: true });
+    }
+  }, [noteId, isLoading, notFound, existsInStore, navigate]);
+
+  if (!noteId || isLoading || notFound || !existsInStore) {
+    return <NoteEditorSkeleton />;
+  }
+
+  if (error) {
+    return (
+      <div className="mx-auto max-w-180 px-4 py-8">
+        <p className="text-sm text-destructive">Error al cargar la nota: {error.message}</p>
+      </div>
+    );
+  }
+
+  return <NoteEditor key={noteId} noteId={noteId} initialContent={initialContent} />;
+}
+
+function NoteEditorSkeleton() {
   return (
-    <div>
-      <h1 className="text-2xl font-bold tracking-tight">Nota</h1>
-      <p className="mt-2 text-sm text-muted-foreground">ID: {noteId}</p>
-      <p className="mt-4 text-muted-foreground">Editor TipTap disponible en F4.</p>
+    <div className="mx-auto flex w-full max-w-180 flex-col gap-3 px-4 py-6">
+      <div className="h-6 w-48 animate-pulse rounded bg-muted" />
+      <div className="h-4 w-full animate-pulse rounded bg-muted" />
+      <div className="h-4 w-5/6 animate-pulse rounded bg-muted" />
+      <div className="h-4 w-2/3 animate-pulse rounded bg-muted" />
     </div>
   );
 }
