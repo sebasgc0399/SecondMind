@@ -7,14 +7,14 @@
       "Bash(npm run:*)",
       "Bash(npx prettier --write:*)",
       "Bash(npx eslint --fix:*)",
-      "Bash(git branch --show-current)"
-    ]
-  },
-  "enabledPlugins": {
-    "typescript-lsp@claude-plugins-official": true,
-    "tailwind-v4-shadcn@claude-skills": true,
-    "react-best-practices@claude-skills": true,
-    "react-composition-patterns@claude-skills": true
+      "Bash(git branch --show-current)",
+      "mcp__brave-search__brave_web_search",
+      "Read(//c/Users/sebas/.claude/**)",
+      "Bash(python \"/c/Users/sebas/.claude/plugins/cache/ui-ux-pro-max-skill/ui-ux-pro-max/2.5.0/.claude/skills/ui-ux-pro-max/scripts/search.py\" \"productivity dashboard\" --domain product)",
+      "Bash(python \"C:/Users/sebas/.claude/plugins/cache/ui-ux-pro-max-skill/ui-ux-pro-max/2.5.0/.claude/skills/ui-ux-pro-max/scripts/search.py\" \"productivity dashboard\" --domain product)",
+      "Bash(python \"C:/Users/sebas/.claude/plugins/cache/ui-ux-pro-max-skill/ui-ux-pro-max/2.5.0/src/ui-ux-pro-max/scripts/search.py\" \"productivity dashboard\" --domain product)"
+    ],
+    "additionalDirectories": ["C:\\Users\\sebas\\.claude"]
   },
   "hooks": {
     "PostToolUse": [
@@ -43,5 +43,12 @@
         ]
       }
     ]
+  },
+  "enabledPlugins": {
+    "typescript-lsp@claude-plugins-official": true,
+    "tailwind-v4-shadcn@claude-skills": true,
+    "react-best-practices@claude-skills": true,
+    "react-composition-patterns@claude-skills": true,
+    "ui-ux-pro-max@ui-ux-pro-max-skill": true
   }
 }
