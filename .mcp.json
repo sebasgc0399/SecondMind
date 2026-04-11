@@ -1,0 +1,26 @@
+{
+  "mcpServers": {
+    "firebase": {
+      "command": "node",
+      "args": ["node_modules/firebase-tools/lib/bin/firebase.js", "experimental:mcp"],
+      "env": {
+        "METADATA_SERVER_DETECTION": "none"
+      }
+    },
+    "context7": {
+      "command": "npx",
+      "args": ["-y", "@upstash/context7-mcp@latest"]
+    },
+    "playwright": {
+      "command": "npx",
+      "args": ["@playwright/mcp@latest"]
+    },
+    "brave-search": {
+      "command": "npx",
+      "args": ["-y", "@brave/brave-search-mcp-server"],
+      "env": {
+        "BRAVE_API_KEY": "${BRAVE_API_KEY}"
+      }
+    }
+  }
+}
