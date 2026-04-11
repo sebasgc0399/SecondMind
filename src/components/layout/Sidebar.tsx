@@ -31,10 +31,10 @@ const navItems: NavItem[] = [
   { label: 'Dashboard', icon: LayoutDashboard, to: '/', end: true },
   { label: 'Inbox', icon: Inbox, to: '/inbox' },
   { label: 'Notas', icon: FileText, to: '/notes' },
-  { label: 'Tareas', icon: CheckSquare },
-  { label: 'Proyectos', icon: FolderKanban },
-  { label: 'Objetivos', icon: Target },
-  { label: 'Hábitos', icon: Repeat },
+  { label: 'Tareas', icon: CheckSquare, to: '/tasks' },
+  { label: 'Proyectos', icon: FolderKanban, to: '/projects' },
+  { label: 'Objetivos', icon: Target, to: '/objectives' },
+  { label: 'Hábitos', icon: Repeat, to: '/habits' },
 ];
 
 const baseItemClass =
