@@ -24,7 +24,10 @@
       "mcp__playwright__browser_console_messages",
       "mcp__playwright__browser_evaluate",
       "mcp__firebase__firestore_get_document",
-      "mcp__firebase__firestore_delete_document"
+      "mcp__firebase__firestore_delete_document",
+      "mcp__playwright__browser_press_key",
+      "mcp__playwright__browser_type",
+      "mcp__firebase__firestore_list_documents"
     ],
     "additionalDirectories": [
       "C:\\Users\\sebas\\.claude"
