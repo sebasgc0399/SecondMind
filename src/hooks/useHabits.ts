@@ -115,36 +115,51 @@ export default function useHabits(weekStart: Date): UseHabitsReturn {
       if (!user) return;
       const now = Date.now();
 
+      // Leer estado actual del store (sync, in-memory).
       const existingRow = habitsStore.getRow('habits', dateKey);
       const hasExisting = Object.keys(existingRow).length > 0;
+      const currentValue = Boolean(existingRow[habitKey]);
+      const nextValue = !currentValue;
 
-      // Parse date del dateKey 'YYYY-MM-DD' para setear el field `date`
-      const [yearStr, monthStr, dayStr] = dateKey.split('-');
-      const dateMs = hasExisting
-        ? Number(existingRow.date) || 0
-        : new Date(Number(yearStr), Number(monthStr) - 1, Number(dayStr)).setHours(12, 0, 0, 0);
+      // Recontar los 14 booleans aplicando el flip.
+      const nextTrueCount = HABITS.filter((h) => {
+        if (h.key === habitKey) return nextValue;
+        return Boolean(existingRow[h.key]);
+      }).length;
+      const progress = Math.round((nextTrueCount / HABITS.length) * 100);
 
-      // Construir nextRow con 14 booleans + progress + timestamps
-      const currentBooleans: Record<HabitKey, boolean> = {} as Record<HabitKey, boolean>;
-      for (const h of HABITS) {
-        currentBooleans[h.key] = hasExisting ? Boolean(existingRow[h.key]) : false;
-      }
-      currentBooleans[habitKey] = !currentBooleans[habitKey];
-
-      const trueCount = HABITS.filter((h) => currentBooleans[h.key]).length;
-      const progress = Math.round((trueCount / HABITS.length) * 100);
-
-      const nextRow = {
-        date: dateMs,
-        ...currentBooleans,
+      // Partial update: solo el field flipado + progress + updatedAt.
+      // Esto es commutative: dos toggles rápidos de hábitos distintos no se
+      // pisan, porque cada uno solo toca su propia celda + progress
+      // (progress puede pisarse pero se recalcula correctamente al próximo
+      // toggle porque leemos el row actualizado del store).
+      const partial: Record<string, string | number | boolean> = {
+        [habitKey]: nextValue,
         progress,
-        createdAt: hasExisting ? Number(existingRow.createdAt) || now : now,
         updatedAt: now,
       };
 
+      // Si es una row nueva, agregar createdAt y date (parseado del dateKey).
+      if (!hasExisting) {
+        const [yearStr, monthStr, dayStr] = dateKey.split('-');
+        const dateMs = new Date(Number(yearStr), Number(monthStr) - 1, Number(dayStr)).setHours(
+          12,
+          0,
+          0,
+          0,
+        );
+        partial.date = dateMs;
+        partial.createdAt = now;
+      }
+
+      // CRÍTICO: aplicar local FIRST (sync), Firestore DESPUÉS (async).
+      // Si se invierte, dos toggles rápidos (click 1 + click 2 antes de que
+      // resuelva el setDoc de click 1) hacen race y el segundo pisa el
+      // primero porque lee existingRow stale.
+      habitsStore.setPartialRow('habits', dateKey, partial);
+
       try {
-        await setDoc(doc(db, 'users', user.uid, 'habits', dateKey), nextRow, { merge: true });
-        habitsStore.setRow('habits', dateKey, nextRow);
+        await setDoc(doc(db, 'users', user.uid, 'habits', dateKey), partial, { merge: true });
       } catch (error) {
         console.error('[useHabits] toggleHabit failed', error);
       }
