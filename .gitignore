@@ -32,3 +32,6 @@ dist-ssr
 
 # Claude Code (config local de la máquina, no compartir)
 .claude/settings.local.json
+
+# Playwright MCP — artefactos de snapshots y console logs de tests
+.playwright-mcp/
