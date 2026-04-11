@@ -1,487 +1,174 @@
-# SPEC — SecondMind · Fase 2: Ejecución — Tareas + Proyectos + Objetivos + Hábitos
+# SPEC — SecondMind · Fase 2: Ejecución — Tareas + Proyectos + Objetivos + Hábitos (Completada)
 
-> Alcance: El usuario puede crear/gestionar tareas con vistas temporales, organizar proyectos con progreso, definir objetivos de alto nivel, y trackear hábitos diarios — todo conectado entre sí y con las notas de Fase 1
-> Dependencias: Fase 1 (MVP) completada
-> Estimado: 3-4 semanas (solo dev)
-> Stack relevante: React 19 + TypeScript + TinyBase v8 + Firebase Firestore + Tailwind v4 + shadcn/ui + React Router
+> Registro de lo implementado en la capa de ejecución.
+> Completada: Abril 2026
 
 ---
 
 ## Objetivo
 
-Al terminar esta fase, el usuario abre SecondMind y tiene un sistema completo de ejecución: crea tareas con fecha y prioridad, las agrupa en proyectos con status kanban, define objetivos que miden progreso via proyectos vinculados, y registra 14 hábitos diarios con vista semanal. Las tareas y proyectos se conectan bidireccionalmente con las notas de Fase 1 — el conocimiento y la acción conviven en la misma app. El dashboard muestra tareas de hoy, proyectos activos, y progreso de hábitos.
+La capa de ejecución del sistema. El usuario crea tareas con fecha y prioridad, las agrupa en proyectos con progreso derivado de las tareas completadas, define objetivos de alto nivel con deadline y progreso agregado de los proyectos vinculados, y trackea 14 hábitos diarios en un grid semanal con toggle de hoy/ayer. Todo conectado bidireccionalmente con las notas de Fase 1 — tareas pueden referenciar notas, proyectos vinculan notas existentes vía búsqueda Orama, y objetivos agrupan proyectos. El dashboard de Fase 1 se expande con 5 cards que consolidan tareas de hoy, inbox, proyectos activos, notas recientes y hábitos del día.
 
 ---
 
-## Features
+## Features implementadas
 
-### F1: TinyBase stores — Tasks, Projects, Objectives, Habits + Types
+### F1: TinyBase stores + types — fundación de datos
 
-**Qué:** Crear los 4 stores nuevos con schemas, persisters y types. Mismo patrón que F2 de Fase 1 (factory `createFirestorePersister`).
+Crea 4 stores (`tasksStore`, `projectsStore`, `objectivesStore`, `habitsStore`) con `createStore().setTablesSchema` clonando el patrón de F2 de Fase 1. Types para las 4 entidades en `src/types/{task,project,objective,habit}.ts` + `HABITS` const con 14 hábitos hardcoded (`{ key, label, emoji }`) + `AREAS` map con 6 áreas PARA en `src/types/area.ts`. Actualiza `TaskStatus` en `common.ts` (drop `'todo'`, add `'delegated'` — alinea con SPEC original de Fase 2) y agrega `ObjectiveStatus`. `useStoreInit` extendido con 4 persisters nuevos (7 en total), y `main.tsx` agrega los 4 stores a `storesById` del `Provider` (notesStore sigue siendo el default). Decisión del schema: `projectId`/`areaId`/`objectiveId` son **singulares** en Task (una tarea pertenece a UN proyecto), mientras que `taskIds`/`noteIds` son JSON arrays serializados en Project/Objective. `HabitEntry` usa ID determinístico `YYYY-MM-DD` como rowId — el día ES el ID, sin UUIDs.
 
-**Criterio de done:**
+### F2: Rutas + sidebar activo
 
-- [ ] `tasksStore` creado con schema completo de Task
-- [ ] `projectsStore` creado con schema completo de Project
-- [ ] `objectivesStore` creado con schema completo de Objective
-- [ ] `habitsStore` creado con schema de HabitEntry (un doc por día)
-- [ ] Los 4 stores tienen persister custom a Firestore
-- [ ] Los 4 stores están disponibles via Provider en `main.tsx`
-- [ ] Interfaces TypeScript definidas para las 4 entidades
-- [ ] Al recargar la app, los datos se recuperan de Firestore
+Agrega 5 rutas al `createBrowserRouter` como children del Layout: `/tasks`, `/projects`, `/projects/:projectId`, `/objectives`, `/habits`. Cada una con un placeholder minimal (el detalle de proyecto usa `useParams` para validar el route param). El sidebar tenía 4 items con `disabled=true` — la modificación solo agrega `to: '/...'` al array `navItems`, y el render condicional preexistente los convierte automáticamente en `<NavLink>` con active state por prefix match (sin `end`). `Dashboard` mantiene `end: true` para no capturar todas las rutas. El item "Proyectos" queda activo también en `/projects/:projectId` por el prefix matching natural de NavLink.
 
-**Archivos a crear:**
+### F3: Tareas — CRUD + vistas temporales
 
-- `src/types/task.ts` — Interface Task con TaskStatus, TaskPriority
-- `src/types/project.ts` — Interface Project con ProjectStatus
-- `src/types/objective.ts` — Interface Objective con ObjectiveStatus
-- `src/types/habit.ts` — Interface HabitEntry (date + 14 booleans + progress)
-- `src/stores/tasksStore.ts` — Store + schema
-- `src/stores/projectsStore.ts` — Store + schema
-- `src/stores/objectivesStore.ts` — Store + schema
-- `src/stores/habitsStore.ts` — Store + schema
+`useTasks` clona el patrón de `useInbox` de Fase 1: `useTable('tasks', 'tasks')` reactivo + grace period 200ms + parse con `useMemo` + actions (`createTask`, `updateTask`, `completeTask`) con dual write `setDoc(merge: true)` + `tasksStore.setRow/setPartialRow`. `completeTask` es un toggle — destildar una tarea completada la vuelve a `in-progress`. `TasksPage` con tabs Hoy/Pronto/Completadas en `useState` local (no URL state, decisión MVP). Filtro con `useMemo`: tab **"Hoy"** incluye vencidas en sección separada `⚠️ Vencidas` + sección `📅 Hoy`; tab **"Pronto"** agrupa tareas de los próximos 7 días por día con `Intl.DateTimeFormat('es', { weekday: 'long', day: 'numeric', month: 'short' })`; tab **"Completadas"** limita a 20 más recientes ordenadas por `completedAt` desc. `TaskCard` es el componente master de tarea — se reutiliza sin modificaciones en F5 (detalle de proyecto) y F8 (dashboard). `TaskInlineCreate` con handlers `Enter`/`Escape`. Priority dot color-coded (verde/amarillo/naranja/rojo) via `PRIORITY_STYLES` map — duplicado intencionalmente en F4/F8 (CLAUDE.md: "three similar lines beat premature abstraction"). Expand inline con `useState` local (no modal) para editar descripción + selects nativos de prioridad/proyecto/fecha. Agrega `startOfDay(ms)` e `isSameDay(a, b)` a `src/lib/formatDate.ts`.
 
-**Archivos a modificar:**
+### F4: Proyectos — lista con status + modal
 
-- `src/hooks/useStoreInit.ts` — Init 7 persisters (3 existentes + 4 nuevos)
-- `src/main.tsx` — Agregar 4 stores al Provider `storesById`
+`useProjects` clonado directamente de `useTasks`. `ProjectsPage` con grupos por status en orden `in-progress → not-started → on-hold` (completed ocultos por default, decisión D2 del SPEC original — kanban excluido por overhead vs valor en MVP). Cross-store task count reactivo: `useTable('tasks', 'tasks')` + `useMemo` que construye `Record<projectId, number>` filtrando `status !== 'completed'`. `ProjectCard` es un `<Link>` wrap completo a `/projects/:id` con nombre + priority badge + área (emoji + label del map `AREAS`) + count de tareas pendientes (con singular/plural correcto: "1 tarea pendiente" / "N tareas pendientes"). `ProjectCreateModal` clona la shell del `QuickCapture` de Fase 1 (base-ui `Dialog.Root` controlled, Backdrop + Popup + Title, animations con `data-starting-style`/`data-ending-style`). Form con input nombre + select área + select prioridad + `autoFocus`, reset del form via `useEffect([open])` al cerrar, navega a `/projects/:id` tras crear. **Workaround del deprecation de `React.FormEvent`**: inline arrow `onSubmit={(event) => { event.preventDefault(); void submit(); }}` — evita importar el type deprecated y permite que TypeScript infiera desde el prop de `<form>`.
 
-**Notas de implementación:**
+### F5: Detalle de proyecto — tareas + notas vinculadas + progreso
 
-Schemas basados en doc 01:
+Reemplaza el placeholder F2 en `src/app/projects/[projectId]/page.tsx`. Layout: back link `← Proyectos` + `<h1>` con el nombre + selects de status/prioridad que disparan `updateProject`, barra de progreso (completadas/total con `div + width: X%` inline Tailwind), sección Tareas reusando `TaskCard` filtrado por `task.projectId === projectId`, y sección Notas vinculadas con `ProjectNoteList` + `NoteLinkModal`. `handleCreateTask` hace doble op: `createTask(name)` seguido de `updateTask(taskId, { projectId })` — el projectId se pre-asigna a la tarea sin tocar la API de `useTasks`. `ProjectNoteList` renderiza los backlinks via `useTable('notes')` + `parseIds(row.projectIds).includes(projectId)` — Orama no sirve acá porque su schema no incluye `projectIds`. Cada item es un `<Link>` al editor de la nota + botón `×` para unlink con `stopPropagation`. `NoteLinkModal` clona la shell del `ProjectCreateModal` pero con `useNoteSearch` dentro (el hook Orama de F6 de Fase 1), filtra los resultados por `excludeNoteIds` para no ofrecer las ya vinculadas, click en una nota dispara `onPick` y cierra. Vinculación bidireccional client-side en el page: `handleLinkNote` hace `updateDoc(Firestore)` + `setPartialRow(TinyBase)` sobre la nota para agregar el `projectId` a su array `projectIds`, y llama `updateProject(id, { noteIds: [...project.noteIds, noteId] })` para el otro lado. `handleUnlinkNote` es el inverso. Dos writes separados sin transacción — D3 del SPEC original acepta la inconsistencia en MVP single-user. Redirect a `/projects` si el proyecto no existe, con **grace dedicado de 1500ms** (no el `isInitializing` del hook de 200ms): bug encontrado en testing — la hidratación de Firestore en un full-reload directo por URL tarda más que 200ms y el redirect disparaba prematuramente.
 
-```typescript
-interface Task {
-  id: string;
-  name: string;
-  status: TaskStatus; // 'inbox' | 'in-progress' | 'waiting' | 'delegated' | 'completed'
-  priority: TaskPriority; // 'low' | 'medium' | 'high' | 'urgent'
-  dueDate: number; // unix ms, 0 = sin fecha
-  projectId: string; // '' = sin proyecto
-  areaId: string;
-  objectiveId: string;
-  noteIds: string; // JSON array
-  description: string;
-  isArchived: boolean;
-  createdAt: number;
-  updatedAt: number;
-  completedAt: number; // 0 = no completada
-}
+### F6: Objetivos — lista con progreso agregado
 
-interface Project {
-  id: string;
-  name: string;
-  status: ProjectStatus; // 'inbox' | 'not-started' | 'in-progress' | 'on-hold' | 'completed'
-  priority: ProjectPriority; // 'low' | 'medium' | 'high' | 'urgent'
-  areaId: string;
-  objectiveId: string;
-  taskIds: string; // JSON array
-  noteIds: string; // JSON array
-  startDate: number;
-  deadline: number;
-  isArchived: boolean;
-  createdAt: number;
-  updatedAt: number;
-}
+`useObjectives` clonado del patrón de `useProjects`, sin select de priority (el schema `Objective` no la tiene). `ObjectivesPage` con grupos por área siguiendo `AREA_ORDER` del map `AREAS` (proyectos, conocimiento, finanzas, salud, pareja, habitos). Cross-store triple: `useTable('tasks')` para construir `tasksByProjectId: Record<string, {total, completed}>`, `useProjects()` para resolver nombres de proyectos vinculados, y `useObjectives()` para el listado de objetivos. Helper `computeProgress(projectIds)` = promedio del `% completadas` de cada proyecto vinculado (`Math.round` del promedio de porcentajes, no del total agregado). `ObjectiveCard` con expand inline que muestra los proyectos vinculados con mini-progress por proyecto (`N%`) + un `<select>` "+ Vincular proyecto..." con los disponibles (resetea a `""` después del link, pattern nativo sin state extra). Deadline formatting helper local en el archivo: "30 jun 2026 · faltan 80 días" / "· mañana" / "· hoy" / "· vencido hace N días" / "Sin deadline". `ObjectiveCreateModal` sin select de prioridad, con input `type="date"` opcional para deadline. **Fuente de verdad para el render**: `projects.filter(p => p.objectiveId === objective.id)` — NO `objective.projectIds.map(...)`. Evita drift visual si el usuario reasigna un proyecto a otro objetivo (la relación Project↔Objective es 1:N por el schema: `Project.objectiveId` singular, `Objective.projectIds` plural — el lado singular es autoritativo). Vinculación bidireccional en el page con `handleLinkProject` / `handleUnlinkProject`.
 
-interface Objective {
-  id: string;
-  name: string;
-  status: ObjectiveStatus; // 'not-started' | 'in-progress' | 'completed'
-  deadline: number;
-  areaId: string;
-  projectIds: string; // JSON array
-  taskIds: string; // JSON array
-  isArchived: boolean;
-  createdAt: number;
-  updatedAt: number;
-}
+### F7: Habit tracker — grid semanal
 
-// Un doc por día, ID = 'YYYY-MM-DD'
-interface HabitEntry {
-  id: string; // '2026-04-11'
-  date: number; // unix ms del inicio del día
-  ejercicio: boolean;
-  codear: boolean;
-  leer: boolean;
-  meditar: boolean;
-  comerBien: boolean;
-  tomarAgua: boolean;
-  planificarDia: boolean;
-  madrugar: boolean;
-  gratitud: boolean;
-  ingles: boolean;
-  pareja: boolean;
-  estirar: boolean;
-  tenderCama: boolean;
-  noComerDulce: boolean;
-  progress: number; // 0-100, calculado client-side
-  createdAt: number;
-  updatedAt: number;
-}
-```
-
-- Arrays (noteIds, taskIds, projectIds) como JSON string con `parseIds()`/`stringifyIds()`, mismo patrón de Fase 1.
-- HabitEntry usa ID determinístico (`YYYY-MM-DD`) para evitar duplicados por día.
-- Los 14 hábitos están hardcoded en el schema. Si en el futuro se quieren hábitos custom, se refactoriza — pero para MVP con tus 14 hábitos fijos es lo más simple.
-
----
-
-### F2: Rutas + Sidebar activo
-
-**Qué:** Agregar las rutas de Fase 2 al router y activar los items del sidebar que estaban disabled.
-
-**Criterio de done:**
-
-- [ ] Rutas creadas: `/tasks`, `/projects`, `/projects/:projectId`, `/objectives`, `/habits`
-- [ ] Los items del sidebar (Tareas, Proyectos, Objetivos, Hábitos) ya no están disabled
-- [ ] Cada ruta muestra un placeholder con título (se reemplazan en F3-F7)
-- [ ] Active state funciona correctamente para cada ruta
-
-**Archivos a crear:**
-
-- `src/app/tasks/page.tsx` — Placeholder
-- `src/app/projects/page.tsx` — Placeholder
-- `src/app/projects/[projectId]/page.tsx` — Placeholder
-- `src/app/objectives/page.tsx` — Placeholder
-- `src/app/habits/page.tsx` — Placeholder
-
-**Archivos a modificar:**
-
-- `src/app/router.tsx` — Agregar 5 rutas nuevas
-- `src/components/layout/Sidebar.tsx` — Activar items: agregar `to` a Tareas, Proyectos, Objetivos, Hábitos
-
----
-
-### F3: Tareas — CRUD + Vistas temporales
-
-**Qué:** Vista `/tasks` con tabs (Hoy, Pronto, Completadas), creación inline, checkbox para completar, prioridad visual. Es la pantalla que el usuario ve cada mañana.
-
-**Criterio de done:**
-
-- [ ] Tab "Hoy" muestra tareas con `dueDate` = hoy, agrupadas por fecha (Hoy, Mañana si aplica)
-- [ ] Tab "Pronto" muestra tareas con `dueDate` en los próximos 7 días
-- [ ] Tab "Completadas" muestra las últimas 20 tareas completadas
-- [ ] "+ Nueva tarea" crea inline: campo de texto + Enter, asigna fecha=hoy, status=in-progress
-- [ ] Click checkbox completa la tarea (optimistic: strikethrough + fade out tras 1s)
-- [ ] Cada task card muestra: nombre, prioridad badge (color), proyecto link (si tiene), fecha relativa
-- [ ] Click en task card expande inline: descripción editable, selector de proyecto, selector de prioridad, selector de fecha
-- [ ] Prioridad visual: rojo=urgente, naranja=alta, amarillo=media, verde=baja
-- [ ] Click en proyecto badge navega a `/projects/:projectId`
-- [ ] Empty states por tab: "Nada para hoy 🎉", "Sin tareas próximas", "Aún no completaste tareas"
-- [ ] Skeleton loading
-
-**Archivos a crear:**
-
-- `src/app/tasks/page.tsx` — Página con tabs y lista
-- `src/components/tasks/TaskCard.tsx` — Card de tarea individual con expand
-- `src/components/tasks/TaskInlineCreate.tsx` — Input de creación inline
-- `src/hooks/useTasks.ts` — CRUD: create, complete, update, filtros por tab
-
-**Notas de implementación:**
-
-- Tabs con estado local (no persiste en URL — simplicidad MVP).
-- Complete = `setPartialRow('tasks', id, { status: 'completed', completedAt: Date.now() })`. Optimistic via TinyBase.
-- La creación inline solo pide nombre. Prioridad=medium, status=in-progress, dueDate=hoy como defaults. Se editan después expandiendo.
-- El expand inline es un `details`/`summary` nativo o un toggle state — no un modal. Mantiene contexto de la lista.
-- Selector de proyecto: dropdown con proyectos del `projectsStore`. En F3 puede ser un `<select>` simple; se mejora visualmente después.
-- Selector de fecha: `<input type="date">` nativo. Sin date picker custom en MVP.
-- NO incluir: drag to reorder, swipe mobile, filtro por área, búsqueda. Simplicidad.
-
----
-
-### F4: Proyectos — Lista con status
-
-**Qué:** Vista `/projects` con lista de proyectos agrupados por status. Creación via modal simple.
-
-**Criterio de done:**
-
-- [ ] La ruta `/projects` muestra todos los proyectos no archivados
-- [ ] Proyectos agrupados por status: In Progress, Not Started, On Hold (Completed ocultos por defecto)
-- [ ] Cada project card muestra: nombre, prioridad badge, count de tareas pendientes, área
-- [ ] "+ Nuevo proyecto" abre modal con: nombre, área (select), prioridad (select). Crea y navega al detalle
-- [ ] Click en project card navega a `/projects/:projectId`
-- [ ] Empty state: "Sin proyectos aún" + CTA crear
-- [ ] Skeleton loading
-
-**Archivos a crear:**
-
-- `src/app/projects/page.tsx` — Página con lista agrupada
-- `src/components/projects/ProjectCard.tsx` — Card de proyecto
-- `src/components/projects/ProjectCreateModal.tsx` — Modal de creación
-- `src/hooks/useProjects.ts` — CRUD: create, update status/priority, list por status
-
-**Notas de implementación:**
-
-- Lista agrupada, NO kanban en MVP. El kanban con drag requiere una librería extra (dnd-kit) y es complejidad innecesaria para un solo dev. Si lo quieres después, es una mejora incremental.
-- El count de tareas pendientes se calcula filtrando `tasksStore` por `projectId` y `status !== 'completed'`.
-- Área se muestra como texto — no necesita un `areasStore` completo en Fase 2. Un map hardcoded `{ 'proyectos': '🚀 Proyectos', 'salud': '💪 Salud', ... }` basta para MVP. Las áreas como entidad CRUD son post-MVP.
-
----
-
-### F5: Detalle de proyecto — Tareas + Notas + Progreso
-
-**Qué:** Vista `/projects/:projectId` que muestra todo lo relacionado al proyecto: tareas vinculadas, notas vinculadas, progreso, y acciones de status.
-
-**Criterio de done:**
-
-- [ ] Header con nombre del proyecto, status dropdown, prioridad dropdown
-- [ ] Sección "Tareas" con lista de tareas del proyecto + "+ Nueva tarea" (crea con projectId pre-asignado)
-- [ ] Barra de progreso: tareas completadas / total
-- [ ] Checkbox en tareas funciona igual que en `/tasks`
-- [ ] Sección "Notas vinculadas" con lista de notas que tienen este projectId en sus `projectIds`
-- [ ] "+ Vincular nota" abre búsqueda de notas existentes (reusa `useNoteSearch` de F6 Fase 1)
-- [ ] Click en nota navega a `/notes/:noteId`
-- [ ] Breadcrumb "← Proyectos" para volver
-- [ ] Si el proyecto no existe, redirect a `/projects`
-
-**Archivos a crear:**
-
-- `src/app/projects/[projectId]/page.tsx` — Página de detalle
-- `src/components/projects/ProjectTaskList.tsx` — Lista de tareas del proyecto
-- `src/components/projects/ProjectNoteList.tsx` — Lista de notas vinculadas
-- `src/components/projects/NoteLinkModal.tsx` — Modal de búsqueda para vincular nota
-
-**Notas de implementación:**
-
-- Vincular nota = agregar `projectId` al array `projectIds` de la nota en `notesStore`. Bidireccional: también agregar `noteId` al array `noteIds` del proyecto en `projectsStore`.
-- La búsqueda de notas reutiliza Orama (`useNoteSearch`) del F6 de Fase 1.
-- Status dropdown: `<select>` nativo. Cambiar status = `setPartialRow('projects', id, { status, updatedAt })`.
-- NO incluir: tabs Tareas/Notas/Info, timeline, deadline countdown. Simplicidad MVP.
-
----
-
-### F6: Objetivos — Lista con progreso
-
-**Qué:** Vista `/objectives` con lista de objetivos agrupados por área, mostrando progreso via proyectos vinculados.
-
-**Criterio de done:**
-
-- [ ] La ruta `/objectives` muestra todos los objetivos no archivados
-- [ ] Objetivos agrupados por área
-- [ ] Cada objective card muestra: nombre, status, deadline (fecha + "faltan X días"), proyectos vinculados con su progreso
-- [ ] Barra de progreso: promedio del progreso de los proyectos vinculados (o 0% si no hay)
-- [ ] "+ Nuevo objetivo" abre modal: nombre, área, deadline. Crea inline
-- [ ] Click en objetivo expande: lista de proyectos vinculados, "+ Vincular proyecto"
-- [ ] Click en proyecto vinculado navega a `/projects/:projectId`
-- [ ] Empty state por área y global
-
-**Archivos a crear:**
-
-- `src/app/objectives/page.tsx` — Página con lista agrupada
-- `src/components/objectives/ObjectiveCard.tsx` — Card con expand
-- `src/components/objectives/ObjectiveCreateModal.tsx` — Modal de creación
-- `src/hooks/useObjectives.ts` — CRUD: create, update, vincular proyecto
-
-**Notas de implementación:**
-
-- Progreso del objetivo = promedio del % de tareas completadas de cada proyecto vinculado. Se calcula en el render, no se persiste.
-- "Faltan X días" usa `Intl.RelativeTimeFormat` (mismo helper de F8 Fase 1).
-- Vincular proyecto = agregar `objectiveId` al proyecto + agregar `projectId` al objetivo. Bidireccional via `parseIds`/`stringifyIds`.
-- NO incluir: tabs por quarter, filtros avanzados, countdown timer visual.
-
----
-
-### F7: Habit Tracker — Grid semanal
-
-**Qué:** Vista `/habits` con grid semanal de 14 hábitos. Toggle de hoy/ayer. Barra de progreso diario.
-
-**Criterio de done:**
-
-- [ ] La ruta `/habits` muestra una tabla: filas = 14 hábitos, columnas = 7 días de la semana actual
-- [ ] Header muestra mes/año actual + "Hoy: X/14 (Y%)" con barra de progreso
-- [ ] Celdas de hoy y ayer son clickeables (toggle ■/□). Días pasados y futuros son read-only
-- [ ] Click en celda de hoy/ayer → toggle optimistic (TinyBase → Firestore async)
-- [ ] Flechas ← → para navegar entre semanas
-- [ ] Colores de celda: □ vacío `bg-muted`, ■ completado `bg-primary`
-- [ ] Progreso recalculado al togglear (count de true / 14 \* 100)
-- [ ] Empty state para semanas sin datos: grid con todas las celdas vacías
-- [ ] Skeleton loading
-
-**Archivos a crear:**
-
-- `src/app/habits/page.tsx` — Página con grid
-- `src/components/habits/HabitGrid.tsx` — Tabla semanal
-- `src/components/habits/HabitRow.tsx` — Fila de un hábito
-- `src/hooks/useHabits.ts` — CRUD: getWeek, toggleHabit, createEntryIfMissing
-
-**Notas de implementación:**
-
-- Cada día es un doc en `users/{uid}/habits/YYYY-MM-DD` con los 14 booleans.
-- `useHabits(weekStart)` retorna 7 entries (uno por día). Si un día no tiene doc, lo crea al primer toggle con todos los hábitos en false.
-- El ID determinístico (`YYYY-MM-DD`) evita duplicados.
-- Los 14 hábitos están definidos en un array constante `HABITS` en `src/types/habit.ts`:
-  ```typescript
-  const HABITS = [
-    { key: 'ejercicio', label: 'Ejercicio', emoji: '🏋️' },
-    { key: 'codear', label: 'Codear', emoji: '💻' },
-    // ... 14 total
-  ] as const;
-  ```
-- Estilo grid inspirado en GitHub contributions (MASTER.md sección "Habit tracker grid"): celdas 28x28px con gap 2px.
-- NO incluir: racha más larga, mejor semana, detalle por hábito, hábitos custom, vista mensual. Simplicidad MVP.
-
----
+`useHabits(weekStart: Date)` toma `weekStart` como parámetro (memoizado en el page con `useMemo(() => getWeekStart(new Date()), [])`) y devuelve 7 entries (uno por día de la semana mostrada, synthesized con todos los booleans en `false` si la row no existe en el store). Helpers exportados del hook para reuso en F8: `formatDateKey(date)` → `'YYYY-MM-DD'`, `addDays(date, n)`, `getWeekStart(date)` — lunes inicia la semana (convención LATAM/europea, si `getDay() === 0` retrocede 6 días). `HabitsPage` con state local `weekStart`, navegación `← →` entre semanas, barra de progreso de **hoy real** (no del día/semana mostrada) leída con `useTable('habits', 'habits')` directo para ser reactiva aunque el usuario esté viendo otra semana. `HabitGrid` con `<table>` semántica: `thead` con 7 columnas (labels de día vía `Intl.DateTimeFormat('es', { weekday: 'narrow' })` — que en español narrow devuelve **L M X J V S D** porque "X" es miércoles, no "M" duplicada) + fecha del día. `tbody` con una fila por hábito vía `HabitRow`. `HabitRow` con label (emoji + nombre) + 7 celdas cuadradas de 28×28px — cada una es un `<button>` con colores: completado `bg-primary`, vacío editable `bg-muted` (hoy/ayer), pasado read-only `bg-muted opacity-60 disabled`, futuro `bg-transparent border-dashed disabled`. Edit window = `Set<{todayKey, yesterdayKey}>` calculado al mount. ID determinístico `YYYY-MM-DD` tanto como `rowId` de TinyBase como `docId` de Firestore — los docs se crean implícitamente al primer toggle vía `setPartialRow`, sin un create explícito.
 
 ### F8: Dashboard expandido
 
-**Qué:** Agregar al dashboard de Fase 1 (F9) las cards de Tareas de hoy, Proyectos activos, y Hábitos de hoy.
-
-**Criterio de done:**
-
-- [ ] Card "✅ Tareas de hoy" muestra top 5 tareas con dueDate=hoy. Checkbox funcional. Link "Ver todas →"
-- [ ] Card "🚀 Proyectos activos" muestra proyectos con status=in-progress. Count de tareas pendientes. Link "Ver todos →"
-- [ ] Card "☑️ Hábitos de hoy" muestra checkboxes inline de los 14 hábitos + barra de progreso. Toggles funcionales
-- [ ] Grid del dashboard: 2x2 en desktop (tareas+inbox arriba, proyectos+notas abajo), stack en mobile. Hábitos ocupa full-width debajo
-- [ ] Las cards existentes (Inbox, Notas recientes) se mantienen
-
-**Archivos a crear:**
-
-- `src/components/dashboard/TasksTodayCard.tsx` — Card de tareas de hoy
-- `src/components/dashboard/ProjectsActiveCard.tsx` — Card de proyectos activos
-- `src/components/dashboard/HabitsTodayCard.tsx` — Card de hábitos con checkboxes inline
-
-**Archivos a modificar:**
-
-- `src/app/page.tsx` — Agregar las 3 cards nuevas al grid
-
-**Notas de implementación:**
-
-- TasksTodayCard reutiliza `useTasks` de F3 filtrado por dueDate=hoy.
-- ProjectsActiveCard reutiliza `useProjects` de F4 filtrado por status=in-progress.
-- HabitsTodayCard reutiliza `useHabits` de F7 con la fecha de hoy.
-- Los checkboxes de tareas y hábitos en el dashboard son funcionales (no solo lectura) — misma lógica de toggle.
-- El grid cambia de 2 columnas a 3 columnas en `2xl` para aprovechar pantallas anchas: tareas+inbox+proyectos arriba, notas+hábitos abajo.
+Reestructura `src/app/page.tsx` con `max-w-4xl → max-w-5xl` para acomodar 5 cards. Grid `lg:grid-cols-2` con orden `[TasksTodayCard][InboxCard]` + `[ProjectsActiveCard][RecentNotesCard]` + `HabitsTodayCard` full-width abajo. `TasksTodayCard` filtra `dueDate === hoy && status !== 'completed'`, top 5, cada item con checkbox funcional (`completeTask` optimistic, la tarea desaparece del card post-filtro) + priority dot color-coded + `<Link>` a `/tasks`. `ProjectsActiveCard` filtra `status === 'in-progress' && !isArchived`, cross-store task counts idéntico al patrón de F4. Read-only: click en un proyecto navega al detalle. `HabitsTodayCard` llama `useHabits(getWeekStart(today))` (memoizado), busca `todayEntry = weekEntries.find(e => e.id === todayKey)`, renderiza los 14 hábitos como pills `flex-wrap` toggleables (emoji + label, completado `bg-primary`, vacío `bg-muted`). Header con contador `X/14 (Y%)` + barra de progreso. Link "Ver semana →" a `/habits`. **Bug encontrado y arreglado durante testing**: race condition en `useHabits.toggleHabit`. Dos clicks rápidos a hábitos distintos se pisaban porque el flujo era `await setDoc() → setRow(nextRow)` con el row completo — el click 2 leía `existingRow` **stale** (antes de que resolviera el `setDoc` del click 1), construía su propio `nextRow` con solo su hábito, y cuando ambas promises resolvían, el segundo `setRow` pisaba el primero. **Fix**: invertir el orden (`setPartialRow` local **PRIMERO** sync, `setDoc` Firestore **DESPUÉS** async), y cambiar de `setRow` (full replace) a `setPartialRow` (solo el campo flipado + `progress` recalculado + `updatedAt`). `setPartialRow` es commutative entre campos distintos, `setRow` no.
 
 ---
 
-## Orden de implementación
+## Decisiones técnicas que cambiaron vs lo planeado
 
-1. **F1: Stores + Types** → Fundación de datos para todo. Sin stores no hay nada.
-2. **F2: Rutas + Sidebar** → Habilita navegación. Depende de F1 solo conceptualmente (las rutas son placeholders).
-3. **F3: Tareas** → Feature más usada diariamente. Depende de F1 (tasksStore).
-4. **F4: Proyectos lista** → Contenedor de tareas. Depende de F1 (projectsStore) y F3 (count de tareas).
-5. **F5: Proyecto detalle** → Conecta tareas + notas al proyecto. Depende de F3, F4, y Orama de Fase 1.
-6. **F6: Objetivos** → Alto nivel, depende de F4 (progreso via proyectos vinculados).
-7. **F7: Hábitos** → Independiente del resto — puede hacerse en paralelo desde F1.
-8. **F8: Dashboard** → Consume datos de F3, F4, F7. Se hace al final.
-
----
-
-## Estructura de archivos nuevos
-
-```
-src/
-├── app/
-│   ├── tasks/
-│   │   └── page.tsx                    # Lista de tareas con tabs (F3)
-│   ├── projects/
-│   │   ├── page.tsx                    # Lista de proyectos (F4)
-│   │   └── [projectId]/
-│   │       └── page.tsx                # Detalle de proyecto (F5)
-│   ├── objectives/
-│   │   └── page.tsx                    # Lista de objetivos (F6)
-│   └── habits/
-│       └── page.tsx                    # Habit tracker grid (F7)
-│
-├── components/
-│   ├── tasks/
-│   │   ├── TaskCard.tsx                # Card de tarea con expand (F3)
-│   │   └── TaskInlineCreate.tsx        # Input de creación inline (F3)
-│   ├── projects/
-│   │   ├── ProjectCard.tsx             # Card de proyecto (F4)
-│   │   ├── ProjectCreateModal.tsx      # Modal de creación (F4)
-│   │   ├── ProjectTaskList.tsx         # Tareas del proyecto (F5)
-│   │   ├── ProjectNoteList.tsx         # Notas vinculadas (F5)
-│   │   └── NoteLinkModal.tsx           # Buscar nota para vincular (F5)
-│   ├── objectives/
-│   │   ├── ObjectiveCard.tsx           # Card con expand (F6)
-│   │   └── ObjectiveCreateModal.tsx    # Modal de creación (F6)
-│   ├── habits/
-│   │   ├── HabitGrid.tsx              # Tabla semanal (F7)
-│   │   └── HabitRow.tsx               # Fila de un hábito (F7)
-│   └── dashboard/
-│       ├── TasksTodayCard.tsx          # Card tareas hoy (F8)
-│       ├── ProjectsActiveCard.tsx      # Card proyectos activos (F8)
-│       └── HabitsTodayCard.tsx         # Card hábitos hoy (F8)
-│
-├── hooks/
-│   ├── useTasks.ts                     # CRUD tareas (F3)
-│   ├── useProjects.ts                  # CRUD proyectos (F4)
-│   ├── useObjectives.ts                # CRUD objetivos (F6)
-│   └── useHabits.ts                    # CRUD hábitos (F7)
-│
-├── stores/
-│   ├── tasksStore.ts                   # Nuevo (F1)
-│   ├── projectsStore.ts               # Nuevo (F1)
-│   ├── objectivesStore.ts             # Nuevo (F1)
-│   └── habitsStore.ts                  # Nuevo (F1)
-│
-└── types/
-    ├── task.ts                         # Interface Task (F1)
-    ├── project.ts                      # Interface Project (F1)
-    ├── objective.ts                    # Interface Objective (F1)
-    └── habit.ts                        # Interface HabitEntry + HABITS const (F1)
-```
+| Planeado                                                                                       | Implementado                                                                                                       | Razón                                                                                                                                                                                                                                                      |
+| ---------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `TaskStatus = 'inbox' \| 'todo' \| 'in-progress' \| 'waiting' \| 'completed'` (en `common.ts`) | Alineado al SPEC: `'inbox' \| 'in-progress' \| 'waiting' \| 'delegated' \| 'completed'`                            | `common.ts` de Fase 1 tenía un placeholder con `'todo'` que nunca se consumió. F1 alineó al SPEC (drop `'todo'`, add `'delegated'`) para evitar confusión y mantener consistencia                                                                          |
+| Redirect en `ProjectDetailPage` usa `isInitializing` del hook (200ms) como gate                | Grace dedicado `redirectGraceExpired` local de 1500ms                                                              | Bug encontrado en testing de F5. El grace de 200ms del hook es para evitar skeleton flash, no para esperar hidratación completa de Firestore. En full-reload directo por URL la row del proyecto tarda >200ms en aparecer y el redirect disparaba antes    |
+| `useHabits.toggleHabit` con `setDoc(await) → setRow(nextRow)` y row completo                   | `setPartialRow` local **PRIMERO** + `setDoc` Firestore **DESPUÉS**, y solo el campo flipado + progress + updatedAt | Bug de race encontrado en testing de F8. Dos clicks rápidos se pisaban porque el click 2 leía `existingRow` stale. La inversión + `setPartialRow` (commutative entre campos distintos) lo resuelve y reduce bandwidth de Firestore                         |
+| `PRIORITY_STYLES` / `PRIORITY_LABELS` extraídos a un helper compartido                         | Duplicados en `TaskCard`, `ProjectCard`, `TasksTodayCard`                                                          | CLAUDE.md: "three similar lines beat premature abstraction". 8 líneas de mapa trivial × 3 usos no justifica extraer — cuando aparezca el 4to uso se evalúa                                                                                                 |
+| `handleSubmit` tipado con `React.FormEvent<HTMLFormElement>`                                   | Inline arrow `onSubmit={(event) => { event.preventDefault(); void submit(); }}`                                    | `React.FormEvent` está deprecated en los types de React 19. La inline arrow permite que TypeScript infiera el tipo desde el prop de `<form>` sin necesidad de importar el type deprecated                                                                  |
+| Vincular proyecto al objetivo via modal (análogo a `NoteLinkModal` de F5)                      | `<select>` nativo con "+ Vincular proyecto..." como placeholder, dentro del expand del `ObjectiveCard`             | Modal es overkill para pocos proyectos. El select nativo es compacto, funciona inline con el expand, no requiere state extra (resetea a `""` post-link), y ahorra un componente                                                                            |
+| Render de proyectos vinculados a un objetivo via `objective.projectIds.map(...)`               | `projects.filter(p => p.objectiveId === objective.id)` como fuente de verdad                                       | La relación Objective↔Project es 1:N por el schema (`Project.objectiveId` es singular). Si el usuario reasigna un proyecto a otro objetivo, `project.objectiveId` es autoritativo; `objective.projectIds` puede driftar. Usar el singular elimina el drift |
+| Grid dashboard con 3 columnas en `2xl` (del SPEC F8)                                           | Solo 2×2 en `lg` + hábitos full-width                                                                              | El 3-col en `2xl` del SPEC era opcional. Quedó fuera de MVP — no cambia la funcionalidad y requiere ajustes visuales que se validan post-launch con uso real                                                                                               |
+| Label del grid de hábitos "L M M J V S D"                                                      | "L M X J V S D" (X = miércoles en español narrow)                                                                  | El SPEC escribió "L M M J V S D" por convención informal. `Intl.DateTimeFormat('es', { weekday: 'narrow' })` devuelve "X" para miércoles (la M duplicada es ambigua en `narrow`). Se usa el resultado de Intl — canónico, cero hardcode del array          |
 
 ---
 
-## Definiciones técnicas
+## Archivos creados — por feature
 
-### D1: Áreas — map hardcoded, no entidad CRUD
+**F1 — Stores y types:**
 
-Las áreas en Fase 2 son un map estático definido en `src/types/area.ts`:
+- `src/stores/tasksStore.ts`, `src/stores/projectsStore.ts`, `src/stores/objectivesStore.ts`, `src/stores/habitsStore.ts`
+- `src/types/task.ts`, `src/types/project.ts`, `src/types/objective.ts`, `src/types/habit.ts` (incluye `HABITS` const + `HabitKey`), `src/types/area.ts` (incluye `AREAS` map + `AreaKey`)
+- `src/types/common.ts` — actualizado con `TaskStatus` alineado y `ObjectiveStatus` nuevo
+- `src/hooks/useStoreInit.ts` — extendido con 4 persisters nuevos
+- `src/main.tsx` — extendido con los 4 stores en `storesById`
 
-```typescript
-const AREAS = {
-  proyectos: { label: 'Proyectos', emoji: '🚀' },
-  conocimiento: { label: 'Conocimiento', emoji: '🧠' },
-  finanzas: { label: 'Finanzas', emoji: '💵' },
-  salud: { label: 'Salud y Ejercicio', emoji: '💪' },
-  pareja: { label: 'Pareja', emoji: '❤️' },
-  habitos: { label: 'Hábitos', emoji: '✅' },
-} as const;
-```
+**F2 — Rutas y sidebar:**
 
-Los selects de área en tareas/proyectos/objetivos leen de este map. Si en el futuro se quieren áreas CRUD, se migra a un store — pero para 6 áreas fijas es overkill.
+- `src/app/tasks/page.tsx`, `src/app/projects/page.tsx`, `src/app/projects/[projectId]/page.tsx`, `src/app/objectives/page.tsx`, `src/app/habits/page.tsx` (placeholders mínimos, reemplazados en F3–F7)
+- `src/app/router.tsx` — 5 imports + 5 entries como children del Layout
+- `src/components/layout/Sidebar.tsx` — `to` agregado a los 4 items del array `navItems`
 
-### D2: Kanban — NO en MVP
+**F3 — Tareas:**
 
-El doc 02 de UX muestra kanban con drag para proyectos. En MVP se hace lista agrupada por status. Razón: kanban requiere dnd-kit (~15KB), lógica de reorder, y testing de edge cases de drag. La lista agrupada da el mismo valor funcional con 10% del esfuerzo.
+- `src/hooks/useTasks.ts`
+- `src/components/tasks/TaskCard.tsx`, `src/components/tasks/TaskInlineCreate.tsx`
+- `src/app/tasks/page.tsx` — reemplazo del placeholder con la página real
+- `src/lib/formatDate.ts` — agrega `startOfDay(ms)` e `isSameDay(a, b)`
 
-### D3: Vinculación bidireccional entidades
+**F4 — Proyectos lista:**
 
-Cuando se vincula una tarea a un proyecto:
+- `src/hooks/useProjects.ts`
+- `src/components/projects/ProjectCard.tsx`, `src/components/projects/ProjectCreateModal.tsx`
+- `src/app/projects/page.tsx` — reemplazo del placeholder
 
-- Se escribe `projectId` en la tarea (`tasksStore`)
-- Se agrega el `taskId` al array `taskIds` del proyecto (`projectsStore`)
-  Ambos writes son client-side, misma transacción lógica. Si uno falla, queda inconsistente — aceptable para MVP single-user. Cloud Function de reconciliación es post-MVP.
+**F5 — Detalle de proyecto:**
+
+- `src/components/projects/ProjectNoteList.tsx`, `src/components/projects/NoteLinkModal.tsx`
+- `src/app/projects/[projectId]/page.tsx` — reemplazo del placeholder, con handlers de link/unlink bidireccional, redirect grace local de 1500ms, cross-store con `useTable('notes')` para los linked notes
+
+**F6 — Objetivos:**
+
+- `src/hooks/useObjectives.ts`
+- `src/components/objectives/ObjectiveCard.tsx`, `src/components/objectives/ObjectiveCreateModal.tsx`
+- `src/app/objectives/page.tsx` — reemplazo del placeholder, con grupos por área + `computeProgress` agregado cross-store
+
+**F7 — Habit tracker:**
+
+- `src/hooks/useHabits.ts` — exporta también `formatDateKey`, `addDays`, `getWeekStart`
+- `src/components/habits/HabitGrid.tsx`, `src/components/habits/HabitRow.tsx`
+- `src/app/habits/page.tsx` — reemplazo del placeholder
+
+**F8 — Dashboard expandido:**
+
+- `src/components/dashboard/TasksTodayCard.tsx`, `src/components/dashboard/ProjectsActiveCard.tsx`, `src/components/dashboard/HabitsTodayCard.tsx`
+- `src/app/page.tsx` — reestructurado con los 5 cards + `max-w-5xl`
+- `src/hooks/useHabits.ts` — fix del race condition en `toggleHabit` (`setPartialRow` local-first + `setDoc` async-after)
 
 ---
 
 ## Checklist de completado
 
-Al terminar Fase 2, TODAS estas condiciones deben ser verdaderas:
+- [x] `npm run build` compila sin errores ni warnings de TypeScript
+- [x] La app despliega correctamente en Firebase Hosting
+- [x] El usuario puede crear, editar, completar y ver tareas con fecha y prioridad
+- [x] Las tareas se filtran por Hoy / Pronto / Completadas
+- [x] El usuario puede crear proyectos con status y prioridad
+- [x] El detalle de proyecto muestra tareas vinculadas con barra de progreso
+- [x] Las notas se pueden vincular y desvincular a proyectos desde el detalle
+- [x] El usuario puede crear objetivos con deadline y vincular proyectos
+- [x] El progreso de objetivos refleja el promedio del progreso de sus proyectos vinculados
+- [x] El usuario puede togglear hábitos diarios en un grid semanal con navegación entre semanas
+- [x] El dashboard muestra tareas de hoy, proyectos activos, y hábitos de hoy
+- [x] Todos los sidebar items están activos y navegan correctamente
+- [x] Los datos persisten en Firestore después de recargar
+- [x] Optimistic updates en todos los toggles (checkboxes, status changes)
+- [x] Skeleton loading con grace period 200ms en todas las vistas nuevas
+- [x] Todos los componentes usan tokens del design system
+- [x] Commits limpios con Conventional Commits en español
 
-- [ ] `npm run build` compila sin errores ni warnings de TypeScript
-- [ ] La app despliega correctamente en Firebase Hosting
-- [ ] El usuario puede crear, editar, completar y ver tareas con fecha y prioridad
-- [ ] Las tareas se filtran por Hoy / Pronto / Completadas
-- [ ] El usuario puede crear proyectos con status y prioridad
-- [ ] El detalle de proyecto muestra tareas vinculadas con progreso
-- [ ] Las notas se pueden vincular a proyectos desde el detalle
-- [ ] El usuario puede crear objetivos con deadline y vincular proyectos
-- [ ] El progreso de objetivos refleja el progreso de sus proyectos
-- [ ] El usuario puede togglear hábitos diarios en un grid semanal
-- [ ] El dashboard muestra tareas de hoy, proyectos activos, y hábitos de hoy
-- [ ] Todos los sidebar items están activos y navegan correctamente
-- [ ] Los datos persisten en Firestore después de recargar
-- [ ] Optimistic updates en todos los toggles (checkboxes, status changes)
-- [ ] Skeleton loading en todas las vistas nuevas
-- [ ] Todos los componentes usan tokens del design system (MASTER.md)
+---
+
+## Gotchas descubiertos
+
+Conocimiento nuevo que salió de la implementación y que Fase 3+ deben respetar:
+
+1. **Optimistic updates requieren local-first + Firestore-after**. El pattern correcto para toggles/updates frecuentes es `setPartialRow` local (sync) **antes** del `await setDoc` (async). Invertir el orden causa races en clicks rápidos a campos distintos porque el click N+1 lee `existingRow` stale mientras el `setDoc` del click N todavía no resolvió. Bug encontrado en `useHabits.toggleHabit` durante F8 y arreglado. Los demás hooks CRUD de Fase 2 (`useTasks`, `useProjects`, `useObjectives`) mantienen el orden inverso (`setDoc → setPartialRow`) porque hacen updates de un solo campo donde la race es improbable — pero deberían revisarse si aparecen síntomas similares
+
+2. **`isInitializing` del hook (200ms) no es suficiente para decisiones de redirect por existencia de row**. El grace de 200ms está diseñado para evitar skeleton flash, no para esperar hidratación completa de Firestore. En un full-reload directo por URL (ej. `/projects/:id`), la row del recurso tarda >200ms en aparecer en el store. Para gates de navegación tipo "¿el recurso existe? → redirect" usar un grace dedicado más largo (1500ms) en el page. Pattern implementado en `ProjectDetailPage` con el flag `redirectGraceExpired`
+
+3. **Vinculaciones 1:N — usar el lado singular como fuente de verdad** para el render. `project.objectiveId === objective.id` es más robusto que `objective.projectIds.includes(projectId)` porque evita drift visual cuando el usuario reasigna un recurso y los dos arrays no se sincronizaron en el mismo instante. El lado "uno" del 1:N es autoritativo
+
+4. **ID determinístico en hábitos** — `YYYY-MM-DD` como `rowId` en TinyBase Y `docId` en Firestore. Los docs se crean implícitamente al primer toggle vía `setPartialRow` sin necesidad de un create explícito. Pattern reutilizable para cualquier entidad time-indexed (ej: un hipotético `dailyDigest` de Fase 4)
+
+5. **`Intl.DateTimeFormat('es', { weekday: 'narrow' })` devuelve "X" para miércoles**, no "M". La convención "L M M J V S D" es informal (M duplicada es ambigua); la canónica en español narrow es "L M X J V S D". Usar el resultado de Intl directamente y no hardcodear el array de labels
+
+6. **`React.FormEvent` está deprecated** en los types de React 19. Para forms simples, poner el handler inline en `onSubmit={(event) => { event.preventDefault(); void submit(); }}` — TypeScript infiere el tipo desde el prop de `<form>` sin necesidad de importar el type deprecated. Pattern en `ProjectCreateModal` y `ObjectiveCreateModal`
+
+7. **Base-UI Dialog vs Radix data attributes**: base-ui usa `data-starting-style` y `data-ending-style` para animaciones de enter/exit, **no** `data-state` como Radix. Las clases `animate-in`/`animate-out` de `tw-animate-css` no aplican. Ya documentado en memoria `feedback_baseui_data_attributes` — pattern respetado en F4/F6 al clonar la shell del modal desde `QuickCapture`
+
+---
+
+## Dependencias agregadas
+
+```
+(ninguna)
+```
+
+Fase 2 no agregó dependencias nuevas — todo se construyó sobre el stack existente (TinyBase v8, base-ui, lucide-react, react-router, `Intl` nativo, Orama ya presente de Fase 1).
 
 ---
 
 ## Siguiente fase
 
-**Fase 3 (AI Pipeline):** Claude Haiku procesa el inbox automáticamente (sugiere tipo, tags, resumen), InboxProcessor UI para revisar/aceptar sugerencias, auto-tagging de notas, y Command Palette (⌘K) para búsqueda global. Fase 2 completa la capa de ejecución — Fase 3 agrega inteligencia que reduce la fricción de organizar.
+Continuar con **Fase 3 — AI Pipeline:** Claude Haiku procesando el inbox automáticamente (título/tags/tipo/resumen sugeridos), `InboxProcessor` UI para revisar y aceptar las sugerencias, auto-tagging de notas nuevas, y `Command Palette` (⌘K) para búsqueda y navegación global. El SPEC vive en `Spec/SPEC-fase-3-ai-pipeline.md`. Fase 2 completó la capa de ejecución (acción); Fase 3 agrega inteligencia que reduce la fricción de organizar lo capturado.

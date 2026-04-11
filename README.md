@@ -40,9 +40,19 @@ Las fases y su progreso se llevan en [CLAUDE.md](CLAUDE.md) y cada una tiene su 
   - **F8 · Vista Inbox:** `/inbox` con lista de items pendientes, acciones "Convertir a nota" y "Descartar". Badge reactivo con el count en el sidebar
   - **F9 · Dashboard:** `/` con saludo contextual (mañana/tarde/noche), botón de captura rápida, card de inbox con los 3 items más recientes y card de notas recientes con las 5 últimas actualizaciones
 
-**Ya se puede usar a diario:** capturar ideas con `Alt+N`, escribir notas atómicas con wikilinks, ver backlinks en el panel lateral, buscar notas instantáneamente y procesar el inbox manualmente.
+- **Fase 2 — Ejecución** ✅ La capa de acción. 8 features completas:
+  - **F1 · Stores y types:** `tasksStore`, `projectsStore`, `objectivesStore`, `habitsStore` con schemas TinyBase + persister Firestore. Types para las 4 entidades + `HABITS` const con los 14 hábitos hardcoded + `AREAS` map con las 6 áreas PARA. Alinea `TaskStatus` y agrega `ObjectiveStatus` a `common.ts`
+  - **F2 · Rutas y sidebar activo:** 5 rutas nuevas (`/tasks`, `/projects`, `/projects/:projectId`, `/objectives`, `/habits`) y activación de los 4 items del sidebar que antes estaban disabled. Active state por prefix match de NavLink
+  - **F3 · Tareas:** `/tasks` con tabs Hoy/Pronto/Completadas, creación inline con `Enter`, `TaskCard` con priority badge color-coded (verde/amarillo/naranja/rojo), expand inline para editar descripción/prioridad/proyecto/fecha, y checkbox optimistic vía TinyBase. Tab "Hoy" incluye vencidas en sección separada; tab "Pronto" agrupa por día con `Intl.DateTimeFormat`
+  - **F4 · Proyectos:** `/projects` con lista agrupada por status (En progreso → No empezados → En pausa; completados ocultos). `ProjectCard` con count reactivo de tareas pendientes calculado cross-store (`useTable('tasks')` + `useMemo`). Modal de creación con área + prioridad que navega al detalle tras crear
+  - **F5 · Detalle de proyecto:** `/projects/:projectId` con header (nombre + selects de status/prioridad), barra de progreso completadas/total, sección Tareas que reusa `TaskCard` con `projectId` pre-asignado, y sección Notas vinculadas con `NoteLinkModal` que reusa `useNoteSearch` de Orama. Vinculación bidireccional client-side `note.projectIds ↔ project.noteIds`
+  - **F6 · Objetivos:** `/objectives` con lista agrupada por área. `ObjectiveCard` con progreso agregado (promedio del % de tareas completadas de cada proyecto vinculado), deadline formateado ("faltan N días" / "hoy" / "vencido hace N días"), y expand inline con `<select>` "+ Vincular proyecto..." que dispara el link bidireccional `objective.projectIds ↔ project.objectiveId`
+  - **F7 · Habit tracker:** `/habits` con grid semanal 14×7 (14 hábitos × 7 días, lunes inicia la semana). Navegación ← → entre semanas, toggle de hoy/ayer clickeable, días pasados/futuros read-only. Barra de progreso de hoy referida al día real aunque se navegue a otra semana. IDs determinísticos `YYYY-MM-DD` como `rowId` y `docId`, con docs creados implícitamente en el primer toggle
+  - **F8 · Dashboard expandido:** reestructura `/` con 5 cards en grid 2×2 + hábitos full-width — `TasksTodayCard` (top 5 tareas de hoy con checkbox funcional), `InboxCard` existente, `ProjectsActiveCard` (proyectos in-progress con count reactivo), `RecentNotesCard` existente, y `HabitsTodayCard` (14 pills toggleables con barra de progreso)
 
-- **Fase 2 — Ejecución:** próxima. Tareas, proyectos, objetivos, habit tracker
+**Ya se puede usar a diario:** capturar ideas con `Alt+N`, escribir notas atómicas con wikilinks y backlinks, buscar instantáneamente, procesar el inbox manualmente, organizar tareas con fecha y prioridad en proyectos con progreso, definir objetivos de alto nivel con deadline y proyectos vinculados, trackear 14 hábitos diarios en el grid semanal, y ver todo junto en el dashboard.
+
+- **Fase 3 — AI Pipeline:** próxima. Claude Haiku procesando el inbox automáticamente (título/tags/tipo/resumen sugeridos), `InboxProcessor` UI para revisar y aceptar sugerencias, auto-tagging de notas nuevas, y `Command Palette` (⌘K) para búsqueda y navegación global
 
 ## Setup local
 

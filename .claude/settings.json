@@ -29,9 +29,7 @@
       "mcp__playwright__browser_type",
       "mcp__firebase__firestore_list_documents"
     ],
-    "additionalDirectories": [
-      "C:\\Users\\sebas\\.claude"
-    ]
+    "additionalDirectories": ["C:\\Users\\sebas\\.claude"]
   },
   "hooks": {
     "PostToolUse": [

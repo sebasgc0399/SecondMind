@@ -20,6 +20,7 @@ Al terminar esta fase, el usuario captura una idea con Alt+N y en segundos la AI
 **Qué:** Cloud Function v2 que se dispara cuando se crea un nuevo item en `users/{userId}/inbox/{itemId}`. Llama a Claude Haiku con el `rawContent` y guarda las sugerencias en el campo `aiResult` del mismo documento.
 
 **Criterio de done:**
+
 - [ ] Cloud Function `processInboxItem` desplegada en Firebase
 - [ ] Se dispara automáticamente con `onDocumentCreated('users/{userId}/inbox/{itemId}')`
 - [ ] Llama a la API de Anthropic con Claude Haiku (`claude-haiku-4-5-20251001`)
@@ -30,6 +31,7 @@ Al terminar esta fase, el usuario captura una idea con Alt+N y en segundos la AI
 - [ ] La API key de Anthropic se almacena como Secret de Firebase (`ANTHROPIC_API_KEY`)
 
 **Archivos a crear:**
+
 - `src/functions/src/inbox/processInboxItem.ts` — Cloud Function
 - `src/functions/package.json` — Deps: `@anthropic-ai/sdk`, `firebase-admin`, `firebase-functions`
 - `src/functions/tsconfig.json` — Config TS para Functions
@@ -37,6 +39,7 @@ Al terminar esta fase, el usuario captura una idea con Alt+N y en segundos la AI
 **Notas de implementación:**
 
 Prompt estructurado para Claude Haiku:
+
 ```
 System: Eres un asistente de productividad personal. Analizas capturas rápidas del usuario
 y sugieres cómo clasificarlas. El usuario tiene estas áreas: Proyectos, Conocimiento,
@@ -69,6 +72,7 @@ Responde SOLO con JSON válido, sin markdown:
 **Qué:** Extender `inboxStore` y `InboxItem` type para soportar el campo `aiResult` que la Cloud Function escribe. El persister ya sincroniza bidireccionalmente — cuando la Cloud Function escribe a Firestore, `onSnapshot` trae el cambio al store local.
 
 **Criterio de done:**
+
 - [ ] Interface `AiResult` definida con todos los campos del JSON de Claude
 - [ ] Interface `InboxItem` extendida con `aiResult?: AiResult`
 - [ ] `inboxStore` schema actualizado con campos de `aiResult` (flat, no nested — TinyBase no soporta objetos)
@@ -76,11 +80,13 @@ Responde SOLO con JSON válido, sin markdown:
 - [ ] Cuando la Cloud Function escribe el resultado, el store se actualiza reactivamente (via `onSnapshot` del persister)
 
 **Archivos a modificar:**
+
 - `src/types/inbox.ts` — Agregar interface `AiResult`, extender `InboxItem`
 - `src/stores/inboxStore.ts` — Agregar campos flat de aiResult al schema
 - `src/hooks/useInbox.ts` — Parsear los campos flat de aiResult a un objeto `AiResult` en el mapping
 
 **Notas de implementación:**
+
 - TinyBase no soporta objetos anidados. Los campos de `aiResult` se almacenan flat en el store:
   ```
   aiSuggestedTitle: string (default '')
@@ -101,6 +107,7 @@ Responde SOLO con JSON válido, sin markdown:
 **Qué:** Actualizar el card de inbox (`InboxItem.tsx`) para mostrar las sugerencias de la AI cuando `aiProcessed === true`. Agregar botones "Aceptar" y "Editar" además del "Descartar" y "→ Nota" existentes.
 
 **Criterio de done:**
+
 - [ ] Si `aiProcessed === false`, el card muestra el contenido sin sugerencias (como hoy) + indicador "⏳ Procesando..."
 - [ ] Si `aiProcessed === true` y hay `aiResult`, muestra sección "🤖 Sugerencia" con: tipo, título sugerido, área, tags, resumen
 - [ ] Botón "✓ Aceptar" crea la entidad sugerida (nota/tarea/proyecto) con los campos pre-llenados y marca el item como processed
@@ -110,12 +117,15 @@ Responde SOLO con JSON válido, sin markdown:
 - [ ] Los botones "→ Nota" y "Descartar" existentes siguen funcionando como fallback manual
 
 **Archivos a modificar:**
+
 - `src/components/capture/InboxItem.tsx` — Agregar sección de sugerencias AI, botones, expand editable
 
 **Archivos a crear:**
+
 - `src/components/capture/AiSuggestionCard.tsx` — Componente que muestra la sugerencia + formulario editable
 
 **Notas de implementación:**
+
 - "Aceptar" con `suggestedType === 'note'` → crea nota (mismo flow que "→ Nota" de F8 Fase 1, pero con título, area, tags pre-llenados).
 - "Aceptar" con `suggestedType === 'task'` → crea tarea con nombre=suggestedTitle, priority=aiPriority, areaId=suggestedArea. Navega a `/tasks`.
 - "Aceptar" con `suggestedType === 'project'` → crea proyecto con nombre=suggestedTitle, areaId=suggestedArea. Navega a `/projects/:id`.
@@ -129,6 +139,7 @@ Responde SOLO con JSON válido, sin markdown:
 **Qué:** Nueva ruta `/inbox/process` que presenta los items pendientes uno a la vez con campos editables pre-llenados por la AI. Diseñada para procesar el inbox rápidamente sin distracciones.
 
 **Criterio de done:**
+
 - [ ] Ruta `/inbox/process` creada en el router
 - [ ] Header muestra "Procesando Inbox · N de M" + botón "✕ Salir" que navega a `/inbox`
 - [ ] Muestra un item a la vez: contenido original (read-only) + formulario con campos pre-llenados por AI
@@ -143,14 +154,17 @@ Responde SOLO con JSON válido, sin markdown:
 - [ ] Si no hay items pendientes, el botón "Procesar" está disabled
 
 **Archivos a crear:**
+
 - `src/app/inbox/process/page.tsx` — Página one-by-one
 - `src/components/capture/InboxProcessorForm.tsx` — Formulario con campos editables
 
 **Archivos a modificar:**
+
 - `src/app/router.tsx` — Agregar ruta `/inbox/process` como child del Layout
 - `src/app/inbox/page.tsx` — Agregar botón "Procesar" en el header
 
 **Notas de implementación:**
+
 - State del processor: `currentIndex` (number), navega entre items con prev/next.
 - Los items se leen del hook `useInbox()` filtrados por `status === 'pending'`. Al crear/descartar, el array se acorta y el index se ajusta.
 - "Crear" según tipo:
@@ -169,6 +183,7 @@ Responde SOLO con JSON válido, sin markdown:
 **Qué:** Modal de búsqueda global accesible con ⌘K (Ctrl+K en Windows) desde cualquier pantalla. Busca notas, tareas y proyectos instantáneamente con Orama. Navegación por teclado.
 
 **Criterio de done:**
+
 - [ ] `Ctrl+K` (o `⌘K` en Mac) abre el modal desde cualquier ruta
 - [ ] Input con placeholder "Buscar notas, tareas, proyectos..."
 - [ ] Resultados agrupados por categoría: Notas, Tareas, Proyectos (con headers)
@@ -181,15 +196,18 @@ Responde SOLO con JSON válido, sin markdown:
 - [ ] El modal se cierra al navegar
 
 **Archivos a crear:**
+
 - `src/components/layout/CommandPalette.tsx` — Modal con input + resultados + keyboard nav
 - `src/hooks/useCommandPalette.ts` — Context + Provider (mismo patrón que QuickCapture): open/close state, keyboard listener global
 - `src/hooks/useGlobalSearch.ts` — Hook que busca en múltiples Orama indexes (notas + tareas + proyectos)
 
 **Archivos a modificar:**
+
 - `src/app/layout.tsx` — Montar `CommandPaletteProvider` + `<CommandPalette />` junto al QuickCapture
 - `src/lib/orama.ts` — Extender para indexar tareas y proyectos (además de notas)
 
 **Notas de implementación:**
+
 - El modal usa Dialog de @base-ui/react (mismo patrón que QuickCapture).
 - Posición: centrado top con offset `space-16` del MASTER.md (estilo Raycast/Linear).
 - Orama: crear 3 indexes separados (notas, tareas, proyectos) o un index unificado con campo `_type`. Index unificado es más simple — un solo `search()` con resultados taggeados.
@@ -206,6 +224,7 @@ Responde SOLO con JSON válido, sin markdown:
 **Qué:** Cloud Function que se dispara cuando se crea una nota nueva y genera tags sugeridos usando Claude Haiku. Los tags se guardan en `aiTags` de la nota.
 
 **Criterio de done:**
+
 - [ ] Cloud Function `autoTagNote` desplegada en Firebase
 - [ ] Se dispara con `onDocumentCreated('users/{userId}/notes/{noteId}')`
 - [ ] Solo procesa si `aiProcessed === false` y `contentPlain` no está vacío
@@ -216,11 +235,13 @@ Responde SOLO con JSON válido, sin markdown:
 - [ ] No se dispara para notas creadas desde el inbox processor (ya tienen tags de la sugerencia)
 
 **Archivos a crear:**
+
 - `src/functions/src/notes/autoTagNote.ts` — Cloud Function
 
 **Notas de implementación:**
 
 Prompt para auto-tagging:
+
 ```
 System: Eres un asistente que analiza notas personales y sugiere tags relevantes.
 Máximo 5 tags. También genera un resumen de una línea.
@@ -291,22 +312,29 @@ src/
 ## Definiciones técnicas
 
 ### D1: Claude Haiku vs modelos locales
+
 Claude Haiku cuesta ~$0.25/1M tokens input. Para uso personal (~100 items/mes, ~500 tokens promedio por item), el costo es < $0.02/mes. Modelos locales son plan B si escala — no en MVP.
 
 ### D2: Secret management
+
 La API key de Anthropic se almacena como Firebase Secret:
+
 ```bash
 firebase functions:secrets:set ANTHROPIC_API_KEY
 ```
+
 La Cloud Function la accede con `defineSecret('ANTHROPIC_API_KEY')` y `process.env.ANTHROPIC_API_KEY` en runtime.
 
 ### D3: Rate limiting / abuse prevention
+
 No necesario en MVP (single-user, auth-gated). Las Cloud Functions solo procesan docs dentro del path autenticado del usuario. Si se abre a multi-user en el futuro, agregar rate limiting por userId.
 
 ### D4: Retry policy
+
 `retry: false` en las Cloud Functions. Si la API de Anthropic falla, el item queda con `aiProcessed: false` y el usuario puede procesarlo manualmente. No vale la pena la complejidad de retry + idempotency para uso personal.
 
 ### D5: Index unificado vs separado en Orama
+
 Index unificado con campo `_type: 'note' | 'task' | 'project'`. Un solo `search()` con resultados agrupados post-query. Más simple que mantener 3 indexes sincronizados.
 
 ---
