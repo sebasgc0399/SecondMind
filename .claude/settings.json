@@ -12,7 +12,11 @@
       "Read(//c/Users/sebas/.claude/**)",
       "Bash(python \"/c/Users/sebas/.claude/plugins/cache/ui-ux-pro-max-skill/ui-ux-pro-max/2.5.0/.claude/skills/ui-ux-pro-max/scripts/search.py\" \"productivity dashboard\" --domain product)",
       "Bash(python \"C:/Users/sebas/.claude/plugins/cache/ui-ux-pro-max-skill/ui-ux-pro-max/2.5.0/.claude/skills/ui-ux-pro-max/scripts/search.py\" \"productivity dashboard\" --domain product)",
-      "Bash(python \"C:/Users/sebas/.claude/plugins/cache/ui-ux-pro-max-skill/ui-ux-pro-max/2.5.0/src/ui-ux-pro-max/scripts/search.py\" \"productivity dashboard\" --domain product)"
+      "Bash(python \"C:/Users/sebas/.claude/plugins/cache/ui-ux-pro-max-skill/ui-ux-pro-max/2.5.0/src/ui-ux-pro-max/scripts/search.py\" \"productivity dashboard\" --domain product)",
+      "Bash(python \"C:/Users/sebas/.claude/plugins/cache/ui-ux-pro-max-skill/ui-ux-pro-max/2.5.0/src/ui-ux-pro-max/scripts/search.py\" \"productivity knowledge management dark minimal\" --design-system -p \"SecondMind\" -f markdown --persist)",
+      "Bash(python \"C:/Users/sebas/.claude/plugins/cache/ui-ux-pro-max-skill/ui-ux-pro-max/2.5.0/src/ui-ux-pro-max/scripts/search.py\" \"dark mode minimal productivity\" --domain style)",
+      "Bash(python \"C:/Users/sebas/.claude/plugins/cache/ui-ux-pro-max-skill/ui-ux-pro-max/2.5.0/src/ui-ux-pro-max/scripts/search.py\" \"productivity saas dashboard\" --domain color)",
+      "Bash(python \"C:/Users/sebas/.claude/plugins/cache/ui-ux-pro-max-skill/ui-ux-pro-max/2.5.0/src/ui-ux-pro-max/scripts/search.py\" \"clean modern readable\" --domain typography)"
     ],
     "additionalDirectories": ["C:\\Users\\sebas\\.claude"]
   },
