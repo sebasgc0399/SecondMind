@@ -6,14 +6,28 @@ import router from '@/app/router';
 import { notesStore } from '@/stores/notesStore';
 import { linksStore } from '@/stores/linksStore';
 import { inboxStore } from '@/stores/inboxStore';
+import { tasksStore } from '@/stores/tasksStore';
+import { projectsStore } from '@/stores/projectsStore';
+import { objectivesStore } from '@/stores/objectivesStore';
+import { habitsStore } from '@/stores/habitsStore';
 import './index.css';
 
 // notesStore es el store default del Provider (acceso sin storeId).
-// linksStore e inboxStore se acceden con storeId en los hooks reactivos,
-// por ejemplo: useRowIds('inbox', 'inbox').
+// Los demás stores se acceden con storeId en los hooks reactivos,
+// por ejemplo: useRowIds('inbox', 'inbox') o useTable('tasks', 'tasks').
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <Provider store={notesStore} storesById={{ links: linksStore, inbox: inboxStore }}>
+    <Provider
+      store={notesStore}
+      storesById={{
+        links: linksStore,
+        inbox: inboxStore,
+        tasks: tasksStore,
+        projects: projectsStore,
+        objectives: objectivesStore,
+        habits: habitsStore,
+      }}
+    >
       <RouterProvider router={router} />
     </Provider>
   </StrictMode>,
