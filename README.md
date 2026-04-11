@@ -25,12 +25,24 @@ Los principios de diseño, la teoría detrás (CODE de Tiago Forte, Zettelkasten
 
 ## Estado actual
 
-El proyecto está en desarrollo temprano. Las fases y su progreso se llevan en [CLAUDE.md](CLAUDE.md) y cada una tiene su SPEC en [`Spec/`](Spec/).
+Las fases y su progreso se llevan en [CLAUDE.md](CLAUDE.md) y cada una tiene su SPEC en [`Spec/`](Spec/).
 
-- **Fase 0 — Setup:** completada. Proyecto compilando, auth con Google, sync TinyBase ↔ Firestore, deploy a Firebase Hosting funcionando.
-- **Fase 0.1 — Toolkit** y **Fase 1 — MVP:** pendientes.
+- **Fase 0 — Setup** ✅ Proyecto compilando, auth con Google, sync TinyBase ↔ Firestore, deploy a Firebase Hosting
+- **Fase 0.1 — Toolkit** ✅ MCPs (Firebase, Context7, Playwright, Brave Search), skills de frontend/UX, hooks de formato automático (Prettier + ESLint en PostToolUse), protección de la rama main
+- **Fase 1 — MVP** ✅ Primera versión usable diariamente. 9 features completas:
+  - **F1 · Router:** React Router con layout (sidebar + outlet) y rutas `/`, `/inbox`, `/notes`, `/notes/:noteId`, `/settings`
+  - **F2 · Stores:** TinyBase v8 con schemas de notes/links/inbox y custom persister Firestore con `merge: true`
+  - **F3 · Quick Capture:** modal global con shortcut `Alt+N`, animación de confirmación, escribe al `inboxStore` sin clasificar
+  - **F4 · Editor:** TipTap con StarterKit + Node custom `wikilink` + autocompletado al escribir `[[`. Auto-save con debounce de 2s. El JSON del doc va directo a Firestore; la metadata a TinyBase
+  - **F5 · Links bidireccionales:** cada save sincroniza los wikilinks contra la colección `links/` con IDs determinísticos `source__target`. Filtra self-links y actualiza `incomingLinkIds`/`outgoingLinkIds` en ambas notas
+  - **F6 · Lista de notas + búsqueda:** vista `/notes` con FTS client-side vía Orama (rebuild on change del `notesStore`), cards con título/snippet/badges/fecha relativa, y botón "Nueva nota"
+  - **F7 · BacklinksPanel:** panel lateral en el editor que muestra las notas que apuntan a la actual, con contexto del párrafo. Toggleable, default abierto en desktop y cerrado en mobile. Resuelve títulos frescos haciendo join con `notesStore`
+  - **F8 · Vista Inbox:** `/inbox` con lista de items pendientes, acciones "Convertir a nota" y "Descartar". Badge reactivo con el count en el sidebar
+  - **F9 · Dashboard:** `/` con saludo contextual (mañana/tarde/noche), botón de captura rápida, card de inbox con los 3 items más recientes y card de notas recientes con las 5 últimas actualizaciones
 
-Aún no hay funcionalidad de usuario final: lo que está arriba es cimientos.
+**Ya se puede usar a diario:** capturar ideas con `Alt+N`, escribir notas atómicas con wikilinks, ver backlinks en el panel lateral, buscar notas instantáneamente y procesar el inbox manualmente.
+
+- **Fase 2 — Ejecución:** próxima. Tareas, proyectos, objetivos, habit tracker
 
 ## Setup local
 
