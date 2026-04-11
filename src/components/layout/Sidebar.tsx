@@ -1,3 +1,4 @@
+import { NavLink } from 'react-router';
 import {
   LayoutDashboard,
   Inbox,
@@ -6,8 +7,10 @@ import {
   FolderKanban,
   Target,
   Repeat,
+  Settings,
   LogOut,
 } from 'lucide-react';
+import { cn } from '@/lib/utils';
 import type { User } from 'firebase/auth';
 import type { LucideIcon } from 'lucide-react';
 
@@ -19,17 +22,25 @@ interface SidebarProps {
 interface NavItem {
   label: string;
   icon: LucideIcon;
+  to?: string;
+  end?: boolean;
 }
 
 const navItems: NavItem[] = [
-  { label: 'Dashboard', icon: LayoutDashboard },
-  { label: 'Inbox', icon: Inbox },
-  { label: 'Notas', icon: FileText },
+  { label: 'Dashboard', icon: LayoutDashboard, to: '/', end: true },
+  { label: 'Inbox', icon: Inbox, to: '/inbox' },
+  { label: 'Notas', icon: FileText, to: '/notes' },
   { label: 'Tareas', icon: CheckSquare },
   { label: 'Proyectos', icon: FolderKanban },
   { label: 'Objetivos', icon: Target },
   { label: 'Hábitos', icon: Repeat },
 ];
+
+const baseItemClass =
+  'flex w-full items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors';
+const inactiveClass =
+  'text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground';
+const activeClass = 'bg-sidebar-accent text-sidebar-accent-foreground';
 
 export default function Sidebar({ user, onSignOut }: SidebarProps) {
   return (
@@ -51,22 +62,43 @@ export default function Sidebar({ user, onSignOut }: SidebarProps) {
       </div>
 
       <nav className="flex-1 space-y-1 p-2">
-        {navItems.map((item) => (
-          <button
-            key={item.label}
-            className="flex w-full items-center gap-3 rounded-md px-3 py-2 text-sm text-sidebar-foreground transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
-          >
-            <item.icon className="h-4 w-4" />
-            {item.label}
-          </button>
-        ))}
+        {navItems.map((item) =>
+          item.to ? (
+            <NavLink
+              key={item.label}
+              to={item.to}
+              end={item.end}
+              className={({ isActive }) =>
+                cn(baseItemClass, isActive ? activeClass : inactiveClass)
+              }
+            >
+              <item.icon className="h-4 w-4" />
+              {item.label}
+            </NavLink>
+          ) : (
+            <button
+              key={item.label}
+              type="button"
+              disabled
+              title="Próximamente — Fase 2"
+              className={cn(baseItemClass, 'cursor-not-allowed text-sidebar-foreground opacity-50')}
+            >
+              <item.icon className="h-4 w-4" />
+              {item.label}
+            </button>
+          ),
+        )}
       </nav>
 
-      <div className="border-t border-sidebar-border p-2">
-        <button
-          onClick={onSignOut}
-          className="flex w-full items-center gap-3 rounded-md px-3 py-2 text-sm text-sidebar-foreground transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+      <div className="space-y-1 border-t border-sidebar-border p-2">
+        <NavLink
+          to="/settings"
+          className={({ isActive }) => cn(baseItemClass, isActive ? activeClass : inactiveClass)}
         >
+          <Settings className="h-4 w-4" />
+          Settings
+        </NavLink>
+        <button type="button" onClick={onSignOut} className={cn(baseItemClass, inactiveClass)}>
           <LogOut className="h-4 w-4" />
           Sign out
         </button>
