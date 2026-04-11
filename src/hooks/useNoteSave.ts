@@ -3,6 +3,9 @@ import { doc, updateDoc } from 'firebase/firestore';
 import type { Editor } from '@tiptap/react';
 import { db } from '@/lib/firebase';
 import { notesStore } from '@/stores/notesStore';
+import { stringifyIds } from '@/lib/tinybase';
+import { extractLinks } from '@/lib/editor/extractLinks';
+import { syncLinks } from '@/lib/editor/syncLinks';
 import useAuth from '@/hooks/useAuth';
 
 export const AUTOSAVE_DEBOUNCE_MS = 2000;
@@ -57,10 +60,20 @@ export default function useNoteSave(
         updatedAt,
       });
 
+      const extracted = extractLinks(json);
+      const { outgoingLinkIds, linkCount } = await syncLinks({
+        sourceId: currentNoteId,
+        sourceTitle: title,
+        userId: currentUid,
+        newLinks: extracted,
+      });
+
       notesStore.setPartialRow('notes', currentNoteId, {
         title,
         contentPlain,
         updatedAt,
+        linkCount,
+        outgoingLinkIds: stringifyIds(outgoingLinkIds),
       });
 
       setStatus('saved');
