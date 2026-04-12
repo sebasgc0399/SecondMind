@@ -21,12 +21,28 @@ import type {
 
 const INIT_GRACE_MS = 200;
 
+interface ConvertOptions {
+  skipNavigate?: boolean;
+}
+
 interface UseInboxReturn {
   items: InboxItem[];
   isInitializing: boolean;
-  convertToNote: (itemId: string, overrides?: ConvertOverrides) => Promise<void>;
-  convertToTask: (itemId: string, overrides?: ConvertOverrides) => Promise<void>;
-  convertToProject: (itemId: string, overrides?: ConvertOverrides) => Promise<void>;
+  convertToNote: (
+    itemId: string,
+    overrides?: ConvertOverrides,
+    options?: ConvertOptions,
+  ) => Promise<void>;
+  convertToTask: (
+    itemId: string,
+    overrides?: ConvertOverrides,
+    options?: ConvertOptions,
+  ) => Promise<void>;
+  convertToProject: (
+    itemId: string,
+    overrides?: ConvertOverrides,
+    options?: ConvertOptions,
+  ) => Promise<void>;
   dismiss: (itemId: string) => void;
 }
 
@@ -78,7 +94,7 @@ export default function useInbox(): UseInboxReturn {
   }, [table]);
 
   const convertToNote = useCallback(
-    async (itemId: string, overrides?: ConvertOverrides) => {
+    async (itemId: string, overrides?: ConvertOverrides, options?: ConvertOptions) => {
       if (!user) return;
       const row = inboxStore.getRow('inbox', itemId);
       if (!row || Object.keys(row).length === 0) return;
@@ -137,7 +153,9 @@ export default function useInbox(): UseInboxReturn {
           status: 'processed',
           processedAs: JSON.stringify({ type: 'note', resultId: newNoteId }),
         });
-        navigate(`/notes/${newNoteId}`);
+        if (!options?.skipNavigate) {
+          navigate(`/notes/${newNoteId}`);
+        }
       } catch (error) {
         console.error('[useInbox] convertToNote failed', error);
       }
@@ -146,7 +164,7 @@ export default function useInbox(): UseInboxReturn {
   );
 
   const convertToTask = useCallback(
-    async (itemId: string, overrides?: ConvertOverrides) => {
+    async (itemId: string, overrides?: ConvertOverrides, options?: ConvertOptions) => {
       if (!user) return;
       const row = inboxStore.getRow('inbox', itemId);
       if (!row || Object.keys(row).length === 0) return;
@@ -168,13 +186,15 @@ export default function useInbox(): UseInboxReturn {
         status: 'processed',
         processedAs: JSON.stringify({ type: 'task', resultId: taskId }),
       });
-      navigate('/tasks');
+      if (!options?.skipNavigate) {
+        navigate('/tasks');
+      }
     },
     [user, createTask, navigate],
   );
 
   const convertToProject = useCallback(
-    async (itemId: string, overrides?: ConvertOverrides) => {
+    async (itemId: string, overrides?: ConvertOverrides, options?: ConvertOptions) => {
       if (!user) return;
       const row = inboxStore.getRow('inbox', itemId);
       if (!row || Object.keys(row).length === 0) return;
@@ -198,7 +218,9 @@ export default function useInbox(): UseInboxReturn {
         status: 'processed',
         processedAs: JSON.stringify({ type: 'project', resultId: projectId }),
       });
-      navigate(`/projects/${projectId}`);
+      if (!options?.skipNavigate) {
+        navigate(`/projects/${projectId}`);
+      }
     },
     [user, createProject, navigate],
   );

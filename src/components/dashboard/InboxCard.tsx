@@ -15,7 +15,7 @@ export default function InboxCard() {
         <h2 className="text-base font-semibold text-foreground">📬 Inbox</h2>
         {items.length > 0 && (
           <Link
-            to="/inbox"
+            to="/inbox/process"
             className="text-xs text-muted-foreground transition-colors hover:text-foreground"
           >
             Procesar →

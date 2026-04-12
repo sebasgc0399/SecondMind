@@ -1,4 +1,6 @@
 import { useCallback } from 'react';
+import { Link } from 'react-router';
+import { Play } from 'lucide-react';
 import useInbox from '@/hooks/useInbox';
 import InboxItemCard from '@/components/capture/InboxItem';
 import type { ConvertOverrides, InboxAiResult } from '@/types/inbox';
@@ -40,10 +42,29 @@ export default function InboxPage() {
   return (
     <div className="mx-auto max-w-3xl">
       <header className="mb-6 flex items-end justify-between gap-4">
-        <h1 className="text-2xl font-bold tracking-tight">Inbox</h1>
-        {items.length > 0 && (
-          <span className="text-sm text-muted-foreground">
-            {items.length} {items.length === 1 ? 'pendiente' : 'pendientes'}
+        <div className="flex items-end gap-3">
+          <h1 className="text-2xl font-bold tracking-tight">Inbox</h1>
+          {items.length > 0 && (
+            <span className="text-sm text-muted-foreground">
+              {items.length} {items.length === 1 ? 'pendiente' : 'pendientes'}
+            </span>
+          )}
+        </div>
+        {items.length > 0 ? (
+          <Link
+            to="/inbox/process"
+            className="inline-flex items-center gap-1.5 rounded-md bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
+          >
+            <Play className="h-3.5 w-3.5" />
+            Procesar
+          </Link>
+        ) : (
+          <span
+            aria-disabled="true"
+            className="inline-flex items-center gap-1.5 rounded-md bg-primary/30 px-3 py-1.5 text-sm font-medium text-primary-foreground/60"
+          >
+            <Play className="h-3.5 w-3.5" />
+            Procesar
           </span>
         )}
       </header>
