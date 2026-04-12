@@ -27,9 +27,19 @@
       "mcp__firebase__firestore_delete_document",
       "mcp__playwright__browser_press_key",
       "mcp__playwright__browser_type",
-      "mcp__firebase__firestore_list_documents"
+      "mcp__firebase__firestore_list_documents",
+      "Bash(git checkout:*)",
+      "Bash(echo \"EXIT_CODE=$?\")",
+      "Bash(firebase functions:secrets:access ANTHROPIC_API_KEY)",
+      "Bash(firebase deploy:*)",
+      "Bash(node -e \"console.time\\('load'\\); require\\('./lib/index.js'\\); console.timeEnd\\('load'\\)\")",
+      "Bash(firebase functions:list)",
+      "Bash(firebase functions:log --only processInboxItem --lines 30)",
+      "mcp__playwright__browser_close"
     ],
-    "additionalDirectories": ["C:\\Users\\sebas\\.claude"]
+    "additionalDirectories": [
+      "C:\\Users\\sebas\\.claude"
+    ]
   },
   "hooks": {
     "PostToolUse": [
