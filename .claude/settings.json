@@ -35,11 +35,11 @@
       "Bash(node -e \"console.time\\('load'\\); require\\('./lib/index.js'\\); console.timeEnd\\('load'\\)\")",
       "Bash(firebase functions:list)",
       "Bash(firebase functions:log --only processInboxItem --lines 30)",
-      "mcp__playwright__browser_close"
+      "mcp__playwright__browser_close",
+      "Bash(echo \"EXIT=$?\")",
+      "Bash(firebase functions:log --only processInboxItem --lines 15)"
     ],
-    "additionalDirectories": [
-      "C:\\Users\\sebas\\.claude"
-    ]
+    "additionalDirectories": ["C:\\Users\\sebas\\.claude"]
   },
   "hooks": {
     "PostToolUse": [
