@@ -10,10 +10,16 @@ import type { Priority, TaskStatus } from '@/types/common';
 
 const INIT_GRACE_MS = 200;
 
+interface CreateTaskOptions {
+  priority?: Priority;
+  areaId?: string;
+  projectId?: string;
+}
+
 interface UseTasksReturn {
   tasks: Task[];
   isInitializing: boolean;
-  createTask: (name: string) => Promise<string | null>;
+  createTask: (name: string, options?: CreateTaskOptions) => Promise<string | null>;
   updateTask: (id: string, updates: Partial<Task>) => Promise<void>;
   completeTask: (id: string) => Promise<void>;
 }
@@ -52,7 +58,7 @@ export default function useTasks(): UseTasksReturn {
   }, [table]);
 
   const createTask = useCallback(
-    async (name: string): Promise<string | null> => {
+    async (name: string, options?: CreateTaskOptions): Promise<string | null> => {
       if (!user) return null;
       const trimmed = name.trim();
       if (!trimmed) return null;
@@ -63,10 +69,10 @@ export default function useTasks(): UseTasksReturn {
       const defaults = {
         name: trimmed,
         status: 'in-progress' as TaskStatus,
-        priority: 'medium' as Priority,
+        priority: (options?.priority ?? 'medium') as Priority,
         dueDate: now,
-        projectId: '',
-        areaId: '',
+        projectId: options?.projectId ?? '',
+        areaId: options?.areaId ?? '',
         objectiveId: '',
         noteIds: '[]',
         description: '',

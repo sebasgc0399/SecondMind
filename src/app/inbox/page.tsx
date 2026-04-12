@@ -1,11 +1,41 @@
+import { useCallback } from 'react';
 import useInbox from '@/hooks/useInbox';
 import InboxItemCard from '@/components/capture/InboxItem';
+import type { ConvertOverrides, InboxAiResult } from '@/types/inbox';
 
 export default function InboxPage() {
-  const { items, isInitializing, convertToNote, dismiss } = useInbox();
+  const { items, isInitializing, convertToNote, convertToTask, convertToProject, dismiss } =
+    useInbox();
 
   const showSkeleton = isInitializing && items.length === 0;
   const showEmpty = !isInitializing && items.length === 0;
+
+  const handleAcceptSuggestion = useCallback(
+    (itemId: string, edited: InboxAiResult) => {
+      const overrides: ConvertOverrides = {
+        title: edited.suggestedTitle,
+        area: edited.suggestedArea,
+        priority: edited.priority,
+        tags: edited.suggestedTags,
+      };
+      switch (edited.suggestedType) {
+        case 'note':
+          void convertToNote(itemId, overrides);
+          break;
+        case 'task':
+          void convertToTask(itemId, overrides);
+          break;
+        case 'project':
+          void convertToProject(itemId, overrides);
+          break;
+        case 'trash':
+        case 'reference':
+        default:
+          dismiss(itemId);
+      }
+    },
+    [convertToNote, convertToTask, convertToProject, dismiss],
+  );
 
   return (
     <div className="mx-auto max-w-3xl">
@@ -32,6 +62,7 @@ export default function InboxPage() {
                   void convertToNote(item.id);
                 }}
                 onDismiss={() => dismiss(item.id)}
+                onAcceptSuggestion={(edited) => handleAcceptSuggestion(item.id, edited)}
               />
             </li>
           ))}
