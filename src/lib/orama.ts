@@ -1,6 +1,65 @@
 import { create, type AnyOrama } from '@orama/orama';
 import type { Row } from 'tinybase';
 
+// --- Global search schema (Command Palette F5) ---
+
+export type GlobalDocType = 'note' | 'task' | 'project';
+
+export const GLOBAL_SCHEMA = {
+  id: 'string',
+  _type: 'string',
+  title: 'string',
+  body: 'string',
+  updatedAt: 'number',
+  isArchived: 'boolean',
+} as const;
+
+export interface GlobalOramaDoc {
+  id: string;
+  _type: GlobalDocType;
+  title: string;
+  body: string;
+  updatedAt: number;
+  isArchived: boolean;
+}
+
+export function createGlobalIndex(): AnyOrama {
+  return create({ schema: GLOBAL_SCHEMA });
+}
+
+export function noteRowToGlobalDoc(id: string, row: Row): GlobalOramaDoc {
+  return {
+    id,
+    _type: 'note',
+    title: ((row.title as string) || '').trim() || 'Sin título',
+    body: (row.contentPlain as string) || '',
+    updatedAt: Number(row.updatedAt) || 0,
+    isArchived: Boolean(row.isArchived),
+  };
+}
+
+export function taskRowToGlobalDoc(id: string, row: Row): GlobalOramaDoc {
+  return {
+    id,
+    _type: 'task',
+    title: ((row.name as string) || '').trim() || 'Sin título',
+    body: (row.description as string) || '',
+    updatedAt: Number(row.updatedAt) || 0,
+    isArchived: Boolean(row.isArchived),
+  };
+}
+
+export function projectRowToGlobalDoc(id: string, row: Row): GlobalOramaDoc {
+  return {
+    id,
+    _type: 'project',
+    title: ((row.name as string) || '').trim() || 'Sin título',
+    body: '',
+    updatedAt: Number(row.updatedAt) || 0,
+    isArchived: Boolean(row.isArchived),
+  };
+}
+
 export const NOTES_SCHEMA = {
   id: 'string',
   title: 'string',
