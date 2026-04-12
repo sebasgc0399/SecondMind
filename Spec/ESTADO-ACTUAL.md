@@ -83,23 +83,29 @@ Ambas CFs usan `tools` + `tool_choice: { type: 'tool', name: '...' }` para forza
 
 6. **Quick Capture shortcut es `Alt+N`** (no `Ctrl+Shift+N` que choca con Chrome incógnito).
 
+7. **`React.FormEvent` deprecated en React 19.** Poner handler inline `onSubmit={(event) => { event.preventDefault(); void submit(); }}` para que TypeScript infiera el tipo sin importar el type deprecated.
+
+### Data y links
+
+8. **Self-links filtrados en `syncLinks`:** `targetId !== sourceId` es un guard activo. Sin este filtro, una nota que se referencia a sí misma con `[[wikilink]]` poluciona el grafo con loops. Aplica a cualquier refactor que toque `extractLinks` o `syncLinks`.
+
 ### Cloud Functions
 
-7. **firebase-functions v7 obligatorio.** La v6 fallaba con timeout en el discovery protocol de la CLI. Importante al elegir versiones.
+9. **firebase-functions v7 obligatorio.** La v6 fallaba con timeout en el discovery protocol de la CLI. Importante al elegir versiones.
 
-8. **`.gitignore` de functions: `/lib/` con anchor.** Sin anchor, matchea `src/lib/` (sources) además de `lib/` (compiled).
+10. **`.gitignore` de functions: `/lib/` con anchor.** Sin anchor, matchea `src/lib/` (sources) además de `lib/` (compiled).
 
 ---
 
 ## Gotchas activos — Tooling de desarrollo
 
-9. **TypeScript LSP plugin requiere patch en Windows.** `child_process.spawn()` sin `shell: true` no resuelve wrappers `.cmd` de npm global. Fix: parchear `marketplace.json` con `command: "node"` + ruta absoluta a `typescript-language-server/lib/cli.mjs`. Se pierde si Claude Code actualiza el marketplace.
+11. **TypeScript LSP plugin requiere patch en Windows.** `child_process.spawn()` sin `shell: true` no resuelve wrappers `.cmd` de npm global. Fix: parchear `marketplace.json` con `command: "node"` + ruta absoluta a `typescript-language-server/lib/cli.mjs`. Se pierde si Claude Code actualiza el marketplace.
 
-10. **Firebase MCP: `node` directo al CLI local, no `npx`.** `npx firebase@latest` falla con "Invalid Version". Configurado en `.mcp.json`.
+12. **Firebase MCP: `node` directo al CLI local, no `npx`.** `npx firebase@latest` falla con "Invalid Version". Configurado en `.mcp.json`.
 
-11. **Brave Search: `BRAVE_API_KEY` como variable de sistema Windows**, no en `.env.local`.
+13. **Brave Search: `BRAVE_API_KEY` como variable de sistema Windows**, no en `.env.local`.
 
-12. **ui-ux-pro-max symlinks rotos en Windows** sin Developer Mode. Los scripts reales viven en `src/ui-ux-pro-max/scripts/search.py`. Fix: Developer Mode + `git config --global core.symlinks true` + reinstalar plugin.
+14. **ui-ux-pro-max symlinks rotos en Windows** sin Developer Mode. Los scripts reales viven en `src/ui-ux-pro-max/scripts/search.py`. Fix: Developer Mode + `git config --global core.symlinks true` + reinstalar plugin.
 
 ---
 
