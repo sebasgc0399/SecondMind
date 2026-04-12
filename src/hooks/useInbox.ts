@@ -137,7 +137,7 @@ export default function useInbox(): UseInboxReturn {
         distillLevel: 0,
         aiTags: '[]',
         aiSummary: '',
-        aiProcessed: false,
+        aiProcessed: !!(overrides?.tags && overrides.tags.length > 0),
         createdAt: now,
         updatedAt: now,
         lastViewedAt: 0,
