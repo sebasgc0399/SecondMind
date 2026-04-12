@@ -155,7 +155,7 @@ IMPORTANT: Siempre consultar el doc de arquitectura (01) para schemas de datos y
 - Siempre loggear con contexto: `{ userId, entityId }`
 - Timeout y retry configurados explícitamente, nunca defaults
 - Secret management: `defineSecret('ANTHROPIC_API_KEY')` + declarar en `secrets: [...]` del trigger. El valor se accede con `secret.value()` dentro del handler, no en top-level
-- `stripJsonFence` helper compartido en `src/functions/src/lib/parseJson.ts` para parsear JSON de Claude que puede venir wrapped en markdown fences
+- Tool use con schema enforcement: ambas CFs usan `tools` + `tool_choice: { type: 'tool' }` para forzar JSON válido. Schemas compartidos en `src/functions/src/lib/schemas.ts`
 - Cloud Functions desplegadas: `processInboxItem` (`onDocumentCreated` inbox) + `autoTagNote` (`onDocumentWritten` notes)
 
 ### Git
@@ -192,7 +192,7 @@ IMPORTANT: Siempre consultar el doc de arquitectura (01) para schemas de datos y
 - **Optimistic updates** para acciones inmediatas (toggle checkbox, favorito, archivar). TinyBase actualiza local → persister sincroniza a Firestore async.
 - **TypeScript LSP plugin requiere patch en Windows:** El plugin `typescript-lsp@claude-plugins-official` no funciona out-of-the-box en Windows por un bug de `spawn()` con wrappers `.cmd`. Ver sección "Toolkit Claude Code → TypeScript LSP" arriba. Si el LSP devuelve `ENOENT: uv_spawn 'typescript-language-server'`, el patch del marketplace.json fue revertido por una actualización.
 - **ui-ux-pro-max symlinks rotos en Windows:** El skill instala symlinks en `~/.claude/plugins/cache/ui-ux-pro-max-skill/.../skills/ui-ux-pro-max/scripts` y `/data` que apuntan a `src/ui-ux-pro-max/`. En Windows sin Developer Mode (o `git config core.symlinks false`), git clona los symlinks como archivos de texto con el path, rompiendo la ejecución. Los scripts reales viven en `src/ui-ux-pro-max/scripts/search.py`. Fix permanente: activar Developer Mode de Windows + `git config --global core.symlinks true` + reinstalar el plugin.
-- **Claude Haiku devuelve `null` en campos individuales del JSON** para inputs basura (especialmente `suggestedArea`). Validar cada campo con fallback en las Cloud Functions — no hacer throw en validación de campos opcionales. El fallback para área es `'conocimiento'`.
+- **Claude Haiku con tool use no produce nulls** — Fase 3.1 migró las CFs a tool use con schema enforcement (`tool_choice: { type: 'tool' }`). Los `enum` y `required` del JSON Schema garantizan valores válidos a nivel de decoder. Ya no se necesitan fallbacks manuales ni `stripJsonFence`.
 - **`isInitializing` de hooks (200ms) no es suficiente para snapshots de datos en full reload.** Los persisters pueden tardar más en hidratar el store. Para decisiones de "¿hay datos o no?" (ej: batch del InboxProcessor, redirect por existencia de row), usar un grace dedicado más largo (1500ms) o observar `items.length > 0` como signal real. Mismo patrón que `redirectGraceExpired` de ProjectDetailPage de Fase 2.
 - **`onDocumentCreated` no cubre notas creadas vacías desde el editor.** Las notas desde `/notes` se crean con `contentPlain: ''` y el texto llega en el auto-save (2s después). `autoTagNote` usa `onDocumentWritten` con guard `aiProcessed` para procesar en el primer write con contenido sin re-procesar en updates subsiguientes.
 - **Notas del inbox processor necesitan `aiProcessed: true` al crear** si vienen con tags aceptados del AI. Sin esto, `autoTagNote` sobrescribiría los tags que el usuario aceptó de la sugerencia del inbox. `convertToNote` en `useInbox.ts` setea `aiProcessed: !!(overrides?.tags?.length > 0)`.
@@ -204,6 +204,7 @@ IMPORTANT: Siempre consultar el doc de arquitectura (01) para schemas de datos y
 - **Fase 1 (MVP) ✅:** Quick Capture + TipTap editor con WikiLinks + Lista de notas + Backlinks + Inbox + Dashboard minimo
 - **Fase 2 (Ejecucion) ✅:** Tareas + Proyectos + Objetivos + Habit Tracker. Ver `Spec/SPEC-fase-2-ejecucion.md`
 - **Fase 3 (AI) ✅:** Claude Haiku inbox processing (CF processInboxItem) + schema aiResult flat + InboxItem card con sugerencias + InboxProcessor one-by-one + Command Palette (Ctrl+K) con Orama FTS global + auto-tagging notas (CF autoTagNote). Ver `Spec/SPEC-fase-3-ai-pipeline.md`
+- **Fase 3.1 (Schema Enforcement) ✅:** Tool use con JSON Schema enforcement en ambas CFs. Elimina stripJsonFence, fallbacks null, código defensivo de parsing. Schemas compartidos en `schemas.ts`. Ver `Spec/SPEC-fase-3.1-ai-provider.md`
 - **Fase 4 (Grafo + Resurfacing):** Knowledge graph + Embeddings + FSRS resurfacing + Daily Digest
 - **Fase 5 (Multi-plataforma):** PWA + Tauri (desktop) + Capacitor (mobile) + Chrome extension
 
