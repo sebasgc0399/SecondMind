@@ -31,5 +31,8 @@ export const notesStore = createStore().setTablesSchema({
     viewCount: { type: 'number', default: 0 },
     isFavorite: { type: 'boolean', default: false },
     isArchived: { type: 'boolean', default: false },
+    fsrsState: { type: 'string', default: '' },
+    fsrsDue: { type: 'number', default: 0 },
+    fsrsLastReview: { type: 'number', default: 0 },
   },
 });

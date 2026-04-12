@@ -27,4 +27,7 @@ export interface Note {
   viewCount: number;
   isFavorite: boolean;
   isArchived: boolean;
+  fsrsState?: string;
+  fsrsDue?: number;
+  fsrsLastReview?: number;
 }

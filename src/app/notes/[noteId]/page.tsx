@@ -3,6 +3,7 @@ import { useNavigate, useParams } from 'react-router';
 import { useRow } from 'tinybase/ui-react';
 import NoteEditor from '@/components/editor/NoteEditor';
 import BacklinksPanel, { BacklinksToggle } from '@/components/editor/BacklinksPanel';
+import ReviewBanner from '@/components/editor/ReviewBanner';
 import useNote from '@/hooks/useNote';
 import useBacklinks from '@/hooks/useBacklinks';
 
@@ -46,6 +47,7 @@ export default function NoteDetailPage() {
   return (
     <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:gap-6">
       <div className="min-w-0 flex-1">
+        <ReviewBanner noteId={noteId} />
         <NoteEditor
           key={noteId}
           noteId={noteId}
