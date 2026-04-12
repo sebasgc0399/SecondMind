@@ -33,3 +33,10 @@ export interface InboxItem {
   processedAs?: InboxProcessedAs;
   createdAt: number;
 }
+
+export interface ConvertOverrides {
+  title?: string;
+  area?: AreaKey;
+  priority?: Priority;
+  tags?: string[];
+}
