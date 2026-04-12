@@ -82,10 +82,11 @@ function parseSuggestion(text: string): AiSuggestion {
     ? rawTags.filter((t): t is string => typeof t === 'string').slice(0, 10)
     : [];
 
-  const suggestedArea = obj.suggestedArea;
-  if (typeof suggestedArea !== 'string' || !VALID_AREAS.includes(suggestedArea as SuggestedArea)) {
-    throw new Error(`suggestedArea inválido: ${String(suggestedArea)}`);
-  }
+  const rawArea = obj.suggestedArea;
+  const validatedArea: SuggestedArea =
+    typeof rawArea === 'string' && VALID_AREAS.includes(rawArea as SuggestedArea)
+      ? (rawArea as SuggestedArea)
+      : 'conocimiento';
 
   const summary = typeof obj.summary === 'string' ? obj.summary : '';
 
@@ -99,7 +100,7 @@ function parseSuggestion(text: string): AiSuggestion {
     suggestedTitle: suggestedTitle.slice(0, 200),
     suggestedType: suggestedType as SuggestedType,
     suggestedTags,
-    suggestedArea: suggestedArea as SuggestedArea,
+    suggestedArea: validatedArea,
     summary,
     priority: validatedPriority,
   };
