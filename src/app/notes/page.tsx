@@ -1,7 +1,8 @@
 import { useCallback } from 'react';
 import { useNavigate } from 'react-router';
 import { doc, setDoc } from 'firebase/firestore';
-import { Plus, Search } from 'lucide-react';
+import { Link } from 'react-router';
+import { Plus, Search, Network } from 'lucide-react';
 import { db } from '@/lib/firebase';
 import { notesStore } from '@/stores/notesStore';
 import useAuth from '@/hooks/useAuth';
@@ -57,14 +58,23 @@ export default function NotesListPage() {
     <div className="mx-auto max-w-3xl">
       <header className="mb-6 flex items-center justify-between gap-4">
         <h1 className="text-2xl font-bold tracking-tight">Notas</h1>
-        <button
-          type="button"
-          onClick={handleCreate}
-          className="inline-flex items-center gap-1.5 rounded-md bg-primary px-3 py-2 text-sm font-medium text-primary-foreground shadow-sm transition-colors hover:bg-primary/90"
-        >
-          <Plus className="h-4 w-4" />
-          Nueva nota
-        </button>
+        <div className="flex items-center gap-2">
+          <Link
+            to="/notes/graph"
+            className="inline-flex items-center gap-1.5 rounded-md border border-border px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+          >
+            <Network className="h-4 w-4" />
+            Ver como grafo
+          </Link>
+          <button
+            type="button"
+            onClick={handleCreate}
+            className="inline-flex items-center gap-1.5 rounded-md bg-primary px-3 py-2 text-sm font-medium text-primary-foreground shadow-sm transition-colors hover:bg-primary/90"
+          >
+            <Plus className="h-4 w-4" />
+            Nueva nota
+          </button>
+        </div>
       </header>
 
       <div className="relative mb-4">
