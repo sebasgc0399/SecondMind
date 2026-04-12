@@ -4,6 +4,7 @@ import { useRow } from 'tinybase/ui-react';
 import NoteEditor from '@/components/editor/NoteEditor';
 import BacklinksPanel, { BacklinksToggle } from '@/components/editor/BacklinksPanel';
 import ReviewBanner from '@/components/editor/ReviewBanner';
+import SimilarNotesPanel from '@/components/editor/SimilarNotesPanel';
 import useNote from '@/hooks/useNote';
 import useBacklinks from '@/hooks/useBacklinks';
 
@@ -59,7 +60,12 @@ export default function NoteDetailPage() {
           }
         />
       </div>
-      {isPanelOpen && <BacklinksPanel noteId={noteId} onClose={() => setIsPanelOpen(false)} />}
+      {isPanelOpen && (
+        <div className="w-full lg:w-72 lg:shrink-0">
+          <BacklinksPanel noteId={noteId} onClose={() => setIsPanelOpen(false)} />
+          <SimilarNotesPanel noteId={noteId} />
+        </div>
+      )}
     </div>
   );
 }
