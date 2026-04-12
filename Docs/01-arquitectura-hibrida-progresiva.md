@@ -9,11 +9,13 @@
 ## 1. Visión general
 
 Un sistema de productividad y conocimiento personal que combina:
+
 - **Ejecución** (tareas, proyectos, objetivos — lo que ya funciona en Notion)
 - **Conocimiento vivo** (notas atómicas, links bidireccionales, grafo — lo que falta)
 - **AI como copiloto** (procesamiento de inbox, auto-tagging, command palette, resurfacing)
 
 ### Principio rector
+
 Construir lo mínimo que genere valor diario, iterar basándose en uso real. Cada fase debe ser usable por sí sola — no hay "todo o nada".
 
 ---
@@ -22,30 +24,30 @@ Construir lo mínimo que genere valor diario, iterar basándose en uso real. Cad
 
 ### Core
 
-| Capa | Tecnología | Justificación |
-|------|-----------|---------------|
-| **UI Framework** | React 19 + TypeScript strict | Stack conocido, máximo code-reuse |
-| **Build** | Vite | Rápido, sin config extra |
-| **Estilos** | Tailwind CSS v4 (CSS-first, `@theme` en `src/index.css`) | No existe `tailwind.config.ts` — toda la config vive en CSS |
-| **Editor de notas** | TipTap (ProseMirror) | Headless, extensible, wikilinks custom |
-| **Store reactivo** | TinyBase v8 | 13KB, hooks React. No tiene persister Firestore nativo — se usa `createCustomPersister` |
-| **Backend** | Firebase (Firestore + Cloud Functions v2 + Auth + Storage + Hosting) | Stack conocido, $0 en free tier |
-| **AI** | Cloud Functions v2 + Anthropic SDK (`@anthropic-ai/sdk`) → Claude Haiku (`claude-haiku-4-5-20251001`) | ~$0.02/mes para uso personal |
-| **Búsqueda local** | Orama | ~40KB, TypeScript-native, FTS client-side. 2 indexes: notas (Fase 1) + global unificado (Fase 3) |
-| **UI Components** | shadcn/ui (Base UI / `@base-ui/react`) | **No es Radix UI** — usa `data-open`/`data-closed` + `data-starting-style`/`data-ending-style`, NO `data-state` |
-| **Routing** | React Router v7 (`createBrowserRouter`) | Client-side routing con layouts anidados |
-| **Iconos** | lucide-react | Consistente, tree-shakeable |
+| Capa                | Tecnología                                                                                            | Justificación                                                                                                   |
+| ------------------- | ----------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------- |
+| **UI Framework**    | React 19 + TypeScript strict                                                                          | Stack conocido, máximo code-reuse                                                                               |
+| **Build**           | Vite                                                                                                  | Rápido, sin config extra                                                                                        |
+| **Estilos**         | Tailwind CSS v4 (CSS-first, `@theme` en `src/index.css`)                                              | No existe `tailwind.config.ts` — toda la config vive en CSS                                                     |
+| **Editor de notas** | TipTap (ProseMirror)                                                                                  | Headless, extensible, wikilinks custom                                                                          |
+| **Store reactivo**  | TinyBase v8                                                                                           | 13KB, hooks React. No tiene persister Firestore nativo — se usa `createCustomPersister`                         |
+| **Backend**         | Firebase (Firestore + Cloud Functions v2 + Auth + Storage + Hosting)                                  | Stack conocido, $0 en free tier                                                                                 |
+| **AI**              | Cloud Functions v2 + Anthropic SDK (`@anthropic-ai/sdk`) → Claude Haiku (`claude-haiku-4-5-20251001`) | ~$0.02/mes para uso personal                                                                                    |
+| **Búsqueda local**  | Orama                                                                                                 | ~40KB, TypeScript-native, FTS client-side. 2 indexes: notas (Fase 1) + global unificado (Fase 3)                |
+| **UI Components**   | shadcn/ui (Base UI / `@base-ui/react`)                                                                | **No es Radix UI** — usa `data-open`/`data-closed` + `data-starting-style`/`data-ending-style`, NO `data-state` |
+| **Routing**         | React Router v7 (`createBrowserRouter`)                                                               | Client-side routing con layouts anidados                                                                        |
+| **Iconos**          | lucide-react                                                                                          | Consistente, tree-shakeable                                                                                     |
 
 ### Fases posteriores
 
-| Capa | Tecnología | Fase |
-|------|-----------|------|
-| **Grafo visual** | Reagraph → Sigma.js + Graphology | Fase 4 |
-| **Embeddings** | OpenAI text-embedding-3-small | Fase 4 |
-| **Resurfacing** | ts-fsrs (spaced repetition adaptado) | Fase 4 |
-| **Desktop** | PWA → Tauri (hotkey + system tray) | Fase 5 |
-| **Mobile** | PWA → Capacitor | Fase 5 |
-| **Web clipper** | Chrome extension minimal | Fase 5 |
+| Capa                   | Tecnología                                 | Fase    |
+| ---------------------- | ------------------------------------------ | ------- |
+| **Grafo visual**       | Reagraph → Sigma.js + Graphology           | Fase 4  |
+| **Embeddings**         | OpenAI text-embedding-3-small              | Fase 4  |
+| **Resurfacing**        | ts-fsrs (spaced repetition adaptado)       | Fase 4  |
+| **Desktop**            | PWA → Tauri (hotkey + system tray)         | Fase 5  |
+| **Mobile**             | PWA → Capacitor                            | Fase 5  |
+| **Web clipper**        | Chrome extension minimal                   | Fase 5  |
 | **Búsqueda semántica** | Orama keyword + embeddings cosine (hybrid) | Fase 5+ |
 
 ---
@@ -53,6 +55,7 @@ Construir lo mínimo que genere valor diario, iterar basándose en uso real. Cad
 ## 3. Modelo de datos (Firestore)
 
 ### Principios del modelo
+
 - **Notas son ciudadanos de primera clase** — no subcolecciones de proyectos
 - **Links como colección separada** — IDs determinísticos `${sourceId}__${targetId}` para dedup trivial y queries bidireccionales eficientes
 - **PARA como metadata** — no como estructura de carpetas
@@ -81,44 +84,44 @@ firestore/
 
 ```typescript
 interface Note {
-  id: string;                    // crypto.randomUUID()
-  title: string;                 // La idea, no el tema ("La fricción mata hábitos")
-  content: string;               // TipTap JSON serializado (fuera del schema TinyBase, solo en Firestore)
-  contentPlain: string;          // Texto plano para búsqueda (generado con editor.getText())
-  
+  id: string; // crypto.randomUUID()
+  title: string; // La idea, no el tema ("La fricción mata hábitos")
+  content: string; // TipTap JSON serializado (fuera del schema TinyBase, solo en Firestore)
+  contentPlain: string; // Texto plano para búsqueda (generado con editor.getText())
+
   // Clasificación PARA
   paraType: 'project' | 'area' | 'resource' | 'archive';
-  
+
   // Zettelkasten
   noteType: 'fleeting' | 'literature' | 'permanent';
-  source?: string;               // De dónde viene (libro, podcast, conversación, etc.)
-  
+  source?: string; // De dónde viene (libro, podcast, conversación, etc.)
+
   // Relaciones (IDs como JSON arrays serializados — parseIds/stringifyIds)
-  projectIds: string[];          // Proyectos vinculados
-  areaIds: string[];             // Áreas vinculadas
-  tagIds: string[];              // Tags/temas
-  
+  projectIds: string[]; // Proyectos vinculados
+  areaIds: string[]; // Áreas vinculadas
+  tagIds: string[]; // Tags/temas
+
   // Links bidireccionales (referencia rápida — la verdad está en links/)
-  outgoingLinkIds: string[];     // Notas a las que esta nota apunta
-  incomingLinkIds: string[];     // Notas que apuntan a esta nota
-  linkCount: number;             // Total de conexiones (para ranking)
-  
+  outgoingLinkIds: string[]; // Notas a las que esta nota apunta
+  incomingLinkIds: string[]; // Notas que apuntan a esta nota
+  linkCount: number; // Total de conexiones (para ranking)
+
   // Progressive Summarization
-  summaryL1?: string;            // Pasajes clave resaltados
-  summaryL2?: string;            // Lo más importante de L1
-  summaryL3?: string;            // Resumen ejecutivo en tus palabras
-  distillLevel: 0 | 1 | 2 | 3;  // Nivel actual de destilación
-  
+  summaryL1?: string; // Pasajes clave resaltados
+  summaryL2?: string; // Lo más importante de L1
+  summaryL3?: string; // Resumen ejecutivo en tus palabras
+  distillLevel: 0 | 1 | 2 | 3; // Nivel actual de destilación
+
   // AI-generated (escritos por Cloud Function autoTagNote)
-  aiTags?: string[];             // Tags sugeridos por Claude
-  aiSummary?: string;            // Resumen de una línea generado
-  aiProcessed: boolean;          // ¿Ya pasó por el pipeline AI?
-  
+  aiTags?: string[]; // Tags sugeridos por Claude
+  aiSummary?: string; // Resumen de una línea generado
+  aiProcessed: boolean; // ¿Ya pasó por el pipeline AI?
+
   // Metadata
   createdAt: Timestamp;
   updatedAt: Timestamp;
-  lastViewedAt?: Timestamp;      // Para resurfacing (FSRS)
-  viewCount: number;             // Engagement tracking
+  lastViewedAt?: Timestamp; // Para resurfacing (FSRS)
+  viewCount: number; // Engagement tracking
   isFavorite: boolean;
   isArchived: boolean;
 }
@@ -128,18 +131,18 @@ interface Note {
 
 ```typescript
 interface NoteLink {
-  id: string;                    // Determinístico: `${sourceId}__${targetId}`
-  sourceId: string;              // Nota origen
-  targetId: string;              // Nota destino
-  
+  id: string; // Determinístico: `${sourceId}__${targetId}`
+  sourceId: string; // Nota origen
+  targetId: string; // Nota destino
+
   // Contexto del link
-  context?: string;              // Texto alrededor del [[wikilink]] en la nota origen
-  linkType: 'explicit' | 'ai-suggested';  // ¿Lo creó el usuario o la AI?
-  
+  context?: string; // Texto alrededor del [[wikilink]] en la nota origen
+  linkType: 'explicit' | 'ai-suggested'; // ¿Lo creó el usuario o la AI?
+
   // Metadata
   createdAt: Timestamp;
-  strength?: number;             // AI: similitud semántica (0-1)
-  accepted: boolean;             // Para links AI-suggested: ¿el usuario aceptó?
+  strength?: number; // AI: similitud semántica (0-1)
+  accepted: boolean; // Para links AI-suggested: ¿el usuario aceptó?
 }
 ```
 
@@ -150,10 +153,10 @@ interface NoteLink {
 ```typescript
 interface InboxItem {
   id: string;
-  rawContent: string;            // Texto tal como se capturó
+  rawContent: string; // Texto tal como se capturó
   source: 'quick-capture' | 'web-clip' | 'voice' | 'share-intent' | 'email';
-  sourceUrl?: string;            // Si viene de web clipper
-  
+  sourceUrl?: string; // Si viene de web clipper
+
   // AI processing results (campos flat en TinyBase, objeto en hook)
   aiProcessed: boolean;
   // En Firestore/TinyBase: campos flat aiSuggestedTitle, aiSuggestedType, etc.
@@ -162,19 +165,19 @@ interface InboxItem {
     suggestedTitle: string;
     suggestedType: 'task' | 'note' | 'project' | 'reference' | 'trash';
     suggestedTags: string[];
-    suggestedArea: AreaKey;       // Key del map AREAS
+    suggestedArea: AreaKey; // Key del map AREAS
     summary: string;
     priority: Priority;
-    relatedNoteIds: string[];    // Notas similares encontradas (Fase 4 embeddings)
+    relatedNoteIds: string[]; // Notas similares encontradas (Fase 4 embeddings)
   };
-  
+
   // Estado
   status: 'pending' | 'processed' | 'dismissed';
   processedAs?: {
     type: 'note' | 'task' | 'project';
-    resultId: string;            // ID de la nota/tarea/proyecto creado
+    resultId: string; // ID de la nota/tarea/proyecto creado
   };
-  
+
   createdAt: Timestamp;
 }
 ```
@@ -189,15 +192,15 @@ interface Task {
   name: string;
   status: 'inbox' | 'in-progress' | 'waiting' | 'delegated' | 'completed';
   priority: 'low' | 'medium' | 'high' | 'urgent';
-  dueDate?: Timestamp;           // Cuándo hacerla
-  
+  dueDate?: Timestamp; // Cuándo hacerla
+
   // Relaciones
-  projectId?: string;            // Singular — una tarea pertenece a UN proyecto
+  projectId?: string; // Singular — una tarea pertenece a UN proyecto
   areaId?: string;
-  noteIds: string[];             // Notas vinculadas
-  
+  noteIds: string[]; // Notas vinculadas
+
   description?: string;
-  
+
   createdAt: Timestamp;
   updatedAt: Timestamp;
   completedAt?: Timestamp;
@@ -214,17 +217,17 @@ interface Project {
   name: string;
   status: 'not-started' | 'in-progress' | 'on-hold' | 'completed';
   priority: 'low' | 'medium' | 'high' | 'urgent';
-  
+
   // Relaciones
   areaId?: string;
-  objectiveId?: string;          // Singular — un proyecto pertenece a UN objetivo
+  objectiveId?: string; // Singular — un proyecto pertenece a UN objetivo
   taskIds: string[];
   noteIds: string[];
-  
+
   // Fechas
   startDate?: Timestamp;
   deadline?: Timestamp;
-  
+
   isArchived: boolean;
   createdAt: Timestamp;
   updatedAt: Timestamp;
@@ -241,11 +244,11 @@ interface Objective {
   name: string;
   status: 'not-started' | 'in-progress' | 'completed';
   deadline?: Timestamp;
-  
+
   areaId?: string;
   projectIds: string[];
   taskIds: string[];
-  
+
   createdAt: Timestamp;
   updatedAt: Timestamp;
 }
@@ -258,10 +261,10 @@ interface Objective {
 ```typescript
 // Colección separada para no inflar los documentos de notas
 interface NoteEmbedding {
-  id: string;                    // Mismo ID que la nota
-  vector: number[];              // 1536 dimensiones (text-embedding-3-small)
-  model: string;                 // "text-embedding-3-small"
-  contentHash: string;           // Hash del contenido — regenerar si cambia
+  id: string; // Mismo ID que la nota
+  vector: number[]; // 1536 dimensiones (text-embedding-3-small)
+  model: string; // "text-embedding-3-small"
+  contentHash: string; // Hash del contenido — regenerar si cambia
   createdAt: Timestamp;
 }
 ```
@@ -569,12 +572,12 @@ Dashboard muestra DailyDigest component
 
 ### ¿Por qué TinyBase y no Firestore directo?
 
-| Problema con Firestore directo | Cómo TinyBase lo resuelve |
-|-------------------------------|---------------------------|
-| Latencia en reads (50-200ms) | Store in-memory, reads instantáneos |
-| Sin reactividad granular | `useRow()`, `useCell()` re-renderizan solo lo que cambió |
-| Offline requiere enablePersistence (limitado) | Store local + persister async a Firestore |
-| Reads se cobran por documento | Cache local, solo sync deltas |
+| Problema con Firestore directo                | Cómo TinyBase lo resuelve                                |
+| --------------------------------------------- | -------------------------------------------------------- |
+| Latencia en reads (50-200ms)                  | Store in-memory, reads instantáneos                      |
+| Sin reactividad granular                      | `useRow()`, `useCell()` re-renderizan solo lo que cambió |
+| Offline requiere enablePersistence (limitado) | Store local + persister async a Firestore                |
+| Reads se cobran por documento                 | Cache local, solo sync deltas                            |
 
 ### Configuración (custom persister)
 
@@ -604,7 +607,7 @@ import { useRow, useCell, useRowIds } from 'tinybase/ui-react';
 function NoteCard({ noteId }: { noteId: string }) {
   const title = useCell('notes', noteId, 'title');
   const linkCount = useCell('notes', noteId, 'linkCount');
-  
+
   return (
     <div>
       <h3>{title}</h3>
@@ -671,20 +674,30 @@ TipTap guarda contenido como JSON (ProseMirror document). Para `contentPlain` (b
 ### 2 indexes independientes
 
 **Index de notas** (Fase 1) — usado por `useNoteSearch` en `/notes`:
+
 ```typescript
 const NOTES_SCHEMA = {
-  id: 'string', title: 'string', contentPlain: 'string',
-  noteType: 'string', paraType: 'string', linkCount: 'number',
-  updatedAt: 'number', isArchived: 'boolean',
+  id: 'string',
+  title: 'string',
+  contentPlain: 'string',
+  noteType: 'string',
+  paraType: 'string',
+  linkCount: 'number',
+  updatedAt: 'number',
+  isArchived: 'boolean',
 };
 ```
 
 **Index global unificado** (Fase 3) — usado por `useGlobalSearch` en Command Palette:
+
 ```typescript
 const GLOBAL_SCHEMA = {
-  id: 'string', _type: 'string',  // 'note' | 'task' | 'project'
-  title: 'string', body: 'string',
-  updatedAt: 'number', isArchived: 'boolean',
+  id: 'string',
+  _type: 'string', // 'note' | 'task' | 'project'
+  title: 'string',
+  body: 'string',
+  updatedAt: 'number',
+  isArchived: 'boolean',
 };
 ```
 
@@ -697,6 +710,7 @@ Full rebuild del índice en cada `addTableListener`. ~50ms para ~300 docs. El in
 ## 9. Fases de desarrollo
 
 ### Fase 0: Setup ✅
+
 - [x] Proyecto Vite + React 19 + TypeScript + Tailwind v4
 - [x] Firebase project + Firestore rules + Auth (Google sign-in)
 - [x] TinyBase v8 config + custom persister Firestore
@@ -704,6 +718,7 @@ Full rebuild del índice en cada `addTableListener`. ~50ms para ~300 docs. El in
 - [x] Deploy inicial a Firebase Hosting
 
 ### Fase 1: MVP — Captura + Notas + Links ✅
+
 - [x] Quick Capture (modal, `Alt+N`)
 - [x] TipTap editor con extensión WikiLink
 - [x] Lista de notas (búsqueda con Orama)
@@ -713,6 +728,7 @@ Full rebuild del índice en cada `addTableListener`. ~50ms para ~300 docs. El in
 - [x] Dashboard mínimo (notas recientes, inbox pendiente)
 
 ### Fase 2: Ejecución — Tareas + Proyectos + Objetivos + Hábitos ✅
+
 - [x] CRUD de tareas con vistas (hoy, pronto, completadas)
 - [x] CRUD de proyectos con status + detalle con tareas y notas vinculadas
 - [x] Vincular tareas ↔ proyectos ↔ notas (bidireccional client-side)
@@ -721,6 +737,7 @@ Full rebuild del índice en cada `addTableListener`. ~50ms para ~300 docs. El in
 - [x] Dashboard expandido (5 cards)
 
 ### Fase 3: AI Pipeline ✅
+
 - [x] Cloud Function `processInboxItem` con Claude Haiku
 - [x] Schema `aiResult` flat en inboxStore + mapping en useInbox
 - [x] InboxItem card con sugerencias AI inline (aceptar/editar/descartar)
@@ -729,6 +746,7 @@ Full rebuild del índice en cada `addTableListener`. ~50ms para ~300 docs. El in
 - [x] Cloud Function `autoTagNote` con Claude Haiku (`onDocumentWritten`)
 
 ### Fase 4: Grafo + Resurfacing
+
 - [ ] Reagraph: visualización del knowledge graph
 - [ ] Filtros de grafo (por área, por tipo, por fecha)
 - [ ] Embeddings pipeline (Cloud Function + OpenAI)
@@ -737,6 +755,7 @@ Full rebuild del índice en cada `addTableListener`. ~50ms para ~300 docs. El in
 - [ ] Daily Digest component en dashboard
 
 ### Fase 5: Multi-plataforma
+
 - [ ] PWA optimizada (service worker, offline)
 - [ ] Tauri wrapper (global hotkey, system tray)
 - [ ] Capacitor wrapper (Share Intent Android)
@@ -747,33 +766,43 @@ Full rebuild del índice en cada `addTableListener`. ~50ms para ~300 docs. El in
 ## 10. Decisiones de diseño clave
 
 ### D1: ¿Por qué notas y tareas en la misma app?
+
 Porque separar ejecución y conocimiento es el error que cometen la mayoría de tools. El poder está en vincular una nota a un proyecto, y que al abrir el proyecto veas el conocimiento relevante. Notion lo intenta pero con friction — aquí es nativo.
 
 ### D2: ¿Por qué no usar Firestore offline persistence nativa?
+
 Porque es limitada: no soporta queries complejas offline, tiene un límite de cache, y no ofrece reactividad granular. TinyBase como capa intermedia da instantaneidad + control total del cache.
 
 ### D3: ¿Por qué Claude Haiku y no modelos locales para inbox?
+
 Porque Haiku cuesta ~$0.25/1M tokens input y produce resultados consistentes sin GPU. Para procesamiento batch de inbox, la calidad/costo es imbatible. Modelos locales son plan B si los costos escalan (improbable para uso personal — ~100 items/mes ≈ $0.02/mes).
 
 ### D4: ¿Por qué empezar con PWA y no Tauri directo?
+
 Porque la PWA ya funciona en desktop (Chrome) y mobile (Android). Tauri añade hotkeys globales y system tray — features de conveniencia, no de funcionalidad core. Mejor tener la app funcionando antes de optimizar la captura.
 
 ### D5: ¿Por qué TinyBase en vez de RxDB?
+
 TinyBase es 13KB vs ~100KB de RxDB. Para single-user personal app, TinyBase es suficiente y mucho más simple. RxDB brilla en multi-user y sync complejo — overkill aquí.
 
 ### D6: ¿Por qué Orama en vez de FlexSearch?
+
 Orama es TypeScript-native, tiene faceted search (filtrar por tipo + área en una query), y pesa ~40KB. FlexSearch es más rápido en benchmarks puros pero no tiene facets ni tipado nativo.
 
 ### D7: ¿Cómo manejar conflictos de sync?
+
 Last-Writer-Wins (LWW) por campo. Para notas atómicas (documentos cortos editados por una persona), LWW es suficiente. TinyBase + Firestore persister ya implementa esto.
 
 ### D8: ¿Por qué links bidireccionales client-side y no Cloud Function?
+
 Una Cloud Function `syncBacklinks` agregaría latencia, costo, y un segundo write path. El sync client-side en `syncLinks.ts` es síncrono con el save, determinístico, y los títulos se resuelven in-memory sin cache stale.
 
 ### D9: ¿Por qué `onDocumentWritten` y no `onDocumentCreated` para auto-tagging?
+
 Las notas creadas desde `/notes` arrancan con `contentPlain: ''` — el contenido llega en el primer auto-save (2s después). `onDocumentCreated` se dispara con content vacío y el guard hace early return. `onDocumentWritten` detecta el primer write con contenido. El guard `aiProcessed` evita re-procesamiento en writes subsiguientes.
 
 ### D10: ¿Por qué campos flat en vez de objeto anidado para aiResult del inbox?
+
 TinyBase no soporta objetos anidados en su schema. Los campos `aiSuggestedTitle`, `aiSuggestedType`, etc. se almacenan flat en el store con defaults vacíos. El hook `useInbox` los agrupa en un objeto `InboxAiResult` solo al mappear — la hidratación bidireccional Firestore ↔ TinyBase funciona sin adaptadores.
 
 ---
@@ -782,27 +811,27 @@ TinyBase no soporta objetos anidados en su schema. Los campos `aiSuggestedTitle`
 
 El sistema funciona si:
 
-| Métrica | Target |
-|---------|--------|
-| Tiempo de captura (idea → guardado) | < 3 segundos |
-| Notas creadas por semana | > 5 (vs. ~1-2 en Notion actual) |
-| % de notas con al menos 1 link | > 50% |
-| Inbox procesado en < 24h | > 80% de items |
-| Notas resurfaceadas y revisadas/semana | > 3 |
-| Notas reutilizadas en proyectos | > 20% |
+| Métrica                                | Target                          |
+| -------------------------------------- | ------------------------------- |
+| Tiempo de captura (idea → guardado)    | < 3 segundos                    |
+| Notas creadas por semana               | > 5 (vs. ~1-2 en Notion actual) |
+| % de notas con al menos 1 link         | > 50%                           |
+| Inbox procesado en < 24h               | > 80% de items                  |
+| Notas resurfaceadas y revisadas/semana | > 3                             |
+| Notas reutilizadas en proyectos        | > 20%                           |
 
 ---
 
 ## 12. Riesgos y mitigaciones
 
-| Riesgo | Probabilidad | Impacto | Mitigación |
-|--------|-------------|---------|------------|
-| TinyBase no escala a >5K notas | Baja | Alto | Content ya va directo a Firestore; migrar metadata si necesario |
-| Costos de Claude/OpenAI escalan | Baja | Bajo | Batch API (-50%), o migrar a modelos locales |
-| Orama rebuild lento con >1K notas | Media | Bajo | Migrar a sync incremental (update/remove por row) |
-| Tauri mobile no madura | Media | Bajo | Capacitor como alternativa probada |
-| El grafo no aporta valor real | Media | Bajo | Es Fase 4 — para entonces hay datos para validar |
-| Over-engineering antes de validar | Alta | Alto | MVP en 4 semanas o menos. Si no lo uso diario, pivotar. |
+| Riesgo                            | Probabilidad | Impacto | Mitigación                                                      |
+| --------------------------------- | ------------ | ------- | --------------------------------------------------------------- |
+| TinyBase no escala a >5K notas    | Baja         | Alto    | Content ya va directo a Firestore; migrar metadata si necesario |
+| Costos de Claude/OpenAI escalan   | Baja         | Bajo    | Batch API (-50%), o migrar a modelos locales                    |
+| Orama rebuild lento con >1K notas | Media        | Bajo    | Migrar a sync incremental (update/remove por row)               |
+| Tauri mobile no madura            | Media        | Bajo    | Capacitor como alternativa probada                              |
+| El grafo no aporta valor real     | Media        | Bajo    | Es Fase 4 — para entonces hay datos para validar                |
+| Over-engineering antes de validar | Alta         | Alto    | MVP en 4 semanas o menos. Si no lo uso diario, pivotar.         |
 
 ---
 
