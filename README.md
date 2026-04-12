@@ -21,7 +21,7 @@ Los principios de diseño, la teoría detrás (CODE de Tiago Forte, Zettelkasten
 - **Editor:** TipTap (ProseMirror) con extensiones custom — wikilinks, slash commands, tags
 - **Búsqueda:** Orama (FTS client-side)
 - **Backend:** Firebase — Firestore + Cloud Functions v2 + Auth + Hosting
-- **AI:** Claude Haiku (inbox processing) + OpenAI embeddings
+- **AI:** Claude Haiku (inbox processing + auto-tagging notas) + OpenAI embeddings
 
 ## Estado actual
 
@@ -50,9 +50,15 @@ Las fases y su progreso se llevan en [CLAUDE.md](CLAUDE.md) y cada una tiene su 
   - **F7 · Habit tracker:** `/habits` con grid semanal 14×7 (14 hábitos × 7 días, lunes inicia la semana). Navegación ← → entre semanas, toggle de hoy/ayer clickeable, días pasados/futuros read-only. Barra de progreso de hoy referida al día real aunque se navegue a otra semana. IDs determinísticos `YYYY-MM-DD` como `rowId` y `docId`, con docs creados implícitamente en el primer toggle
   - **F8 · Dashboard expandido:** reestructura `/` con 5 cards en grid 2×2 + hábitos full-width — `TasksTodayCard` (top 5 tareas de hoy con checkbox funcional), `InboxCard` existente, `ProjectsActiveCard` (proyectos in-progress con count reactivo), `RecentNotesCard` existente, y `HabitsTodayCard` (14 pills toggleables con barra de progreso)
 
-**Ya se puede usar a diario:** capturar ideas con `Alt+N`, escribir notas atómicas con wikilinks y backlinks, buscar instantáneamente, procesar el inbox manualmente, organizar tareas con fecha y prioridad en proyectos con progreso, definir objetivos de alto nivel con deadline y proyectos vinculados, trackear 14 hábitos diarios en el grid semanal, y ver todo junto en el dashboard.
+- **Fase 3 — AI Pipeline** ✅ Inteligencia que reduce la friccion de organizar. 6 features completas:
+  - **F1 · Cloud Function processInboxItem:** `onDocumentCreated` en `inbox/{itemId}` llama a Claude Haiku (`claude-haiku-4-5-20251001`) y escribe campos flat `aiSuggested*` (titulo, tipo, tags, area, resumen, prioridad) al doc. Secret via `defineSecret`. Retry false, timeout 60s, us-central1
+  - **F2 · Schema aiResult flat:** reemplaza el placeholder `aiResult: string` del `inboxStore` por 6 campos flat. El hook `useInbox` construye el objeto `aiResult` con gate `aiProcessed && aiSuggestedTitle`. Cadena completa CF -> Firestore -> persister -> store -> mapper verificada
+  - **F3 · InboxItem card con sugerencias:** `AiSuggestionCard` con display + edit modes. Muestra tipo/titulo/area/tags/prioridad/resumen sugeridos. Botones Aceptar (crea entidad con overrides) y Editar (expand form inline con selects + input tags comma-separated, parseo al submit). Indicator "Procesando con AI..." para items en flight. Botones fallback "Nota"/"Descartar" siempre visibles. `useInbox` compone `useTasks`/`useProjects` para `convertToTask`/`convertToProject` con `createTask` extendido (acepta `{priority, areaId}` en 1 write)
+  - **F4 · Inbox Processor:** ruta `/inbox/process` con vista one-by-one. Snapshot congelado del batch al montar (permite Atras a items ya procesados sin que desaparezcan del array reactivo). `InboxProcessorForm` con draft local reseteado por `key={item.id}`. Read-only variant para items procesados. Progress dots clickeables. Keyboard shortcuts (Enter/Escape/ArrowLeft/ArrowRight). Pantalla done con resumen ("Procesaste N notas, M tareas, X descartados"). Grace de hidratacion dedicado (1500ms) para evitar false empty en full reload
+  - **F5 · Command Palette (Ctrl+K):** modal de busqueda global con Orama FTS. Index unificado con campo `_type: 'note' | 'task' | 'project'`, rebuild con debounce 100ms en 3 store listeners. Query vacio muestra recientes (top 5 por `updatedAt` desc, filtra completed/archived) + acciones rapidas estaticas. Keyboard nav completo (arrows + Enter + Escape). Mouse hover sincronizado con keyboard index. Dialog base-ui con animaciones `data-starting-style`/`data-ending-style`
+  - **F6 · Cloud Function autoTagNote:** `onDocumentWritten` en `notes/{noteId}` genera hasta 5 tags + resumen con Claude Haiku. Guard `aiProcessed || !contentPlain.trim()`. Cambio de `onDocumentCreated` a `onDocumentWritten` para cubrir notas creadas vacias desde el editor (contenido llega en auto-save 2s despues). Fix critico: `convertToNote` setea `aiProcessed: true` cuando hay tags del inbox processor para evitar que F6 sobrescriba. `stripJsonFence` extraido a modulo compartido `src/functions/src/lib/parseJson.ts`
 
-- **Fase 3 — AI Pipeline:** próxima. Claude Haiku procesando el inbox automáticamente (título/tags/tipo/resumen sugeridos), `InboxProcessor` UI para revisar y aceptar sugerencias, auto-tagging de notas nuevas, y `Command Palette` (⌘K) para búsqueda y navegación global
+**Ya se puede usar a diario:** capturar ideas con `Alt+N`, la AI sugiere tipo/titulo/tags/area automaticamente, procesar el inbox one-by-one con sugerencias pre-llenadas o en batch con el Inbox Processor, buscar notas/tareas/proyectos globalmente con `Ctrl+K`, escribir notas atomicas con wikilinks y backlinks (auto-tagged por AI), organizar tareas con fecha y prioridad en proyectos con progreso, definir objetivos de alto nivel con deadline y proyectos vinculados, trackear 14 habitos diarios en el grid semanal, y ver todo junto en el dashboard.
 
 ## Setup local
 
@@ -91,6 +97,8 @@ npm run lint          # ESLint sobre src/
 npm run preview       # Preview del build local
 npm run deploy        # Build + deploy a Firebase Hosting
 npm run deploy:rules  # Deploy de Firestore security rules
+npm run deploy:functions  # Deploy de Cloud Functions
+npm run logs:functions    # Logs de Cloud Functions
 ```
 
 ## Documentación
