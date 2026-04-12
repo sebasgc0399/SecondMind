@@ -3,10 +3,13 @@ import { useNavigate } from 'react-router';
 import { useTable } from 'tinybase/ui-react';
 import { doc, setDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
+import { parseIds } from '@/lib/tinybase';
 import { inboxStore } from '@/stores/inboxStore';
 import { notesStore } from '@/stores/notesStore';
 import useAuth from '@/hooks/useAuth';
-import type { InboxItem, InboxSource } from '@/types/inbox';
+import type { AreaKey } from '@/types/area';
+import type { Priority } from '@/types/common';
+import type { InboxAiResult, InboxItem, InboxResultType, InboxSource } from '@/types/inbox';
 
 const INIT_GRACE_MS = 200;
 
@@ -32,12 +35,29 @@ export default function useInbox(): UseInboxReturn {
     const out: InboxItem[] = [];
     for (const [id, row] of Object.entries(table)) {
       if (row.status !== 'pending') continue;
+
+      const aiProcessed = Boolean(row.aiProcessed);
+      const suggestedTitle = (row.aiSuggestedTitle as string) || '';
+      const aiResult: InboxAiResult | undefined =
+        aiProcessed && suggestedTitle
+          ? {
+              suggestedTitle,
+              suggestedType: ((row.aiSuggestedType as string) || 'note') as InboxResultType,
+              suggestedTags: parseIds((row.aiSuggestedTags as string) || '[]'),
+              suggestedArea: ((row.aiSuggestedArea as string) || 'conocimiento') as AreaKey,
+              summary: (row.aiSummary as string) || '',
+              priority: ((row.aiPriority as string) || 'medium') as Priority,
+              relatedNoteIds: [],
+            }
+          : undefined;
+
       out.push({
         id,
         rawContent: (row.rawContent as string) || '',
         source: ((row.source as string) || 'quick-capture') as InboxSource,
         sourceUrl: (row.sourceUrl as string) || undefined,
-        aiProcessed: Boolean(row.aiProcessed),
+        aiProcessed,
+        aiResult,
         status: 'pending',
         createdAt: Number(row.createdAt) || 0,
       });
