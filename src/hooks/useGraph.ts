@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { useTable } from 'tinybase/ui-react';
 import type { GraphNode, GraphEdge } from 'reagraph';
-import type { ParaType } from '@/types/common';
+import type { ParaType, NoteType } from '@/types/common';
 
 const PARA_COLORS: Record<ParaType, string> = {
   project: '#3b82f6',
@@ -17,13 +17,25 @@ function truncate(str: string, max: number): string {
   return str.slice(0, max - 1) + '\u2026';
 }
 
+export interface GraphFilters {
+  paraType: ParaType | 'all';
+  noteType: NoteType | 'all';
+  minLinks: number;
+}
+
+export const DEFAULT_FILTERS: GraphFilters = {
+  paraType: 'all',
+  noteType: 'all',
+  minLinks: 0,
+};
+
 export interface GraphData {
   nodes: GraphNode[];
   edges: GraphEdge[];
   isEmpty: boolean;
 }
 
-export default function useGraph(): GraphData {
+export default function useGraph(filters: GraphFilters = DEFAULT_FILTERS): GraphData {
   const notesTable = useTable('notes');
   const linksTable = useTable('links', 'links');
 
@@ -36,7 +48,12 @@ export default function useGraph(): GraphData {
 
       const title = typeof row.title === 'string' && row.title ? row.title : 'Sin titulo';
       const paraType = (row.paraType as ParaType) || 'resource';
+      const noteType = (row.noteType as NoteType) || 'fleeting';
       const linkCount = typeof row.linkCount === 'number' ? row.linkCount : 0;
+
+      if (filters.paraType !== 'all' && paraType !== filters.paraType) continue;
+      if (filters.noteType !== 'all' && noteType !== filters.noteType) continue;
+      if (linkCount < filters.minLinks) continue;
 
       visibleNodeIds.add(noteId);
       nodes.push({
@@ -47,7 +64,7 @@ export default function useGraph(): GraphData {
         data: {
           title,
           paraType,
-          noteType: row.noteType || 'fleeting',
+          noteType,
           linkCount,
         },
       });
@@ -68,5 +85,5 @@ export default function useGraph(): GraphData {
     }
 
     return { nodes, edges, isEmpty: nodes.length < 3 };
-  }, [notesTable, linksTable]);
+  }, [notesTable, linksTable, filters]);
 }

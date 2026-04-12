@@ -4,40 +4,25 @@ import { ArrowLeft, Maximize2, Minimize2 } from 'lucide-react';
 import type { GraphNode } from 'reagraph';
 import KnowledgeGraph from '@/components/graph/KnowledgeGraph';
 import GraphNodePanel from '@/components/graph/GraphNodePanel';
-import useGraph from '@/hooks/useGraph';
+import GraphFiltersPanel from '@/components/graph/GraphFilters';
+import useGraph, { DEFAULT_FILTERS } from '@/hooks/useGraph';
+import type { GraphFilters } from '@/hooks/useGraph';
 import type { ParaType, NoteType } from '@/types/common';
 
 export default function GraphPage() {
-  const { nodes, edges, isEmpty } = useGraph();
+  const [filters, setFilters] = useState<GraphFilters>(DEFAULT_FILTERS);
+  const { nodes, edges, isEmpty } = useGraph(filters);
   const [selectedNode, setSelectedNode] = useState<GraphNode | null>(null);
   const [isFullscreen, setIsFullscreen] = useState(false);
+
+  const hasActiveFilters =
+    filters.paraType !== DEFAULT_FILTERS.paraType ||
+    filters.noteType !== DEFAULT_FILTERS.noteType ||
+    filters.minLinks !== DEFAULT_FILTERS.minLinks;
 
   const handleNodeSelect = useCallback((node: GraphNode | null) => {
     setSelectedNode(node);
   }, []);
-
-  if (isEmpty) {
-    return (
-      <div className="flex h-full flex-col">
-        <div className="flex items-center gap-3 border-b border-border px-6 py-4">
-          <Link
-            to="/notes"
-            className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
-          >
-            <ArrowLeft className="h-4 w-4" />
-            Notas
-          </Link>
-          <h1 className="text-lg font-semibold text-foreground">Knowledge Graph</h1>
-        </div>
-        <div className="flex flex-1 flex-col items-center justify-center gap-2 text-center">
-          <p className="text-muted-foreground">El grafo cobra vida con mas notas y conexiones.</p>
-          <Link to="/notes" className="text-sm font-medium text-primary hover:underline">
-            Crear notas &rarr;
-          </Link>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div
@@ -66,20 +51,45 @@ export default function GraphPage() {
         </button>
       </div>
 
-      <div className="relative flex-1">
-        <KnowledgeGraph nodes={nodes} edges={edges} onNodeSelect={handleNodeSelect} />
+      <GraphFiltersPanel filters={filters} onChange={setFilters} />
 
-        {selectedNode && selectedNode.data && (
-          <GraphNodePanel
-            nodeId={selectedNode.id}
-            title={selectedNode.data.title}
-            paraType={selectedNode.data.paraType as ParaType}
-            noteType={selectedNode.data.noteType as NoteType}
-            linkCount={selectedNode.data.linkCount as number}
-            onClose={() => setSelectedNode(null)}
-          />
-        )}
-      </div>
+      {isEmpty ? (
+        <div className="flex flex-1 flex-col items-center justify-center gap-2 text-center">
+          <p className="text-muted-foreground">
+            {hasActiveFilters
+              ? 'Ningun nodo coincide con los filtros.'
+              : 'El grafo cobra vida con mas notas y conexiones.'}
+          </p>
+          {hasActiveFilters ? (
+            <button
+              type="button"
+              onClick={() => setFilters(DEFAULT_FILTERS)}
+              className="text-sm font-medium text-primary hover:underline"
+            >
+              Resetear filtros
+            </button>
+          ) : (
+            <Link to="/notes" className="text-sm font-medium text-primary hover:underline">
+              Crear notas &rarr;
+            </Link>
+          )}
+        </div>
+      ) : (
+        <div className="relative flex-1">
+          <KnowledgeGraph nodes={nodes} edges={edges} onNodeSelect={handleNodeSelect} />
+
+          {selectedNode && selectedNode.data && (
+            <GraphNodePanel
+              nodeId={selectedNode.id}
+              title={selectedNode.data.title}
+              paraType={selectedNode.data.paraType as ParaType}
+              noteType={selectedNode.data.noteType as NoteType}
+              linkCount={selectedNode.data.linkCount as number}
+              onClose={() => setSelectedNode(null)}
+            />
+          )}
+        </div>
+      )}
     </div>
   );
 }
