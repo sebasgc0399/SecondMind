@@ -5,6 +5,7 @@ import InboxPage from '@/app/inbox/page';
 import InboxProcessorPage from '@/app/inbox/process/page';
 import NotesListPage from '@/app/notes/page';
 import NoteDetailPage from '@/app/notes/[noteId]/page';
+import GraphPage from '@/app/notes/graph/page';
 import TasksPage from '@/app/tasks/page';
 import ProjectsPage from '@/app/projects/page';
 import ProjectDetailPage from '@/app/projects/[projectId]/page';
@@ -23,6 +24,7 @@ const router = createBrowserRouter([
       { path: 'inbox', Component: InboxPage },
       { path: 'inbox/process', Component: InboxProcessorPage },
       { path: 'notes', Component: NotesListPage },
+      { path: 'notes/graph', Component: GraphPage },
       { path: 'notes/:noteId', Component: NoteDetailPage },
       { path: 'tasks', Component: TasksPage },
       { path: 'projects', Component: ProjectsPage },
