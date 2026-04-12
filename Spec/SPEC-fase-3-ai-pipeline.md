@@ -103,7 +103,7 @@ Cloud Function con `onDocumentWritten('users/{userId}/notes/{noteId}')`. Cambio 
 **F6 — Cloud Function autoTagNote:**
 
 - `src/functions/src/notes/autoTagNote.ts` — Cloud Function
-- `src/functions/src/lib/parseJson.ts` — `stripJsonFence` compartido
+- `src/functions/src/lib/parseJson.ts` — `stripJsonFence` compartido (eliminado en Fase 3.1)
 - `src/functions/src/inbox/processInboxItem.ts` — refactor import
 - `src/functions/src/index.ts` — export agregado
 - `src/hooks/useInbox.ts` — fix `aiProcessed` en `convertToNote`
@@ -133,7 +133,7 @@ Cloud Function con `onDocumentWritten('users/{userId}/notes/{noteId}')`. Cambio 
 
 Conocimiento nuevo que salió de la implementación y que Fase 4+ deben respetar:
 
-1. **Claude Haiku devuelve `null` en campos individuales del JSON** para inputs basura (especialmente `suggestedArea`). Validar cada campo con fallback en las Cloud Functions — no hacer throw en validación de campos opcionales. El fallback para área es `'conocimiento'`
+1. **Claude Haiku devuelve `null` en campos individuales del JSON** para inputs basura (especialmente `suggestedArea`). Validar cada campo con fallback en las Cloud Functions — no hacer throw en validación de campos opcionales. El fallback para área es `'conocimiento'`. _(Resuelto en Fase 3.1: tool use con schema enforcement elimina nulls a nivel de decoder)_
 
 2. **`isInitializing` de hooks (200ms) no es suficiente para snapshots de datos en full reload.** Los persisters pueden tardar más en hidratar el store. Para decisiones de "¿hay datos o no?" (ej: batch del InboxProcessor, redirect por existencia de row), usar un grace dedicado más largo (1500ms) o observar `items.length > 0` como signal real. Mismo patrón que `redirectGraceExpired` de ProjectDetailPage de Fase 2
 
@@ -162,7 +162,3 @@ firebase-functions ^7.2.5
 **En raíz:** ninguna. Todo el stack de Fase 3 funciona sobre las dependencias existentes (Orama, base-ui, lucide-react, TinyBase, React Router).
 
 ---
-
-## Siguiente fase
-
-Continuar con **Fase 4 — Grafo + Resurfacing:** Knowledge graph visual con Reagraph, embeddings pipeline con OpenAI, búsqueda semántica de "notas similares", FSRS resurfacing algorithm, y Daily Digest en el dashboard. Fase 3 completó la inteligencia del inbox y la búsqueda global; Fase 4 agrega inteligencia al conocimiento conectado.

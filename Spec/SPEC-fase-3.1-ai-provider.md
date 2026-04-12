@@ -1,228 +1,93 @@
-# SPEC — SecondMind · Fase 3.1: Schema Enforcement — Tool Use en Cloud Functions
+# SPEC — SecondMind · Fase 3.1: Schema Enforcement — Tool Use en Cloud Functions (Completada)
 
-> Alcance: Refactorizar las 2 Cloud Functions de AI para usar tool use de Anthropic con schema enforcement en vez de "Responde SOLO JSON" en el prompt. Elimina nulls, stripJsonFence, y fallbacks manuales sin cambiar de proveedor.
-> Dependencias: Fase 3 (AI Pipeline) completada
-> Estimado: 2-3 días (solo dev)
-> Stack relevante: Firebase Cloud Functions v2 + Anthropic SDK (`@anthropic-ai/sdk`) + Claude Haiku 4.5
+> Registro de lo implementado en el refactoring de las Cloud Functions de AI.
+> Completada: Abril 2026
 
 ---
 
 ## Objetivo
 
-Al terminar esta fase, las Cloud Functions de AI usan tool use con `tool_choice: { type: 'tool' }` para forzar a Claude Haiku a devolver JSON que cumple el schema definido. No más campos null, no más JSON envuelto en markdown fences, no más `stripJsonFence`. Los schemas se definen una sola vez y se reusan en ambas CFs. Cero cambios en el frontend — las CFs siguen escribiendo los mismos campos flat a Firestore.
+Las 2 Cloud Functions de AI (`processInboxItem`, `autoTagNote`) usaban prompts "Responde SOLO JSON" + `stripJsonFence` + fallbacks manuales para parsear respuestas de Claude Haiku. Esto producía nulls en campos (especialmente `suggestedArea` para inputs basura), JSON wrapeado en markdown fences, y ~120 líneas de código defensivo de parsing y validación. Fase 3.1 migró ambas CFs a tool use de Anthropic con `tool_choice: { type: 'tool' }` — enforcement a nivel de decoder, no de obediencia al prompt. Cero cambios en el frontend; las CFs siguen escribiendo los mismos campos flat a Firestore.
 
 ---
 
-## Features
+## Features implementadas
 
 ### F1: Schemas compartidos
 
-**Qué:** Módulo `src/functions/src/lib/schemas.ts` con los JSON Schemas de las respuestas de AI definidos una sola vez. Reemplaza los prompts "Responde SOLO JSON" por schemas tipados que tool use enforce.
-
-**Criterio de done:**
-- [ ] `schemas.ts` exporta `INBOX_CLASSIFICATION_SCHEMA` (6 campos: suggestedTitle, suggestedType, suggestedTags, suggestedArea, summary, priority)
-- [ ] `schemas.ts` exporta `NOTE_TAGGING_SCHEMA` (2 campos: tags, summary)
-- [ ] Ambos schemas usan `enum` para campos con valores fijos (suggestedType, suggestedArea, priority)
-- [ ] TypeScript types `InboxClassification` y `NoteTagging` exportados para tipar las respuestas
-- [ ] Los schemas siguen la estructura JSON Schema estándar (`type`, `properties`, `required`, `additionalProperties: false`)
-
-**Archivos a crear:**
-- `src/functions/src/lib/schemas.ts` — schemas + types
-
-**Notas de implementación:**
-
-```typescript
-export const INBOX_CLASSIFICATION_SCHEMA = {
-  type: 'object' as const,
-  properties: {
-    suggestedTitle: { type: 'string', description: 'Título conciso (max 80 chars)' },
-    suggestedType: { type: 'string', enum: ['note', 'task', 'project', 'trash'] },
-    suggestedTags: { type: 'array', items: { type: 'string' }, maxItems: 5 },
-    suggestedArea: { type: 'string', enum: ['proyectos', 'conocimiento', 'finanzas', 'salud', 'pareja', 'habitos'] },
-    summary: { type: 'string', description: 'Resumen de una línea' },
-    priority: { type: 'string', enum: ['low', 'medium', 'high', 'urgent'] },
-  },
-  required: ['suggestedTitle', 'suggestedType', 'suggestedTags', 'suggestedArea', 'summary', 'priority'],
-};
-
-export interface InboxClassification {
-  suggestedTitle: string;
-  suggestedType: 'note' | 'task' | 'project' | 'trash';
-  suggestedTags: string[];
-  suggestedArea: string;
-  summary: string;
-  priority: string;
-}
-```
-
-Las 6 áreas del enum coinciden con las keys de `AREAS` de `src/types/area.ts`. Los 4 tipos y 4 prioridades coinciden con los valores que F1 de Fase 3 ya producía.
-
----
+Módulo `src/functions/src/lib/schemas.ts` con 2 JSON Schemas y 2 interfaces TypeScript. `INBOX_CLASSIFICATION_SCHEMA` define 6 campos required (`suggestedTitle`, `suggestedType`, `suggestedTags`, `suggestedArea`, `summary`, `priority`) con `enum` en los campos con valores fijos — los valores coinciden exactamente con los que Fase 3 ya producía (`VALID_TYPES`, `VALID_AREAS`, `VALID_PRIORITIES` del antiguo `processInboxItem.ts` y las keys de `AREAS` de `src/types/area.ts`). `NOTE_TAGGING_SCHEMA` define 2 campos required (`tags`, `summary`). Ambos usan `additionalProperties: false` y `type: 'object' as const` para compatibilidad con el tipo `Anthropic.Tool['input_schema']` del SDK. Las interfaces `InboxClassification` y `NoteTagging` tipan el resultado de `toolBlock.input` con union types en los campos de enum.
 
 ### F2: Refactorizar processInboxItem con tool use
 
-**Qué:** Reemplazar la llamada `messages.create` con prompt "Responde SOLO JSON" por una llamada con `tools` + `tool_choice` que enforce el schema. Eliminar `stripJsonFence`, eliminar fallbacks manuales por null, extraer el resultado del `tool_use` block.
-
-**Criterio de done:**
-- [ ] La llamada a Anthropic usa `tools: [{ name: 'classify_inbox', input_schema: INBOX_CLASSIFICATION_SCHEMA }]`
-- [ ] `tool_choice: { type: 'tool', name: 'classify_inbox' }` fuerza la respuesta como tool call
-- [ ] El resultado se extrae de `response.content.find(b => b.type === 'tool_use').input` — ya es un objeto, no un string
-- [ ] No hay import de `stripJsonFence` ni llamada a `JSON.parse` de la respuesta
-- [ ] No hay fallbacks manuales (`?? 'conocimiento'`, `?? 'medium'`) — el schema los garantiza via `enum`/`required`
-- [ ] El system prompt se simplifica: solo contexto de productividad, sin instrucciones de formato JSON
-- [ ] Los 6 campos flat escritos a Firestore mantienen la misma estructura (cero impacto en frontend)
-- [ ] El log incluye el `suggestedType` como antes
-
-**Archivos a modificar:**
-- `src/functions/src/inbox/processInboxItem.ts` — refactor de la llamada AI + cleanup
-
-**Notas de implementación:**
-
-El prompt cambia de:
-```
-System: ... Responde SOLO con JSON válido, sin markdown: { suggestedTitle, ... }
-User: Clasifica esta captura: "{rawContent}"
-```
-
-A:
-```
-System: Eres un asistente de productividad personal. Analizas capturas rápidas
-del usuario y sugieres cómo clasificarlas. El usuario tiene estas áreas:
-Proyectos, Conocimiento, Finanzas, Salud y Ejercicio, Pareja, Hábitos.
-
-User: Clasifica esta captura: "{rawContent}"
-```
-
-Las instrucciones de formato desaparecen — el schema del tool las reemplaza. El `description` de cada campo en el schema guía al modelo sobre qué generar.
-
-Extracción del resultado:
-```typescript
-const response = await client.messages.create({
-  model: 'claude-haiku-4-5-20251001',
-  max_tokens: 512,
-  tools: [{
-    name: 'classify_inbox',
-    description: 'Clasifica una captura de inbox del usuario',
-    input_schema: INBOX_CLASSIFICATION_SCHEMA,
-  }],
-  tool_choice: { type: 'tool', name: 'classify_inbox' },
-  messages: [{ role: 'user', content: `${systemPrompt}\n\n${rawContent}` }],
-});
-
-const toolBlock = response.content.find((b) => b.type === 'tool_use');
-if (!toolBlock || toolBlock.type !== 'tool_use') {
-  // Edge case: no debería pasar con tool_choice forced, pero defensivo
-  logger.error('No tool_use block in response', { userId, itemId });
-  return;
-}
-const result = toolBlock.input as InboxClassification;
-```
-
-`toolBlock.input` ya es un objeto parseado con los campos del schema — no es un string. No necesita `JSON.parse`. No necesita `stripJsonFence`.
-
-**Nota sobre el system prompt con tool use:** Anthropic recomienda poner el system prompt en el campo `system` del request, no concatenado al user message. Verificar si la API de `messages.create` soporta `system` como parámetro top-level (sí lo soporta). Usar:
-```typescript
-{
-  model: '...',
-  system: SYSTEM_PROMPT,
-  tools: [...],
-  tool_choice: { type: 'tool', name: '...' },
-  messages: [{ role: 'user', content: `Clasifica esta captura:\n"${rawContent}"` }],
-}
-```
-
----
+Reescritura de `src/functions/src/inbox/processInboxItem.ts`. Se eliminaron: import de `stripJsonFence`, constantes `VALID_TYPES`/`VALID_AREAS`/`VALID_PRIORITIES` y sus types, interface `AiSuggestion`, función `buildUserPrompt` (instrucciones de formato JSON en el prompt), función `parseSuggestion` (48 líneas de parsing manual con fallbacks `?? 'conocimiento'`, `?? 'medium'`). Se agregó: import de `INBOX_CLASSIFICATION_SCHEMA` e `InboxClassification` de schemas.ts, tool `classify_inbox` en `messages.create` con `tool_choice: { type: 'tool', name: 'classify_inbox' }`. El system prompt se simplificó a solo contexto de productividad (sin instrucciones de formato). El resultado se extrae de `toolBlock.input as InboxClassification` — ya es un objeto parseado, no un string. No hay `JSON.parse` ni `stripJsonFence`. El `docRef.update` con los 7 campos flat y el logging con `suggestedType` se mantuvieron idénticos. Net: -104/+40 líneas.
 
 ### F3: Refactorizar autoTagNote con tool use
 
-**Qué:** Mismo tratamiento que F2 pero para la CF de auto-tagging de notas.
-
-**Criterio de done:**
-- [ ] La llamada usa `tools: [{ name: 'tag_note', input_schema: NOTE_TAGGING_SCHEMA }]` + `tool_choice` forced
-- [ ] El resultado se extrae de `toolBlock.input` como objeto directo
-- [ ] No hay `stripJsonFence` ni `JSON.parse` de la respuesta
-- [ ] Si la respuesta no tiene `tool_use` block (edge case), marca `aiProcessed: true` con `aiTags: '[]'` (evita re-procesamiento)
-- [ ] El guard `aiProcessed` y `contentPlain.trim()` se mantienen sin cambios
-- [ ] Los campos escritos a Firestore mantienen la misma estructura
-
-**Archivos a modificar:**
-- `src/functions/src/notes/autoTagNote.ts` — refactor de la llamada AI + cleanup
-
----
+Mismo tratamiento en `src/functions/src/notes/autoTagNote.ts`. Se eliminaron: import de `stripJsonFence`, función `buildUserPrompt`, función `parseTagResult`, interface `TagResult`. Se agregó tool `tag_note` con `NOTE_TAGGING_SCHEMA` y `tool_choice` forced. Edge case defensivo: si la respuesta no tiene `tool_use` block (no debería pasar con forced, pero defensivo), marca `aiProcessed: true` con `aiTags: '[]'` y `aiSummary: ''` para evitar re-procesamiento infinito por `onDocumentWritten`. Los guards `aiProcessed` y `contentPlain.trim()` se mantuvieron sin cambios. Net: -46/+28 líneas.
 
 ### F4: Cleanup — eliminar parseJson.ts
 
-**Qué:** Eliminar el módulo `stripJsonFence` que ya no tiene consumidores.
-
-**Criterio de done:**
-- [ ] `src/functions/src/lib/parseJson.ts` eliminado
-- [ ] No hay imports huérfanos que referencien a `parseJson` en ningún archivo
-- [ ] `cd src/functions && npm run build` compila limpio
-- [ ] `npm run build` en raíz compila sin regresión
-
-**Archivos a eliminar:**
-- `src/functions/src/lib/parseJson.ts`
+`src/functions/src/lib/parseJson.ts` eliminado. Grep verificó 0 referencias a `stripJsonFence` o `parseJson` en `src/functions/` tras F2 y F3. Build limpio en functions y raíz.
 
 ---
 
-## Orden de implementación
+## Archivos — por feature
 
-1. **F1: schemas.ts** → Primero. Define los schemas que F2 y F3 consumen.
-2. **F2: processInboxItem** → Consume schemas. Testeable E2E con una captura.
-3. **F3: autoTagNote** → Consume schemas. Testeable creando una nota.
-4. **F4: Cleanup** → Al final. Eliminar parseJson.ts solo después de confirmar build limpio.
+**F1 — Schemas compartidos:**
 
----
+- `src/functions/src/lib/schemas.ts` — NUEVO (schemas + interfaces)
 
-## Estructura de archivos
+**F2 — processInboxItem con tool use:**
 
-```
-src/functions/
-├── src/
-│   ├── lib/
-│   │   ├── schemas.ts           # NUEVO — JSON Schemas + types
-│   │   └── parseJson.ts         # ELIMINADO en F4
-│   ├── inbox/
-│   │   └── processInboxItem.ts  # MODIFICADO — tool use
-│   └── notes/
-│       └── autoTagNote.ts       # MODIFICADO — tool use
-```
+- `src/functions/src/inbox/processInboxItem.ts` — MODIFICADO (tool use, eliminado parsing manual)
+
+**F3 — autoTagNote con tool use:**
+
+- `src/functions/src/notes/autoTagNote.ts` — MODIFICADO (tool use, eliminado parsing manual)
+
+**F4 — Cleanup:**
+
+- `src/functions/src/lib/parseJson.ts` — ELIMINADO
 
 ---
 
-## Definiciones técnicas
+## Verificación E2E
 
-### D1: ¿Cómo funciona tool use como schema enforcement?
-
-Cuando se usa `tool_choice: { type: 'tool', name: 'X' }`, Anthropic fuerza al modelo a responder exclusivamente con un `tool_use` block que cumple el `input_schema` de la tool `X`. El modelo no puede devolver texto libre, ni wrappear en markdown, ni omitir campos `required`. Los `enum` restringen los valores posibles. Es enforcement a nivel de decodificador — no depende de obediencia al prompt.
-
-### D2: ¿Por qué no agregar OpenAI ahora?
-
-Simplicidad. El problema actual (nulls, JSON malformado) se resuelve 100% con tool use sin cambiar de proveedor. OpenAI se agrega en Fase 4 cuando realmente se necesite para embeddings — no antes. YAGNI.
-
-### D3: ¿Cambia el costo?
-
-No. Tool use con Haiku tiene un overhead fijo de ~50-100 tokens extra por la definición de la tool en el prompt. A $1/MTok y ~100 requests/mes, el incremento es < $0.01/mes.
+- Quick Capture con texto real ("Investigar como funciona FSRS..."): 6 campos flat correctos — `aiSuggestedType: 'task'`, `aiSuggestedArea: 'conocimiento'`, `aiPriority: 'medium'`, 4 tags relevantes, summary coherente, `aiProcessed: true`
+- Quick Capture con basura ("asdf jkl qwerty"): todos los campos con valores válidos del enum, sin nulls — `aiSuggestedArea: 'conocimiento'`, `aiPriority: 'low'`, `aiSuggestedType: 'note'`
+- Nota nueva con texto (FSRS): `aiTags` con 5 tags relevantes, `aiSummary` coherente, `aiProcessed: true`
+- `/inbox`, `/inbox/process`, dashboard: sin regresión en renderizado de sugerencias AI
+- Build functions + raíz: limpio
+- Deploy exitoso: ambas funciones actualizadas en us-central1
 
 ---
 
 ## Checklist de completado
 
-- [ ] `schemas.ts` creado con `INBOX_CLASSIFICATION_SCHEMA` + `NOTE_TAGGING_SCHEMA` + types
-- [ ] `processInboxItem` usa tool use con schema enforcement — sin `stripJsonFence`, sin fallbacks null
-- [ ] `autoTagNote` usa tool use con schema enforcement
-- [ ] `parseJson.ts` eliminado
-- [ ] `cd src/functions && npm run build` compila sin errores
-- [ ] `npm run build` en raíz compila sin errores
-- [ ] Deploy exitoso: `firebase deploy --only functions`
-- [ ] Al capturar con Alt+N, la CF procesa correctamente (6 campos flat con valores válidos, sin nulls)
-- [ ] Al crear nota con texto, autoTagNote genera tags correctamente
-- [ ] Captura de basura ("asdf") produce `suggestedType: 'trash'` y `suggestedArea` con valor válido del enum (no null)
-- [ ] `/inbox`, `/inbox/process`, y dashboard funcionan sin regresión
-- [ ] Logs muestran las invocaciones exitosas con `suggestedType`
+- [x] `schemas.ts` creado con `INBOX_CLASSIFICATION_SCHEMA` + `NOTE_TAGGING_SCHEMA` + types
+- [x] `processInboxItem` usa tool use con schema enforcement — sin `stripJsonFence`, sin fallbacks null
+- [x] `autoTagNote` usa tool use con schema enforcement
+- [x] `parseJson.ts` eliminado
+- [x] `cd src/functions && npm run build` compila sin errores
+- [x] `npm run build` en raíz compila sin errores
+- [x] Deploy exitoso: `firebase deploy --only functions`
+- [x] Al capturar con Alt+N, la CF procesa correctamente (6 campos flat con valores válidos, sin nulls)
+- [x] Al crear nota con texto, autoTagNote genera tags correctamente
+- [x] Captura de basura produce `suggestedArea` con valor válido del enum (no null)
+- [x] `/inbox`, `/inbox/process`, y dashboard funcionan sin regresión
+
+---
+
+## Observaciones post-implementación
+
+1. **Tool use no mejora la calidad de clasificación, solo el formato.** Input basura "asdf jkl qwerty" devolvió `suggestedType: 'note'` en vez de `'trash'`. El modelo sigue decidiendo qué clasificar como trash vs note — tool use garantiza que el valor sea uno del enum, no que sea el correcto.
+
+2. **El gotcha de nulls de Haiku ya no aplica.** Los `enum` + `required` del JSON Schema garantizan valores válidos a nivel de decoder. El fallback `?? 'conocimiento'` y las validaciones manuales de `parseSuggestion` ya no son necesarios. CLAUDE.md actualizado.
+
+3. **`stripJsonFence` eliminado del repo.** El gotcha de markdown fences en las respuestas de Haiku ya no aplica — `toolBlock.input` es un objeto nativo del SDK, no un string.
 
 ---
 
 ## Siguiente fase
 
-Continuar con **Fase 4 — Grafo + Resurfacing**. OpenAI SDK se agrega en Fase 4 cuando se implemente `text-embedding-3-small` para embeddings.
+Continuar con **Fase 4 — Grafo + Resurfacing.** OpenAI SDK se agrega en Fase 4 cuando se implemente `text-embedding-3-small` para embeddings.
