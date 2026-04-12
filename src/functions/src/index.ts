@@ -4,3 +4,4 @@ admin.initializeApp();
 
 export { processInboxItem } from './inbox/processInboxItem';
 export { autoTagNote } from './notes/autoTagNote';
+export { generateEmbedding } from './embeddings/generateEmbedding';
