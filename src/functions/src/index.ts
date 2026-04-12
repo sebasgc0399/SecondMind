@@ -3,3 +3,4 @@ import * as admin from 'firebase-admin';
 admin.initializeApp();
 
 export { processInboxItem } from './inbox/processInboxItem';
+export { autoTagNote } from './notes/autoTagNote';

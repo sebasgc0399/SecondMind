@@ -37,7 +37,11 @@
       "Bash(firebase functions:log --only processInboxItem --lines 30)",
       "mcp__playwright__browser_close",
       "Bash(echo \"EXIT=$?\")",
-      "Bash(firebase functions:log --only processInboxItem --lines 15)"
+      "Bash(firebase functions:log --only processInboxItem --lines 15)",
+      "Bash(firebase functions:log --only autoTagNote --lines 10)",
+      "Bash(firebase functions:log --only autoTagNote --lines 5)",
+      "Bash(firebase functions:log --only processInboxItem --lines 5)",
+      "mcp__playwright__browser_select_option"
     ],
     "additionalDirectories": ["C:\\Users\\sebas\\.claude"]
   },

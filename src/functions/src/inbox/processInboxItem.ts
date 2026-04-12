@@ -3,6 +3,7 @@ import * as admin from 'firebase-admin';
 import { onDocumentCreated } from 'firebase-functions/v2/firestore';
 import { defineSecret } from 'firebase-functions/params';
 import { logger } from 'firebase-functions';
+import { stripJsonFence } from '../lib/parseJson';
 
 const anthropicApiKey = defineSecret('ANTHROPIC_API_KEY');
 
@@ -48,13 +49,6 @@ Responde SOLO con JSON válido, sin markdown:
   "summary": "Resumen de una línea",
   "priority": "low" | "medium" | "high" | "urgent"
 }`;
-}
-
-function stripJsonFence(text: string): string {
-  const trimmed = text.trim();
-  const fenceMatch = trimmed.match(/^```(?:json)?\s*([\s\S]*?)\s*```$/);
-  if (fenceMatch && fenceMatch[1]) return fenceMatch[1].trim();
-  return trimmed;
 }
 
 function parseSuggestion(text: string): AiSuggestion {
