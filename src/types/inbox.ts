@@ -1,3 +1,6 @@
+import type { AreaKey } from '@/types/area';
+import type { Priority } from '@/types/common';
+
 export type InboxSource = 'quick-capture' | 'web-clip' | 'voice' | 'share-intent' | 'email';
 
 export type InboxStatus = 'pending' | 'processed' | 'dismissed';
@@ -8,7 +11,9 @@ export interface InboxAiResult {
   suggestedTitle: string;
   suggestedTags: string[];
   suggestedType: InboxResultType;
+  suggestedArea: AreaKey;
   summary: string;
+  priority: Priority;
   relatedNoteIds: string[];
 }
 
