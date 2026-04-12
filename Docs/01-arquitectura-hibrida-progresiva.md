@@ -1,7 +1,8 @@
-# 🏗️ Arquitectura D: Híbrida Progresiva — Guía Técnica
+# 🏗️ Arquitectura: Híbrida Progresiva — Guía Técnica
 
-> Documento de referencia arquitectónica para el Segundo Cerebro digital.
-> Este documento NO es el SPEC — es la guía que informa al SPEC.
+> Documento de referencia arquitectónica para SecondMind.
+> Este documento NO es el SPEC — es la guía que informa al SPEC de cada fase.
+> Actualizado tras Fases 0–2 con correcciones factuales del stack y patterns descubiertos.
 
 ---
 
@@ -21,18 +22,20 @@ Construir lo mínimo que genere valor diario, iterar basándose en uso real. Cad
 
 ## 2. Stack técnico definitivo
 
-### Core (MVP)
+### Core
 
-| Capa                | Tecnología                                                 | Justificación                             |
-| ------------------- | ---------------------------------------------------------- | ----------------------------------------- |
-| **UI Framework**    | React 19 + TypeScript strict                               | Stack conocido, máximo code-reuse         |
-| **Build**           | Vite                                                       | Ya lo usas, rápido, sin config extra      |
-| **Estilos**         | Tailwind CSS                                               | Consistente con tus otros proyectos       |
-| **Editor de notas** | TipTap (ProseMirror)                                       | Headless, extensible, wikilinks custom    |
-| **Store reactivo**  | TinyBase                                                   | 13KB, hooks React, persister Firestore    |
-| **Backend**         | Firebase (Firestore + Cloud Functions v2 + Auth + Storage) | Stack conocido, $0 en free tier           |
-| **Búsqueda local**  | Orama                                                      | ~40KB, TypeScript-native, FTS client-side |
-| **UI Components**   | shadcn/ui                                                  | Ya lo usas, Tailwind-first                |
+| Capa                | Tecnología                                                           | Justificación                                                                                                   |
+| ------------------- | -------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------- |
+| **UI Framework**    | React 19 + TypeScript strict                                         | Stack conocido, máximo code-reuse                                                                               |
+| **Build**           | Vite                                                                 | Rápido, sin config extra                                                                                        |
+| **Estilos**         | Tailwind CSS v4 (CSS-first, `@theme` en `src/index.css`)             | No existe `tailwind.config.ts` — toda la config vive en CSS                                                     |
+| **Editor de notas** | TipTap (ProseMirror)                                                 | Headless, extensible, wikilinks custom                                                                          |
+| **Store reactivo**  | TinyBase v8                                                          | 13KB, hooks React. No tiene persister Firestore nativo — se usa `createCustomPersister`                         |
+| **Backend**         | Firebase (Firestore + Cloud Functions v2 + Auth + Storage + Hosting) | Stack conocido, $0 en free tier                                                                                 |
+| **Búsqueda local**  | Orama                                                                | ~40KB, TypeScript-native, FTS client-side                                                                       |
+| **UI Components**   | shadcn/ui (Base UI / `@base-ui/react`)                               | **No es Radix UI** — usa `data-open`/`data-closed` + `data-starting-style`/`data-ending-style`, NO `data-state` |
+| **Routing**         | React Router v7 (`createBrowserRouter`)                              | Client-side routing con layouts anidados                                                                        |
+| **Iconos**          | lucide-react                                                         | Consistente, tree-shakeable                                                                                     |
 
 ### Fases posteriores
 
@@ -54,9 +57,10 @@ Construir lo mínimo que genere valor diario, iterar basándose en uso real. Cad
 ### Principios del modelo
 
 - **Notas son ciudadanos de primera clase** — no subcolecciones de proyectos
-- **Links como colección separada** — permite queries bidireccionales eficientes
+- **Links como colección separada** — IDs determinísticos `${sourceId}__${targetId}` para dedup trivial y queries bidireccionales eficientes
 - **PARA como metadata** — no como estructura de carpetas
-- **Denormalización intencional** — títulos de notas linkeadas se cachean para evitar reads extra
+- **Títulos de links resueltos in-memory** — `useBacklinks` hace join con `useTable('notes')` en vez de cachear títulos en el doc de link. Cero stale titles, reactivo a cambios
+- **Content de notas fuera de TinyBase** — el campo `content` (TipTap JSON) se lee/escribe directo de Firestore solo cuando se abre el editor. TinyBase solo maneja metadata. El persister usa `merge: true` para no sobrescribir `content` al sincronizar
 
 ### Colecciones principales
 
@@ -64,7 +68,7 @@ Construir lo mínimo que genere valor diario, iterar basándose en uso real. Cad
 firestore/
 ├── users/{userId}/
 │   ├── notes/           → Notas atómicas (la entidad central)
-│   ├── links/           → Conexiones bidireccionales entre notas
+│   ├── links/           → Conexiones bidireccionales entre notas (ID: sourceId__targetId)
 │   ├── tasks/           → Tareas (acciones atómicas)
 │   ├── projects/        → Proyectos (resultados con deadline)
 │   ├── objectives/      → Objetivos (metas grandes)
@@ -79,10 +83,10 @@ firestore/
 
 ```typescript
 interface Note {
-  id: string; // auto-generated
+  id: string; // crypto.randomUUID()
   title: string; // La idea, no el tema ("La fricción mata hábitos")
-  content: string; // TipTap JSON serializado
-  contentPlain: string; // Texto plano para búsqueda (generado de content)
+  content: string; // TipTap JSON serializado (fuera del schema TinyBase, solo en Firestore)
+  contentPlain: string; // Texto plano para búsqueda (generado con editor.getText())
 
   // Clasificación PARA
   paraType: 'project' | 'area' | 'resource' | 'archive';
@@ -91,7 +95,7 @@ interface Note {
   noteType: 'fleeting' | 'literature' | 'permanent';
   source?: string; // De dónde viene (libro, podcast, conversación, etc.)
 
-  // Relaciones (IDs denormalizados)
+  // Relaciones (IDs como JSON arrays serializados — parseIds/stringifyIds)
   projectIds: string[]; // Proyectos vinculados
   areaIds: string[]; // Áreas vinculadas
   tagIds: string[]; // Tags/temas
@@ -122,11 +126,11 @@ interface Note {
 }
 ```
 
-### Esquema: `links/{linkId}`
+### Esquema: `links/{sourceId__targetId}`
 
 ```typescript
 interface NoteLink {
-  id: string;
+  id: string; // Determinístico: `${sourceId}__${targetId}`
   sourceId: string; // Nota origen
   targetId: string; // Nota destino
 
@@ -134,16 +138,14 @@ interface NoteLink {
   context?: string; // Texto alrededor del [[wikilink]] en la nota origen
   linkType: 'explicit' | 'ai-suggested'; // ¿Lo creó el usuario o la AI?
 
-  // Denormalización para queries rápidas
-  sourceTitle: string; // Cache del título de la nota origen
-  targetTitle: string; // Cache del título de la nota destino
-
   // Metadata
   createdAt: Timestamp;
   strength?: number; // AI: similitud semántica (0-1)
   accepted: boolean; // Para links AI-suggested: ¿el usuario aceptó?
 }
 ```
+
+> **Nota:** `sourceTitle` y `targetTitle` no se cachean en el doc de link. Se resuelven in-memory con join en `useBacklinks` → `useTable('notes')`. Esto elimina el stale-title problem sin round-trip.
 
 ### Esquema: `inbox/{itemId}`
 
@@ -175,20 +177,21 @@ interface InboxItem {
 }
 ```
 
+> **Items nunca se borran físicamente** — se marcan `processed` o `dismissed`. Preserva historial para undo o auditoría futura.
+
 ### Esquema: `tasks/{taskId}`
 
 ```typescript
 interface Task {
   id: string;
   name: string;
-  status: 'inbox' | 'todo' | 'in-progress' | 'waiting' | 'completed';
+  status: 'inbox' | 'in-progress' | 'waiting' | 'delegated' | 'completed';
   priority: 'low' | 'medium' | 'high' | 'urgent';
-  date?: Timestamp; // Cuándo hacerla
+  dueDate?: Timestamp; // Cuándo hacerla
 
   // Relaciones
-  projectId?: string;
+  projectId?: string; // Singular — una tarea pertenece a UN proyecto
   areaId?: string;
-  objectiveId?: string;
   noteIds: string[]; // Notas vinculadas
 
   description?: string;
@@ -199,18 +202,20 @@ interface Task {
 }
 ```
 
+> **Cambio vs diseño original:** `status` droppeó `'todo'` (nunca se usó) y agregó `'delegated'`. `completeTask` es un toggle — destildar vuelve a `in-progress`.
+
 ### Esquema: `projects/{projectId}`
 
 ```typescript
 interface Project {
   id: string;
   name: string;
-  status: 'inbox' | 'not-started' | 'in-progress' | 'on-hold' | 'completed';
+  status: 'not-started' | 'in-progress' | 'on-hold' | 'completed';
   priority: 'low' | 'medium' | 'high' | 'urgent';
 
   // Relaciones
   areaId?: string;
-  objectiveId?: string;
+  objectiveId?: string; // Singular — un proyecto pertenece a UN objetivo
   taskIds: string[];
   noteIds: string[];
 
@@ -223,6 +228,8 @@ interface Project {
   updatedAt: Timestamp;
 }
 ```
+
+> **Progreso derivado:** % completado = tareas completadas / total de tareas donde `task.projectId === project.id`. Cross-store reactivo en UI.
 
 ### Esquema: `objectives/{objectiveId}`
 
@@ -241,6 +248,8 @@ interface Objective {
   updatedAt: Timestamp;
 }
 ```
+
+> **Relaciones 1:N:** El lado singular (`project.objectiveId`) es fuente de verdad para render, no el plural (`objective.projectIds`). `projects.filter(p => p.objectiveId === id)` evita drift visual cuando se reasigna un proyecto.
 
 ### Esquema: `embeddings/{noteId}`
 
@@ -263,9 +272,11 @@ interface NoteEmbedding {
 
 ```
 src/
-├── app/                         # Rutas y layouts
-│   ├── layout.tsx
+├── app/                         # Rutas (React Router con createBrowserRouter)
+│   ├── router.tsx               # Definición de rutas
+│   ├── layout.tsx               # Layout compartido: Sidebar + Outlet + QuickCapture
 │   ├── page.tsx                 # Dashboard
+│   ├── not-found.tsx            # 404
 │   ├── inbox/
 │   ├── notes/
 │   │   ├── page.tsx             # Lista de notas
@@ -275,91 +286,128 @@ src/
 │   │       └── page.tsx         # Vista de grafo
 │   ├── tasks/
 │   ├── projects/
+│   │   ├── page.tsx
+│   │   └── [projectId]/
+│   │       └── page.tsx         # Detalle de proyecto
 │   ├── objectives/
 │   └── habits/
 │
 ├── components/
-│   ├── ui/                      # shadcn/ui components
+│   ├── ui/                      # shadcn/ui components (Base UI)
 │   ├── editor/                  # TipTap editor y extensiones
-│   │   ├── Editor.tsx
-│   │   ├── extensions/
-│   │   │   ├── wikilink.ts      # [[wikilinks]] con autocompletado
-│   │   │   ├── slash-command.ts  # / commands
-│   │   │   └── tag.ts           # #tag inline
-│   │   └── menus/
-│   │       ├── BubbleMenu.tsx
-│   │       └── SlashMenu.tsx
-│   ├── graph/                   # Visualización de grafo
+│   │   ├── NoteEditor.tsx
+│   │   ├── NoteCard.tsx
+│   │   ├── BacklinksPanel.tsx
+│   │   └── extensions/
+│   │       └── wikilink.ts      # [[wikilinks]] con autocompletado
+│   ├── graph/                   # Visualización de grafo (Fase 4)
 │   │   ├── KnowledgeGraph.tsx
 │   │   └── GraphFilters.tsx
 │   ├── capture/                 # Captura rápida
-│   │   ├── QuickCapture.tsx     # Modal/drawer de captura
-│   │   └── InboxProcessor.tsx   # Vista de procesamiento AI
+│   │   ├── QuickCapture.tsx     # Modal global (Alt+N)
+│   │   └── InboxProcessor.tsx   # Vista de procesamiento AI (Fase 3)
+│   ├── tasks/
+│   │   ├── TaskCard.tsx
+│   │   └── TaskInlineCreate.tsx
+│   ├── projects/
+│   │   ├── ProjectCard.tsx
+│   │   ├── ProjectCreateModal.tsx
+│   │   ├── ProjectNoteList.tsx
+│   │   └── NoteLinkModal.tsx
+│   ├── objectives/
+│   │   ├── ObjectiveCard.tsx
+│   │   └── ObjectiveCreateModal.tsx
+│   ├── habits/
+│   │   ├── HabitGrid.tsx
+│   │   └── HabitRow.tsx
 │   ├── dashboard/
-│   │   ├── TodayTasks.tsx
-│   │   ├── ActiveProjects.tsx
-│   │   ├── DailyDigest.tsx      # Resurfacing de notas
-│   │   └── HabitTracker.tsx
+│   │   ├── Greeting.tsx
+│   │   ├── QuickCaptureButton.tsx
+│   │   ├── InboxCard.tsx
+│   │   ├── RecentNotesCard.tsx
+│   │   ├── TasksTodayCard.tsx
+│   │   ├── ProjectsActiveCard.tsx
+│   │   ├── HabitsTodayCard.tsx
+│   │   └── DailyDigest.tsx      # Resurfacing de notas (Fase 4)
 │   └── layout/
 │       ├── Sidebar.tsx
-│       ├── CommandPalette.tsx   # ⌘K para búsqueda global
+│       ├── CommandPalette.tsx   # ⌘K para búsqueda global (Fase 3)
 │       └── Breadcrumbs.tsx
 │
-├── stores/                      # TinyBase stores
+├── stores/                      # TinyBase stores (uno por entidad)
 │   ├── notesStore.ts
+│   ├── linksStore.ts
+│   ├── inboxStore.ts
 │   ├── tasksStore.ts
 │   ├── projectsStore.ts
-│   ├── linksStore.ts
-│   └── inboxStore.ts
+│   ├── objectivesStore.ts
+│   └── habitsStore.ts
 │
 ├── hooks/                       # Custom hooks
-│   ├── useNote.ts
-│   ├── useSearch.ts             # Orama FTS
-│   ├── useBacklinks.ts          # Links bidireccionales
-│   ├── useGraph.ts              # Datos del grafo
-│   └── useQuickCapture.ts
+│   ├── useAuth.ts
+│   ├── useStoreInit.ts          # Inicializa persisters + grace period
+│   ├── useNote.ts               # Carga content desde Firestore (getDoc one-shot)
+│   ├── useNoteSave.ts           # Autosave debounced + syncLinks
+│   ├── useNoteSearch.ts         # Orama FTS
+│   ├── useBacklinks.ts          # Join in-memory links + notes para títulos frescos
+│   ├── useInbox.ts              # CRUD inbox + usePendingInboxCount
+│   ├── useTasks.ts
+│   ├── useProjects.ts
+│   ├── useObjectives.ts
+│   ├── useHabits.ts             # Toggle + helpers de fecha
+│   ├── useQuickCapture.ts
+│   └── useGraph.ts              # Datos del grafo (Fase 4)
 │
 ├── lib/
 │   ├── firebase.ts              # Config Firebase
-│   ├── tinybase.ts              # Config TinyBase + persisters
+│   ├── tinybase.ts              # createCustomPersister factory (merge: true)
 │   ├── orama.ts                 # Config búsqueda
+│   ├── formatDate.ts            # Fecha relativa, startOfDay, isSameDay
 │   ├── editor/
-│   │   ├── serialize.ts         # TipTap JSON ↔ Markdown
-│   │   └── extractLinks.ts     # Parser de [[wikilinks]] del contenido
+│   │   ├── syncLinks.ts         # Diff + write links bidireccionales client-side
+│   │   ├── extractLinks.ts      # Parser de [[wikilinks]] del contenido
+│   │   └── serialize.ts         # TipTap JSON ↔ Markdown
 │   └── ai/
-│       ├── processInbox.ts      # Client para Cloud Function de inbox
-│       └── suggestLinks.ts      # Client para sugerencia de links
+│       ├── processInbox.ts      # Client para Cloud Function de inbox (Fase 3)
+│       └── suggestLinks.ts      # Client para sugerencia de links (Fase 4)
 │
-├── types/                       # TypeScript interfaces (los esquemas de arriba)
+├── types/                       # TypeScript interfaces
 │   ├── note.ts
+│   ├── link.ts
+│   ├── inbox.ts
 │   ├── task.ts
 │   ├── project.ts
-│   └── inbox.ts
+│   ├── objective.ts
+│   ├── habit.ts
+│   ├── area.ts
+│   └── common.ts               # TaskStatus, ObjectiveStatus, Priority
 │
 └── functions/                   # Cloud Functions v2 (deploy separado)
     ├── src/
     │   ├── inbox/
-    │   │   └── processInboxItem.ts   # onDocumentCreated → Claude Haiku
+    │   │   └── processInboxItem.ts   # onDocumentCreated → Claude Haiku (Fase 3)
+    │   ├── notes/
+    │   │   └── autoTagNote.ts        # onDocumentCreated → Claude Haiku (Fase 3)
     │   ├── embeddings/
-    │   │   └── generateEmbedding.ts  # onDocumentWritten → OpenAI
-    │   ├── links/
-    │   │   └── syncBacklinks.ts      # Mantener links bidireccionales en sync
+    │   │   └── generateEmbedding.ts  # onDocumentWritten → OpenAI (Fase 4)
     │   └── resurfacing/
-    │       └── dailyDigest.ts        # Scheduled: generar digest diario
+    │       └── dailyDigest.ts        # Scheduled: generar digest diario (Fase 4)
     └── package.json
 ```
+
+> **Nota:** `syncBacklinks` Cloud Function fue eliminada del diseño. Los links bidireccionales se sincronizan 100% client-side en `syncLinks.ts` (decisión de diseño — ver sección 5, Flujo 2 y sección 10, D8).
 
 ---
 
 ## 5. Flujos clave
 
-### Flujo 1: Captura rápida (<2 segundos percibidos)
+### Flujo 1: Captura rápida (< 3 segundos)
 
 ```
-Usuario presiona ⌘+Shift+N (o toca "+")
+Usuario presiona Alt+N (global, cualquier ruta)
     │
     ▼
-QuickCapture modal se abre (campo de texto enfocado)
+QuickCapture modal se abre (textarea enfocado)
     │
     ▼
 Escribe texto → Enter
@@ -368,10 +416,10 @@ Escribe texto → Enter
 TinyBase guarda localmente (INSTANTÁNEO)
     │
     ▼
-TinyBase persiste a Firestore (async, invisible)
+TinyBase persiste a Firestore (async, invisible, merge: true)
     │
     ▼
-Cloud Function se dispara (onDocumentCreated en inbox/)
+(Fase 3) Cloud Function se dispara (onDocumentCreated en inbox/)
     │
     ▼
 Claude Haiku procesa:
@@ -379,7 +427,7 @@ Claude Haiku procesa:
   - Sugiere tags
   - Sugiere tipo (nota/tarea/proyecto)
   - Genera resumen de 1 línea
-  - Busca notas relacionadas (v1.1: por embeddings)
+  - (v1.1) Busca notas relacionadas por embeddings
     │
     ▼
 Inbox item actualizado con aiResult
@@ -390,28 +438,39 @@ Usuario ve sugerencias en InboxProcessor
   - Un tap para convertir en nota/tarea/proyecto
 ```
 
+> **Shortcut:** `Alt+N` en vez de `⌘+Shift+N` — este último choca con "Nueva ventana incógnito" de Chrome.
+
 ### Flujo 2: Escribir una nota atómica con links
 
 ```
 Usuario abre editor de nota
     │
     ▼
+useNote carga content desde Firestore (getDoc one-shot, no onSnapshot)
+    │
+    ▼
 Escribe contenido en TipTap
     │
     ▼
 Escribe [[ → autocompletado muestra notas existentes
+    (via @tiptap/suggestion, popup con createPortal + virtual anchor, sin tippy.js)
     │
     ▼
 Selecciona nota → se crea un [[wikilink]]
     │
     ▼
-Al guardar:
-  1. extractLinks() parsea el contenido
-  2. Nuevos links se escriben en links/ collection
-  3. Cloud Function syncBacklinks actualiza incomingLinkIds
-     en las notas destino (bidireccional automático)
-  4. El sidebar muestra "Backlinks" con todas las notas
-     que apuntan a esta nota
+Al guardar (debounce 2s via useNoteSave):
+  1. updateDoc a Firestore (content + contentPlain + title + updatedAt)
+  2. notesStore.setPartialRow con metadata
+  3. syncLinks() — client-side, NO Cloud Function:
+     a. extractLinks() parsea el TipTap JSON
+     b. Diff con links existentes en linksStore (filtrados por sourceId)
+     c. Self-links (targetId === sourceId) se filtran
+     d. setDoc para creates, deleteDoc para removes (en paralelo)
+     e. Actualiza incomingLinkIds de targets afectados via setPartialRow
+     f. Retorna { outgoingLinkIds, linkCount }
+  4. BacklinksPanel muestra backlinks con títulos frescos
+     (join in-memory useTable('notes'), no cache en doc de link)
     │
     ▼
 (v1.1) Al guardar también:
@@ -420,7 +479,7 @@ Al guardar:
   7. Se sugieren links adicionales ("¿Conectar con...?")
 ```
 
-### Flujo 3: Procesamiento AI del inbox
+### Flujo 3: Procesamiento AI del inbox (Fase 3)
 
 ```
 Cloud Function: processInboxItem (onDocumentCreated)
@@ -459,10 +518,10 @@ Usuario revisa en InboxProcessor:
   - Ve sugerencia de Claude
   - Acepta → se crea nota/tarea/proyecto con un click
   - Modifica → edita antes de crear
-  - Descarta → elimina del inbox
+  - Descarta → marca como dismissed
 ```
 
-### Flujo 4: Resurfacing diario (v1.1)
+### Flujo 4: Resurfacing diario (Fase 4)
 
 ```
 Cloud Function scheduled: dailyDigest (cada mañana, 6 AM)
@@ -501,39 +560,24 @@ Dashboard muestra DailyDigest component
 | Offline requiere enablePersistence (limitado) | Store local + persister async a Firestore                |
 | Reads se cobran por documento                 | Cache local, solo sync deltas                            |
 
-### Configuración básica
+### Configuración (custom persister)
+
+TinyBase v8 **no tiene** `persister-firestore` nativo. Se usa `createCustomPersister` con una factory reutilizable:
 
 ```typescript
-import { createStore } from 'tinybase';
-import { createFirestorePersister } from 'tinybase/persisters/persister-firestore';
-import { db } from './firebase';
-import { collection } from 'firebase/firestore';
+// src/lib/tinybase.ts
+import { createCustomPersister } from 'tinybase/persisters';
 
-// 1. Crear store
-const notesStore = createStore();
-
-// 2. Definir tablas
-notesStore.setTablesSchema({
-  notes: {
-    title: { type: 'string', default: '' },
-    contentPlain: { type: 'string', default: '' },
-    paraType: { type: 'string', default: 'resource' },
-    noteType: { type: 'string', default: 'fleeting' },
-    distillLevel: { type: 'number', default: 0 },
-    linkCount: { type: 'number', default: 0 },
-    isFavorite: { type: 'boolean', default: false },
-    isArchived: { type: 'boolean', default: false },
-    aiProcessed: { type: 'boolean', default: false },
-    viewCount: { type: 'number', default: 0 },
-  },
-});
-
-// 3. Conectar a Firestore
-const persister = createFirestorePersister(notesStore, collection(db, `users/${userId}/notes`));
-
-// 4. Iniciar sync bidireccional
-await persister.startAutoLoad(); // Firestore → TinyBase
-await persister.startAutoSave(); // TinyBase → Firestore
+// Factory que crea un persister bidireccional Firestore ↔ TinyBase
+// - onSnapshot listener para Firestore → TinyBase (auto-load)
+// - setDoc con merge: true para TinyBase → Firestore (auto-save)
+// - merge: true es CRÍTICO — sin él, el persister borra campos
+//   escritos fuera del store (ej: content de notas)
+export function createFirestorePersister({ store, collectionPath, tableName }) {
+  return createCustomPersister(store, {
+    // ... implementación con onSnapshot + setDoc({ merge: true })
+  });
+}
 ```
 
 ### Uso en componentes React
@@ -561,56 +605,47 @@ function NotesList() {
 }
 ```
 
-### Nota importante sobre contenido largo
+### Contenido largo — estrategia implementada
 
-TinyBase es un store in-memory. Para notas con contenido largo (TipTap JSON), hay dos estrategias:
+TinyBase solo guarda metadata (título, tags, flags). El `content` completo (TipTap JSON) se lee/escribe directo de Firestore solo cuando se abre el editor via `useNote` (getDoc one-shot) y `useNoteSave` (updateDoc debounced). Esto mantiene el store ligero y evita cargar contenido de todas las notas en memoria.
 
-**Estrategia A (simple, MVP):** Guardar `content` como celda en TinyBase. Para <2000 notas funciona bien.
+> **`useNoteSave` es el único punto que escribe `content`** a Firestore. Nuevas features que manipulen notas no deben tocar `content` por fuera de este flujo.
 
-**Estrategia B (escalable, v2):** TinyBase solo guarda metadata (título, tags, flags). El `content` completo se lee/escribe directo de Firestore solo cuando se abre el editor. Esto mantiene el store ligero.
+### Patterns clave descubiertos
+
+- **Arrays como JSON strings:** `parseIds(row.projectIds)` / `stringifyIds([...ids, newId])` — TinyBase no soporta arrays nativos
+- **`setPartialRow` > `setRow`:** `setRow` es full replace y causa race conditions en toggles rápidos (ej: dos hábitos clickeados seguidos). `setPartialRow` es commutative entre campos distintos
+- **Local-first para toggles frecuentes:** `setPartialRow` local (sync) **antes** del `setDoc` Firestore (async) — evita races en clicks rápidos. Para updates de un solo campo donde la race es improbable, el orden inverso (`setDoc → setPartialRow`) es aceptable
+- **Grace period:** 200ms para UI (evita skeleton flash), 1500ms para redirects por existencia de recurso (el `isInitializing` de 200ms no es suficiente para esperar hidratación completa de Firestore en full-reload por URL)
+- **Creación de entidades — orden estricto:** `await setDoc(Firestore)` → `store.setRow(TinyBase)` → `navigate()`. Invertir causa race con `getDoc`/`useNote` en la página destino
 
 ---
 
 ## 7. TipTap — Editor de notas atómicas
 
-### Extensiones necesarias
+### Extensiones
 
 ```
-Extensiones base:
+Extensiones base (implementadas):
 ├── StarterKit (bold, italic, headings, lists, code, etc.)
-├── Placeholder ("Escribe una idea...")
-├── Typography (smart quotes, em-dash)
-└── CharacterCount (feedback visual)
+└── Placeholder ("Escribe una idea...")
 
-Extensiones custom (construir):
-├── WikiLink          → [[nota]] con autocompletado
+Extensión custom (implementada):
+└── WikiLink → [[nota]] con autocompletado
+    ├── @tiptap/suggestion con char: '[[' (TipTap v3 acepta strings multi-char nativamente)
+    ├── Popup: createPortal + virtual anchor del clientRect() (sin tippy.js)
+    ├── Node schema: { type: 'wikilink', attrs: { noteId, noteTitle } }
+    └── Click: event delegation con data-note-id → navigate
+
+Extensiones custom (planeadas, Fase 4+):
 ├── SlashCommand      → / para insertar bloques
 ├── TagInline         → #tag reconocido inline
 └── ProgressiveHighlight → Niveles de summarization visual
 ```
 
-### WikiLink extension — concepto
-
-```typescript
-// La extensión detecta [[ como trigger
-// Muestra un popup con autocompletado de títulos de notas
-// Al seleccionar, inserta un Node con el ID de la nota
-// Al renderizar, muestra el título como link clickeable
-// Al hacer click, navega a la nota
-
-// Node schema:
-{
-  type: 'wikilink',
-  attrs: {
-    noteId: string,        // ID de la nota linkeada
-    noteTitle: string,     // Título (cache para display)
-  }
-}
-```
-
 ### Serialización
 
-TipTap guarda contenido como JSON (ProseMirror document). Para `contentPlain` (búsqueda), se genera texto plano con `editor.getText()`. Para export Markdown, se usa `@tiptap/pm` con serializer custom.
+TipTap guarda contenido como JSON (ProseMirror document). Para `contentPlain` (búsqueda), se genera texto plano con `editor.getText()`. El título se extrae automáticamente de la primera línea del plain text en `useNoteSave`.
 
 ---
 
@@ -624,7 +659,7 @@ TipTap guarda contenido como JSON (ProseMirror document). Para `contentPlain` (b
 - **Stemming y fuzzy**: búsqueda inteligente incluida
 - **Faceted search**: filtrar por tipo, área, tags en una query
 
-### Setup conceptual
+### Setup
 
 ```typescript
 import { create, insert, search } from '@orama/orama';
@@ -638,71 +673,60 @@ const searchIndex = await create({
     tags: 'string[]',
   },
 });
-
-// Insertar notas del TinyBase store
-for (const noteId of noteIds) {
-  const note = notesStore.getRow('notes', noteId);
-  await insert(searchIndex, { id: noteId, ...note });
-}
-
-// Buscar
-const results = await search(searchIndex, {
-  term: 'fricción hábitos',
-  properties: ['title', 'contentPlain'],
-  facets: { paraType: {}, noteType: {} },
-  limit: 20,
-});
 ```
 
 ### Sync con TinyBase
 
-Usar listeners de TinyBase para mantener el índice Orama sincronizado:
+Full rebuild del índice en cada `addTableListener('notes')`. ~50ms para ~100 notas — más simple que incremental y correcto para el corpus actual. Se optimiza a updates incrementales si el corpus crece >1K.
 
 ```typescript
-notesStore.addRowListener('notes', null, (store, tableId, rowId) => {
-  const note = store.getRow('notes', rowId);
-  // Actualizar o insertar en Orama
+// Pattern actual: full rebuild on table change
+notesStore.addTableListener('notes', () => {
+  // Destroy + recreate + insertMultiple de todas las notas
 });
 ```
+
+> **Fase 3** extenderá Orama a un index unificado con campo `_type: 'note' | 'task' | 'project'` para el Command Palette (⌘K).
 
 ---
 
 ## 9. Fases de desarrollo
 
-### Fase 0: Setup (1 semana)
+### Fase 0: Setup ✅
 
-- [ ] Proyecto Vite + React 19 + TypeScript + Tailwind
-- [ ] Firebase project + Firestore rules + Auth (Google sign-in)
-- [ ] TinyBase config + persister Firestore
-- [ ] Estructura de carpetas base
-- [ ] Deploy inicial a Firebase Hosting
+- [x] Proyecto Vite + React 19 + TypeScript + Tailwind v4
+- [x] Firebase project + Firestore rules + Auth (Google sign-in)
+- [x] TinyBase v8 config + custom persister Firestore
+- [x] Estructura de carpetas base
+- [x] Deploy inicial a Firebase Hosting
 
-### Fase 1: MVP — Captura + Notas + Links (3-4 semanas)
+### Fase 1: MVP — Captura + Notas + Links ✅
 
-- [ ] Quick Capture (modal, ⌘+Shift+N)
-- [ ] TipTap editor con extensión WikiLink
-- [ ] Lista de notas (búsqueda con Orama)
-- [ ] Backlinks sidebar (notas que apuntan a la nota actual)
-- [ ] Clasificación PARA básica (select en nota)
-- [ ] Inbox view (lista simple)
-- [ ] Dashboard mínimo (notas recientes, tareas pendientes)
+- [x] Quick Capture (modal, `Alt+N`)
+- [x] TipTap editor con extensión WikiLink
+- [x] Lista de notas (búsqueda con Orama)
+- [x] Backlinks sidebar (notas que apuntan a la nota actual)
+- [x] Clasificación PARA básica (select en nota)
+- [x] Inbox view (lista simple, procesamiento manual)
+- [x] Dashboard mínimo (notas recientes, inbox pendiente)
 
-### Fase 2: Ejecución — Tareas + Proyectos (2-3 semanas)
+### Fase 2: Ejecución — Tareas + Proyectos + Objetivos + Hábitos ✅
 
-- [ ] CRUD de tareas con vistas (hoy, pronto, completadas)
-- [ ] CRUD de proyectos con status
-- [ ] Vincular tareas ↔ proyectos ↔ notas
-- [ ] Objetivos básicos
-- [ ] Habit tracker (checks diarios)
+- [x] CRUD de tareas con vistas (hoy, pronto, completadas)
+- [x] CRUD de proyectos con status + detalle con tareas y notas vinculadas
+- [x] Vincular tareas ↔ proyectos ↔ notas (bidireccional client-side)
+- [x] Objetivos con progreso agregado vía proyectos
+- [x] Habit tracker (grid semanal, checks diarios)
+- [x] Dashboard expandido (5 cards)
 
-### Fase 3: AI Pipeline (2-3 semanas)
+### Fase 3: AI Pipeline (SPEC listo, pendiente implementar)
 
 - [ ] Cloud Function: inbox processing con Claude Haiku
 - [ ] InboxProcessor UI (revisar/aceptar sugerencias)
 - [ ] Auto-tagging de notas nuevas
 - [ ] Command Palette (⌘K) búsqueda global
 
-### Fase 4: Grafo + Resurfacing (2-3 semanas)
+### Fase 4: Grafo + Resurfacing
 
 - [ ] Reagraph: visualización del knowledge graph
 - [ ] Filtros de grafo (por área, por tipo, por fecha)
@@ -711,7 +735,7 @@ notesStore.addRowListener('notes', null, (store, tableId, rowId) => {
 - [ ] ts-fsrs: resurfacing algorithm
 - [ ] Daily Digest component en dashboard
 
-### Fase 5: Multi-plataforma (3-4 semanas)
+### Fase 5: Multi-plataforma
 
 - [ ] PWA optimizada (service worker, offline)
 - [ ] Tauri wrapper (global hotkey, system tray)
@@ -750,6 +774,10 @@ Orama es TypeScript-native, tiene faceted search (filtrar por tipo + área en un
 
 Last-Writer-Wins (LWW) por campo. Para notas atómicas (documentos cortos editados por una persona), LWW es suficiente. TinyBase + Firestore persister ya implementa esto.
 
+### D8: ¿Por qué links bidireccionales client-side y no Cloud Function?
+
+Una Cloud Function `syncBacklinks` agregaría latencia, costo, y un segundo write path. El sync client-side en `syncLinks.ts` es síncrono con el save, determinístico, y los títulos se resuelven in-memory sin cache stale. Decisión validada en Fase 1 — no se justifica la complejidad backend para single-user.
+
 ---
 
 ## 11. Métricas de éxito
@@ -769,13 +797,34 @@ El sistema funciona si:
 
 ## 12. Riesgos y mitigaciones
 
-| Riesgo                             | Probabilidad | Impacto | Mitigación                                               |
-| ---------------------------------- | ------------ | ------- | -------------------------------------------------------- |
-| TinyBase no escala a >5K notas     | Baja         | Alto    | Migrar metadata a TinyBase, content a Firestore directo  |
-| TipTap WikiLink extension compleja | Media        | Medio   | Empezar con link manual (paste ID), autocompletado en v2 |
-| Costos de Claude/OpenAI escalan    | Baja         | Bajo    | Batch API (-50%), o migrar a modelos locales             |
-| Tauri mobile no madura             | Media        | Bajo    | Capacitor como alternativa probada                       |
-| El grafo no aporta valor real      | Media        | Bajo    | Es fase 4 — para entonces ya hay datos para validar      |
-| Over-engineering antes de validar  | Alta         | Alto    | MVP en 4 semanas o menos. Si no lo uso diario, pivotar.  |
+| Riesgo                            | Probabilidad | Impacto | Mitigación                                                      |
+| --------------------------------- | ------------ | ------- | --------------------------------------------------------------- |
+| TinyBase no escala a >5K notas    | Baja         | Alto    | Content ya va directo a Firestore; migrar metadata si necesario |
+| Costos de Claude/OpenAI escalan   | Baja         | Bajo    | Batch API (-50%), o migrar a modelos locales                    |
+| Orama rebuild lento con >1K notas | Media        | Bajo    | Migrar a sync incremental (update/remove por row)               |
+| Tauri mobile no madura            | Media        | Bajo    | Capacitor como alternativa probada                              |
+| El grafo no aporta valor real     | Media        | Bajo    | Es fase 4 — para entonces ya hay datos para validar             |
+| Over-engineering antes de validar | Alta         | Alto    | MVP en 4 semanas o menos. Si no lo uso diario, pivotar.         |
+
+---
+
+## 13. Gotchas técnicos
+
+Conocimiento acumulado de las Fases 0–2. Toda sesión de desarrollo debe respetar estos patterns:
+
+1. **`merge: true` en persister** — Sin merge, el persister borra campos escritos fuera del schema de TinyBase (ej: `content`). Precondición para toda feature que escriba a Firestore fuera del schema
+2. **`setPartialRow` > `setRow` para updates** — `setRow` es full replace y causa race conditions en toggles rápidos. `setPartialRow` es commutative entre campos distintos
+3. **Local-first para toggles** — `setPartialRow` sync → `setDoc` async. Invertir causa reads stale en clicks rápidos a campos distintos
+4. **Grace 200ms para UI, 1500ms para redirects** — `isInitializing` del hook (200ms) no es suficiente para decidir "el recurso no existe → redirect" en full-reload por URL
+5. **Creación de entidades — orden estricto** — `await setDoc(Firestore)` → `store.setRow` → `navigate`. Evita race con `getDoc` en la siguiente página
+6. **Items de inbox nunca se borran** — Se marcan `processed`/`dismissed`, nunca `deleteDoc`
+7. **Base-UI ≠ Radix** — Usa `data-open`/`data-closed` + `data-starting-style`/`data-ending-style`, NO `data-state="open"`. Las clases `animate-in`/`animate-out` de tw-animate-css no aplican
+8. **`React.FormEvent` deprecated en React 19** — Usar inline arrow en `onSubmit` para que TypeScript infiera el tipo
+9. **Tailwind v4 CSS-first** — Config en `@theme` dentro de `src/index.css`. NO existe `tailwind.config.ts`
+10. **ESLint flat config** — `eslint.config.js`, NO `.eslintrc.cjs`
+11. **Relaciones 1:N** — El lado singular (`project.objectiveId`) es fuente de verdad para render, no el plural (`objective.projectIds`)
+12. **`Intl.DateTimeFormat('es', { weekday: 'narrow' })`** devuelve "X" para miércoles, no "M". Usar Intl directo, no hardcodear
+13. **Self-links filtrados** — `targetId !== sourceId` en `syncLinks` para evitar polucionar el grafo
+14. **Auto-save es el único punto que escribe `content`** — `useNoteSave` es el único lugar que toca el campo `content` en Firestore
 
 ---
