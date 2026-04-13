@@ -2,6 +2,7 @@ import { Navigate, Outlet } from 'react-router';
 import QuickCapture from '@/components/capture/QuickCapture';
 import QuickCaptureProvider from '@/components/capture/QuickCaptureProvider';
 import CommandPalette, { CommandPaletteProvider } from '@/components/layout/CommandPalette';
+import InstallPrompt from '@/components/layout/InstallPrompt';
 import Sidebar from '@/components/layout/Sidebar';
 import useAuth from '@/hooks/useAuth';
 import useStoreInit from '@/hooks/useStoreInit';
@@ -32,6 +33,7 @@ export default function Layout() {
           </main>
           <QuickCapture />
           <CommandPalette />
+          <InstallPrompt />
         </div>
       </QuickCaptureProvider>
     </CommandPaletteProvider>
