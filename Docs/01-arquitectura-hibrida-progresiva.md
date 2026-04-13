@@ -2,7 +2,7 @@
 
 > Documento de referencia arquitectónica para SecondMind.
 > Este documento NO es el SPEC — es la guía que informa al SPEC de cada fase.
-> Actualizado tras Fases 0–4 con correcciones factuales del stack y patterns descubiertos.
+> Actualizado tras Fases 0–5 con correcciones factuales del stack y patterns descubiertos.
 
 ---
 
@@ -38,16 +38,17 @@ Construir lo mínimo que genere valor diario, iterar basándose en uso real. Cad
 | **Grafo visual** | Reagraph (WebGL, force-directed 2D) | React-native, API declarativa `<GraphCanvas>`, suficiente para <500 nodos |
 | **Embeddings** | Cloud Functions v2 + OpenAI SDK → `text-embedding-3-small` (1536 dims) | ~$0.002/500 notas. Guard por `contentHash` SHA-256 evita regeneraciones |
 | **Resurfacing** | ts-fsrs (~15KB, client-side) | Spaced repetition adaptado a knowledge notes. 2 ratings (Again/Good), opt-in por nota |
+| **PWA** | vite-plugin-pwa + Workbox (generateSW) | Installable, offline-capable. Service worker con precache + runtimeCaching. `navigateFallback` para SPA routing offline |
+| **Web clipper** | Chrome Extension MV3 (CRXJS + React + firebase/firestore/lite) | Captura texto + URL desde cualquier página. Auth via `chrome.identity` + `signInWithCredential`. Proyecto separado en `extension/` |
 
 ### Fases posteriores
 
 | Capa | Tecnología | Fase |
 |------|-----------|------|
-| **Desktop** | PWA → Tauri (hotkey + system tray) | Fase 5 |
-| **Mobile** | PWA → Capacitor | Fase 5 |
-| **Web clipper** | Chrome extension minimal | Fase 5 |
-| **Búsqueda semántica** | Orama keyword + embeddings cosine (hybrid) | Fase 5+ |
-| **Grafo avanzado** | Sigma.js + Graphology (migración desde Reagraph si >1000 nodos) | Fase 5+ |
+| **Desktop nativo** | Tauri (global hotkey + system tray) | Fase 5.1 |
+| **Mobile nativo** | Capacitor (Share Intent Android) | Fase 5.1 |
+| **Búsqueda semántica** | Orama keyword + embeddings cosine (hybrid) | Fase 5.1+ |
+| **Grafo avanzado** | Sigma.js + Graphology (migración desde Reagraph si >1000 nodos) | Fase 5.1+ |
 
 ---
 
@@ -158,7 +159,8 @@ interface InboxItem {
   id: string;
   rawContent: string;            // Texto tal como se capturó
   source: 'quick-capture' | 'web-clip' | 'voice' | 'share-intent' | 'email';
-  sourceUrl?: string;            // Si viene de web clipper
+  sourceUrl?: string;            // Si viene de web clipper (limpia, sin UTM params)
+  sourceTitle?: string;          // Título de la página capturada (web-clip)
   
   // AI processing results (campos flat en TinyBase, objeto en hook)
   aiProcessed: boolean;
@@ -349,6 +351,8 @@ src/
 │   └── layout/
 │       ├── Sidebar.tsx
 │       ├── CommandPalette.tsx   # Ctrl+K búsqueda global (Fase 3)
+│       ├── InstallPrompt.tsx    # Banner PWA install (Fase 5)
+│       ├── OfflineBadge.tsx     # Indicador offline (Fase 5)
 │       └── Breadcrumbs.tsx
 │
 ├── stores/                      # TinyBase stores (uno por entidad)
@@ -378,7 +382,9 @@ src/
 │   ├── useGraph.ts              # Datos del grafo + filtros (Fase 4)
 │   ├── useSimilarNotes.ts       # Cosine similarity embeddings (Fase 4)
 │   ├── useResurfacing.ts        # FSRS state + reviewNote() (Fase 4)
-│   └── useDailyDigest.ts        # Digest client-side: review + hubs (Fase 4)
+│   ├── useDailyDigest.ts        # Digest client-side: review + hubs (Fase 4)
+│   ├── useInstallPrompt.ts     # beforeinstallprompt + localStorage (Fase 5)
+│   └── useOnlineStatus.ts      # useSyncExternalStore para navigator.onLine (Fase 5)
 │
 ├── lib/
 │   ├── firebase.ts              # Config Firebase
@@ -416,6 +422,25 @@ src/
     │       └── generateEmbedding.ts  # onDocumentWritten → OpenAI text-embedding-3-small (Fase 4)
     ├── package.json             # CommonJS, Node 20, firebase-functions ^7.2.5
     └── tsconfig.json
+
+extension/                       # Chrome Extension MV3 (proyecto separado, Fase 5)
+├── manifest.json                # MV3: permissions, oauth2, icons
+├── package.json                 # React, Firebase (lite), CRXJS, Vite, @types/chrome
+├── vite.config.ts               # CRXJS plugin ({ crx } named export)
+├── tsconfig.json                # strict, types: ["chrome", "vite/client"]
+├── src/
+│   ├── popup/
+│   │   ├── index.html           # Entry point
+│   │   ├── index.tsx            # React mount
+│   │   ├── Popup.tsx            # UI: textarea + captura + auth + save
+│   │   └── popup.css            # Tokens oklch + dark mode (prefers-color-scheme)
+│   ├── content/
+│   │   └── getSelection.ts      # Función pura inyectable via chrome.scripting
+│   └── lib/
+│       ├── firebaseConfig.ts    # Config hardcoded (valores públicos)
+│       ├── auth.ts              # chrome.identity + signInWithCredential
+│       └── firestore.ts         # saveToInbox (firestore/lite)
+└── icons/                       # 16, 48, 128 PNG
 ```
 
 > **Nota:** `syncBacklinks` Cloud Function fue eliminada del diseño. Los links bidireccionales se sincronizan 100% client-side en `syncLinks.ts` (decisión de diseño — ver sección 5, Flujo 2 y sección 10, D8).
@@ -759,11 +784,11 @@ Full rebuild del índice en cada `addTableListener`. ~50ms para ~300 docs. El in
 - [x] ts-fsrs: resurfacing (opt-in, 2 ratings Again/Good, campos flat en notesStore)
 - [x] Daily Digest en dashboard (client-side, review FSRS + hubs por hash diario)
 
-### Fase 5: Multi-plataforma
-- [ ] PWA optimizada (service worker, offline)
-- [ ] Tauri wrapper (global hotkey, system tray)
-- [ ] Capacitor wrapper (Share Intent Android)
-- [ ] Chrome extension web clipper
+### Fase 5: PWA + Chrome Extension ✅
+- [x] PWA: vite-plugin-pwa con manifest, iconos (brain-circuit), InstallPrompt banner
+- [x] PWA: Service Worker offline (Workbox, navigateFallback, runtimeCaching, OfflineBadge)
+- [x] Chrome Extension: scaffold MV3 con CRXJS, popup React, captura de selección
+- [x] Chrome Extension: auth (chrome.identity + signInWithCredential) + write a inbox (firestore/lite)
 
 ---
 
@@ -814,6 +839,21 @@ Cada embedding es 1536 floats (~6KB). Con 500 notas = ~3MB permanente en TinyBas
 ### D15: ¿Por qué solo 2 ratings FSRS (Again/Good) en vez de 4?
 SecondMind no es Anki. El objetivo es re-exponer notas olvidadas, no optimizar memorización. Again + Good reducen la decisión a un click significativo. ts-fsrs funciona perfectamente con un subconjunto de ratings.
 
+### D16: ¿Por qué vite-plugin-pwa con generateSW y no service worker manual?
+Genera manifest + SW + precache manifest automáticamente desde la config de Vite. Zero-config para el caso base, extensible con `runtimeCaching`. Un SW manual requeriría mantener la lista de precache a mano. `registerType: 'autoUpdate'` para actualizaciones silenciosas — single-user app no necesita prompt de "nueva versión".
+
+### D17: ¿Por qué CRXJS Vite Plugin para el Chrome Extension?
+Integra directamente con Vite (ya en el stack), soporta React + TypeScript + MV3 con HMR en dev. Plasmo es más opinado. Build manual con Vite multi-entry requiere config multi-entry + copy manifest + resolución de paths. CRXJS lo resuelve. Gotcha: usa named export `{ crx }`, no default.
+
+### D18: ¿Por qué chrome.identity y no offscreen document para auth?
+`chrome.identity.getAuthToken()` + `signInWithCredential()` es el approach más simple para Google sign-in en MV3. No requiere offscreen documents, ni hosting de una página auth, ni postMessage entre frames. Funciona porque el usuario ya tiene su Google account en Chrome.
+
+### D19: ¿Por qué el extension es proyecto separado (extension/) y no monorepo integrado?
+Build target diferente (Chrome Extension vs SPA), manifest propio, deploy diferente (Chrome Web Store vs Firebase Hosting). Lo que se comparte (Firebase config) se copia — son 10 líneas, no vale abstraer.
+
+### D20: ¿Por qué firebase/firestore/lite en el extension?
+El extension solo hace un `setDoc`. El lite SDK pesa ~75% menos que el completo (~30KB vs ~120KB gzipped). No necesita listeners, snapshots, ni cache offline. El popup es efímero — sin encolamiento offline.
+
 ---
 
 ## 11. Métricas de éxito
@@ -846,7 +886,7 @@ El sistema funciona si:
 
 ## 13. Gotchas técnicos
 
-Conocimiento acumulado de las Fases 0–4. Toda sesión de desarrollo debe respetar estos patterns:
+Conocimiento acumulado de las Fases 0–5. Toda sesión de desarrollo debe respetar estos patterns:
 
 **Fases 0–2:**
 
@@ -884,6 +924,17 @@ Conocimiento acumulado de las Fases 0–4. Toda sesión de desarrollo debe respe
 26. **Guard de embeddings CF es `contentHash`, no `aiProcessed`** — A diferencia de `autoTagNote` (que guarda `aiProcessed: true` para nunca reprocesar), `generateEmbedding` debe regenerar cuando el contenido cambia. Comparar SHA-256 de `contentPlain` con el hash guardado en `embeddings/{noteId}`
 27. **Reagraph agrega ~1.3MB al bundle** — Three.js/WebGL. Code-splitting pendiente para fase futura. Compatible con React 19 sin issues (smoke test previo a implementación)
 
+**Fase 5:**
+
+28. **`maximumFileSizeToCacheInBytes: 4 * 1024 * 1024`** — El bundle principal es ~2.7MB por Reagraph/Three.js. Sin este override, Workbox rechaza precachearlo y la app no funciona offline. Reducir/eliminar cuando se haga code-splitting del grafo
+29. **`vite-plugin-pwa` requiere `--legacy-peer-deps`** con Vite 8 — peer dependency mismatch. Funciona correctamente, solo la instalación necesita el flag
+30. **CRXJS usa named export `{ crx }`** — `import { crx } from '@crxjs/vite-plugin'`, NO `import crx from`. El default export no existe
+31. **`chrome.identity.getAuthToken()` devuelve `{ token }` object** — Acceder con `token.token`, no directamente como string. Luego `GoogleAuthProvider.credential(null, token.token)` → `signInWithCredential()`
+32. **`firebase/auth/web-extension`** obligatorio en Chrome Extension MV3 — `firebase/auth` normal falla en el service worker context. Import: `import { getAuth } from 'firebase/auth/web-extension'`
+33. **`cleanUrl()` para `sourceUrl` del web clipper** — Eliminar parámetros de tracking (utm_*, gclid, fbclid, etc.) antes de guardar. El rawContent solo contiene el texto capturado, sin URL ni metadata concatenada
+34. **Config Firebase hardcoded en extension** — No usar `import.meta.env`. Los valores son públicos y el extension no tiene .env processing. Hardcodear directamente es el approach estándar
+35. **`navigateFallbackDenylist: [/^\/api/, /^\/__\//]`** — No interceptar rutas internas de Firebase (`/__/auth/`, `/__/firebase/`). Sin esto, el SW rompe el auth flow
+
 ---
 
-> **Siguiente paso**: Implementar Fase 5 — Multi-plataforma (PWA, Tauri, Capacitor, Chrome extension).
+> **Siguiente paso**: Fase 5.1 — Wrappers nativos (Tauri desktop + Capacitor mobile) o nueva dirección a definir.

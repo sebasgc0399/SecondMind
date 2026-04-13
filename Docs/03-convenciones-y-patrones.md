@@ -39,7 +39,7 @@ src/
 │   ├── graph/                   # Reagraph: knowledge graph WebGL
 │   ├── capture/                 # Quick Capture modal, Inbox Processor
 │   ├── dashboard/               # Cards del dashboard
-│   └── layout/                  # Sidebar, CommandPalette, Breadcrumbs
+│   └── layout/                  # Sidebar, CommandPalette, InstallPrompt, OfflineBadge
 │
 ├── stores/                      # TinyBase stores (1 archivo por entidad)
 ├── hooks/                       # Custom hooks (1 archivo por hook)
@@ -58,6 +58,16 @@ src/
     │   ├── notes/               # autoTagNote
     │   └── embeddings/          # generateEmbedding
     └── package.json
+
+extension/                       # Chrome Extension MV3 (proyecto separado)
+├── manifest.json                # MV3, oauth2, permissions
+├── package.json                 # React + Firebase lite + CRXJS
+├── vite.config.ts               # CRXJS plugin
+├── src/
+│   ├── popup/                   # Popup UI (React)
+│   ├── content/                 # getSelection.ts (inyectable)
+│   └── lib/                     # firebaseConfig, auth, firestore
+└── icons/                       # 16, 48, 128 PNG
 ```
 
 ### Reglas de organización
