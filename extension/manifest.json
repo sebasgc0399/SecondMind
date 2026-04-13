@@ -18,7 +18,7 @@
     "128": "icons/icon-128.png"
   },
   "oauth2": {
-    "client_id": "PLACEHOLDER.apps.googleusercontent.com",
+    "client_id": "39583209123-fgs84i873hvghkf1u39tooc5n00du8d5.apps.googleusercontent.com",
     "scopes": ["openid", "email", "profile"]
   }
 }
