@@ -72,8 +72,7 @@ export default function Popup() {
         return;
       }
 
-      const captured = `${result.text}\n\n--- Capturado de: ${result.title}\n${result.url}`;
-      setContent((prev) => (prev ? `${prev}\n\n${captured}` : captured));
+      setContent((prev) => (prev ? `${prev}\n\n${result.text}` : result.text));
     } catch {
       setError('No se puede capturar en esta pagina.');
     } finally {
@@ -90,6 +89,7 @@ export default function Popup() {
       await saveToInbox(user.uid, {
         rawContent: content.trim(),
         sourceUrl: pageInfo?.url ?? '',
+        sourceTitle: pageInfo?.title ?? '',
       });
       setSaveState('saved');
       setTimeout(() => window.close(), 800);
