@@ -1,0 +1,252 @@
+:root {
+  --bg: oklch(1 0 0);
+  --fg: oklch(0.145 0 0);
+  --card: oklch(0.985 0 0);
+  --border: oklch(0.922 0 0);
+  --muted: oklch(0.556 0 0);
+  --brand: #7b2ad1;
+  --brand-fg: #fff;
+  --radius: 0.625rem;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: oklch(0.145 0 0);
+    --fg: oklch(0.985 0 0);
+    --card: oklch(0.205 0 0);
+    --border: oklch(1 0 0 / 10%);
+    --muted: oklch(0.708 0 0);
+  }
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family:
+    system-ui,
+    -apple-system,
+    sans-serif;
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--fg);
+  background: var(--bg);
+  -webkit-font-smoothing: antialiased;
+}
+
+.popup {
+  width: 350px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.popup-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.popup-logo {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--fg);
+  letter-spacing: -0.01em;
+}
+
+.popup-status {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.popup-status-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--muted);
+}
+
+.popup-textarea {
+  width: 100%;
+  min-height: 80px;
+  field-sizing: content;
+  max-height: 200px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--card);
+  color: var(--fg);
+  font-family: inherit;
+  font-size: 13px;
+  line-height: 1.5;
+  resize: none;
+  outline: none;
+  transition: border-color 0.15s;
+}
+
+.popup-textarea::placeholder {
+  color: var(--muted);
+}
+
+.popup-textarea:focus {
+  border-color: var(--brand);
+}
+
+.popup-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.popup-btn {
+  flex: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  height: 34px;
+  padding: 0 12px;
+  border: none;
+  border-radius: var(--radius);
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition:
+    opacity 0.15s,
+    background 0.15s;
+}
+
+.popup-btn:active:not(:disabled) {
+  transform: translateY(1px);
+}
+
+.popup-btn-primary {
+  background: var(--brand);
+  color: var(--brand-fg);
+}
+
+.popup-btn-primary:hover:not(:disabled) {
+  opacity: 0.9;
+}
+
+.popup-btn-primary:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.popup-btn-secondary {
+  background: transparent;
+  color: var(--fg);
+  border: 1px solid var(--border);
+}
+
+.popup-btn-secondary:hover:not(:disabled) {
+  background: var(--card);
+}
+
+.popup-btn-secondary:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.popup-footer {
+  padding-top: 8px;
+  border-top: 1px solid var(--border);
+}
+
+.popup-page-info {
+  font-size: 11px;
+  color: var(--muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.popup-error {
+  font-size: 12px;
+  color: oklch(0.577 0.245 27.325);
+  padding: 8px 10px;
+  border-radius: var(--radius);
+  background: oklch(0.577 0.245 27.325 / 10%);
+}
+
+.popup-disabled-msg {
+  font-size: 11px;
+  color: var(--muted);
+  text-align: center;
+}
+
+.popup-status-dot--connected {
+  background: oklch(0.65 0.2 145);
+}
+
+.popup-user {
+  font-size: 11px;
+  color: var(--fg);
+  font-weight: 500;
+  max-width: 120px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.popup-btn-google {
+  width: 100%;
+  height: 36px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--card);
+  color: var(--fg);
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.popup-btn-google:hover:not(:disabled) {
+  background: var(--bg);
+}
+
+.popup-btn-google:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.popup-success {
+  font-size: 12px;
+  color: oklch(0.65 0.2 145);
+  padding: 8px 10px;
+  border-radius: var(--radius);
+  background: oklch(0.65 0.2 145 / 10%);
+  text-align: center;
+}
+
+.popup-spinner {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  border: 2px solid var(--brand-fg);
+  border-top-color: transparent;
+  border-radius: 50%;
+  animation: spin 0.6s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
