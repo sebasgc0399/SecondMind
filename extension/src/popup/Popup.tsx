@@ -1,4 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
+import type { User } from 'firebase/auth/web-extension';
+import { signInWithChrome, observeAuth } from '../lib/auth.ts';
+import { saveToInbox } from '../lib/firestore.ts';
 import { getSelection } from '../content/getSelection.ts';
 
 interface PageInfo {
@@ -6,11 +9,26 @@ interface PageInfo {
   url: string;
 }
 
+type SaveState = 'idle' | 'saving' | 'saved';
+
 export default function Popup() {
+  const [user, setUser] = useState<User | null>(null);
+  const [authLoading, setAuthLoading] = useState(true);
+  const [authError, setAuthError] = useState<string | null>(null);
+
   const [content, setContent] = useState('');
   const [pageInfo, setPageInfo] = useState<PageInfo | null>(null);
   const [isCapturing, setIsCapturing] = useState(false);
+  const [saveState, setSaveState] = useState<SaveState>('idle');
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const unsubscribe = observeAuth((u) => {
+      setUser(u);
+      setAuthLoading(false);
+    });
+    return unsubscribe;
+  }, []);
 
   useEffect(() => {
     chrome.tabs.query({ active: true, currentWindow: true }).then((tabs) => {
@@ -19,6 +37,17 @@ export default function Popup() {
         setPageInfo({ title: tab.title, url: tab.url });
       }
     });
+  }, []);
+
+  const handleSignIn = useCallback(async () => {
+    setAuthError(null);
+    setAuthLoading(true);
+    try {
+      await signInWithChrome();
+    } catch {
+      setAuthError('Error al conectar con Google.');
+      setAuthLoading(false);
+    }
   }, []);
 
   const handleCapture = useCallback(async () => {
@@ -52,15 +81,58 @@ export default function Popup() {
     }
   }, []);
 
+  const handleSave = useCallback(async () => {
+    if (!user || !content.trim()) return;
+    setError(null);
+    setSaveState('saving');
+
+    try {
+      await saveToInbox(user.uid, {
+        rawContent: content.trim(),
+        sourceUrl: pageInfo?.url ?? '',
+      });
+      setSaveState('saved');
+      setTimeout(() => window.close(), 800);
+    } catch {
+      setError('Error al guardar. Verifica tu conexion.');
+      setSaveState('idle');
+    }
+  }, [user, content, pageInfo]);
+
+  const isAuthenticated = !!user;
+
   return (
     <div className="popup">
       <header className="popup-header">
         <span className="popup-logo">SecondMind</span>
-        <span className="popup-status">
-          <span className="popup-status-dot" />
-          Sin conectar
-        </span>
+        {isAuthenticated ? (
+          <span className="popup-status">
+            <span className="popup-status-dot popup-status-dot--connected" />
+            <span className="popup-user">{user.displayName ?? user.email}</span>
+          </span>
+        ) : (
+          <span className="popup-status">
+            <span className="popup-status-dot" />
+            Sin conectar
+          </span>
+        )}
       </header>
+
+      {!isAuthenticated && !authLoading && (
+        <>
+          <button
+            type="button"
+            className="popup-btn-google"
+            onClick={() => void handleSignIn()}
+            disabled={authLoading}
+          >
+            Conectar con Google
+          </button>
+          {authError && <p className="popup-error">{authError}</p>}
+        </>
+      )}
+
+      {authLoading && !isAuthenticated && <p className="popup-disabled-msg">Conectando...</p>}
 
       <textarea
         className="popup-textarea"
@@ -70,6 +142,7 @@ export default function Popup() {
       />
 
       {error && <p className="popup-error">{error}</p>}
+      {saveState === 'saved' && <p className="popup-success">Guardado en Inbox</p>}
 
       <div className="popup-actions">
         <button
@@ -80,12 +153,23 @@ export default function Popup() {
         >
           {isCapturing ? 'Capturando...' : 'Capturar seleccion'}
         </button>
-        <button type="button" className="popup-btn popup-btn-primary" disabled>
-          Guardar en Inbox
+        <button
+          type="button"
+          className="popup-btn popup-btn-primary"
+          onClick={() => void handleSave()}
+          disabled={!isAuthenticated || !content.trim() || saveState !== 'idle'}
+        >
+          {saveState === 'saving' ? (
+            <span className="popup-spinner" />
+          ) : saveState === 'saved' ? (
+            'Guardado'
+          ) : (
+            'Guardar en Inbox'
+          )}
         </button>
       </div>
 
-      <p className="popup-disabled-msg">Conecta tu cuenta para guardar</p>
+      {!isAuthenticated && <p className="popup-disabled-msg">Conecta tu cuenta para guardar</p>}
 
       {pageInfo && (
         <footer className="popup-footer">
