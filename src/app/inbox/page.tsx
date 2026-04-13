@@ -2,12 +2,14 @@ import { useCallback } from 'react';
 import { Link } from 'react-router';
 import { Play } from 'lucide-react';
 import useInbox from '@/hooks/useInbox';
+import useOnlineStatus from '@/hooks/useOnlineStatus';
 import InboxItemCard from '@/components/capture/InboxItem';
 import type { ConvertOverrides, InboxAiResult } from '@/types/inbox';
 
 export default function InboxPage() {
   const { items, isInitializing, convertToNote, convertToTask, convertToProject, dismiss } =
     useInbox();
+  const isOnline = useOnlineStatus();
 
   const showSkeleton = isInitializing && items.length === 0;
   const showEmpty = !isInitializing && items.length === 0;
@@ -50,7 +52,7 @@ export default function InboxPage() {
             </span>
           )}
         </div>
-        {items.length > 0 ? (
+        {items.length > 0 && isOnline ? (
           <Link
             to="/inbox/process"
             className="inline-flex items-center gap-1.5 rounded-md bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
@@ -61,7 +63,8 @@ export default function InboxPage() {
         ) : (
           <span
             aria-disabled="true"
-            className="inline-flex items-center gap-1.5 rounded-md bg-primary/30 px-3 py-1.5 text-sm font-medium text-primary-foreground/60"
+            title={items.length > 0 && !isOnline ? 'Requiere conexion a internet' : undefined}
+            className="inline-flex cursor-not-allowed items-center gap-1.5 rounded-md bg-primary/30 px-3 py-1.5 text-sm font-medium text-primary-foreground/60"
           >
             <Play className="h-3.5 w-3.5" />
             Procesar
