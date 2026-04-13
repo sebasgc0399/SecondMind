@@ -3,7 +3,7 @@
   "private": true,
   "main": "lib/index.js",
   "engines": {
-    "node": "20"
+    "node": "22"
   },
   "scripts": {
     "build": "tsc",
@@ -19,7 +19,7 @@
     "openai": "^4.85.0"
   },
   "devDependencies": {
-    "@types/node": "^20.17.10",
+    "@types/node": "^22.0.0",
     "typescript": "^5.7.2"
   }
 }
