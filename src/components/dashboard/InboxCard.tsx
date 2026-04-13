@@ -1,5 +1,6 @@
 import { Link } from 'react-router';
 import useInbox from '@/hooks/useInbox';
+import useOnlineStatus from '@/hooks/useOnlineStatus';
 import { formatRelative } from '@/lib/formatDate';
 import type { InboxItem } from '@/types/inbox';
 
@@ -7,20 +8,29 @@ const PREVIEW_LIMIT = 3;
 
 export default function InboxCard() {
   const { items, isInitializing } = useInbox();
+  const isOnline = useOnlineStatus();
   const preview = items.slice(0, PREVIEW_LIMIT);
 
   return (
     <section className="rounded-lg border border-border bg-card p-5">
       <header className="mb-4 flex items-center justify-between">
         <h2 className="text-base font-semibold text-foreground">📬 Inbox</h2>
-        {items.length > 0 && (
-          <Link
-            to="/inbox/process"
-            className="text-xs text-muted-foreground transition-colors hover:text-foreground"
-          >
-            Procesar →
-          </Link>
-        )}
+        {items.length > 0 &&
+          (isOnline ? (
+            <Link
+              to="/inbox/process"
+              className="text-xs text-muted-foreground transition-colors hover:text-foreground"
+            >
+              Procesar →
+            </Link>
+          ) : (
+            <span
+              title="Requiere conexion a internet"
+              className="cursor-not-allowed text-xs text-muted-foreground/50"
+            >
+              Procesar →
+            </span>
+          ))}
       </header>
 
       {isInitializing && preview.length === 0 ? (

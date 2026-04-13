@@ -1,5 +1,6 @@
 import { Link } from 'react-router';
 import { Sparkles } from 'lucide-react';
+import useOnlineStatus from '@/hooks/useOnlineStatus';
 import useSimilarNotes from '@/hooks/useSimilarNotes';
 
 interface SimilarNotesPanelProps {
@@ -8,6 +9,7 @@ interface SimilarNotesPanelProps {
 
 export default function SimilarNotesPanel({ noteId }: SimilarNotesPanelProps) {
   const { notes, isLoading, noEmbedding } = useSimilarNotes(noteId);
+  const isOnline = useOnlineStatus();
 
   return (
     <div className="mt-4 border-t border-border pt-4">
@@ -19,17 +21,21 @@ export default function SimilarNotesPanel({ noteId }: SimilarNotesPanelProps) {
         )}
       </h2>
 
-      {isLoading && <SimilarNotesSkeleton />}
+      {!isOnline && (
+        <p className="text-xs text-muted-foreground">Disponible cuando vuelva la conexion.</p>
+      )}
 
-      {!isLoading && noEmbedding && (
+      {isOnline && isLoading && <SimilarNotesSkeleton />}
+
+      {isOnline && !isLoading && noEmbedding && (
         <p className="text-xs text-muted-foreground">Guarda la nota para ver sugerencias.</p>
       )}
 
-      {!isLoading && !noEmbedding && notes.length === 0 && (
+      {isOnline && !isLoading && !noEmbedding && notes.length === 0 && (
         <p className="text-xs text-muted-foreground">Sin notas similares aun.</p>
       )}
 
-      {!isLoading && notes.length > 0 && (
+      {isOnline && !isLoading && notes.length > 0 && (
         <ul className="flex flex-col gap-1">
           {notes.map((note) => (
             <li key={note.noteId}>
