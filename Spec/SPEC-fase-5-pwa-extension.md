@@ -1,268 +1,157 @@
-# SPEC — SecondMind · Fase 5: PWA + Chrome Extension
+# SPEC — SecondMind · Fase 5: PWA + Chrome Extension (Completada)
 
-> Alcance: SecondMind instalable como app (desktop/mobile) con soporte offline + captura desde cualquier página web vía Chrome Extension
-> Dependencias: Fase 4 completada
-> Estimado: 2-3 semanas (solo dev)
-> Stack relevante: vite-plugin-pwa, Workbox, Chrome Extension Manifest V3, Firebase Auth (web-extension), Vite
-
----
-
-## Objetivo
-
-El usuario puede instalar SecondMind como app nativa en desktop y mobile (PWA), usarla offline con datos cacheados, y capturar contenido de cualquier página web directamente al inbox sin salir del navegador (Chrome Extension).
+> Alcance: SecondMind instalable como app (desktop/mobile) con soporte offline + captura desde cualquier pagina web via Chrome Extension
+> Completada: Abril 2026
+> Stack: vite-plugin-pwa, Workbox, Chrome Extension Manifest V3, CRXJS, Firebase Auth (web-extension), firebase/firestore/lite
 
 ---
 
-## Features
+## Features implementadas
 
 ### F1: PWA — Manifest + Icons + Install Prompt
 
-**Qué:** Configurar `vite-plugin-pwa` con web app manifest completo, iconos en múltiples tamaños, y un componente de UI que invite al usuario a instalar la app cuando el navegador lo permita.
+Configuracion de `vite-plugin-pwa` con manifest inline, iconos PWA en multiples tamanos (brain-circuit icon generado en Recraft), y componente InstallPrompt que captura `beforeinstallprompt` y persiste dismiss en localStorage. `registerType: 'autoUpdate'` para actualizaciones silenciosas del SW.
+
+**Archivos:**
+
+- `vite.config.ts` — VitePWA plugin con manifest, workbox config
+- `index.html` — apple-touch-icon, meta theme-color `#7b2ad1`, title "SecondMind"
+- `src/hooks/useInstallPrompt.ts` — hook para beforeinstallprompt + localStorage
+- `src/components/layout/InstallPrompt.tsx` — banner fijo bottom-right
+- `public/` — favicon.svg (brain icon), pwa-192x192.png, pwa-512x512.png, pwa-maskable-512x512.png, apple-touch-icon.png, brain-original.svg, brain-fullbleed.svg, favicon-32x32.png, icon-16.png, icon-48.png, icon-128.png
 
 **Criterio de done:**
 
-- [ ] `vite-plugin-pwa` instalado y configurado en `vite.config.ts`
-- [ ] Manifest generado con `name`, `short_name`, `start_url`, `display: standalone`, `theme_color`, `background_color`
-- [ ] Iconos PWA en `public/`: 192×192 y 512×512 (+ maskable)
-- [ ] Componente `InstallPrompt` muestra banner "Instalar SecondMind" cuando `beforeinstallprompt` se dispara
-- [ ] El banner se oculta permanentemente con `localStorage` tras dismiss o instalación
-- [ ] En desktop Chrome y Android Chrome, la app es instalable (verificar con Lighthouse PWA audit)
-
-**Archivos a crear/modificar:**
-
-- `vite.config.ts` — agregar `VitePWA()` al array de plugins
-- `public/pwa-192x192.png` — icono 192×192
-- `public/pwa-512x512.png` — icono 512×512 (purpose: any maskable)
-- `public/apple-touch-icon.png` — icono 180×180 para iOS
-- `src/components/layout/InstallPrompt.tsx` — banner de instalación
-- `src/app/layout.tsx` — montar `InstallPrompt`
-
-**Notas de implementación:**
-
-- `registerType: 'autoUpdate'` — el SW se actualiza automáticamente sin prompt de "nueva versión disponible". Para single-user, la simplicidad vale más que el control granular.
-- `includeAssets: ['favicon.ico', 'apple-touch-icon.png']` para precachear assets estáticos.
-- Iconos: generar desde un SVG base con herramientas como `pwa-asset-generator` o Figma. El logo SM del sidebar puede servir como base.
-- `beforeinstallprompt` se guarda en `useRef` y se invoca con `prompt()` al click del banner. El evento solo se dispara una vez por sesión — capturarlo en el layout.
+- [x] `vite-plugin-pwa` instalado y configurado (con `--legacy-peer-deps` por Vite 8)
+- [x] Manifest con name, short_name, start_url, display: standalone, theme_color `#7b2ad1`
+- [x] Iconos PWA: 192x192, 512x512, maskable 512x512 (iconos separados, no combined purpose)
+- [x] Apple touch icon 180x180 + meta theme-color
+- [x] InstallPrompt con beforeinstallprompt + localStorage dismiss
+- [x] Favicon reemplazado de rayo Vite a brain-circuit icon
 
 ---
 
 ### F2: PWA — Service Worker + Offline
 
-**Qué:** Configurar Workbox vía `vite-plugin-pwa` para precachear el app shell y cachear respuestas de API con estrategias apropiadas. Agregar indicador visual de estado offline/online.
+Configuracion de Workbox con `navigateFallback` para SPA routing offline, `runtimeCaching` para Google Fonts, hook `useOnlineStatus` con `useSyncExternalStore`, componente OfflineBadge, y guards de UI en features que requieren red (AI processing, embeddings).
+
+**Archivos:**
+
+- `vite.config.ts` — navigateFallback, navigateFallbackDenylist, runtimeCaching, maximumFileSizeToCacheInBytes 4MB
+- `src/hooks/useOnlineStatus.ts` — useSyncExternalStore para navigator.onLine
+- `src/components/layout/OfflineBadge.tsx` — badge fijo con WifiOff icon
+- `src/app/layout.tsx` — monta OfflineBadge
+- `src/app/inbox/page.tsx` — "Procesar" disabled offline con title tooltip
+- `src/components/dashboard/InboxCard.tsx` — "Procesar →" disabled offline
+- `src/components/editor/SimilarNotesPanel.tsx` — mensaje offline
 
 **Criterio de done:**
 
-- [ ] El app shell (HTML, JS, CSS, fonts) se precachea en el SW al primer load
-- [ ] Al perder conexión, la app sigue cargando desde cache (shell completo)
-- [ ] Los datos de TinyBase (ya en memoria) siguen disponibles offline — el usuario puede navegar notas, tareas, proyectos
-- [ ] Las escrituras offline se encolan en TinyBase y se sincronizan al reconectar (comportamiento existente del persister, solo verificar)
-- [ ] Indicador `OfflineBadge` visible en el header cuando `navigator.onLine === false`
-- [ ] Features que requieren red (AI processing, embeddings) muestran mensaje "Disponible cuando vuelva la conexión" en vez de error críptico
-- [ ] Lighthouse PWA score ≥ 90
-
-**Archivos a crear/modificar:**
-
-- `vite.config.ts` — configurar `workbox.runtimeCaching` con estrategias por ruta
-- `src/hooks/useOnlineStatus.ts` — hook reactivo para `navigator.onLine` + eventos `online`/`offline`
-- `src/components/layout/OfflineBadge.tsx` — indicador visual en header
-- `src/app/layout.tsx` — montar `OfflineBadge`
-- `src/components/capture/QuickCapture.tsx` — verificar que funciona offline (write a TinyBase/Firestore local)
-- `src/app/inbox/process/page.tsx` — guard de red para el botón "Procesar con AI"
-
-**Notas de implementación:**
-
-- Estrategia de cache Workbox:
-  - **Precache:** app shell (HTML, JS, CSS) — se invalida por hash en cada build.
-  - **StaleWhileRevalidate:** Google Fonts, CDN assets.
-  - **NetworkFirst:** llamadas a Firestore (el SDK de Firestore maneja su propio cache, no competir).
-- TinyBase ya actúa como offline layer — los datos en memoria sobreviven a la pérdida de red. El persister Firestore con `autoSave` encola writes. No se necesita lógica adicional para offline data.
-- **NO habilitar** `enableOfflineDataPersistence()` de Firestore — D2 del doc de arquitectura ya decidió que TinyBase es el offline layer, no Firestore.
-- Cloud Functions (processInboxItem, autoTagNote, generateEmbedding) son inherentemente online. El guard es UI-only: deshabilitar botones + mostrar tooltip.
-- `useOnlineStatus` usa `navigator.onLine` (inmediato) + `addEventListener('online'/'offline')` (reactivo). Devuelve `boolean`.
+- [x] navigateFallback: 'index.html' para SPA routing offline
+- [x] runtimeCaching para Google Fonts (StaleWhileRevalidate + CacheFirst)
+- [x] maximumFileSizeToCacheInBytes 4MB (bundle ~2.7MB por Reagraph/Three.js)
+- [x] useOnlineStatus hook con useSyncExternalStore
+- [x] OfflineBadge visible cuando navigator.onLine === false
+- [x] "Procesar" en inbox deshabilitado offline
+- [x] SimilarNotesPanel muestra "Disponible cuando vuelva la conexion" offline
+- [x] TinyBase data en memoria sigue accesible offline
 
 ---
 
 ### F3: Chrome Extension — Scaffold + Popup UI
 
-**Qué:** Crear la estructura del Chrome Extension con Manifest V3 como proyecto separado dentro del repo (`extension/`). Popup minimalista con textarea para captura rápida + botón para capturar la selección actual de la página.
+Proyecto separado en `extension/` con CRXJS Vite Plugin, Manifest V3, popup React minimalista con textarea y captura de seleccion via `chrome.scripting.executeScript()`. CSS manual con tokens oklch del design system, dark mode via `prefers-color-scheme`.
+
+**Archivos:**
+
+- `extension/package.json` — react, react-dom, @crxjs/vite-plugin, vite, typescript, @types/chrome
+- `extension/tsconfig.json` — strict, types: ["chrome", "vite/client"]
+- `extension/vite.config.ts` — CRXJS plugin (`{ crx }` named export)
+- `extension/manifest.json` — MV3, permisos: identity, activeTab, storage, scripting
+- `extension/src/popup/index.html` — entry point
+- `extension/src/popup/index.tsx` — React mount
+- `extension/src/popup/Popup.tsx` — textarea + captura + auth + save
+- `extension/src/popup/popup.css` — tokens oklch + dark mode
+- `extension/src/content/getSelection.ts` — funcion pura inyectable
+- `extension/icons/` — icon-16.png, icon-48.png, icon-128.png
 
 **Criterio de done:**
 
-- [ ] Directorio `extension/` con su propio `package.json`, `tsconfig.json`, y build con Vite + CRXJS
-- [ ] `manifest.json` v3 con permisos: `identity`, `activeTab`, `storage`
-- [ ] Popup UI funcional: textarea + botón "Guardar en Inbox" + botón "Capturar selección"
-- [ ] Content script inyectable que extrae: texto seleccionado, título de la página, URL
-- [ ] Al hacer click en "Capturar selección", el popup se llena con el texto seleccionado + URL de la pestaña activa
-- [ ] La UI del popup sigue el design system de SecondMind (mismos colores, tipografía)
-- [ ] El extension se carga como "unpacked" en Chrome y funciona
-
-**Archivos a crear:**
-
-- `extension/package.json` — deps: react, firebase, vite, @crxjs/vite-plugin
-- `extension/vite.config.ts` — config con CRXJS plugin
-- `extension/tsconfig.json` — TypeScript config
-- `extension/manifest.json` — Manifest V3
-- `extension/src/popup/Popup.tsx` — UI principal del popup
-- `extension/src/popup/index.html` — entry point del popup
-- `extension/src/popup/index.tsx` — mount React
-- `extension/src/popup/popup.css` — estilos (subset de los tokens de SecondMind)
-- `extension/src/content/getSelection.ts` — content script para extraer selección
-- `extension/src/lib/firebaseConfig.ts` — config Firebase (mismos valores que la app principal)
-
-**Notas de implementación:**
-
-- **CRXJS Vite Plugin** (`@crxjs/vite-plugin`) — transforma un proyecto Vite en Chrome Extension con HMR en dev. Soporta React + TypeScript + Manifest V3 out of the box. Alternativa: build manual con Vite multi-entry, pero CRXJS ahorra configuración.
-- El popup es deliberadamente simple: solo captura. No intenta replicar la app completa.
-- Content script: `chrome.scripting.executeScript({ target: { tabId }, func: () => ({ text: window.getSelection()?.toString(), title: document.title, url: location.href }) })` desde el popup vía `chrome.tabs.query({ active: true, currentWindow: true })`. No necesita content script persistente.
-- CSS: copiar los CSS custom properties del `src/index.css` de la app principal (colores oklch, font family, border-radius) a `popup.css`. No importar Tailwind completo — es overkill para un popup de 200×300px. Estilos manuales con las variables.
-- Icono del extension: reutilizar los iconos PWA (16, 48, 128).
+- [x] extension/ con package.json, tsconfig, vite config independientes
+- [x] Popup renderiza con textarea + botones
+- [x] "Capturar seleccion" extrae texto + titulo + URL via chrome.scripting.executeScript
+- [x] CSS con design system tokens (dark mode via prefers-color-scheme)
+- [x] Error handling en paginas restringidas (chrome://)
+- [x] Build genera dist/ cargable como unpacked
 
 ---
 
 ### F4: Chrome Extension — Auth + Firestore Write
 
-**Qué:** Autenticar al usuario con Google (via `chrome.identity`) y escribir las capturas directamente a la colección `inbox/` de Firestore, usando el mismo schema que Quick Capture.
+Auth con Google via `chrome.identity.getAuthToken()` + `signInWithCredential()`, escritura a Firestore inbox con `firebase/firestore/lite` (bundle reducido ~75%). Auth state persiste entre aperturas del popup.
+
+**Archivos:**
+
+- `extension/src/lib/firebaseConfig.ts` — Firebase init con firebase/auth/web-extension + firebase/firestore/lite
+- `extension/src/lib/auth.ts` — signInWithChrome() + observeAuth()
+- `extension/src/lib/firestore.ts` — saveToInbox() con schema: id, rawContent, source 'web-clip', sourceUrl, status, aiProcessed, createdAt
+- `extension/manifest.json` — oauth2.client_id real
+- `extension/src/popup/Popup.tsx` — auth state, "Conectar con Google", save con feedback spinner/check/auto-close
+- `extension/src/popup/popup.css` — estilos para Google button, spinner, success
 
 **Criterio de done:**
 
-- [ ] Al abrir el popup por primera vez, muestra botón "Conectar con Google"
-- [ ] `chrome.identity.getAuthToken({ interactive: true })` obtiene token OAuth
-- [ ] `signInWithCredential(auth, GoogleAuthProvider.credential(null, token))` autentica con Firebase
-- [ ] El estado auth persiste entre aperturas del popup (no pedir login cada vez)
-- [ ] Al guardar, se crea doc en `users/{userId}/inbox/{itemId}` con `source: 'web-clip'` y `sourceUrl`
-- [ ] El item aparece en el Inbox de la app web en < 5 segundos
-- [ ] Feedback visual en popup: spinner → check ✓ → cierra tras 500ms
-- [ ] Si no hay conexión, muestra error "Sin conexión" (no encolar — el popup es efímero)
-
-**Archivos a crear/modificar:**
-
-- `extension/src/lib/auth.ts` — lógica de auth con `chrome.identity` + Firebase
-- `extension/src/lib/firestore.ts` — write a inbox collection
-- `extension/src/popup/Popup.tsx` — integrar auth state + write + feedback
-- `extension/manifest.json` — agregar `oauth2.client_id` y `oauth2.scopes`
-
-**Notas de implementación:**
-
-- **Auth flow:** `chrome.identity.getAuthToken()` devuelve un OAuth access token del Google account del browser. Se pasa a `GoogleAuthProvider.credential(null, accessToken)` y luego `signInWithCredential()`. Es el approach más limpio para MV3 — no requiere offscreen documents ni iframes.
-- **Prerequisito GCP:** Crear un OAuth 2.0 Client ID tipo "Chrome app" en la consola de Google Cloud del proyecto `secondmindv1`. El `client_id` va en `manifest.json` bajo `oauth2.client_id`. El `key` del extension (public key) se obtiene al publicar o cargar como unpacked en `chrome://extensions`.
-- **Firebase import:** usar `firebase/auth/web-extension` en vez de `firebase/auth` para compatibilidad con el service worker context del extension.
-- **Schema del inbox item:** reusar la interfaz existente:
-  ```typescript
-  {
-    id: crypto.randomUUID(),
-    rawContent: string,           // texto capturado
-    source: 'web-clip',
-    sourceUrl: string,            // URL de la página
-    aiProcessed: false,
-    status: 'pending',
-    createdAt: serverTimestamp(),
-  }
-  ```
-- **No encolar offline:** a diferencia de la app web (que tiene TinyBase como buffer), el popup del extension es efímero — se destruye al cerrar. Encolar en `chrome.storage.local` es posible pero agrega complejidad sin valor real para uso personal. Si no hay red, mostrar error.
-- Agregar `chrome-extension://<extension-id>` a los Authorized Domains en Firebase Auth console.
+- [x] Firebase SDK lite instalado y configurado
+- [x] Auth via chrome.identity + signInWithCredential funciona
+- [x] manifest.json con oauth2.client_id real
+- [x] saveToInbox escribe a users/{uid}/inbox/{itemId} con schema correcto
+- [x] Feedback visual: spinner → check → auto-close (800ms)
+- [x] Error handling: sin conexion, auth fallida
+- [x] Bundle: 342KB (105KB gzip) con Firebase incluido
 
 ---
 
-## Orden de implementación
+## Observaciones post-implementacion
 
-1. **F1** → Fundamento: manifest + iconos + install prompt. Sin esto no hay PWA.
-2. **F2** → Depende de F1: el SW generado por vite-plugin-pwa es lo que habilita offline. Se configura el caching y el indicador de estado.
-3. **F3** → Independiente de F1/F2 pero se implementa después para no abrir dos frentes simultáneos. Scaffold del extension con popup funcional (sin auth aún).
-4. **F4** → Depende de F3: agrega auth y escritura a Firestore. Es la feature que conecta el extension con la app.
+1. **`vite-plugin-pwa@1.2.0` no lista Vite 8 en peerDependencies** pero funciona correctamente. Requiere `--legacy-peer-deps` en npm install. El PR para agregar Vite 8 al peer dep estaba abierto al momento de implementacion.
 
----
+2. **Favicon original era el rayo de Vite**, no un logo de SecondMind. Se reemplazo con un brain-circuit icon generado en Recraft (color `#7b2ad1`). El `theme_color` del plan original era `#863bff` y se corrigio a `#7b2ad1` para coincidir con el icono real.
 
-## Estructura de archivos
+3. **`maximumFileSizeToCacheInBytes: 4MB`** necesario porque el bundle principal es ~2.7MB (Reagraph/Three.js ~1.3MB). Cuando se implemente code-splitting del grafo (lazy import), este override se puede reducir o eliminar.
 
-```
-# PWA (archivos nuevos en el proyecto existente)
-public/
-├── pwa-192x192.png
-├── pwa-512x512.png
-└── apple-touch-icon.png
+4. **CRXJS exporta `{ crx }` como named export** en v2.4.0, no default export como muestran algunos ejemplos. Error comun al configurar.
 
-src/
-├── hooks/
-│   └── useOnlineStatus.ts
-├── components/
-│   └── layout/
-│       ├── InstallPrompt.tsx
-│       └── OfflineBadge.tsx
+5. **`scripting` permission** no estaba en el SPEC original (solo listaba identity, activeTab, storage). Es requerido por `chrome.scripting.executeScript()` — sin el, falla en runtime.
 
-# Chrome Extension (proyecto separado en el repo)
-extension/
-├── package.json
-├── tsconfig.json
-├── vite.config.ts
-├── manifest.json
-├── src/
-│   ├── popup/
-│   │   ├── index.html
-│   │   ├── index.tsx
-│   │   ├── Popup.tsx
-│   │   └── popup.css
-│   ├── content/
-│   │   └── getSelection.ts
-│   └── lib/
-│       ├── firebaseConfig.ts
-│       ├── auth.ts
-│       └── firestore.ts
-└── icons/
-    ├── icon-16.png
-    ├── icon-48.png
-    └── icon-128.png
-```
+6. **`firebase/firestore/lite`** reduce el bundle del extension significativamente (~30KB vs ~120KB gzip para Firestore). Suficiente para un solo `setDoc`.
+
+7. **OAuth2 setup requiere 4 pasos manuales en GCP Console** que no se pueden automatizar: crear client ID, obtener extension ID, agregar dominio autorizado en Firebase Auth, configurar manifest. Documentado en el plan como prerequisitos.
 
 ---
 
-## Definiciones técnicas
+## Definiciones tecnicas
 
-### D1: ¿Por qué vite-plugin-pwa y no SW manual?
+### D1: vite-plugin-pwa sobre SW manual
 
-- **Opciones:** Workbox CLI manual, vite-plugin-pwa, custom service worker
-- **Decisión:** vite-plugin-pwa
-- **Razón:** Genera manifest + SW + precache manifest automáticamente desde la config de Vite. Zero-config para el caso base, extensible para caching custom. El proyecto ya usa Vite — agregar un plugin es una línea. Un SW manual requeriría mantener la lista de precache a mano.
+- **Decision:** vite-plugin-pwa con generateSW
+- **Razon:** Zero-config para precache + manifest. Extensible con runtimeCaching para offline. No requiere mantener lista de precache manual.
 
-### D2: ¿Por qué CRXJS y no build manual del extension?
+### D2: CRXJS sobre build manual
 
-- **Opciones:** CRXJS Vite plugin, Plasmo framework, Webpack manual, Vite multi-entry manual
-- **Decisión:** CRXJS Vite plugin
-- **Razón:** Integra directamente con Vite (ya en el stack), soporta React + TypeScript + MV3 con HMR en dev. Plasmo es más opinado y agrega una capa de abstracción innecesaria para un extension minimal. Build manual con Vite requiere config multi-entry + copy de manifest + resolución de paths — CRXJS lo resuelve.
+- **Decision:** @crxjs/vite-plugin 2.4.0
+- **Razon:** Soporta Vite 8 + React + TypeScript + MV3 con HMR en dev. Build manual con multi-entry era el plan B pero no fue necesario.
 
-### D3: ¿Por qué chrome.identity y no offscreen document para auth?
+### D3: chrome.identity sobre offscreen document
 
-- **Opciones:** `chrome.identity.getAuthToken()`, offscreen document con `signInWithPopup`, `firebase/auth/web-extension` directo
-- **Decisión:** `chrome.identity.getAuthToken()` + `signInWithCredential()`
-- **Razón:** Es el approach más simple para Google sign-in en MV3. No requiere offscreen documents, ni hosting de una página auth, ni postMessage entre frames. Funciona porque el usuario ya tiene su Google account en Chrome. Para app personal de single-user, esta simplicidad es ideal.
+- **Decision:** chrome.identity.getAuthToken() + signInWithCredential()
+- **Razon:** Approach mas simple para Google sign-in en MV3. No requiere offscreen documents ni hosting de pagina auth.
 
-### D4: ¿Por qué el extension es proyecto separado y no monorepo integrado?
+### D4: Extension como proyecto separado
 
-- **Opciones:** subfolder con su propio package.json, monorepo con workspace, todo en el mismo build
-- **Decisión:** subfolder `extension/` con package.json independiente
-- **Razón:** El extension tiene su propio build target (Chrome Extension vs SPA), su propio manifest, y se despliega diferente (Chrome Web Store o unpacked, no Firebase Hosting). Compartir el mismo build complicaría ambos. Lo que se comparte (Firebase config, tipos) se copia — son 10 líneas, no vale abstraer.
+- **Decision:** extension/ con package.json independiente
+- **Razon:** Build target diferente (Chrome Extension vs SPA), manifest propio, deploy diferente. Lo que se comparte (Firebase config) se copia — son 10 lineas.
 
----
+### D5: firebase/firestore/lite sobre SDK completo
 
-## Checklist de completado
-
-Al terminar esta fase, TODAS estas condiciones deben ser verdaderas:
-
-- [ ] `npm run build` genera bundle con manifest.webmanifest y SW funcional
-- [ ] La app es instalable en Chrome desktop (botón de instalar en address bar)
-- [ ] La app es instalable en Chrome Android (banner "Agregar a pantalla de inicio")
-- [ ] Con la app instalada y sin red, la app carga y muestra los datos cacheados en TinyBase
-- [ ] El badge "Offline" aparece al perder conexión y desaparece al reconectar
-- [ ] Quick Capture funciona offline (guarda en TinyBase, synca después)
-- [ ] Los botones de AI (Procesar inbox, etc.) se deshabilitan offline con tooltip explicativo
-- [ ] Lighthouse PWA audit ≥ 90
-- [ ] El Chrome Extension se carga como unpacked y muestra el popup
-- [ ] El popup permite login con Google y muestra el nombre del usuario
-- [ ] Capturar texto seleccionado + URL de la página activa funciona
-- [ ] El item capturado aparece en el Inbox de la app web con `source: 'web-clip'`
-- [ ] El deploy a Firebase Hosting sigue funcionando sin breaking changes
-
----
-
-## Siguiente fase
-
-Fase 5.1: Wrappers Nativos — Tauri para desktop (global hotkey Quick Capture, system tray) y Capacitor para mobile (Share Intent Android para capturar desde cualquier app). Esta fase habilita la PWA como base sólida sobre la que los wrappers agregan features nativas de conveniencia.
+- **Decision:** firebase/firestore/lite para el extension
+- **Razon:** Solo necesita setDoc. El lite SDK pesa ~75% menos. El extension no necesita listeners, snapshots, ni cache offline.

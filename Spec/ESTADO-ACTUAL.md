@@ -1,6 +1,6 @@
 # Estado Actual — SecondMind (Snapshot consolidado)
 
-> Última actualización: Fase 4 (Abril 2026)
+> Última actualización: Fase 5 (Abril 2026)
 > Este archivo consolida el conocimiento no-obvio de todas las fases completadas.
 > Se actualiza al cerrar cada fase. Para detalle de features → README.md.
 > Para detalle de implementación → Spec/SPEC-fase-X.md individual.
@@ -16,6 +16,7 @@
 - **Fase 3** — AI Pipeline: CF processInboxItem + autoTagNote con Claude Haiku, InboxProcessor one-by-one, Command Palette (Ctrl+K)
 - **Fase 3.1** — Schema Enforcement: tool use con JSON Schema en ambas CFs, eliminó nulls/stripJsonFence/fallbacks
 - **Fase 4** — Grafo + Resurfacing: Knowledge graph (Reagraph), embeddings (OpenAI), notas similares, FSRS spaced repetition, Daily Digest
+- **Fase 5** — PWA + Extension: PWA instalable (manifest, SW, offline support, install prompt), Chrome Extension MV3 (captura web, auth Google, write a inbox)
 
 ---
 
@@ -36,6 +37,23 @@
 ### Optimistic updates
 
 - **Local-first: `setPartialRow` sync ANTES de `setDoc` async.** Invertir causa races en clicks rápidos porque click N+1 lee `existingRow` stale. Bug encontrado en `useHabits.toggleHabit` (Fase 2). Los demás hooks mantienen orden inverso pero deberían revisarse si aparecen síntomas similares.
+
+### PWA + Offline
+
+- **`vite-plugin-pwa` con `generateSW` y `autoUpdate`.** El SW se genera automaticamente en build. `navigateFallback: 'index.html'` permite SPA routing offline. `navigateFallbackDenylist: [/^\/api/, /^\/__\//]` evita interceptar rutas Firebase internas.
+- **TinyBase es el offline layer.** Los datos en memoria sobreviven a la perdida de red. El persister con `autoSave` sincroniza al reconectar. No se usa `enableOfflineDataPersistence()` de Firestore.
+- **Guards offline solo en features AI.** Las escrituras locales (notas, tareas, habitos) funcionan via TinyBase. Solo "Procesar" inbox (Cloud Functions + Claude) y SimilarNotesPanel (embeddings Firestore) se deshabilitan offline.
+- **`useOnlineStatus` usa `useSyncExternalStore`** — mas correcto semanticamente que useState+useEffect para suscripciones a APIs del browser.
+
+### Chrome Extension
+
+- **Proyecto separado en `extension/`** con su propio package.json, tsconfig, vite.config. No comparte build con la app principal.
+- **CRXJS 2.4.0 + Vite 8** para el build. Named export: `import { crx } from '@crxjs/vite-plugin'`.
+- **Auth: `chrome.identity.getAuthToken()` + `signInWithCredential()`** — el approach mas simple para Google sign-in en MV3. No requiere offscreen documents.
+- **Firebase SDK lite:** `firebase/auth/web-extension` + `firebase/firestore/lite`. Bundle total 342KB (105KB gzip).
+- **Items del extension se crean con `source: 'web-clip'`** y `sourceUrl` del tab activo. El campo `id` se incluye en el document data ademas del docId.
+- **Sin encolamiento offline** — el popup es efimero, si no hay red muestra error.
+- **OAuth2 Client ID:** `39583209123-fgs84i873hvghkf1u39tooc5n00du8d5.apps.googleusercontent.com` en `manifest.json`.
 
 ### IDs y timestamps
 
@@ -108,23 +126,35 @@ Ambas CFs usan `tools` + `tool_choice: { type: 'tool', name: '...' }` para forza
 
 13. **`Math.random()` no es seedable en JavaScript.** Para orden determinístico diario de hubs en Daily Digest, usar hash numérico de `noteId + dateString`: `[...s].reduce((h, c) => (h * 31 + c.charCodeAt(0)) | 0, 0)`.
 
+### PWA y Extension
+
+14. **`vite-plugin-pwa` requiere `--legacy-peer-deps` con Vite 8.** El peerDependency de v1.2.0 solo lista hasta Vite 7, pero funciona correctamente.
+
+15. **`maximumFileSizeToCacheInBytes: 4MB` en workbox config.** El bundle principal es ~2.7MB por Reagraph/Three.js. Sin este override, Workbox rechaza precachear el JS principal. Cuando se haga code-splitting del grafo, se puede bajar o eliminar.
+
+16. **CRXJS exporta `{ crx }` como named export**, no default. La documentacion y ejemplos pueden mostrar `import crx from` pero en v2.4.0 es `import { crx } from '@crxjs/vite-plugin'`.
+
+17. **Chrome Extension usa `firebase/auth/web-extension`** (no `firebase/auth`). Obligatorio para MV3 — el import normal falla en service worker context.
+
+18. **Chrome Extension usa `firebase/firestore/lite`** para un solo `setDoc`. Reduce bundle significativamente vs SDK completo.
+
 ### Cloud Functions
 
-14. **firebase-functions v7 obligatorio.** La v6 fallaba con timeout en el discovery protocol de la CLI. Importante al elegir versiones.
+19. **firebase-functions v7 obligatorio.** La v6 fallaba con timeout en el discovery protocol de la CLI. Importante al elegir versiones.
 
-15. **`.gitignore` de functions: `/lib/` con anchor.** Sin anchor, matchea `src/lib/` (sources) además de `lib/` (compiled).
+20. **`.gitignore` de functions: `/lib/` con anchor.** Sin anchor, matchea `src/lib/` (sources) además de `lib/` (compiled).
 
 ---
 
 ## Gotchas activos — Tooling de desarrollo
 
-16. **TypeScript LSP plugin requiere patch en Windows.** `child_process.spawn()` sin `shell: true` no resuelve wrappers `.cmd` de npm global. Fix: parchear `marketplace.json` con `command: "node"` + ruta absoluta a `typescript-language-server/lib/cli.mjs`. Se pierde si Claude Code actualiza el marketplace.
+21. **TypeScript LSP plugin requiere patch en Windows.** `child_process.spawn()` sin `shell: true` no resuelve wrappers `.cmd` de npm global. Fix: parchear `marketplace.json` con `command: "node"` + ruta absoluta a `typescript-language-server/lib/cli.mjs`. Se pierde si Claude Code actualiza el marketplace.
 
-17. **Firebase MCP: `node` directo al CLI local, no `npx`.** `npx firebase@latest` falla con "Invalid Version". Configurado en `.mcp.json`.
+22. **Firebase MCP: `node` directo al CLI local, no `npx`.** `npx firebase@latest` falla con "Invalid Version". Configurado en `.mcp.json`.
 
-18. **Brave Search: `BRAVE_API_KEY` como variable de sistema Windows**, no en `.env.local`.
+23. **Brave Search: `BRAVE_API_KEY` como variable de sistema Windows**, no en `.env.local`.
 
-19. **ui-ux-pro-max symlinks rotos en Windows** sin Developer Mode. Los scripts reales viven en `src/ui-ux-pro-max/scripts/search.py`. Fix: Developer Mode + `git config --global core.symlinks true` + reinstalar plugin.
+24. **ui-ux-pro-max symlinks rotos en Windows** sin Developer Mode. Los scripts reales viven en `src/ui-ux-pro-max/scripts/search.py`. Fix: Developer Mode + `git config --global core.symlinks true` + reinstalar plugin.
 
 ---
 
@@ -155,9 +185,11 @@ Ambas CFs usan `tools` + `tool_choice: { type: 'tool', name: '...' }` para forza
 | `reagraph`           | latest    | WebGL graph viz (Three.js). Compatible React 19. ~1.3MB bundle. API declarativa `<GraphCanvas>` |
 | `openai`             | `^4.85`   | SDK para embeddings en CF generateEmbedding. Solo en `src/functions/`                           |
 | `ts-fsrs`            | latest    | FSRS spaced repetition. Client-side (~15KB). `createEmptyCard`, `fsrs().next()`                 |
+| `vite-plugin-pwa`    | `^1.2.0`  | Requiere `--legacy-peer-deps` con Vite 8. `generateSW` + `autoUpdate`                           |
+| `@crxjs/vite-plugin` | `^2.4.0`  | Named export `{ crx }`. Soporta Vite 8 + MV3 + React + HMR                                      |
 
 ---
 
 ## Siguiente fase
 
-**Fase 5 — Multi-plataforma:** PWA optimizada (service worker, offline), Tauri wrapper para desktop (global hotkey, system tray), Capacitor wrapper para mobile (Share Intent Android), Chrome extension web clipper.
+**Fase 5.1 — Wrappers Nativos:** Tauri para desktop (global hotkey Quick Capture, system tray) y Capacitor para mobile (Share Intent Android para capturar desde cualquier app).

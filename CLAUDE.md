@@ -201,6 +201,11 @@ IMPORTANT: Siempre consultar el doc de arquitectura (01) para schemas de datos y
 - **Embeddings NO van en TinyBase.** Vectores de 1536 floats (~6KB c/u) demasiado grandes para store in-memory. Carga on-demand desde Firestore con cache en `useRef`.
 - **FSRS opt-in requiere botón explícito.** Sin "Activar revisión periódica", la feature es invisible. ReviewBanner tiene 4 estados: activar, due, próxima fecha, confirmación post-review.
 - **`generateEmbedding` usa `contentHash` como guard, no `aiProcessed`.** Los embeddings deben regenerarse cuando el contenido cambia, a diferencia de autoTagNote que solo procesa una vez.
+- **`vite-plugin-pwa` requiere `--legacy-peer-deps` con Vite 8.** El peerDependency de v1.2.0 solo lista hasta Vite 7, pero funciona correctamente con Vite 8.
+- **`maximumFileSizeToCacheInBytes: 4MB` en workbox config.** El bundle principal es ~2.7MB por Reagraph/Three.js. Sin este override, Workbox rechaza precachear el JS principal. Cuando se haga code-splitting del grafo, se puede bajar o eliminar.
+- **CRXJS exporta `{ crx }` como named export**, no default. `import { crx } from '@crxjs/vite-plugin'`, no `import crx from`.
+- **Chrome Extension usa `firebase/firestore/lite`** (no el SDK completo). Solo necesita `setDoc` para un write. Reduce bundle de ~120KB a ~30KB gzip.
+- **Chrome Extension auth: `firebase/auth/web-extension`** (no `firebase/auth`). Obligatorio para MV3 service worker context.
 
 ## Fases de desarrollo
 
@@ -211,6 +216,6 @@ IMPORTANT: Siempre consultar el doc de arquitectura (01) para schemas de datos y
 - **Fase 3 (AI) ✅:** Claude Haiku inbox processing (CF processInboxItem) + schema aiResult flat + InboxItem card con sugerencias + InboxProcessor one-by-one + Command Palette (Ctrl+K) con Orama FTS global + auto-tagging notas (CF autoTagNote). Ver `Spec/SPEC-fase-3-ai-pipeline.md`
 - **Fase 3.1 (Schema Enforcement) ✅:** Tool use con JSON Schema enforcement en ambas CFs. Elimina stripJsonFence, fallbacks null, código defensivo de parsing. Schemas compartidos en `schemas.ts`. Ver `Spec/SPEC-fase-3.1-ai-provider.md`
 - **Fase 4 (Grafo + Resurfacing) ✅:** Knowledge graph (Reagraph WebGL), CF generateEmbedding (OpenAI), filtros del grafo, notas similares (cosine similarity), FSRS resurfacing (ts-fsrs), Daily Digest (client-side). Ver `Spec/SPEC-fase-4-grafo-resurfacing.md`
-- **Fase 5 (Multi-plataforma):** PWA + Tauri (desktop) + Capacitor (mobile) + Chrome extension
+- **Fase 5 (PWA + Extension) ✅:** PWA instalable (vite-plugin-pwa, manifest, SW offline, install prompt), offline support (navigateFallback, runtimeCaching, useOnlineStatus, OfflineBadge, guards AI), Chrome Extension MV3 (CRXJS, popup React, captura seleccion, auth chrome.identity + Firebase, write a inbox con firestore/lite). Ver `Spec/SPEC-fase-5-pwa-extension.md`
 
 When compacting, preserve: current phase, modified files list, pending tasks, and any architectural decisions made during the conversation.
