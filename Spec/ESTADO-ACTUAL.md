@@ -1,6 +1,6 @@
 # Estado Actual — SecondMind (Snapshot consolidado)
 
-> Última actualización: Fase 3.1 (Abril 2026)
+> Última actualización: Fase 4 (Abril 2026)
 > Este archivo consolida el conocimiento no-obvio de todas las fases completadas.
 > Se actualiza al cerrar cada fase. Para detalle de features → README.md.
 > Para detalle de implementación → Spec/SPEC-fase-X.md individual.
@@ -15,6 +15,7 @@
 - **Fase 2** — Ejecución: tareas con prioridad/fecha, proyectos con progreso, objetivos con deadline, habit tracker semanal
 - **Fase 3** — AI Pipeline: CF processInboxItem + autoTagNote con Claude Haiku, InboxProcessor one-by-one, Command Palette (Ctrl+K)
 - **Fase 3.1** — Schema Enforcement: tool use con JSON Schema en ambas CFs, eliminó nulls/stripJsonFence/fallbacks
+- **Fase 4** — Grafo + Resurfacing: Knowledge graph (Reagraph), embeddings (OpenAI), notas similares, FSRS spaced repetition, Daily Digest
 
 ---
 
@@ -47,10 +48,11 @@
 
 ### Estado del deployment
 
-2 Cloud Functions v2 desplegadas en `us-central1`, ambas con `retry: false`, `timeoutSeconds: 60`:
+3 Cloud Functions v2 desplegadas en `us-central1`, todas con `retry: false`, `timeoutSeconds: 60`:
 
 - **processInboxItem** — `onDocumentCreated('users/{userId}/inbox/{itemId}')`. Llama a Claude Haiku con tool `classify_inbox` + `INBOX_CLASSIFICATION_SCHEMA`. Escribe 6 campos flat `aiSuggested*` + `aiProcessed: true`.
 - **autoTagNote** — `onDocumentWritten('users/{userId}/notes/{noteId}')`. Llama a Claude Haiku con tool `tag_note` + `NOTE_TAGGING_SCHEMA`. Escribe `aiTags`, `aiSummary`, `aiProcessed: true`.
+- **generateEmbedding** — `onDocumentWritten('users/{userId}/notes/{noteId}')`. Genera embedding con OpenAI `text-embedding-3-small` (1536 dims). Guard por `contentPlain` vacío + `contentHash` SHA-256 para evitar regeneraciones. Escribe a `users/{userId}/embeddings/{noteId}`.
 
 ### Tool use con schema enforcement (Fase 3.1)
 
@@ -61,7 +63,8 @@ Ambas CFs usan `tools` + `tool_choice: { type: 'tool', name: '...' }` para forza
 - **`aiProcessed` guard en autoTagNote:** `if (after.aiProcessed) return` — evita re-procesamiento en cada update de la nota. Early return sin log (frecuente).
 - **`onDocumentWritten` en vez de `onDocumentCreated`:** las notas desde `/notes` se crean con `contentPlain: ''` y el texto llega en el auto-save (2s después). `onDocumentWritten` detecta el primer write con contenido.
 - **`convertToNote` setea `aiProcessed: true` cuando hay tags del inbox.** Sin esto, autoTagNote sobrescribiría los tags que el usuario aceptó. Condición: `aiProcessed: !!(overrides?.tags?.length > 0)`.
-- **Secret management:** `defineSecret('ANTHROPIC_API_KEY')` + `secrets: [...]` en el trigger. `.value()` dentro del handler, no top-level.
+- **Secret management:** `defineSecret('ANTHROPIC_API_KEY')` / `defineSecret('OPENAI_API_KEY')` + `secrets: [...]` en el trigger. `.value()` dentro del handler, no top-level.
+- **`contentHash` guard en generateEmbedding:** compara SHA-256 del `contentPlain` actual con el hash almacenado en el embedding existente. Si coinciden, early return. No usa `aiProcessed` — a diferencia de autoTagNote, los embeddings deben regenerarse cuando el contenido cambia.
 
 ---
 
@@ -89,23 +92,39 @@ Ambas CFs usan `tools` + `tool_choice: { type: 'tool', name: '...' }` para forza
 
 8. **Self-links filtrados en `syncLinks`:** `targetId !== sourceId` es un guard activo. Sin este filtro, una nota que se referencia a sí misma con `[[wikilink]]` poluciona el grafo con loops. Aplica a cualquier refactor que toque `extractLinks` o `syncLinks`.
 
+### Knowledge Graph y filtros
+
+9. **Ruta `notes/graph` ANTES de `notes/:noteId` en router.tsx.** Si va después, React Router captura "graph" como noteId. Orden crítico en flat routes con parámetros dinámicos.
+
+10. **Empty state con filtros activos: no hacer early return.** Renderizar siempre los controles de filtro y diferenciar mensaje: "sin datos" vs "filtros sin resultados" con botón de reseteo inline. Aplica a cualquier vista con filtros.
+
+### Embeddings y similares
+
+11. **Embeddings NO van en TinyBase.** Vectores de 1536 floats (~6KB c/u) son demasiado grandes para store in-memory. Carga on-demand desde Firestore con cache en `useRef`. Para <500 notas (~1.2MB total), fetch all es viable.
+
+### FSRS y resurfacing
+
+12. **FSRS opt-in requiere botón explícito.** Sin "Activar revisión periódica", la feature es invisible porque notas nuevas no tienen `fsrsDue`. ReviewBanner tiene 4 estados: activar, due, próxima fecha, confirmación post-review.
+
+13. **`Math.random()` no es seedable en JavaScript.** Para orden determinístico diario de hubs en Daily Digest, usar hash numérico de `noteId + dateString`: `[...s].reduce((h, c) => (h * 31 + c.charCodeAt(0)) | 0, 0)`.
+
 ### Cloud Functions
 
-9. **firebase-functions v7 obligatorio.** La v6 fallaba con timeout en el discovery protocol de la CLI. Importante al elegir versiones.
+14. **firebase-functions v7 obligatorio.** La v6 fallaba con timeout en el discovery protocol de la CLI. Importante al elegir versiones.
 
-10. **`.gitignore` de functions: `/lib/` con anchor.** Sin anchor, matchea `src/lib/` (sources) además de `lib/` (compiled).
+15. **`.gitignore` de functions: `/lib/` con anchor.** Sin anchor, matchea `src/lib/` (sources) además de `lib/` (compiled).
 
 ---
 
 ## Gotchas activos — Tooling de desarrollo
 
-11. **TypeScript LSP plugin requiere patch en Windows.** `child_process.spawn()` sin `shell: true` no resuelve wrappers `.cmd` de npm global. Fix: parchear `marketplace.json` con `command: "node"` + ruta absoluta a `typescript-language-server/lib/cli.mjs`. Se pierde si Claude Code actualiza el marketplace.
+16. **TypeScript LSP plugin requiere patch en Windows.** `child_process.spawn()` sin `shell: true` no resuelve wrappers `.cmd` de npm global. Fix: parchear `marketplace.json` con `command: "node"` + ruta absoluta a `typescript-language-server/lib/cli.mjs`. Se pierde si Claude Code actualiza el marketplace.
 
-12. **Firebase MCP: `node` directo al CLI local, no `npx`.** `npx firebase@latest` falla con "Invalid Version". Configurado en `.mcp.json`.
+17. **Firebase MCP: `node` directo al CLI local, no `npx`.** `npx firebase@latest` falla con "Invalid Version". Configurado en `.mcp.json`.
 
-13. **Brave Search: `BRAVE_API_KEY` como variable de sistema Windows**, no en `.env.local`.
+18. **Brave Search: `BRAVE_API_KEY` como variable de sistema Windows**, no en `.env.local`.
 
-14. **ui-ux-pro-max symlinks rotos en Windows** sin Developer Mode. Los scripts reales viven en `src/ui-ux-pro-max/scripts/search.py`. Fix: Developer Mode + `git config --global core.symlinks true` + reinstalar plugin.
+19. **ui-ux-pro-max symlinks rotos en Windows** sin Developer Mode. Los scripts reales viven en `src/ui-ux-pro-max/scripts/search.py`. Fix: Developer Mode + `git config --global core.symlinks true` + reinstalar plugin.
 
 ---
 
@@ -127,15 +146,18 @@ Ambas CFs usan `tools` + `tool_choice: { type: 'tool', name: '...' }` para forza
 
 ## Dependencias clave con historia
 
-| Paquete              | Versión   | Nota                                                                                       |
-| -------------------- | --------- | ------------------------------------------------------------------------------------------ |
-| `firebase-functions` | `^7.2.5`  | v6 fallaba con timeout en discovery. Major bump obligatorio                                |
-| `@anthropic-ai/sdk`  | `^0.40.1` | Soporta `tools` + `tool_choice` para schema enforcement                                    |
-| `tinybase`           | v8        | Sin `persister-firestore` nativo. Custom persister con `createCustomPersister`             |
-| `@orama/orama`       | v3        | `search()` es sync at runtime aunque el tipo diga `Promise`. Cast a `Results<AnyDocument>` |
+| Paquete              | Versión   | Nota                                                                                            |
+| -------------------- | --------- | ----------------------------------------------------------------------------------------------- |
+| `firebase-functions` | `^7.2.5`  | v6 fallaba con timeout en discovery. Major bump obligatorio                                     |
+| `@anthropic-ai/sdk`  | `^0.40.1` | Soporta `tools` + `tool_choice` para schema enforcement                                         |
+| `tinybase`           | v8        | Sin `persister-firestore` nativo. Custom persister con `createCustomPersister`                  |
+| `@orama/orama`       | v3        | `search()` es sync at runtime aunque el tipo diga `Promise`. Cast a `Results<AnyDocument>`      |
+| `reagraph`           | latest    | WebGL graph viz (Three.js). Compatible React 19. ~1.3MB bundle. API declarativa `<GraphCanvas>` |
+| `openai`             | `^4.85`   | SDK para embeddings en CF generateEmbedding. Solo en `src/functions/`                           |
+| `ts-fsrs`            | latest    | FSRS spaced repetition. Client-side (~15KB). `createEmptyCard`, `fsrs().next()`                 |
 
 ---
 
 ## Siguiente fase
 
-**Fase 4 — Grafo + Resurfacing:** Knowledge graph visual, OpenAI embeddings (`text-embedding-3-small`), búsqueda semántica, FSRS resurfacing, Daily Digest.
+**Fase 5 — Multi-plataforma:** PWA optimizada (service worker, offline), Tauri wrapper para desktop (global hotkey, system tray), Capacitor wrapper para mobile (Share Intent Android), Chrome extension web clipper.
