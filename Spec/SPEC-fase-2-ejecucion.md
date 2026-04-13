@@ -168,7 +168,3 @@ Conocimiento nuevo que salió de la implementación y que Fase 3+ deben respetar
 Fase 2 no agregó dependencias nuevas — todo se construyó sobre el stack existente (TinyBase v8, base-ui, lucide-react, react-router, `Intl` nativo, Orama ya presente de Fase 1).
 
 ---
-
-## Siguiente fase
-
-Continuar con **Fase 3 — AI Pipeline:** Claude Haiku procesando el inbox automáticamente (título/tags/tipo/resumen sugeridos), `InboxProcessor` UI para revisar y aceptar las sugerencias, auto-tagging de notas nuevas, y `Command Palette` (⌘K) para búsqueda y navegación global. El SPEC vive en `Spec/SPEC-fase-3-ai-pipeline.md`. Fase 2 completó la capa de ejecución (acción); Fase 3 agrega inteligencia que reduce la fricción de organizar lo capturado.

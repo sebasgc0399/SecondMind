@@ -87,7 +87,3 @@ Mismo tratamiento en `src/functions/src/notes/autoTagNote.ts`. Se eliminaron: im
 3. **`stripJsonFence` eliminado del repo.** El gotcha de markdown fences en las respuestas de Haiku ya no aplica — `toolBlock.input` es un objeto nativo del SDK, no un string.
 
 ---
-
-## Siguiente fase
-
-Continuar con **Fase 4 — Grafo + Resurfacing.** OpenAI SDK se agrega en Fase 4 cuando se implemente `text-embedding-3-small` para embeddings.

@@ -105,7 +105,3 @@ Nueva sección "Toolkit Claude Code (Fase 0.1)" entre "Comandos" y "Estructura d
 4. **Marketplaces comunitarios** (`secondsky/claude-skills`, `jezweb/claude-skills`) se agregan via `extraKnownMarketplaces` en `~/.claude/settings.json`, los skills se instalan luego desde el UI de plugins de la extensión VS Code
 
 ---
-
-## Siguiente fase
-
-Continuar con **Fase 1 (MVP):** Quick Capture + Editor TipTap con WikiLinks + Lista de notas + Backlinks + Inbox + Dashboard mínimo. El toolkit configurado aquí hace que la implementación sea significativamente más rápida: Context7 resuelve dudas de APIs actualizadas, los skills de React/Tailwind guían la calidad del output, el LSP detecta errores de tipo en cada edición, y Prettier/ESLint mantienen el código consistente sin intervención manual.

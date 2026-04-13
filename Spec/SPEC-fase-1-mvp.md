@@ -175,7 +175,3 @@ Conocimiento nuevo que salió de la implementación y que futuras fases deben re
 (No se agregó `tippy.js` — el popup de wikilinks se implementó sin esa dep)
 
 ---
-
-## Siguiente fase
-
-Continuar con **Fase 2 — Ejecución:** Tareas + Proyectos + Objetivos + Habit Tracker. El SPEC vive en `Spec/SPEC-fase-2-ejecucion.md`. Fase 1 desbloquea el sistema de notas y captura; Fase 2 agrega la capa de ejecución que conecta las notas con acciones concretas.
