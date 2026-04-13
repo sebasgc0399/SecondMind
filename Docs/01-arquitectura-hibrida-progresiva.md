@@ -2,7 +2,7 @@
 
 > Documento de referencia arquitectónica para SecondMind.
 > Este documento NO es el SPEC — es la guía que informa al SPEC de cada fase.
-> Actualizado tras Fases 0–3.1 con correcciones factuales del stack y patterns descubiertos.
+> Actualizado tras Fases 0–4 con correcciones factuales del stack y patterns descubiertos.
 
 ---
 
@@ -35,18 +35,19 @@ Construir lo mínimo que genere valor diario, iterar basándose en uso real. Cad
 | **UI Components** | shadcn/ui (Base UI / `@base-ui/react`) | **No es Radix UI** — usa `data-open`/`data-closed` + `data-starting-style`/`data-ending-style`, NO `data-state` |
 | **Routing** | React Router v7 (`createBrowserRouter`) | Client-side routing con layouts anidados |
 | **Iconos** | lucide-react | Consistente, tree-shakeable |
+| **Grafo visual** | Reagraph (WebGL, force-directed 2D) | React-native, API declarativa `<GraphCanvas>`, suficiente para <500 nodos |
+| **Embeddings** | Cloud Functions v2 + OpenAI SDK → `text-embedding-3-small` (1536 dims) | ~$0.002/500 notas. Guard por `contentHash` SHA-256 evita regeneraciones |
+| **Resurfacing** | ts-fsrs (~15KB, client-side) | Spaced repetition adaptado a knowledge notes. 2 ratings (Again/Good), opt-in por nota |
 
 ### Fases posteriores
 
 | Capa | Tecnología | Fase |
 |------|-----------|------|
-| **Grafo visual** | Reagraph → Sigma.js + Graphology | Fase 4 |
-| **Embeddings** | OpenAI text-embedding-3-small | Fase 4 |
-| **Resurfacing** | ts-fsrs (spaced repetition adaptado) | Fase 4 |
 | **Desktop** | PWA → Tauri (hotkey + system tray) | Fase 5 |
 | **Mobile** | PWA → Capacitor | Fase 5 |
 | **Web clipper** | Chrome extension minimal | Fase 5 |
 | **Búsqueda semántica** | Orama keyword + embeddings cosine (hybrid) | Fase 5+ |
+| **Grafo avanzado** | Sigma.js + Graphology (migración desde Reagraph si >1000 nodos) | Fase 5+ |
 
 ---
 
@@ -113,6 +114,11 @@ interface Note {
   aiTags?: string[];             // Tags sugeridos por Claude
   aiSummary?: string;            // Resumen de una línea generado
   aiProcessed: boolean;          // ¿Ya pasó por el pipeline AI?
+  
+  // FSRS — Spaced Repetition (Fase 4, opt-in por nota)
+  fsrsState?: string;            // Card de ts-fsrs serializado como JSON string
+  fsrsDue?: number;              // Timestamp de próxima revisión (para queries eficientes)
+  fsrsLastReview?: number;       // Timestamp de última revisión
   
   // Metadata
   createdAt: Timestamp;
@@ -304,11 +310,14 @@ src/
 │   │   ├── NoteEditor.tsx
 │   │   ├── NoteCard.tsx
 │   │   ├── BacklinksPanel.tsx
+│   │   ├── SimilarNotesPanel.tsx  # Top 5 notas por cosine similarity (Fase 4)
+│   │   ├── ReviewBanner.tsx       # FSRS: activar/revisar/próxima fecha (Fase 4)
 │   │   └── extensions/
 │   │       └── wikilink.ts      # [[wikilinks]] con autocompletado
 │   ├── graph/                   # Visualización de grafo (Fase 4)
-│   │   ├── KnowledgeGraph.tsx
-│   │   └── GraphFilters.tsx
+│   │   ├── KnowledgeGraph.tsx   # Canvas Reagraph + hover/click/dblclick
+│   │   ├── GraphNodePanel.tsx   # Panel flotante al click en nodo
+│   │   └── GraphFilters.tsx     # Panel colapsable: paraType + noteType + minLinks
 │   ├── capture/                 # Captura rápida + procesamiento AI
 │   │   ├── QuickCapture.tsx     # Modal global (Alt+N)
 │   │   ├── InboxItem.tsx        # Card con sugerencias AI inline (Fase 3)
@@ -336,7 +345,7 @@ src/
 │   │   ├── TasksTodayCard.tsx
 │   │   ├── ProjectsActiveCard.tsx
 │   │   ├── HabitsTodayCard.tsx
-│   │   └── DailyDigest.tsx      # Resurfacing de notas (Fase 4)
+│   │   └── DailyDigest.tsx      # Resurfacing: review FSRS + hubs (Fase 4)
 │   └── layout/
 │       ├── Sidebar.tsx
 │       ├── CommandPalette.tsx   # Ctrl+K búsqueda global (Fase 3)
@@ -366,19 +375,22 @@ src/
 │   ├── useQuickCapture.ts       # Context + Provider para Alt+N
 │   ├── useCommandPalette.ts     # Context + Provider para Ctrl+K (Fase 3)
 │   ├── useGlobalSearch.ts       # Orama index unificado multi-store (Fase 3)
-│   └── useGraph.ts              # Datos del grafo (Fase 4)
+│   ├── useGraph.ts              # Datos del grafo + filtros (Fase 4)
+│   ├── useSimilarNotes.ts       # Cosine similarity embeddings (Fase 4)
+│   ├── useResurfacing.ts        # FSRS state + reviewNote() (Fase 4)
+│   └── useDailyDigest.ts        # Digest client-side: review + hubs (Fase 4)
 │
 ├── lib/
 │   ├── firebase.ts              # Config Firebase
 │   ├── tinybase.ts              # createCustomPersister factory (merge: true)
 │   ├── orama.ts                 # NOTES_SCHEMA + GLOBAL_SCHEMA + helpers
 │   ├── formatDate.ts            # Fecha relativa, startOfDay, isSameDay
-│   ├── editor/
-│   │   ├── syncLinks.ts         # Diff + write links bidireccionales client-side
-│   │   ├── extractLinks.ts      # Parser de [[wikilinks]] del contenido
-│   │   └── serialize.ts         # TipTap JSON ↔ Markdown
-│   └── ai/
-│       └── suggestLinks.ts      # Client para sugerencia de links (Fase 4)
+│   ├── embeddings.ts            # cosineSimilarity + fetchEmbedding/All (Fase 4)
+│   ├── fsrs.ts                  # Wrapper ts-fsrs: scheduleReview, serialize/deserialize (Fase 4)
+│   └── editor/
+│       ├── syncLinks.ts         # Diff + write links bidireccionales client-side
+│       ├── extractLinks.ts      # Parser de [[wikilinks]] del contenido
+│       └── serialize.ts         # TipTap JSON ↔ Markdown
 │
 ├── types/
 │   ├── note.ts
@@ -400,10 +412,8 @@ src/
     │   │   └── autoTagNote.ts        # onDocumentWritten → Claude Haiku tool use (Fase 3 + 3.1)
     │   ├── lib/
     │   │   └── schemas.ts            # JSON Schemas compartidos para tool use (Fase 3.1)
-    │   ├── embeddings/
-    │   │   └── generateEmbedding.ts  # onDocumentWritten → OpenAI (Fase 4)
-    │   └── resurfacing/
-    │       └── dailyDigest.ts        # Scheduled: generar digest diario (Fase 4)
+    │   └── embeddings/
+    │       └── generateEmbedding.ts  # onDocumentWritten → OpenAI text-embedding-3-small (Fase 4)
     ├── package.json             # CommonJS, Node 20, firebase-functions ^7.2.5
     └── tsconfig.json
 ```
@@ -491,10 +501,15 @@ Cloud Function autoTagNote se dispara (onDocumentWritten)
   - Marca aiProcessed: true
     │
     ▼
-(Fase 4) Al guardar también:
-  5. Se genera/actualiza embedding
-  6. Se encuentran notas semánticamente similares
-  7. Se sugieren links adicionales ("¿Conectar con...?")
+Cloud Function generateEmbedding se dispara (onDocumentWritten)
+  - Guard: if (!contentPlain.trim()) return + comparar contentHash con existente
+  - Genera vector 1536 dims con OpenAI text-embedding-3-small
+  - Guarda en embeddings/{noteId} con contentHash SHA-256
+    │
+    ▼
+Editor sidebar muestra:
+  5. SimilarNotesPanel — top 5 notas por cosine similarity de embeddings
+  6. ReviewBanner — si la nota tiene FSRS activo y está due
 ```
 
 ### Flujo 3: Procesamiento AI del inbox
@@ -542,27 +557,28 @@ Usuario revisa en /inbox o /inbox/process:
 ### Flujo 4: Resurfacing diario (Fase 4)
 
 ```
-Cloud Function scheduled: dailyDigest (cada mañana, 6 AM)
+Dashboard carga → useDailyDigest (client-side, no Cloud Function)
     │
     ▼
-Para el usuario:
-  1. Consultar notas con FSRS score más alto
-     (mayor necesidad de revisión)
-  2. Consultar notas semánticamente cercanas
-     a las editadas en últimos 3 días
-  3. Pick aleatorio de notas con >3 links
-     (nodos hub del grafo)
+Lee todas las notas del store TinyBase:
+  1. Filtrar notas con fsrsDue <= endOfToday
+     → ordenar por urgencia (más atrasadas primero) → max 3
+  2. Si hay espacio (< 5 items): buscar notas hub
+     (linkCount >= 3, excluir ya incluidas)
+     → orden determinístico con hash diario
+     → agregar hasta llenar 5
     │
     ▼
-Generar digest: 3-5 notas con contexto
-  - Por qué esta nota te puede interesar hoy
-  - Links a notas relacionadas
+Dashboard muestra DailyDigest card:
+  - Items review: icono CalendarClock, "Revisar hoy"
+  - Items hub: icono Network, "Hub: N conexiones"
+  - Click → navega al editor (ReviewBanner visible si FSRS activo)
     │
     ▼
-Guardar en users/{userId}/digest/{date}
-    │
-    ▼
-Dashboard muestra DailyDigest component
+En el editor, el usuario revisa la nota:
+  - "La recuerdo bien" (Rating.Good) → próxima revisión se aleja
+  - "Necesito repasarla" (Rating.Again) → próxima revisión se acerca
+  - Persistencia: setPartialRow local-first → persister sync a Firestore
 ```
 
 ---
@@ -648,7 +664,7 @@ Extensión custom (implementada):
     ├── Node schema: { type: 'wikilink', attrs: { noteId, noteTitle } }
     └── Click: event delegation con data-note-id → navigate
 
-Extensiones custom (planeadas, Fase 4+):
+Extensiones custom (planeadas, Fase 5+):
 ├── SlashCommand      → / para insertar bloques
 ├── TagInline         → #tag reconocido inline
 └── ProgressiveHighlight → Niveles de summarization visual
@@ -735,13 +751,13 @@ Full rebuild del índice en cada `addTableListener`. ~50ms para ~300 docs. El in
 - [x] `schemas.ts` compartido con `INBOX_CLASSIFICATION_SCHEMA` + `NOTE_TAGGING_SCHEMA`
 - [x] Eliminado `stripJsonFence`, fallbacks null, `parseJson.ts`
 
-### Fase 4: Grafo + Resurfacing
-- [ ] Reagraph: visualización del knowledge graph
-- [ ] Filtros de grafo (por área, por tipo, por fecha)
-- [ ] Embeddings pipeline (Cloud Function + OpenAI)
-- [ ] "Notas similares" sidebar
-- [ ] ts-fsrs: resurfacing algorithm
-- [ ] Daily Digest component en dashboard
+### Fase 4: Grafo + Resurfacing ✅
+- [x] Cloud Function `generateEmbedding` (OpenAI text-embedding-3-small, guard por contentHash)
+- [x] Reagraph: knowledge graph interactivo (force-directed WebGL, colores por paraType, tamaños por linkCount)
+- [x] Filtros del grafo (paraType + noteType + minLinks, AND, panel colapsable)
+- [x] "Notas similares" sidebar (cosine similarity, top 5, threshold 0.5, cache useRef)
+- [x] ts-fsrs: resurfacing (opt-in, 2 ratings Again/Good, campos flat en notesStore)
+- [x] Daily Digest en dashboard (client-side, review FSRS + hubs por hash diario)
 
 ### Fase 5: Multi-plataforma
 - [ ] PWA optimizada (service worker, offline)
@@ -786,6 +802,18 @@ TinyBase no soporta objetos anidados en su schema. Los campos `aiSuggestedTitle`
 ### D11: ¿Por qué tool use en vez de prompt "Responde SOLO JSON"?
 Tool use con `tool_choice: { type: 'tool' }` fuerza a Claude a devolver un objeto que cumple el `input_schema`. Es schema enforcement a nivel de decodificador — no depende de que el modelo "obedezca" el prompt. Elimina `stripJsonFence`, nulls en campos con `enum`, y wrapping en markdown. Los schemas se definen una sola vez en `schemas.ts` y se reusan en ambas CFs.
 
+### D12: ¿Por qué Reagraph y no Sigma.js para el grafo?
+Reagraph ofrece API declarativa (`<GraphCanvas nodes edges />`) que encaja con React. Para <500 nodos, el rendimiento WebGL es más que suficiente. Sigma.js requiere setup imperativo + Graphology como data layer — más potente pero más complejo. Si el grafo supera ~1000 nodos, migrar. Smoke test confirmó compatibilidad con React 19 + Vite sin issues.
+
+### D13: ¿Por qué Daily Digest client-side y no Cloud Function scheduled?
+Los datos ya están en TinyBase al cargar el dashboard. Computar 3-5 notas del digest es O(n) trivial. Una CF scheduled agregaría cron + colección `digest/{date}` + sync, y el digest sería stale si el usuario revisa una nota entre el cron y la apertura. Client-side siempre fresh.
+
+### D14: ¿Por qué embeddings en Firestore directo y no en TinyBase?
+Cada embedding es 1536 floats (~6KB). Con 500 notas = ~3MB permanente en TinyBase. Los embeddings solo se usan al abrir el editor ("Notas similares") — no justifica tenerlos en memoria siempre. Carga on-demand con `getDocs` + cache en `useRef`.
+
+### D15: ¿Por qué solo 2 ratings FSRS (Again/Good) en vez de 4?
+SecondMind no es Anki. El objetivo es re-exponer notas olvidadas, no optimizar memorización. Again + Good reducen la decisión a un click significativo. ts-fsrs funciona perfectamente con un subconjunto de ratings.
+
 ---
 
 ## 11. Métricas de éxito
@@ -811,14 +839,14 @@ El sistema funciona si:
 | Costos de Claude/OpenAI escalan | Baja | Bajo | Batch API (-50%), o migrar a modelos locales |
 | Orama rebuild lento con >1K notas | Media | Bajo | Migrar a sync incremental (update/remove por row) |
 | Tauri mobile no madura | Media | Bajo | Capacitor como alternativa probada |
-| El grafo no aporta valor real | Media | Bajo | Es Fase 4 — para entonces hay datos para validar |
+| Reagraph lento con >1000 nodos | Baja | Medio | Migrar a Sigma.js + Graphology (más potente para grafos grandes) |
 | Over-engineering antes de validar | Alta | Alto | MVP en 4 semanas o menos. Si no lo uso diario, pivotar. |
 
 ---
 
 ## 13. Gotchas técnicos
 
-Conocimiento acumulado de las Fases 0–3.1. Toda sesión de desarrollo debe respetar estos patterns:
+Conocimiento acumulado de las Fases 0–4. Toda sesión de desarrollo debe respetar estos patterns:
 
 **Fases 0–2:**
 
@@ -846,6 +874,16 @@ Conocimiento acumulado de las Fases 0–3.1. Toda sesión de desarrollo debe res
 19. **Firebase Functions v6 → v7 breaking change** — La v6 fallaba con timeout en el discovery protocol de la CLI. Usar `firebase-functions ^7.2.5`+
 20. **`/lib/` en `.gitignore` de functions** necesita anchor (`/lib/`) para no ignorar `src/lib/` (sources) además de `lib/` (compiled)
 
+**Fase 4:**
+
+21. **Ruta `notes/graph` ANTES de `notes/:noteId` en router.tsx** — Si va después, React Router captura "graph" como noteId dinámico y muestra "nota no encontrada". Orden crítico en flat routes con segmentos estáticos vs dinámicos
+22. **Empty state con filtros activos: no hacer early return** — Si filtros reducen resultados a 0, el empty state debe seguir mostrando los controles de filtro con opción de reseteo. Aplica a cualquier vista con filtros + empty state
+23. **`Math.random()` no es seedable en JavaScript** — Para orden determinístico (ej: hubs del Daily Digest que no cambien al recargar), usar hash numérico de `string + dateKey`: `[...s].reduce((h, c) => (h * 31 + c.charCodeAt(0)) | 0, 0)`
+24. **Embeddings NO van en TinyBase** — Vectores de 1536 floats (~6KB c/u) son demasiado grandes para el store in-memory. Cargar on-demand desde Firestore con cache en `useRef`. Para <500 notas (~3MB total), fetch all es viable
+25. **FSRS opt-in requiere botón explícito** — Sin "Activar revisión periódica", la feature es invisible (notas nuevas no tienen `fsrsDue` y el ReviewBanner nunca aparece). El tercer estado del banner resuelve el discovery
+26. **Guard de embeddings CF es `contentHash`, no `aiProcessed`** — A diferencia de `autoTagNote` (que guarda `aiProcessed: true` para nunca reprocesar), `generateEmbedding` debe regenerar cuando el contenido cambia. Comparar SHA-256 de `contentPlain` con el hash guardado en `embeddings/{noteId}`
+27. **Reagraph agrega ~1.3MB al bundle** — Three.js/WebGL. Code-splitting pendiente para fase futura. Compatible con React 19 sin issues (smoke test previo a implementación)
+
 ---
 
-> **Siguiente paso**: Implementar Fase 4 — Grafo + Resurfacing.
+> **Siguiente paso**: Implementar Fase 5 — Multi-plataforma (PWA, Tauri, Capacitor, Chrome extension).
