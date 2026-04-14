@@ -44,8 +44,10 @@ export default function Popup() {
     setAuthLoading(true);
     try {
       await signInWithChrome();
-    } catch {
-      setAuthError('Error al conectar con Google.');
+    } catch (err) {
+      console.error('[SecondMind] signIn error:', err);
+      const msg = err instanceof Error ? err.message : String(err);
+      setAuthError(`Error: ${msg}`);
       setAuthLoading(false);
     }
   }, []);
