@@ -67,6 +67,10 @@
 - **`--legacy-peer-deps` también para `@tauri-apps/*` packages.** Mismo issue con Vite 8 que vite-plugin-pwa.
 - **Bundle MSI + NSIS ambos activos** en `tauri.conf.json` targets. MSI para distribución corporativa, NSIS para auto-updater futuro. Output en `src-tauri/target/release/bundle/{msi,nsis}/`.
 - **Primer `cargo build` tarda 5-10 min** (compila ~400 crates). Incrementales después son 10-30s.
+- **Auth en Tauri NO usa `signInWithPopup`.** Firebase popup auth usa `window.open` + `postMessage`, pero Tauri WebView2 abre `window.open` en el navegador del sistema y el popup no puede comunicarse de vuelta (procesos distintos). El fix: OAuth Desktop flow custom — `useAuth` detecta `isTauri()` y usa `signInWithTauri` que (1) arranca HTTP listener local en Rust via comando `start_oauth_listener` en `src-tauri/src/oauth.rs`, (2) abre Google OAuth URL en browser del sistema via `@tauri-apps/plugin-shell`, (3) escucha el evento `oauth://callback`, (4) intercambia code por `id_token` en `oauth2.googleapis.com/token`, (5) `signInWithCredential` con `GoogleAuthProvider.credential(id_token)`. PKCE (code_challenge S256) + state CSRF.
+- **Credenciales OAuth Desktop en `.env.local` (gitignored):** `VITE_GOOGLE_OAUTH_CLIENT_ID` + `VITE_GOOGLE_OAUTH_CLIENT_SECRET`. OAuth Client tipo "Desktop app" creado en Google Cloud Console (proyecto `secondmindv1`). Google acepta redirect URIs loopback (`http://127.0.0.1:*`) automáticamente sin listarlas.
+- **Capability scoped `shell:allow-open`** con allowlist `accounts.google.com/**` y `oauth2.googleapis.com/**`. Sin scope, cualquier URL podría abrirse desde JS; con scope solo los dominios OAuth.
+- **OAuth listener es one-shot.** El thread del `TcpListener` acepta una conexión y termina. Si el usuario retry (cierra browser, reabre), hay que volver a llamar `start_oauth_listener` (pasa automáticamente porque el botón Sign in re-invoca el flujo completo).
 
 ### Chrome Extension
 

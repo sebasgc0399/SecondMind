@@ -1,3 +1,4 @@
+mod oauth;
 mod tray;
 
 use tauri::Manager;
@@ -22,6 +23,8 @@ pub fn run() {
             tauri_plugin_autostart::MacosLauncher::LaunchAgent,
             None,
         ))
+        .plugin(tauri_plugin_shell::init())
+        .invoke_handler(tauri::generate_handler![oauth::start_oauth_listener])
         .setup(|app| {
             if cfg!(debug_assertions) {
                 app.handle().plugin(
