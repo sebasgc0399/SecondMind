@@ -14,6 +14,7 @@ import HabitsPage from '@/app/habits/page';
 import SettingsPage from '@/app/settings/page';
 import NotFoundPage from '@/app/not-found';
 import LoginPage from '@/app/login/page';
+import CapturePage from '@/app/capture/page';
 
 const router = createBrowserRouter([
   {
@@ -35,6 +36,7 @@ const router = createBrowserRouter([
       { path: '*', Component: NotFoundPage },
     ],
   },
+  { path: '/capture', Component: CapturePage },
   { path: '/login', Component: LoginPage },
 ]);
 

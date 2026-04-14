@@ -1,8 +1,10 @@
-import { StrictMode } from 'react';
+import { StrictMode, type ReactNode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { RouterProvider } from 'react-router';
 import { Provider } from 'tinybase/ui-react';
 import router from '@/app/router';
+import useCloseToTray from '@/hooks/useCloseToTray';
+import useGlobalShortcutRegistration from '@/hooks/useGlobalShortcutRegistration';
 import { notesStore } from '@/stores/notesStore';
 import { linksStore } from '@/stores/linksStore';
 import { inboxStore } from '@/stores/inboxStore';
@@ -11,6 +13,12 @@ import { projectsStore } from '@/stores/projectsStore';
 import { objectivesStore } from '@/stores/objectivesStore';
 import { habitsStore } from '@/stores/habitsStore';
 import './index.css';
+
+function TauriIntegration({ children }: { children: ReactNode }) {
+  useCloseToTray();
+  useGlobalShortcutRegistration();
+  return <>{children}</>;
+}
 
 // notesStore es el store default del Provider (acceso sin storeId).
 // Los demás stores se acceden con storeId en los hooks reactivos,
@@ -28,7 +36,9 @@ createRoot(document.getElementById('root')!).render(
         habits: habitsStore,
       }}
     >
-      <RouterProvider router={router} />
+      <TauriIntegration>
+        <RouterProvider router={router} />
+      </TauriIntegration>
     </Provider>
   </StrictMode>,
 );

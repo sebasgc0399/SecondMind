@@ -25,6 +25,8 @@ npm run preview      # Preview del build local
 npm run deploy       # Deploy a Firebase Hosting
 npm run deploy:functions  # Deploy solo Cloud Functions
 npm run logs:functions    # Logs de Cloud Functions
+npm run tauri:dev    # Abre la app nativa en modo dev (Vite + Tauri)
+npm run tauri:build  # Build release: genera MSI + NSIS en src-tauri/target/release/bundle/
 ```
 
 ## Toolkit Claude Code (Fase 0.1)
@@ -206,6 +208,18 @@ IMPORTANT: Siempre consultar el doc de arquitectura (01) para schemas de datos y
 - **CRXJS exporta `{ crx }` como named export**, no default. `import { crx } from '@crxjs/vite-plugin'`, no `import crx from`.
 - **Chrome Extension usa `firebase/firestore/lite`** (no el SDK completo). Solo necesita `setDoc` para un write. Reduce bundle de ~120KB a ~30KB gzip.
 - **Chrome Extension auth: `firebase/auth/web-extension`** (no `firebase/auth`). Obligatorio para MV3 service worker context.
+- **Tauri v2 `tray-icon` feature obligatorio en Cargo.toml.** `tauri = { version = "2.10", features = ["tray-icon"] }`. Sin esta feature, `tauri::tray::TrayIconBuilder` no existe — el módulo `tray` está gated.
+- **Ventana `/capture` es ruta top-level fuera de Layout.** Tauri abre segunda WebView con `url: "/capture"`. Debe renderizar en <200ms, por lo que no puede cargar sidebar + stores de TinyBase. Escribe directo a Firestore (patrón extension) con `source: 'desktop-capture'`.
+- **Tauri global shortcut en JS (no Rust).** `@tauri-apps/plugin-global-shortcut.register()` + callback llama `getAllWebviewWindows()` → find `capture` → `show()+setFocus()`. Siempre `isRegistered() + unregister()` antes de `register()` en el useEffect para evitar duplicados por HMR.
+- **Tauri close-to-tray en JS via `onCloseRequested`.** Hook `useCloseToTray` se monta en `main.tsx` vía `TauriIntegration` wrapper → se ejecuta en cada WebView (main y capture).
+- **Single-instance plugin es obligatorio si hay autostart.** Sin él, autostart + click manual duplica procesos, el segundo falla al registrar el shortcut global.
+- **Window-state plugin con `.with_denylist(&["capture"])`** para que la ventana efímera siempre abra centrada. Main persiste pos/size automáticamente.
+- **Capabilities Tauri v2 NO soportan wildcards.** Usar `core:tray:default`, `core:menu:default`, `core:window:allow-*` enumerado. Nada de `core:tray:*`.
+- **Capabilities separadas por ventana.** `default.json` (main, con tray/menu/global-shortcut/autostart) + `capture.json` (capture, solo window show/hide/focus). Principio de mínimo privilegio.
+- **CSP explícito en `tauri.conf.json` para Firebase.** `connect-src` incluye `*.googleapis.com *.firebaseio.com wss://*.firebaseio.com identitytoolkit auth`; `frame-src` incluye `*.firebaseapp.com accounts.google.com` para el popup de Google signIn en release.
+- **IDE marca permissions "not accepted" tras agregar plugin Tauri.** El schema `src-tauri/gen/schemas/desktop-schema.json` se regenera en `cargo check`/`build`. Correr uno y recargar la IDE.
+- **Global shortcut usado: `Ctrl+Shift+Space`.** Cero conflictos en Windows (Chrome no lo usa; VS Code solo con editor enfocado para parameter hints). El `Alt+N` local sigue intacto para la web app.
+- **`--legacy-peer-deps` también para `@tauri-apps/*`.** Mismo issue con Vite 8 que vite-plugin-pwa.
 
 ## Fases de desarrollo
 
@@ -217,5 +231,6 @@ IMPORTANT: Siempre consultar el doc de arquitectura (01) para schemas de datos y
 - **Fase 3.1 (Schema Enforcement) ✅:** Tool use con JSON Schema enforcement en ambas CFs. Elimina stripJsonFence, fallbacks null, código defensivo de parsing. Schemas compartidos en `schemas.ts`. Ver `Spec/SPEC-fase-3.1-ai-provider.md`
 - **Fase 4 (Grafo + Resurfacing) ✅:** Knowledge graph (Reagraph WebGL), CF generateEmbedding (OpenAI), filtros del grafo, notas similares (cosine similarity), FSRS resurfacing (ts-fsrs), Daily Digest (client-side). Ver `Spec/SPEC-fase-4-grafo-resurfacing.md`
 - **Fase 5 (PWA + Extension) ✅:** PWA instalable (vite-plugin-pwa, manifest, SW offline, install prompt), offline support (navigateFallback, runtimeCaching, useOnlineStatus, OfflineBadge, guards AI), Chrome Extension MV3 (CRXJS, popup React, captura seleccion, auth chrome.identity + Firebase, write a inbox con firestore/lite). Ver `Spec/SPEC-fase-5-pwa-extension.md`
+- **Fase 5.1 (Tauri Desktop) ✅:** wrapper nativo Windows con system tray (close-to-tray, menu con Abrir/Captura/Autostart/Salir), global shortcut `Ctrl+Shift+Space` desde cualquier app → ventana frameless `/capture` que escribe directo a Firestore, single-instance plugin, window-state plugin con denylist capture, autostart opcional con CheckMenuItem toggle, CSP Firebase explícito. Build genera MSI + NSIS. Ver `Spec/SPEC-fase-5.1-tauri-desktop.md`
 
 When compacting, preserve: current phase, modified files list, pending tasks, and any architectural decisions made during the conversation.
