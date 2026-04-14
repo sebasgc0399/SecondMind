@@ -6,6 +6,8 @@ import {
   GoogleAuthProvider,
 } from 'firebase/auth';
 import { auth } from '@/lib/firebase';
+import { isTauri } from '@/lib/tauri';
+import { signInWithTauri } from '@/lib/tauriAuth';
 import type { User } from 'firebase/auth';
 
 const googleProvider = new GoogleAuthProvider();
@@ -31,7 +33,11 @@ export default function useAuth(): UseAuthReturn {
   }, []);
 
   const signIn = useCallback(async () => {
-    await signInWithPopup(auth, googleProvider);
+    if (isTauri()) {
+      await signInWithTauri(auth);
+    } else {
+      await signInWithPopup(auth, googleProvider);
+    }
   }, []);
 
   const signOut = useCallback(async () => {
