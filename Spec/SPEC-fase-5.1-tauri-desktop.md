@@ -1,8 +1,8 @@
 # SPEC — SecondMind · Fase 5.1: Tauri Desktop (Registro de implementación)
 
-> Estado: **Completada** — Abril 2026
-> Alcance: SecondMind como app de escritorio nativa Windows con Quick Capture global, system tray, autostart opcional, window-state persistido y single-instance.
-> Stack implementado: Tauri v2.10.3, Rust 1.94.1, MSVC Build Tools 2026, 4 plugins oficiales Tauri
+> Estado: **Completada** — Abril 2026 (incluye fix post-merge F6 OAuth Desktop flow)
+> Alcance: SecondMind como app de escritorio nativa Windows con Quick Capture global, system tray, autostart opcional, window-state persistido, single-instance y auth Google via OAuth Desktop flow.
+> Stack implementado: Tauri v2.10.3, Rust 1.94.1, MSVC Build Tools 2026, 5 plugins oficiales Tauri (global-shortcut, autostart, window-state, single-instance, shell)
 > Para gotchas operativos consolidados → `Spec/ESTADO-ACTUAL.md` sección "Tauri Desktop (Fase 5.1)".
 
 ---
@@ -90,23 +90,58 @@ El usuario instala SecondMind como app de escritorio nativa que vive en el syste
 - Actualización de `CLAUDE.md` con comandos tauri + gotchas + fase 5.1 en lista de fases
 - Este SPEC convertido a registro
 
+### F6: OAuth Desktop flow (post-merge fix)
+
+**Contexto del bug:** al instalar el MSI y clickear "Sign in with Google" no pasaba nada. Root cause: `signInWithPopup` de Firebase usa `window.open` + `postMessage` entre opener y popup. Tauri WebView2 abre `window.open` en el navegador del sistema (proceso distinto), el popup no puede `postMessage` de vuelta a la Tauri window. Además el origen de Tauri (`tauri://localhost`) no está en Authorized domains de Firebase.
+
+**Solución implementada** (commit [5158d02](https://github.com/sebasgc0399/SecondMind/commit/5158d02)):
+
+- Deps Rust: `tauri-plugin-shell@2.3.5`
+- Dep npm: `@tauri-apps/plugin-shell`
+- Archivos creados:
+  - `src-tauri/src/oauth.rs` — comando Tauri `start_oauth_listener`:
+    - `TcpListener::bind("127.0.0.1:0")` → puerto random libre del OS
+    - Thread spawn que acepta una conexión, parsea request line, emite evento `oauth://callback` con la URL completa
+    - Responde HTML "SecondMind — Autenticación completada" con `window.close()`
+    - Retorna puerto a JS
+  - `src/lib/tauriAuth.ts` — `signInWithTauri(auth)`:
+    - Genera PKCE: `code_verifier` (32 bytes random base64url) + `code_challenge` (SHA256 base64url S256)
+    - `state` UUID para CSRF
+    - `invoke('start_oauth_listener')` → puerto
+    - Construye `https://accounts.google.com/o/oauth2/v2/auth?...` con `redirect_uri=http://127.0.0.1:PORT`, `access_type=offline`, `prompt=select_account`
+    - `listen('oauth://callback')` + timeout 5 min
+    - `shell.open(authUrl)` abre en browser del sistema
+    - Al recibir callback: valida state, extrae code, POST a `https://oauth2.googleapis.com/token` con `code_verifier` + `client_secret` → `id_token`
+    - `signInWithCredential(auth, GoogleAuthProvider.credential(id_token, access_token))`
+- Archivos modificados:
+  - `src-tauri/src/lib.rs` → agrega `mod oauth`, plugin `tauri_plugin_shell::init()`, `invoke_handler![oauth::start_oauth_listener]`
+  - `src-tauri/capabilities/default.json` → scoped permission `shell:allow-open` con allowlist `accounts.google.com/**` + `oauth2.googleapis.com/**`
+  - `src/hooks/useAuth.ts` → `signIn` detecta `isTauri()` y llama `signInWithTauri(auth)`; sino mantiene `signInWithPopup` para web PWA/Chrome
+- Credenciales (no commiteadas, en `.env.local` gitignored):
+  - OAuth Client ID tipo "Desktop app" creado en Google Cloud Console (proyecto `secondmindv1`)
+  - `VITE_GOOGLE_OAUTH_CLIENT_ID` + `VITE_GOOGLE_OAUTH_CLIENT_SECRET`
+  - Google acepta redirect URIs loopback (`http://127.0.0.1:*`) automáticamente sin listarlas
+
+**Verificado E2E:** desinstalar MSI anterior → instalar nuevo → click Sign in → browser abre Google → elegir cuenta → redirect a `http://127.0.0.1:PORT` → HTML "Autenticado" → Tauri app loguea y muestra dashboard.
+
 ---
 
 ## Decisiones clave (aplicadas)
 
-| #   | Decisión                                                     | Razón                                                                                                   |
-| --- | ------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------- |
-| D1  | `/capture` como ruta top-level, fuera de Layout              | Layout hidrata sidebar + TinyBase + editor (~2.7MB). Capture debe abrir en <200ms                       |
-| D2  | Escritura directa a Firestore desde `/capture` (no TinyBase) | Ventana efímera, no vale hidratar persister. Main recibe snapshot reactivo ~200-800ms                   |
-| D3  | Global shortcut registrado en JS (no Rust)                   | Más simple; callback puede controlar WebViews directo sin IPC                                           |
-| D4  | Close-to-tray en JS via `onCloseRequested`                   | Un solo hook para main y capture; más contenido en React                                                |
-| D5  | `Ctrl+Shift+Space` en vez de `Alt+Shift+N`                   | Cero conflictos en Windows (Chrome no lo usa, VS Code solo con editor enfocado)                         |
-| D6  | `tauri-plugin-single-instance`                               | Obligatorio con autostart para prevenir doble proceso                                                   |
-| D7  | window-state con denylist `["capture"]`                      | Capture siempre centrada; main sí persiste pos                                                          |
-| D8  | MSI + NSIS ambos                                             | MSI corporate-friendly, NSIS futuro auto-updater                                                        |
-| D9  | CSP explícito Firebase                                       | Release build sin CSP correcto rompe auth + firestore                                                   |
-| D10 | Version sync parcial                                         | `tauri.conf.json` y `Cargo.toml` en `0.1.0`; `package.json` queda en `0.0.0` hasta major release formal |
-| D11 | `src-tauri/` integrado en raíz                               | Tauri consume `dist/`, workflow `tauri:dev` lanza Vite+Tauri juntos                                     |
+| #   | Decisión                                                     | Razón                                                                                                                                                                                                                                      |
+| --- | ------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| D1  | `/capture` como ruta top-level, fuera de Layout              | Layout hidrata sidebar + TinyBase + editor (~2.7MB). Capture debe abrir en <200ms                                                                                                                                                          |
+| D2  | Escritura directa a Firestore desde `/capture` (no TinyBase) | Ventana efímera, no vale hidratar persister. Main recibe snapshot reactivo ~200-800ms                                                                                                                                                      |
+| D3  | Global shortcut registrado en JS (no Rust)                   | Más simple; callback puede controlar WebViews directo sin IPC                                                                                                                                                                              |
+| D4  | Close-to-tray en JS via `onCloseRequested`                   | Un solo hook para main y capture; más contenido en React                                                                                                                                                                                   |
+| D5  | `Ctrl+Shift+Space` en vez de `Alt+Shift+N`                   | Cero conflictos en Windows (Chrome no lo usa, VS Code solo con editor enfocado)                                                                                                                                                            |
+| D6  | `tauri-plugin-single-instance`                               | Obligatorio con autostart para prevenir doble proceso                                                                                                                                                                                      |
+| D7  | window-state con denylist `["capture"]`                      | Capture siempre centrada; main sí persiste pos                                                                                                                                                                                             |
+| D8  | MSI + NSIS ambos                                             | MSI corporate-friendly, NSIS futuro auto-updater                                                                                                                                                                                           |
+| D9  | CSP explícito Firebase                                       | Release build sin CSP correcto rompe auth + firestore                                                                                                                                                                                      |
+| D10 | Version sync parcial                                         | `tauri.conf.json` y `Cargo.toml` en `0.1.0`; `package.json` queda en `0.0.0` hasta major release formal                                                                                                                                    |
+| D11 | `src-tauri/` integrado en raíz                               | Tauri consume `dist/`, workflow `tauri:dev` lanza Vite+Tauri juntos                                                                                                                                                                        |
+| D12 | OAuth Desktop flow custom en vez de `signInWithPopup`        | Firebase popup usa `window.open` + `postMessage`; Tauri WebView2 abre popup en browser del sistema (proceso distinto) que no puede postMessage back. OAuth loopback + PKCE + `signInWithCredential` es el patrón oficial para desktop apps |
 
 ---
 
@@ -127,18 +162,21 @@ src-tauri/
 │   └── android/, ios/           # generados pero no usados (Windows only)
 └── src/
     ├── main.rs                  # entry: secondmind_lib::run()
-    ├── lib.rs                   # setup: 4 plugins + tray::build
-    └── tray.rs                  # TrayIconBuilder + menu + handlers
+    ├── lib.rs                   # setup: 5 plugins + tray::build + invoke_handler oauth
+    ├── tray.rs                  # TrayIconBuilder + menu + handlers
+    └── oauth.rs                 # start_oauth_listener command (TcpListener + emit callback)
 
 src/
 ├── app/
 │   └── capture/
 │       └── page.tsx             # Ventana /capture: auth guard + textarea + Firestore setDoc
 ├── hooks/
+│   ├── useAuth.ts               # signIn ramifica: isTauri → signInWithTauri; sino signInWithPopup
 │   ├── useCloseToTray.ts        # onCloseRequested → preventDefault + hide
 │   └── useGlobalShortcutRegistration.ts  # register Ctrl+Shift+Space
 ├── lib/
-│   └── tauri.ts                 # isTauri, showMainWindow, hideCurrentWindow
+│   ├── tauri.ts                 # isTauri, showMainWindow, hideCurrentWindow
+│   └── tauriAuth.ts             # signInWithTauri: PKCE + state + shell.open + token exchange
 ├── main.tsx                     # TauriIntegration wrapper invoca los 2 hooks
 └── app/router.tsx               # ruta /capture top-level
 ```
@@ -163,6 +201,7 @@ src/
 - [x] `npm run dev` solo sigue funcionando en navegador (sin Tauri)
 - [x] PWA + Chrome Extension intactos
 - [x] Cloud Functions procesan items creados por desktop-capture igual que otros sources
+- [x] Auth Google funciona en Tauri via OAuth Desktop flow (PKCE + state CSRF + HTTP listener local)
 
 ---
 
