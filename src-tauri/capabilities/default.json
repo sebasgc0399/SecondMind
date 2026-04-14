@@ -1,7 +1,7 @@
 {
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "default",
-  "description": "Permisos de la ventana main: core, tray, menu, window controls",
+  "description": "Permisos de la ventana main: core, tray, menu, window controls, global shortcut",
   "windows": ["main"],
   "permissions": [
     "core:default",
@@ -12,6 +12,10 @@
     "core:window:allow-show",
     "core:window:allow-set-focus",
     "core:window:allow-unminimize",
-    "core:webview:allow-internal-toggle-devtools"
+    "core:webview:allow-create-webview-window",
+    "core:webview:allow-internal-toggle-devtools",
+    "global-shortcut:allow-register",
+    "global-shortcut:allow-unregister",
+    "global-shortcut:allow-is-registered"
   ]
 }

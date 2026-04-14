@@ -4,6 +4,7 @@ import { RouterProvider } from 'react-router';
 import { Provider } from 'tinybase/ui-react';
 import router from '@/app/router';
 import useCloseToTray from '@/hooks/useCloseToTray';
+import useGlobalShortcutRegistration from '@/hooks/useGlobalShortcutRegistration';
 import { notesStore } from '@/stores/notesStore';
 import { linksStore } from '@/stores/linksStore';
 import { inboxStore } from '@/stores/inboxStore';
@@ -15,6 +16,7 @@ import './index.css';
 
 function TauriIntegration({ children }: { children: ReactNode }) {
   useCloseToTray();
+  useGlobalShortcutRegistration();
   return <>{children}</>;
 }
 
