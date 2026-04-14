@@ -22,7 +22,7 @@ export default defineConfig({
         description: 'Tu segundo cerebro digital',
         start_url: '/',
         display: 'standalone',
-        theme_color: '#7b2ad1',
+        theme_color: '#878bf9',
         background_color: '#0a0a0a',
         icons: [
           {
