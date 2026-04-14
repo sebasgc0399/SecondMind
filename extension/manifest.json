@@ -3,6 +3,7 @@
   "name": "SecondMind",
   "version": "0.1.0",
   "description": "Captura contenido web en tu inbox de SecondMind",
+  "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAjoGw8BaiByqO+S6ZQGuJ9FS0SKQGanL15jsuHTlHtki7qHNJzKU4r8HIoa97+YVg53MIOdwBDy66SET6aS98vX1rpSV8jEE3VwUa4vyiWAGq7SL10a6cPr8nevgRAlrPoX7S6G79X6ws6y4z7zsAJB3KZCn4Rlgrfxpq5HpEKzzv6OJeQZ9MXsQERpYTxBbkwEl59da4ct+58fmT+MXDN4BNt4wjT6d3uVVhf4Zc9IshHXCV7xrhFKJcp216KCvZuXTQcXOBICNz7Mhf6DDM7mhqpDvUrxg32GM2x/TvxdUihgni/6j5B9Z45fvENnJRrRzT5uq4aOVkopuEja5YYQIDAQAB",
   "permissions": ["identity", "activeTab", "storage", "scripting"],
   "action": {
     "default_popup": "src/popup/index.html",
