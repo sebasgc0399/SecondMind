@@ -60,14 +60,35 @@ Las fases y su progreso se llevan en [CLAUDE.md](CLAUDE.md) y cada una tiene su 
 
 - **Fase 3.1 — Schema Enforcement** ✅ Refactoring de las 2 Cloud Functions de AI para usar tool use de Anthropic (`tool_choice: { type: 'tool' }`) con JSON Schema enforcement en vez de "Responde SOLO JSON" en el prompt. Elimina nulls en campos, `stripJsonFence`, fallbacks manuales, y ~120 lineas de codigo defensivo. Schemas compartidos en `schemas.ts`. Cero cambios en frontend — las CFs siguen escribiendo los mismos campos flat a Firestore.
 
-**Ya se puede usar a diario:** capturar ideas con `Alt+N`, la AI sugiere tipo/titulo/tags/area automaticamente, procesar el inbox one-by-one con sugerencias pre-llenadas o en batch con el Inbox Processor, buscar notas/tareas/proyectos globalmente con `Ctrl+K`, escribir notas atomicas con wikilinks y backlinks (auto-tagged por AI), organizar tareas con fecha y prioridad en proyectos con progreso, definir objetivos de alto nivel con deadline y proyectos vinculados, trackear 14 habitos diarios en el grid semanal, y ver todo junto en el dashboard.
+- **Fase 4 — Grafo + Resurfacing** ✅ El conocimiento vuelve a aparecer. 5 features:
+  - **F1 · Knowledge graph:** `/notes/graph` con Reagraph (WebGL sobre Three.js). Nodos = notas, aristas = wikilinks. Filtros por tag/area, zoom, select para navegar al detalle
+  - **F2 · Embeddings (CF generateEmbedding):** `onDocumentWritten` en `notes/{noteId}` genera vector 1536 dims con OpenAI `text-embedding-3-small`. Guard por `contentHash` SHA-256 para evitar regeneraciones innecesarias. Persistidos en `users/{uid}/embeddings/{noteId}`
+  - **F3 · Notas similares:** panel lateral en el editor con cosine similarity sobre los embeddings cacheados en `useRef` (embeddings NO van a TinyBase por tamaño)
+  - **F4 · FSRS spaced repetition:** algoritmo `ts-fsrs` client-side para agendar revisiones de notas. Opt-in via `ReviewBanner` con 4 estados (activar/due/próxima/confirmación). `fsrsDue` en Firestore solo para notas activadas
+  - **F5 · Daily Digest:** cards en el dashboard agrupando notas por hubs (tags con más incoming links) + orden determinístico del día via hash `noteId+date`
+
+- **Fase 5 — PWA + Chrome Extension** ✅ Acceso desde donde sea. 2 features:
+  - **F1 · PWA instalable:** `vite-plugin-pwa` con `generateSW` + `autoUpdate`, manifest completo, navigateFallback para SPA routing offline, runtimeCaching de Google Fonts, install prompt en el Layout. `useOnlineStatus` (useSyncExternalStore) + `OfflineBadge`. Guards offline solo en features AI (procesar inbox, notas similares); el resto funciona via TinyBase
+  - **F2 · Chrome Extension MV3 (`extension/`):** CRXJS 2.4.0 + Vite 8, popup React con captura de selección del tab activo, auth Google via `chrome.identity.getAuthToken` + `signInWithCredential`, SDK lite (`firebase/auth/web-extension` + `firebase/firestore/lite` = 342KB / 105KB gzip), `source: 'web-clip'` con `sourceUrl` limpiado de tracking params
+
+- **Fase 5.1 — Tauri Desktop** ✅ Wrapper nativo Windows. 6 features:
+  - **F1 · Scaffold:** Tauri v2.10 integrado al proyecto existente (`src-tauri/`). Consume `dist/` del build Vite. Scripts `tauri:dev` / `tauri:build`. Iconos generados desde `public/pwa-512x512.png`
+  - **F2 · System tray + close-to-tray:** icono en la bandeja con menú (Abrir / Captura rápida / Iniciar con Windows / Salir). Click izq toggle main window. Botón X oculta en vez de terminar proceso
+  - **F3 · Global shortcut `Ctrl+Shift+Space`:** desde cualquier app abre una ventana frameless `/capture` (480×220 frameless alwaysOnTop) con textarea enfocado. Enter escribe directo a Firestore con `source: 'desktop-capture'`, Escape cierra. No colisiona con `Alt+N` local
+  - **F4 · Autostart + window-state:** toggle en el tray registra `HKCU\...\Run\SecondMind`. Main window persiste pos/size; capture siempre centrada (denylist)
+  - **F5 · Single-instance + CSP Firebase:** plugin previene procesos duplicados (crítico con autostart). CSP explícito en `tauri.conf.json` permite auth + firestore en release
+  - **F6 · OAuth Desktop flow (post-merge fix):** `signInWithPopup` no funciona en Tauri WebView2 (window.open va al browser del sistema, no puede postMessage back). Reemplazado por flow custom con `tauri-plugin-shell` + HTTP listener local en Rust (`src-tauri/src/oauth.rs`), PKCE S256, state CSRF, intercambio code→id_token, `signInWithCredential`. OAuth Client tipo "Desktop app" en Google Cloud Console. `useAuth` detecta `isTauri()` y ramifica
+  - Instaladores: `SecondMind_0.1.0_x64_en-US.msi` + `SecondMind_0.1.0_x64-setup.exe` (NSIS) en `src-tauri/target/release/bundle/`
+
+**Ya se puede usar a diario:** capturar ideas desde cualquier app con `Ctrl+Shift+Space` (desktop) o `Alt+N` (web/in-app), web clip desde Chrome via extensión, procesar inbox con sugerencias AI, buscar globalmente con `Ctrl+K`, escribir notas con wikilinks + backlinks + auto-tags + resumen AI, explorar el grafo de conocimiento, ver notas similares por embeddings, agendar revisiones con FSRS, organizar tareas/proyectos/objetivos/hábitos, y todo offline gracias a TinyBase + PWA.
 
 ## Setup local
 
 Requisitos:
 
-- Node.js 20 o superior
+- Node.js 22 o superior
 - Un proyecto Firebase propio con Auth (Google sign-in) y Firestore habilitados
+- Opcional para el wrapper desktop: Rust 1.70+ (`rustup`) y MSVC Build Tools con workload "Desktop development with C++" en Windows
 
 Pasos:
 
@@ -101,7 +122,15 @@ npm run deploy        # Build + deploy a Firebase Hosting
 npm run deploy:rules  # Deploy de Firestore security rules
 npm run deploy:functions  # Deploy de Cloud Functions
 npm run logs:functions    # Logs de Cloud Functions
+npm run tauri:dev     # Abre la app desktop nativa en modo dev (requiere Rust)
+npm run tauri:build   # Genera MSI + NSIS en src-tauri/target/release/bundle/
 ```
+
+## Distribución
+
+- **Web / PWA:** https://secondmind.web.app — instalable desde Chrome/Edge
+- **Chrome Extension:** código en [`extension/`](extension/) (build separado vía CRXJS)
+- **Desktop Windows:** instaladores generados con `npm run tauri:build` en `src-tauri/target/release/bundle/{msi,nsis}/`
 
 ## Documentación
 
