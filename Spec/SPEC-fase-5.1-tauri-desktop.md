@@ -1,251 +1,178 @@
-# SPEC — SecondMind · Fase 5.1: Tauri Desktop
+# SPEC — SecondMind · Fase 5.1: Tauri Desktop (Registro de implementación)
 
-> Alcance: SecondMind como app de escritorio nativa con Quick Capture global (hotkey desde cualquier app) y system tray (siempre disponible en segundo plano)
-> Dependencias: Fase 5 completada (PWA + Chrome Extension)
-> Estimado: 2-3 semanas (solo dev)
-> Stack relevante: Tauri v2, Rust, @tauri-apps/plugin-global-shortcut, @tauri-apps/api/tray
+> Estado: **Completada** — Abril 2026
+> Alcance: SecondMind como app de escritorio nativa Windows con Quick Capture global, system tray, autostart opcional, window-state persistido y single-instance.
+> Stack implementado: Tauri v2.10.3, Rust 1.94.1, MSVC Build Tools 2026, 4 plugins oficiales Tauri
+> Para gotchas operativos consolidados → `Spec/ESTADO-ACTUAL.md` sección "Tauri Desktop (Fase 5.1)".
 
 ---
 
 ## Objetivo
 
-El usuario puede instalar SecondMind como app de escritorio nativa que vive en el system tray. Desde cualquier aplicación (navegador, editor, terminal), puede presionar un atajo global para abrir una ventana de captura rápida sin cambiar de contexto. La app se inicia con el sistema y está siempre lista.
+El usuario instala SecondMind como app de escritorio nativa que vive en el system tray. Desde cualquier app (Chrome, VS Code, terminal) presiona `Ctrl+Shift+Space` y una ventana frameless aparece centrada con textarea enfocado. Escribe, Enter guarda al inbox de Firestore y cierra. Escape cancela. La app se inicia con Windows (opcional) y recuerda posición/tamaño entre sesiones.
 
 ---
 
-## Prerequisitos manuales
+## Prerequisitos instalados
 
-Antes de implementar, el usuario debe instalar:
-
-1. **Rust toolchain** — `rustup` + `cargo` (https://rustup.rs)
-2. **Windows Build Tools** — MSVC build tools via Visual Studio Build Tools (C++ workload)
-3. **WebView2** — generalmente pre-instalado en Windows 10/11. Si no: https://developer.microsoft.com/microsoft-edge/webview2
-
-Verificar con:
-
-```bash
-rustc --version   # debe mostrar 1.70+
-cargo --version
-```
-
-Claude Code puede ejecutar todo el scaffolding y código, pero estos 3 prerequisitos requieren instalación manual del usuario.
+- **Rust toolchain:** `rustc 1.94.1`, `cargo 1.94.1` (via https://rustup.rs)
+- **MSVC Build Tools 2026** con workload "Desktop development with C++" (MSVC compiler, Windows 11 SDK, CMake)
+- **WebView2:** pre-instalado en Windows 10/11
 
 ---
 
-## Features
+## Features implementadas
 
-### F1: Tauri Setup — Scaffold + Integración con Vite
+### F1: Scaffold Tauri + integración Vite (commits C1+C2)
 
-**Qué:** Agregar Tauri v2 al proyecto existente de SecondMind. El frontend es el mismo build de Vite (`dist/`). Tauri crea `src-tauri/` con la configuración Rust y el binary nativo.
+- `tauri init --ci` con identifier `com.secondmind.app`, frontend dist `../dist`, dev URL `http://localhost:5173`
+- Iconos generados con `tauri icon public/pwa-512x512.png` (todas las plataformas)
+- `src-tauri/Cargo.toml`: package `secondmind`, lib `secondmind_lib`, feature `tray-icon` activada en dep `tauri`
+- `tauri.conf.json`: ventana main 1280×800 + bundle targets `msi` y `nsis`
+- `package.json`: scripts `tauri`/`tauri:dev`/`tauri:build`, deps `@tauri-apps/cli@^2.10.1` y `@tauri-apps/api@^2.10.1`
+- `vite.config.ts`: `clearScreen: false`, `server.port: 5173` + `strictPort: true`, `envPrefix: ['VITE_', 'TAURI_ENV_']`
+- `.gitignore` raíz con `src-tauri/target/` y `src-tauri/gen/`
 
-**Criterio de done:**
+### F2: System tray + close-to-tray (commit C3)
 
-- [ ] `@tauri-apps/cli` instalado como devDependency en el `package.json` raíz
-- [ ] `src-tauri/` generado con `tauri.conf.json`, `Cargo.toml`, `src/main.rs`
-- [ ] `tauri.conf.json` configurado: `frontendDist: "../dist"`, `devUrl: "http://localhost:5173"`, identifier `com.secondmind.app`
-- [ ] Scripts en `package.json`: `"tauri:dev"` y `"tauri:build"`
-- [ ] `npm run tauri:dev` abre la app SecondMind en una ventana nativa con el frontend de Vite
-- [ ] `npm run tauri:build` genera un instalador `.msi` (Windows) o `.dmg` (macOS)
-- [ ] El icono de la app usa el brain-circuit icon existente (`public/pwa-512x512.png`)
+- `src-tauri/src/tray.rs` con `TrayIconBuilder` + `MenuBuilder`:
+  - Items: "Abrir SecondMind", "Captura rápida", separador, "Iniciar con Windows" (CheckMenuItem), separador, "Salir"
+  - `on_menu_event` routing por ID (open/capture/autostart/quit)
+  - `on_tray_icon_event` maneja click izquierdo → toggle main window (show/hide)
+  - Icon del tray reutiliza `src-tauri/icons/32x32.png` (el default de tauri icon)
+- `src-tauri/src/lib.rs` invoca `tray::build(app.handle())` en setup
+- Close-to-tray en JS: hook `src/hooks/useCloseToTray.ts` con `onCloseRequested` + `preventDefault` + `hide`. Montado en `main.tsx` via wrapper `TauriIntegration`, se ejecuta en cada WebView del bundle (main y capture).
+- `src/lib/tauri.ts`: helpers `isTauri()`, `showMainWindow()`, `hideCurrentWindow()` con imports dinámicos (no rompen build web).
+- `capabilities/default.json`: permisos `core:tray:default`, `core:menu:default`, window show/hide/set-focus/unminimize/close.
 
-**Archivos a crear/modificar:**
+### F3: Global shortcut `Ctrl+Shift+Space` + ventana /capture (commit C4)
 
-- `src-tauri/tauri.conf.json` — configuración principal
-- `src-tauri/Cargo.toml` — dependencias Rust (tauri, plugins)
-- `src-tauri/src/main.rs` — entry point Rust
-- `src-tauri/src/lib.rs` — setup de plugins y handlers
-- `src-tauri/icons/` — iconos generados desde `public/pwa-512x512.png` via `tauri icon`
-- `src-tauri/capabilities/default.json` — permisos del frontend (Tauri v2 capability system)
-- `package.json` — scripts `tauri:dev` y `tauri:build`
-- `vite.config.ts` — ajustes mínimos para compatibilidad Tauri (puerto fijo, clearScreen: false)
+- Deps Rust: `tauri-plugin-global-shortcut@2.3.1`, `tauri-plugin-single-instance@2.4.1`
+- Dep npm: `@tauri-apps/plugin-global-shortcut@2.3.1`
+- `tauri.conf.json`: segunda ventana `capture` `{label, url: "/capture", width: 480, height: 220, decorations: false, alwaysOnTop: true, center: true, visible: false, skipTaskbar: true, resizable: false, focus: true}`
+- `tauri.conf.json` CSP explícito para Firebase:
+  ```
+  connect-src: ipc: http://ipc.localhost *.googleapis.com *.firebaseio.com wss://*.firebaseio.com *.firestore.googleapis.com identitytoolkit.googleapis.com securetoken.googleapis.com apis.google.com
+  frame-src: *.firebaseapp.com accounts.google.com
+  ```
+- `src-tauri/src/lib.rs`:
+  - Plugin `single_instance::init` con callback que enfoca main window en segundo lanzamiento
+  - Plugin `global_shortcut::Builder::new().build()`
+- `src/app/router.tsx`: ruta `/capture` top-level (fuera de Layout)
+- `src/app/capture/page.tsx`:
+  - Si `user == null` → estado con botón "Abrir SecondMind" que hace `showMainWindow()` + `hideCurrentWindow()`
+  - Si autenticado → textarea enfocado auto, Enter guarda con `setDoc(doc(db, 'users', uid, 'inbox', id), { source: 'desktop-capture', status: 'pending', aiProcessed: false, createdAt: serverTimestamp() })`, feedback check 300ms, cierre con `hideCurrentWindow()`
+  - Escape cierra sin guardar
+  - Header con `data-tauri-drag-region` para arrastrar la ventana frameless
+- `src/hooks/useGlobalShortcutRegistration.ts`: registra `Ctrl+Shift+Space` con guard `isRegistered()` + `unregister()` previo para evitar duplicados por HMR. Cleanup en unmount.
+- `src/main.tsx` wrapper `TauriIntegration` invoca `useCloseToTray()` y `useGlobalShortcutRegistration()`.
+- `capabilities/default.json`: agrega permissions `global-shortcut:*` y `core:webview:allow-create-webview-window`.
+- `capabilities/capture.json` (nuevo): `windows: ["capture"]` con `core:default` + window show/hide/set-focus. Mínimo privilegio.
 
-**Notas de implementación:**
+### F4: Autostart + window-state (commit C5)
 
-- **Tauri v2 usa capability-based permissions** — el frontend debe declarar qué APIs nativas puede usar. En `capabilities/default.json` se listan: `global-shortcut:allow-register`, `tray:default`, `window:allow-show`, `window:allow-hide`, etc.
-- **`npx tauri init`** dentro del proyecto existente genera `src-tauri/`. No crea un proyecto nuevo — se integra al Vite existente.
-- **`npx tauri icon public/pwa-512x512.png`** genera todos los iconos necesarios para cada plataforma desde el PNG existente.
-- **Vite config para Tauri:** agregar `server.strictPort: true` y `clearScreen: false`. El `envPrefix` con `TAURI_` permite acceder a variables de entorno de Tauri en el frontend.
-- **El build de Vite no cambia** — Tauri usa el output de `dist/` tal cual. La app web sigue funcionando igual en el navegador.
+- Deps Rust: `tauri-plugin-autostart@2.5.1`, `tauri-plugin-window-state@2.4.1`
+- Deps npm: `@tauri-apps/plugin-autostart`, `@tauri-apps/plugin-window-state`
+- `src-tauri/src/lib.rs`:
+  - Plugin `window_state::Builder::default().with_denylist(&["capture"]).build()` — main persiste pos/size, capture siempre centrada
+  - Plugin `autostart::init(MacosLauncher::LaunchAgent, None)`
+- `src-tauri/src/tray.rs`:
+  - `CheckMenuItemBuilder "Iniciar con Windows"` con estado inicial leyendo `autolaunch().is_enabled()`
+  - Handler del item alterna `enable()`/`disable()` + `item.set_checked(!enabled)` (menu items inmutables post-build)
+- `capabilities/default.json`: agrega `autostart:allow-enable`, `allow-disable`, `allow-is-enabled`.
 
----
+### F5: Build MSI release + documentación (commit C6)
 
-### F2: System Tray — Icono + Menú Contextual
-
-**Qué:** La app vive en el system tray (bandeja del sistema). El icono del tray muestra un menú contextual con opciones básicas. Cerrar la ventana la oculta al tray en vez de terminar el proceso.
-
-**Criterio de done:**
-
-- [ ] Icono de SecondMind visible en el system tray al iniciar la app
-- [ ] Click izquierdo en el tray icon muestra/oculta la ventana principal
-- [ ] Click derecho muestra menú contextual: "Abrir SecondMind", "Captura rápida", separador, "Salir"
-- [ ] "Salir" cierra la app completamente (no solo oculta)
-- [ ] Cerrar la ventana (botón X) la oculta al tray en vez de cerrar la app
-- [ ] El tray icon usa el brain-circuit icon (16×16 o 32×32 según plataforma)
-
-**Archivos a crear/modificar:**
-
-- `src-tauri/src/lib.rs` — setup del tray con menú
-- `src-tauri/src/tray.rs` — lógica del system tray (crear, manejar eventos)
-- `src-tauri/icons/tray-icon.png` — icono 32×32 para el tray
-- `src-tauri/capabilities/default.json` — agregar permisos de tray y window
-- `src-tauri/tauri.conf.json` — configurar `"trayIcon"` y `"windows[0].closingPolicy": "hide"` (Tauri v2 maneja el close-to-tray via config, no via evento)
-
-**Notas de implementación:**
-
-- **Tauri v2 system tray** usa `TrayIconBuilder` en Rust. El menú se construye con `MenuBuilder` → items `MenuItem` y `PredefinedMenuItem::separator()`.
-- **Close-to-tray** en Tauri v2: configurar la ventana con `close_requested` event que hace `window.hide()` en vez de `window.destroy()`. O usar el campo `closingPolicy` en `tauri.conf.json` si está disponible en la versión.
-- **Tray icon**: debe ser PNG con fondo transparente. El brain-circuit icon funciona pero necesita versión sin fondo purple — solo el cerebro blanco sobre transparente. Generar con sharp desde el SVG fullbleed (reemplazar fondo purple por transparente).
-- **Nota sobre Windows**: el tray icon en Windows debe ser `.ico` o PNG 32×32. Tauri convierte automáticamente si se provee PNG.
-
----
-
-### F3: Global Shortcut — Quick Capture desde cualquier app
-
-**Qué:** Registrar un atajo de teclado global (funciona incluso cuando SecondMind no tiene foco) que abre una ventana de captura rápida. El usuario puede capturar ideas sin cambiar de contexto.
-
-**Criterio de done:**
-
-- [ ] `Alt+Shift+N` registrado como global shortcut (funciona desde cualquier app)
-- [ ] Al presionar el shortcut, se abre una ventana pequeña de captura (no la ventana principal)
-- [ ] La ventana de captura es: siempre al frente (always on top), centrada, sin decoración (frameless), ~400×200px
-- [ ] La ventana de captura contiene: textarea enfocado + Enter para guardar + Escape para cerrar
-- [ ] Al guardar, el texto se escribe al inbox de Firestore (misma lógica que QuickCapture de la app web)
-- [ ] Tras guardar, la ventana se cierra automáticamente con feedback visual (✓)
-- [ ] Si la ventana de captura ya está abierta, el shortcut la enfoca en vez de abrir otra
-- [ ] El shortcut se registra al iniciar la app y se libera al salir
-
-**Archivos a crear/modificar:**
-
-- `src-tauri/src/lib.rs` — registrar global shortcut
-- `src-tauri/capabilities/default.json` — agregar `global-shortcut:allow-register`, `global-shortcut:allow-unregister`
-- `src/app/capture/page.tsx` — nueva ruta `/capture` para la ventana de captura (React)
-- `src-tauri/tauri.conf.json` — definir segunda ventana `"capture"` (label, tamaño, decorations: false, alwaysOnTop: true, visible: false)
-- `src/hooks/useQuickCapture.ts` — modificar para detectar contexto Tauri y escribir a Firestore directo si la ventana es la de captura
-
-**Notas de implementación:**
-
-- **`Alt+Shift+N`** en vez de `Alt+N` — el shortcut global no debe colisionar con shortcuts de otras apps. `Alt+N` es demasiado genérico. `Alt+Shift+N` es más seguro y memorable ("N de Nota" con modificadores).
-- **Plugin `@tauri-apps/plugin-global-shortcut`** — se instala como Cargo dependency + npm package. Se registra en Rust con `GlobalShortcutPlugin::default()` y se invoca desde JS o Rust.
-- **Ventana de captura separada** — Tauri v2 soporta múltiples ventanas. La ventana `"capture"` se define en `tauri.conf.json` con `visible: false` (oculta por defecto). El global shortcut la muestra/oculta via `WebviewWindow::get_webview_window("capture")?.show()`.
-- **Frameless window** — `decorations: false` + drag region CSS (un header con `-webkit-app-region: drag`). La ventana no tiene barra de título, solo el textarea y botones.
-- **El frontend de la ventana de captura** es la misma app React pero en la ruta `/capture`. Tauri carga esa ruta específica en la segunda ventana via el campo `url` en la config de la ventana.
-- **Firestore write desde la ventana de captura** — reutiliza `useInbox` o la función `createInboxItem` existente. No necesita lógica nueva — la ventana tiene acceso a Firebase Auth y Firestore igual que la ventana principal.
-- **Detección de contexto Tauri** — `import { isTauri } from '@tauri-apps/api/core'` o `window.__TAURI__` para condicionales.
+- `npm run tauri:build` genera:
+  - `src-tauri/target/release/bundle/msi/SecondMind_0.1.0_x64_en-US.msi`
+  - `src-tauri/target/release/bundle/nsis/SecondMind_0.1.0_x64-setup.exe`
+- Actualización de `Spec/ESTADO-ACTUAL.md` con sección Fase 5.1 (decisiones, patrones, gotchas, deps)
+- Actualización de `CLAUDE.md` con comandos tauri + gotchas + fase 5.1 en lista de fases
+- Este SPEC convertido a registro
 
 ---
 
-### F4: Auto-start + Polish
+## Decisiones clave (aplicadas)
 
-**Qué:** La app se inicia automáticamente con el sistema operativo (minimizada al tray) y tiene comportamientos pulidos de ventana.
-
-**Criterio de done:**
-
-- [ ] Plugin autostart configurado — la app se inicia con Windows (minimizada al tray)
-- [ ] El usuario puede desactivar el autostart desde el menú del tray ("Iniciar con Windows" toggle)
-- [ ] La ventana principal recuerda su tamaño y posición entre sesiones
-- [ ] Doble click en el tray icon abre la ventana principal
-- [ ] La app funciona sin conexión (TinyBase offline, misma lógica que la PWA)
-
-**Archivos a crear/modificar:**
-
-- `src-tauri/Cargo.toml` — agregar `tauri-plugin-autostart` y `tauri-plugin-window-state`
-- `src-tauri/src/lib.rs` — registrar plugins autostart y window-state
-- `src-tauri/src/tray.rs` — agregar item toggle "Iniciar con Windows" al menú del tray
-- `src-tauri/capabilities/default.json` — agregar permisos de autostart
-
-**Notas de implementación:**
-
-- **`tauri-plugin-autostart`** — registra la app en el startup del OS. En Windows, agrega un registry key. El toggle en el menú del tray llama `autostart::enable()` / `autostart::disable()`.
-- **`tauri-plugin-window-state`** — persiste posición, tamaño y estado de la ventana automáticamente. Zero config — solo registrar el plugin.
-- **Sin conexión:** la app Tauri tiene el mismo comportamiento offline que la PWA — TinyBase en memoria, Workbox cache del shell. No se necesita lógica adicional.
+| #   | Decisión                                                     | Razón                                                                                                   |
+| --- | ------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------- |
+| D1  | `/capture` como ruta top-level, fuera de Layout              | Layout hidrata sidebar + TinyBase + editor (~2.7MB). Capture debe abrir en <200ms                       |
+| D2  | Escritura directa a Firestore desde `/capture` (no TinyBase) | Ventana efímera, no vale hidratar persister. Main recibe snapshot reactivo ~200-800ms                   |
+| D3  | Global shortcut registrado en JS (no Rust)                   | Más simple; callback puede controlar WebViews directo sin IPC                                           |
+| D4  | Close-to-tray en JS via `onCloseRequested`                   | Un solo hook para main y capture; más contenido en React                                                |
+| D5  | `Ctrl+Shift+Space` en vez de `Alt+Shift+N`                   | Cero conflictos en Windows (Chrome no lo usa, VS Code solo con editor enfocado)                         |
+| D6  | `tauri-plugin-single-instance`                               | Obligatorio con autostart para prevenir doble proceso                                                   |
+| D7  | window-state con denylist `["capture"]`                      | Capture siempre centrada; main sí persiste pos                                                          |
+| D8  | MSI + NSIS ambos                                             | MSI corporate-friendly, NSIS futuro auto-updater                                                        |
+| D9  | CSP explícito Firebase                                       | Release build sin CSP correcto rompe auth + firestore                                                   |
+| D10 | Version sync parcial                                         | `tauri.conf.json` y `Cargo.toml` en `0.1.0`; `package.json` queda en `0.0.0` hasta major release formal |
+| D11 | `src-tauri/` integrado en raíz                               | Tauri consume `dist/`, workflow `tauri:dev` lanza Vite+Tauri juntos                                     |
 
 ---
 
-## Orden de implementación
-
-1. **F1** → Fundamento: sin Tauri configurado, nada funciona. El dev puede probar que la app web se ve correctamente en la ventana nativa.
-2. **F2** → El system tray es la base para que la app sea "residente" — viva en segundo plano. F3 y F4 dependen de que la app no se cierre al presionar X.
-3. **F3** → Depende de F1 (ventana secundaria) y F2 (app residente). El global shortcut es la feature hero de esta fase.
-4. **F4** → Polish que solo tiene sentido cuando F1-F3 están completas. Autostart + window state son plugins drop-in.
-
----
-
-## Estructura de archivos
+## Estructura de archivos final
 
 ```
-src-tauri/                       # Tauri backend (Rust)
-├── tauri.conf.json              # Config: ventanas, plugins, bundle, identifier
-├── Cargo.toml                   # Deps Rust: tauri, plugins
-├── build.rs                     # Build script (generado)
+src-tauri/
+├── tauri.conf.json              # identifier, ventanas main+capture, CSP Firebase, bundle msi+nsis
+├── Cargo.toml                   # deps: tauri (feat tray-icon) + 4 plugins
+├── Cargo.lock                   # pinned versions
+├── build.rs                     # generado por tauri init
+├── .gitignore                   # target/, gen/schemas
 ├── capabilities/
-│   └── default.json             # Permisos del frontend (capability system v2)
-├── icons/                       # Generados con `tauri icon`
-│   ├── icon.ico
-│   ├── icon.png
-│   ├── tray-icon.png            # 32×32, fondo transparente
-│   └── ...
+│   ├── default.json             # windows: ["main"], todos los permisos
+│   └── capture.json             # windows: ["capture"], solo window controls
+├── icons/                       # generados con tauri icon
+│   ├── icon.ico, icon.png, 32x32.png, 128x128.png, ...
+│   └── android/, ios/           # generados pero no usados (Windows only)
 └── src/
-    ├── main.rs                  # Entry point (generado)
-    ├── lib.rs                   # Setup: plugins, tray, global shortcut
-    └── tray.rs                  # Lógica del system tray + menú
+    ├── main.rs                  # entry: secondmind_lib::run()
+    ├── lib.rs                   # setup: 4 plugins + tray::build
+    └── tray.rs                  # TrayIconBuilder + menu + handlers
 
 src/
 ├── app/
 │   └── capture/
-│       └── page.tsx             # Ventana de captura rápida (ruta /capture)
-└── ...                          # El resto del frontend no cambia
+│       └── page.tsx             # Ventana /capture: auth guard + textarea + Firestore setDoc
+├── hooks/
+│   ├── useCloseToTray.ts        # onCloseRequested → preventDefault + hide
+│   └── useGlobalShortcutRegistration.ts  # register Ctrl+Shift+Space
+├── lib/
+│   └── tauri.ts                 # isTauri, showMainWindow, hideCurrentWindow
+├── main.tsx                     # TauriIntegration wrapper invoca los 2 hooks
+└── app/router.tsx               # ruta /capture top-level
 ```
 
 ---
 
-## Definiciones técnicas
+## Checklist de completado (verificado)
 
-### D1: ¿Por qué Tauri v2 y no Electron?
-
-- **Opciones:** Tauri v2, Electron, Neutralinojs
-- **Decisión:** Tauri v2
-- **Razón:** Binary ~15MB vs ~150MB de Electron. Usa WebView nativo del OS (WebView2 en Windows, WebKit en macOS/Linux). Menor consumo de memoria. El costo es necesitar Rust toolchain para build, pero el código Rust es mínimo (~100 líneas para tray + shortcut).
-
-### D2: ¿Por qué `Alt+Shift+N` y no `Alt+N` como global shortcut?
-
-- **Opciones:** `Alt+N`, `Ctrl+Shift+N`, `Alt+Shift+N`, configurable
-- **Decisión:** `Alt+Shift+N` hardcoded
-- **Razón:** `Alt+N` colisiona con shortcuts de muchas apps (Outlook, VS Code). `Ctrl+Shift+N` es "nueva ventana incógnito" en Chrome. `Alt+Shift+N` está libre en la mayoría de apps. Hacerlo configurable agrega UI de settings — overkill para single-user. Si colisiona con algo específico del usuario, se cambia en el código.
-
-### D3: ¿Por qué ventana de captura separada y no reutilizar la principal?
-
-- **Opciones:** Mostrar ventana principal con QuickCapture modal, ventana separada dedicada
-- **Decisión:** Ventana separada `"capture"`
-- **Razón:** La ventana principal es pesada (sidebar, dashboard, stores). Mostrarla para una captura de 3 segundos es lento y distrae. Una ventana frameless de 400×200px con solo un textarea es instantánea y no rompe el contexto del usuario.
-
-### D4: ¿Por qué `src-tauri/` en el proyecto principal y no proyecto separado?
-
-- **Opciones:** `src-tauri/` integrado, proyecto separado como `extension/`
-- **Decisión:** `src-tauri/` integrado en el raíz
-- **Razón:** A diferencia del Chrome Extension (que tiene build target completamente diferente), Tauri **consume** el output de Vite (`dist/`). El `tauri:dev` lanza Vite + Tauri juntos. Separarlos complicaría el dev workflow sin beneficio.
-
----
-
-## Checklist de completado
-
-Al terminar esta fase, TODAS estas condiciones deben ser verdaderas:
-
-- [ ] `npm run tauri:dev` abre SecondMind en ventana nativa con frontend funcional
-- [ ] `npm run tauri:build` genera instalador (`.msi` en Windows)
-- [ ] Icono de SecondMind visible en el system tray
-- [ ] Cerrar la ventana la oculta al tray (no termina el proceso)
-- [ ] Click izquierdo en tray icon muestra/oculta la ventana
-- [ ] Click derecho en tray icon muestra menú con "Abrir", "Captura rápida", "Salir"
-- [ ] `Alt+Shift+N` desde cualquier app abre la ventana de captura rápida
-- [ ] La ventana de captura es frameless, always on top, con textarea enfocado
-- [ ] Escribir texto + Enter guarda en inbox y cierra la ventana
-- [ ] La app se inicia con Windows (minimizada al tray)
-- [ ] La ventana principal recuerda posición y tamaño entre sesiones
-- [ ] La app web (`npm run dev`) sigue funcionando igual sin Tauri
-- [ ] El deploy a Firebase Hosting no se ve afectado
+- [x] `npm run tauri:dev` abre ventana nativa con login/dashboard + HMR
+- [x] `npm run tauri:build` genera `.msi` y `.exe` NSIS
+- [x] Icono SecondMind visible en system tray (diseño manual requerido tras testing)
+- [x] Click izq tray toggle ventana main
+- [x] Click der tray muestra menú con 5 items (Abrir / Captura / Iniciar con Windows / Salir + separadores)
+- [x] "Salir" termina proceso; botón X oculta al tray (proceso vivo)
+- [x] `Ctrl+Shift+Space` desde cualquier app abre ventana capture frameless centrada
+- [x] Textarea enfocado auto, Enter guarda a Firestore con `source: 'desktop-capture'`, feedback check, hide
+- [x] Escape cierra capture sin guardar
+- [x] Item aparece en main window inbox ~1s después (reactividad TinyBase)
+- [x] Single-instance previene duplicados tras doble click al .exe
+- [x] Toggle "Iniciar con Windows" modifica registry key `HKCU\...\Run\SecondMind`; menu check reflejado
+- [x] Main window recuerda pos/size entre sesiones; capture siempre centrada
+- [x] `npm run dev` solo sigue funcionando en navegador (sin Tauri)
+- [x] PWA + Chrome Extension intactos
+- [x] Cloud Functions procesan items creados por desktop-capture igual que otros sources
 
 ---
 
 ## Siguiente fase
 
-Fase 5.2: Capacitor Mobile — Wrapper para Android con Share Intent (capturar contenido desde el menú "Compartir" de cualquier app Android directamente al inbox de SecondMind).
+**Fase 5.2 — Capacitor Mobile:** wrapper Android con Share Intent (capturar contenido desde el menú "Compartir" de cualquier app Android directamente al inbox de SecondMind).
+
+**Fuera de scope:**
+
+- iOS (requiere Apple Developer ID $99/año)
+- Code signing Windows (cert EV ~$300/año o Azure Trusted Signing ~$10/mes) — sin firma el MSI muestra SmartScreen warning "Unknown publisher"
+- Build macOS/Linux
+- Auto-updater via NSIS (ya configurado el target, pero sin servidor de updates)

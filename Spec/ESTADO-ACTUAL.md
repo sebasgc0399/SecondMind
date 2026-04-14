@@ -1,6 +1,6 @@
 # Estado Actual — SecondMind (Snapshot consolidado)
 
-> Última actualización: Fase 5 (Abril 2026)
+> Última actualización: Fase 5.1 (Abril 2026)
 > Este archivo consolida el conocimiento no-obvio de todas las fases completadas.
 > Se actualiza al cerrar cada fase. Para detalle de features → README.md.
 > Para detalle de implementación → Spec/SPEC-fase-X.md individual.
@@ -17,6 +17,7 @@
 - **Fase 3.1** — Schema Enforcement: tool use con JSON Schema en ambas CFs, eliminó nulls/stripJsonFence/fallbacks
 - **Fase 4** — Grafo + Resurfacing: Knowledge graph (Reagraph), embeddings (OpenAI), notas similares, FSRS spaced repetition, Daily Digest
 - **Fase 5** — PWA + Extension: PWA instalable (manifest, SW, offline support, install prompt), Chrome Extension MV3 (captura web, auth Google, write a inbox)
+- **Fase 5.1** — Tauri Desktop: wrapper nativo Windows con system tray, close-to-tray, global shortcut `Ctrl+Shift+Space`, ventana de captura frameless, autostart opcional, window-state persistido, single-instance
 
 ---
 
@@ -44,6 +45,28 @@
 - **TinyBase es el offline layer.** Los datos en memoria sobreviven a la perdida de red. El persister con `autoSave` sincroniza al reconectar. No se usa `enableOfflineDataPersistence()` de Firestore.
 - **Guards offline solo en features AI.** Las escrituras locales (notas, tareas, habitos) funcionan via TinyBase. Solo "Procesar" inbox (Cloud Functions + Claude) y SimilarNotesPanel (embeddings Firestore) se deshabilitan offline.
 - **`useOnlineStatus` usa `useSyncExternalStore`** — mas correcto semanticamente que useState+useEffect para suscripciones a APIs del browser.
+
+### Tauri Desktop (Fase 5.1)
+
+- **`src-tauri/` integrado en el raíz del proyecto** — no es un proyecto separado. Tauri consume el output de Vite (`dist/`) tal cual. `tauri:dev` lanza Vite + Tauri juntos.
+- **Ventana `/capture` como ruta top-level, fuera de Layout.** Layout hidrata sidebar + TinyBase + editor pesado; capture debe abrir en <200ms. Top-level = solo auth + textarea + `setDoc` directo.
+- **Escritura directa a Firestore (no TinyBase) desde `/capture`.** Mismo patrón que la extension — la ventana es efímera, no tiene sentido hidratar el persister. Main window recibe el snapshot reactivo vía `onSnapshot` en ~200-800ms y reconcilia solo.
+- **Global shortcut registrado en JS con `@tauri-apps/plugin-global-shortcut`.** Más simple que Rust-side. El callback hace `show() + setFocus()` de la webview `capture` desde `getAllWebviewWindows()`. Cleanup con `unregister()` en unmount.
+- **Close-to-tray en JS via `onCloseRequested`.** Hook `useCloseToTray` en `main.tsx` llama `event.preventDefault()` + `getCurrentWebviewWindow().hide()`. Se monta en cada ventana del bundle (main y capture comparten `main.tsx`), así ambas hacen hide en vez de cerrar proceso.
+- **Single-instance plugin obligatorio con autostart.** Sin él, doble-click tras boot (autostart + click manual) crea dos procesos, dos trays, y el segundo falla al registrar el global shortcut. `tauri_plugin_single_instance::init` intercepta el segundo lanzamiento y hace `show() + set_focus()` de la instancia existente.
+- **Window-state plugin con denylist `["capture"]`.** `Builder::default().with_denylist(&["capture"]).build()` — capture siempre centrada (nunca recuerda pos). Main sí persiste pos/size automáticamente.
+- **`CheckMenuItemBuilder` para autostart toggle.** Menu items de Tauri v2 son inmutables post-build. El estado checked se actualiza via handle guardado: `item.set_checked(!enabled)` en el handler. No requiere rebuild del menu.
+- **Feature `tray-icon` obligatorio en `Cargo.toml`.** `tauri::tray` está gated detrás de `features = ["tray-icon"]` — sin esta feature, `cargo check` falla con "could not find tray in tauri".
+- **Shortcut global `Ctrl+Shift+Space`** (no `Alt+Shift+N` del SPEC original). Cero conflictos en Windows: Chrome no lo usa, VS Code solo con editor enfocado ("parameter hints"). UX tipo Spotlight.
+- **`Alt+N` local sigue intacto** — listener en QuickCaptureProvider funciona con main window enfocada. `Ctrl+Shift+Space` es OS-level, combo distinto, sin colisión.
+- **CSP Firebase explícito en `tauri.conf.json`.** Incluye `https://*.googleapis.com https://*.firebaseio.com wss://*.firebaseio.com https://*.firestore.googleapis.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://apis.google.com` en `connect-src` + `frame-src` para auth popups. Sin esto, auth + firestore fallan en release build.
+- **Capabilities separadas por ventana.** `default.json` → `windows: ["main"]` con tray/menu/window/global-shortcut/autostart. `capture.json` → `windows: ["capture"]` con solo window show/hide/focus. Principio de mínimo privilegio.
+- **Capabilities schema en v2 NO soporta wildcards.** Usar `core:tray:default`, `core:menu:default`, `core:window:allow-*` enumerado. Nada de `core:tray:*`.
+- **IDE diagnostics de capabilities pueden estar stale.** El schema generado (`src-tauri/gen/schemas/desktop-schema.json`) se regenera en `cargo build`. Si la IDE marca permissions como "not accepted" tras agregar un plugin, correr `cargo check` una vez y recargar la IDE.
+- **`data-tauri-drag-region`** en el header de `/capture` permite arrastrar ventana frameless sin JS.
+- **`--legacy-peer-deps` también para `@tauri-apps/*` packages.** Mismo issue con Vite 8 que vite-plugin-pwa.
+- **Bundle MSI + NSIS ambos activos** en `tauri.conf.json` targets. MSI para distribución corporativa, NSIS para auto-updater futuro. Output en `src-tauri/target/release/bundle/{msi,nsis}/`.
+- **Primer `cargo build` tarda 5-10 min** (compila ~400 crates). Incrementales después son 10-30s.
 
 ### Chrome Extension
 
@@ -138,6 +161,18 @@ Ambas CFs usan `tools` + `tool_choice: { type: 'tool', name: '...' }` para forza
 
 18. **Chrome Extension usa `firebase/firestore/lite`** para un solo `setDoc`. Reduce bundle significativamente vs SDK completo.
 
+### Tauri Desktop (Fase 5.1)
+
+25. **Tauri v2 feature `tray-icon` gated.** `tauri = { version = "2.10", features = ["tray-icon"] }` obligatorio. Sin la feature, `tauri::tray::TrayIconBuilder` no existe.
+
+26. **IDE marca capabilities como "not accepted" tras agregar plugin.** El schema `gen/schemas/desktop-schema.json` se regenera solo en `cargo build`/`cargo check`. Correr uno y recargar IDE. No es error real.
+
+27. **Single-instance obligatorio para apps con autostart.** Sin él, autostart + click manual = dos instancias, segunda falla al registrar shortcut global.
+
+28. **Auth popup en ventana Tauri requiere `frame-src` en CSP.** Sin `https://*.firebaseapp.com` y `https://accounts.google.com` en `frame-src`, el popup de Google signIn queda bloqueado en release. Dev funciona porque CSP está relaxed.
+
+29. **Global shortcut registrado 2 veces falla silenciosamente.** Siempre chequear `isRegistered()` y `unregister()` antes de `register()` en el useEffect. HMR del dev re-monta y duplica el registro.
+
 ### Cloud Functions
 
 19. **firebase-functions v7 obligatorio.** La v6 fallaba con timeout en el discovery protocol de la CLI. Importante al elegir versiones.
@@ -176,20 +211,26 @@ Ambas CFs usan `tools` + `tool_choice: { type: 'tool', name: '...' }` para forza
 
 ## Dependencias clave con historia
 
-| Paquete              | Versión   | Nota                                                                                            |
-| -------------------- | --------- | ----------------------------------------------------------------------------------------------- |
-| `firebase-functions` | `^7.2.5`  | v6 fallaba con timeout en discovery. Major bump obligatorio                                     |
-| `@anthropic-ai/sdk`  | `^0.40.1` | Soporta `tools` + `tool_choice` para schema enforcement                                         |
-| `tinybase`           | v8        | Sin `persister-firestore` nativo. Custom persister con `createCustomPersister`                  |
-| `@orama/orama`       | v3        | `search()` es sync at runtime aunque el tipo diga `Promise`. Cast a `Results<AnyDocument>`      |
-| `reagraph`           | latest    | WebGL graph viz (Three.js). Compatible React 19. ~1.3MB bundle. API declarativa `<GraphCanvas>` |
-| `openai`             | `^4.85`   | SDK para embeddings en CF generateEmbedding. Solo en `src/functions/`                           |
-| `ts-fsrs`            | latest    | FSRS spaced repetition. Client-side (~15KB). `createEmptyCard`, `fsrs().next()`                 |
-| `vite-plugin-pwa`    | `^1.2.0`  | Requiere `--legacy-peer-deps` con Vite 8. `generateSW` + `autoUpdate`                           |
-| `@crxjs/vite-plugin` | `^2.4.0`  | Named export `{ crx }`. Soporta Vite 8 + MV3 + React + HMR                                      |
+| Paquete                        | Versión   | Nota                                                                                            |
+| ------------------------------ | --------- | ----------------------------------------------------------------------------------------------- |
+| `firebase-functions`           | `^7.2.5`  | v6 fallaba con timeout en discovery. Major bump obligatorio                                     |
+| `@anthropic-ai/sdk`            | `^0.40.1` | Soporta `tools` + `tool_choice` para schema enforcement                                         |
+| `tinybase`                     | v8        | Sin `persister-firestore` nativo. Custom persister con `createCustomPersister`                  |
+| `@orama/orama`                 | v3        | `search()` es sync at runtime aunque el tipo diga `Promise`. Cast a `Results<AnyDocument>`      |
+| `reagraph`                     | latest    | WebGL graph viz (Three.js). Compatible React 19. ~1.3MB bundle. API declarativa `<GraphCanvas>` |
+| `openai`                       | `^4.85`   | SDK para embeddings en CF generateEmbedding. Solo en `src/functions/`                           |
+| `ts-fsrs`                      | latest    | FSRS spaced repetition. Client-side (~15KB). `createEmptyCard`, `fsrs().next()`                 |
+| `vite-plugin-pwa`              | `^1.2.0`  | Requiere `--legacy-peer-deps` con Vite 8. `generateSW` + `autoUpdate`                           |
+| `@crxjs/vite-plugin`           | `^2.4.0`  | Named export `{ crx }`. Soporta Vite 8 + MV3 + React + HMR                                      |
+| `@tauri-apps/cli`              | `^2.10.1` | CLI para scaffold/dev/build. Requiere Rust + MSVC Build Tools en Windows                        |
+| `@tauri-apps/api`              | `^2.10.1` | Window management, webview, event system. Import dinámico para no romper build web              |
+| `tauri-plugin-global-shortcut` | `2.3.1`   | Registro OS-level de hotkeys. JS-side más simple que Rust-side                                  |
+| `tauri-plugin-autostart`       | `2.5.1`   | Autostart con Windows (registry key HKCU Run). `MacosLauncher::LaunchAgent` default             |
+| `tauri-plugin-window-state`    | `2.4.1`   | Persiste pos/size. `.with_denylist(&["capture"])` para excluir la ventana efímera               |
+| `tauri-plugin-single-instance` | `2.4.1`   | Previene múltiples procesos simultáneos. Crítico con autostart                                  |
 
 ---
 
 ## Siguiente fase
 
-**Fase 5.1 — Wrappers Nativos:** Tauri para desktop (global hotkey Quick Capture, system tray) y Capacitor para mobile (Share Intent Android para capturar desde cualquier app).
+**Fase 5.2 — Capacitor Mobile:** wrapper Android con Share Intent (capturar contenido desde el menú "Compartir" de cualquier app Android directamente al inbox de SecondMind). Fuera de scope: iOS (requiere Apple Developer ID $99/año), code signing Windows para MSI.
