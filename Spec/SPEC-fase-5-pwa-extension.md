@@ -111,6 +111,54 @@ Auth con Google via `chrome.identity.getAuthToken()` + `signInWithCredential()`,
 
 ---
 
+### F5: Fixed Extension ID para multi-PC (post-merge)
+
+**Problema:** cuando la extension se carga unpacked, Chrome deriva el Extension ID del path de instalación. En otra PC el path es distinto → ID distinto → el OAuth Client ID registrado en Google Cloud Console (atado al ID anterior) no reconoce la nueva instancia y el sign-in falla silenciosamente.
+
+**Solución:** agregar un campo `"key"` (clave pública RSA 2048 base64) al `manifest.json`. Chrome deriva el Extension ID **del key** en vez del path, garantizando el mismo ID en cualquier máquina.
+
+**Proceso seguido:**
+
+1. Intento fallido de extraer key existente de Chrome Preferences/Secure Preferences — Chrome no guarda keys para extensions unpacked (solo para Web Store). La lista enumerada solo mostraba extensions de la Web Store.
+2. Generación local del keypair con openssl 3.5.4 (Git Bash):
+   ```bash
+   openssl genrsa -out secondmind-key.pem 2048
+   openssl rsa -in secondmind-key.pem -pubout -outform DER | base64 -w 0  # public key base64
+   openssl rsa -in secondmind-key.pem -pubout -outform DER | openssl dgst -sha256 -binary | head -c 16 | xxd -p | tr '0-9a-f' 'a-p'  # nuevo Extension ID
+   ```
+3. Extension ID viejo (path-derived): `nhbaflombadegmbmmgnpibljohekphlp`
+4. Extension ID nuevo (key-derived): `cnalgnphkfpealaboanaaobofpeeneej`
+5. OAuth Client ID de Google Cloud Console (proyecto `secondmindv1`) editado: Application ID actualizado al nuevo Extension ID. El `client_id` permanece `39583209123-fgs84i873hvghkf1u39tooc5n00du8d5.apps.googleusercontent.com`.
+
+**Archivos:**
+
+- `extension/manifest.json` — agregado campo `"key"` con public key base64 (390 chars)
+- `extension/.gitignore` — agregado `*.pem` para ignorar el private key local
+- `extension/secondmind-key.pem` — private key RSA 2048 (local only, NUNCA commitear). Si se pierde, se regenera el keypair y se re-actualiza Application ID en Google Cloud Console.
+
+**Criterio de done:**
+
+- [x] `extension/dist/manifest.json` tras rebuild contiene el campo `key`
+- [x] `secondmind-key.pem` gitignored y ausente de `git status`
+- [x] OAuth Client ID actualizado con el nuevo Extension ID
+- [x] Load unpacked en cualquier PC produce el mismo ID: `cnalgnphkfpealaboanaaobofpeeneej`
+- [x] Sign-in con Google funciona en instalaciones multi-PC
+
+**Cómo instalar en una PC nueva:**
+
+```bash
+git clone <repo>
+cd SecondMind/extension
+npm install --legacy-peer-deps
+npm run build
+# Chrome → chrome://extensions/ → Dev mode ON → Load unpacked → seleccionar extension/dist/
+# Verificar que el ID mostrado es cnalgnphkfpealaboanaaobofpeeneej
+```
+
+No se necesita `.env.local` en la PC nueva — la extension lee las credenciales de `firebaseConfig.ts` (ya hardcoded al proyecto `secondmindv1`) y el OAuth flow usa `chrome.identity` que resuelve el `client_id` del manifest.
+
+---
+
 ## Observaciones post-implementacion
 
 1. **`vite-plugin-pwa@1.2.0` no lista Vite 8 en peerDependencies** pero funciona correctamente. Requiere `--legacy-peer-deps` en npm install. El PR para agregar Vite 8 al peer dep estaba abierto al momento de implementacion.

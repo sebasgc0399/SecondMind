@@ -1,2 +1,5 @@
 node_modules/
 dist/
+
+# Private key del keypair que deriva el Extension ID fijo (nunca commitear)
+*.pem
