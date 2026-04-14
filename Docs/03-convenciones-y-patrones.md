@@ -2,19 +2,35 @@
 
 > Reglas de código para mantener consistencia en el proyecto.
 > Fuente: `01-arquitectura-hibrida-progresiva.md`
-> Stack: React 19 + TypeScript strict + Vite + Tailwind CSS + TinyBase + Firebase + TipTap
+> Stack: React 19 + TypeScript strict + Vite + Tailwind CSS + TinyBase + Firebase + TipTap + Tauri v2
 > Escala: Solo developer
-> Última actualización: Abril 2026
+> Última actualización: Abril 2026 (post Fases 5 + 5.1)
 
 ---
 
 ## 1. Estructura de carpetas
 
 ```
+src-tauri/                       # Tauri v2 backend (Rust) — no tocar salvo cambios en tray/plugins
+├── tauri.conf.json              # ventanas, CSP, bundle
+├── Cargo.toml
+├── capabilities/                # permisos por ventana (default.json, capture.json)
+└── src/                         # main.rs, lib.rs, tray.rs, oauth.rs
+
+extension/                       # Chrome Extension MV3 — proyecto independiente
+├── package.json                 # deps propias (react, crxjs, firebase lite)
+├── manifest.json                # MV3, key RSA fija, oauth2.client_id
+└── src/
+    ├── popup/                   # Popup.tsx, popup.css
+    ├── content/                 # getSelection.ts
+    └── lib/                     # firebaseConfig.ts, auth.ts, firestore.ts
+
 src/
 ├── app/                         # Rutas y layouts (React Router)
 │   ├── layout.tsx               # Layout raíz (sidebar + content area)
 │   ├── page.tsx                 # Dashboard (ruta /)
+│   ├── capture/                 # Ventana /capture Tauri — TOP-LEVEL, fuera de Layout
+│   │   └── page.tsx
 │   ├── inbox/
 │   │   ├── page.tsx             # Lista de inbox
 │   │   └── process/
@@ -39,17 +55,26 @@ src/
 │   ├── graph/                   # Reagraph: knowledge graph WebGL
 │   ├── capture/                 # Quick Capture modal, Inbox Processor
 │   ├── dashboard/               # Cards del dashboard
-│   └── layout/                  # Sidebar, CommandPalette, InstallPrompt, OfflineBadge
+│   └── layout/                  # Sidebar, CommandPalette, Breadcrumbs, InstallPrompt, OfflineBadge
 │
 ├── stores/                      # TinyBase stores (1 archivo por entidad)
 ├── hooks/                       # Custom hooks (1 archivo por hook)
+│   ├── useAuth.ts               # signIn: isTauri → signInWithTauri; sino signInWithPopup
+│   ├── useCloseToTray.ts        # onCloseRequested → hide (no-op fuera de Tauri)
+│   ├── useGlobalShortcutRegistration.ts  # Ctrl+Shift+Space (no-op fuera de Tauri)
+│   ├── useInstallPrompt.ts      # PWA beforeinstallprompt
+│   ├── useOnlineStatus.ts       # useSyncExternalStore navigator.onLine
+│   └── ...                      # resto de hooks (useNote, useTasks, etc.)
 ├── lib/                         # Configs y utilidades
 │   ├── firebase.ts              # Config Firebase (singleton)
 │   ├── tinybase.ts              # Config TinyBase + persisters
 │   ├── orama.ts                 # Config búsqueda
+│   ├── tauri.ts                 # isTauri(), showMainWindow(), hideCurrentWindow()
+│   ├── tauriAuth.ts             # signInWithTauri: PKCE + state + shell.open + token exchange
 │   ├── editor/                  # Serialización TipTap, extractLinks
 │   ├── embeddings.ts            # cosineSimilarity + fetchEmbedding/All
-│   └── fsrs.ts                  # Wrapper ts-fsrs: scheduleReview, serialize/deserialize
+│   └── fsrs.ts                  # Wrapper ts-fsrs
+├── main.tsx                     # TauriIntegration wrapper (useCloseToTray + useGlobalShortcutRegistration)
 ├── types/                       # Interfaces TypeScript (1 archivo por entidad)
 │
 └── functions/                   # Cloud Functions v2 (deploy separado)
@@ -58,16 +83,6 @@ src/
     │   ├── notes/               # autoTagNote
     │   └── embeddings/          # generateEmbedding
     └── package.json
-
-extension/                       # Chrome Extension MV3 (proyecto separado)
-├── manifest.json                # MV3, oauth2, permissions
-├── package.json                 # React + Firebase lite + CRXJS
-├── vite.config.ts               # CRXJS plugin
-├── src/
-│   ├── popup/                   # Popup UI (React)
-│   ├── content/                 # getSelection.ts (inyectable)
-│   └── lib/                     # firebaseConfig, auth, firestore
-└── icons/                       # 16, 48, 128 PNG
 ```
 
 ### Reglas de organización
@@ -105,6 +120,8 @@ extension/                       # Chrome Extension MV3 (proyecto separado)
 | Utilidad/helper | camelCase.ts | `extractLinks.ts`, `serialize.ts` |
 | Cloud Function | camelCase.ts | `processInboxItem.ts` |
 | Página/ruta | page.tsx (siempre) | `app/notes/page.tsx` |
+| Tauri helper | camelCase.ts | `tauri.ts`, `tauriAuth.ts` |
+| Rust module | snake_case.rs | `tray.rs`, `oauth.rs` |
 
 ### Variables y funciones
 
@@ -432,6 +449,19 @@ const doc = await getDoc(doc(db, `users/${uid}/notes/${noteId}`));
 
 **Excepción: embeddings.** Los vectores de 1536 floats se cargan on-demand desde Firestore con `getDocs` + cache en `useRef`. Son demasiado grandes para TinyBase.
 
+**Browser APIs reactivas con `useSyncExternalStore`.** Para suscribirse a APIs del browser (ej: `navigator.onLine`), usar `useSyncExternalStore` en vez de `useState` + `useEffect`. Es el approach correcto en React 19:
+
+```typescript
+// ✅ useSyncExternalStore (correcto)
+const isOnline = useSyncExternalStore(
+  (cb) => { window.addEventListener('online', cb); window.addEventListener('offline', cb);
+             return () => { window.removeEventListener('online', cb); window.removeEventListener('offline', cb); }; },
+  () => navigator.onLine,
+);
+
+// ❌ useState + useEffect (incorrect en React 19, puede causar tearing)
+```
+
 **Loading states: skeleton siempre, spinner nunca.** Los skeletons mantienen el layout y reducen el "salto" visual.
 
 ```tsx
@@ -734,7 +764,7 @@ extensions/
 | Herramienta | Config |
 |---|---|
 | TypeScript | `strict: true`, `noUncheckedIndexedAccess: true` |
-| Vite | Path alias `@/` → `src/` |
+| Vite | Path alias `@/` → `src/`. `server.port: 5173` + `strictPort: true` (Tauri). `envPrefix: ['VITE_', 'TAURI_ENV_']` |
 | ESLint | Flat config (`eslint.config.js`, NO `.eslintrc.cjs`) + `@typescript-eslint/recommended` + import order |
 | Prettier | Single quotes, trailing commas, 100 char width |
 | Tailwind | CSS-first: `@theme` en `src/index.css`. No existe `tailwind.config.ts` |
@@ -748,9 +778,92 @@ extensions/
   "preview": "vite preview",
   "lint": "eslint src/",
   "deploy": "firebase deploy --only hosting",
-  "deploy:functions": "firebase deploy --only functions"
+  "deploy:functions": "firebase deploy --only functions",
+  "tauri": "tauri",
+  "tauri:dev": "tauri dev",
+  "tauri:build": "tauri build"
 }
 ```
+
+---
+
+## 15. Multi-plataforma (PWA + Extension + Tauri)
+
+### Detección de entorno Tauri
+
+```typescript
+// src/lib/tauri.ts — helper central
+export function isTauri(): boolean {
+  return '__TAURI_INTERNALS__' in window;
+}
+```
+
+**Usar `isTauri()` para ramificar lógica, no para import condicional.** Los imports de `@tauri-apps/api/*` se hacen con `import()` dinámico dentro de funciones que solo se llaman si `isTauri()` es true. Esto evita romper el build web.
+
+```typescript
+// ✅ Import dinámico protegido
+export async function hideCurrentWindow() {
+  if (!isTauri()) return;
+  const { getCurrentWindow } = await import('@tauri-apps/api/window');
+  await getCurrentWindow().hide();
+}
+
+// ❌ Import estático que rompe build web
+import { getCurrentWindow } from '@tauri-apps/api/window';
+```
+
+### Escritura directa a Firestore desde entornos efímeros
+
+**Patrón compartido entre Chrome Extension y ventana /capture de Tauri.** Ambos contextos son efímeros (popup que se cierra, ventana que se oculta) y no justifican hidratar TinyBase:
+
+```typescript
+// Patrón de escritura directa (extension y /capture)
+await setDoc(doc(db, 'users', uid, 'inbox', id), {
+  rawContent,
+  source: 'web-clip' | 'desktop-capture',  // según origen
+  sourceUrl,        // solo extension
+  sourceTitle,      // solo extension
+  status: 'pending',
+  aiProcessed: false,
+  createdAt: serverTimestamp(),
+});
+```
+
+La main window recibe el nuevo item via snapshot reactivo del persister TinyBase (~200-800ms de latencia). No hay race destructiva.
+
+### Rutas top-level (fuera de Layout)
+
+Las rutas que deben cargar rápido sin providers pesados van como top-level en `router.tsx`, antes del Layout:
+
+```typescript
+// router.tsx — orden importa
+{ path: '/capture', Component: CapturePage },  // Tauri capture: <200ms
+{ path: '/login', Component: LoginPage },
+{
+  Component: Layout,  // Sidebar + TinyBase + Providers (~2.7MB)
+  children: [
+    { path: '/', Component: DashboardPage },
+    // ... resto de rutas
+  ],
+}
+```
+
+### Hooks Tauri como no-op fuera de WebView
+
+Los hooks `useCloseToTray` y `useGlobalShortcutRegistration` hacen early return si `!isTauri()`. Se montan en `TauriIntegration` wrapper en `main.tsx`, que envuelve toda la app. No agregan overhead fuera de Tauri.
+
+### Extension: proyecto separado
+
+`extension/` tiene su propio `package.json`, `tsconfig.json`, y `vite.config.ts`. Lo que se comparte con la app principal (Firebase config) se copia — son 10 líneas. No usar imports cruzados entre `src/` y `extension/src/`.
+
+```
+✅ extension/src/lib/firebaseConfig.ts  (copia local)
+❌ import { db } from '../../src/lib/firebase';  (import cruzado)
+```
+
+### Extension: fixed Extension ID
+
+El `manifest.json` incluye un campo `"key"` (RSA 2048 base64) que fija el Extension ID independiente del path de instalación. Esto es necesario para que el OAuth Client ID de Google funcione en cualquier PC. El `.pem` privado está gitignored — si se pierde, regenerar keypair y actualizar Application ID en Google Cloud Console.
 
 ---
 
