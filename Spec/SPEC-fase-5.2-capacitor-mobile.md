@@ -49,6 +49,7 @@ El usuario instala SecondMind en su teléfono Android. Desde cualquier app (Chro
 **Qué:** Inicializar Capacitor 8 en el proyecto, generar el proyecto Android, y verificar que la app se abre en el emulador con la pantalla de login visible (sin auth nativa todavía — solo la UI).
 
 **Criterio de done:**
+
 - [ ] `npx cap init` ejecutado con appId `com.secondmind.app` y appName `SecondMind`
 - [ ] `npx cap add android` genera carpeta `android/` con proyecto Gradle válido
 - [ ] `npm run build && npx cap sync` copia dist/ al proyecto Android sin errores
@@ -59,12 +60,14 @@ El usuario instala SecondMind en su teléfono Android. Desde cualquier app (Chro
 - [ ] PWA, Chrome Extension, y Tauri desktop siguen intactos
 
 **Archivos a crear/modificar:**
+
 - `capacitor.config.ts` — config: appId, appName, webDir `dist`, server.androidScheme `https`
 - `package.json` — agregar deps `@capacitor/core@^8`, `@capacitor/cli@^8`, `@capacitor/app@^8`, `@capacitor/splash-screen@^8`; scripts `cap:sync`, `cap:run`, `cap:build`
-- `.gitignore` — agregar entradas Android (build/, .gradle/, local.properties, *.apk, *.keystore)
+- `.gitignore` — agregar entradas Android (build/, .gradle/, local.properties, _.apk, _.keystore)
 - `android/` — generado por `cap add android` (no tocar manualmente en F1)
 
 **Notas de implementación:**
+
 - Capacitor 8 requiere Node 22+ (proyecto usa 24.12.0 ✅) y Android Studio Otter 2025.2.1+.
 - `server.androidScheme: 'https'` es obligatorio para que Firebase Auth funcione (necesita origen HTTPS). Capacitor sirve desde `https://localhost` en el WebView.
 - `npx cap sync` debe correrse después de cada `npm run build`. Agregar script compuesto: `"cap:sync": "npm run build && npx cap sync"`.
@@ -79,6 +82,7 @@ El usuario instala SecondMind en su teléfono Android. Desde cualquier app (Chro
 **Qué:** Implementar Google Sign-In nativo en Android usando `@capgo/capacitor-social-login`. El flujo: botón "Sign in with Google" → bottom sheet nativo de Google → seleccionar cuenta → `signInWithCredential` de Firebase → dashboard.
 
 **Criterio de done:**
+
 - [ ] `@capgo/capacitor-social-login@^8` instalado y configurado
 - [ ] `useAuth.ts` detecta Capacitor (`Capacitor.isNativePlatform()`) y usa sign-in nativo
 - [ ] Click en "Sign in with Google" en Android muestra el bottom sheet nativo de selección de cuenta
@@ -87,6 +91,7 @@ El usuario instala SecondMind en su teléfono Android. Desde cualquier app (Chro
 - [ ] Sign-in sigue funcionando en Tauri via OAuth Desktop flow
 
 **Archivos a crear/modificar:**
+
 - `src/hooks/useAuth.ts` — agregar branch: `isCapacitor() → signInWithCapacitor(auth)`
 - `src/lib/capacitorAuth.ts` (nuevo) — wrapper: `SocialLogin.login({ provider: 'google' })` → extraer `idToken` → `signInWithCredential(auth, GoogleAuthProvider.credential(idToken))`
 - `src/lib/capacitor.ts` (nuevo) — helper `isCapacitor()` usando `Capacitor.isNativePlatform()`
@@ -95,6 +100,7 @@ El usuario instala SecondMind en su teléfono Android. Desde cualquier app (Chro
 - `android/app/src/main/java/.../MainActivity.java` — implementar `ModifiedMainActivityForSocialLoginPlugin` interface (requerido por el plugin)
 
 **Notas de implementación:**
+
 - `@codetrix-studio/capacitor-google-auth` está abandonado (máx Cap 6). Su sucesor oficial es `@capgo/capacitor-social-login` — soporta Cap 8, API similar pero con namespace `SocialLogin`.
 - `SocialLogin.initialize({ google: { webClientId: 'WEB_CLIENT_ID' } })` debe llamarse al inicio de la app (en `main.tsx` o similar). En web es no-op.
 - El `webClientId` es el **Web Client ID** (no el Android Client ID). El Android Client ID solo se usa para validar el SHA-1 del keystore. Google usa el Web Client ID para generar el `idToken` que Firebase acepta.
@@ -108,6 +114,7 @@ El usuario instala SecondMind en su teléfono Android. Desde cualquier app (Chro
 **Qué:** Registrar SecondMind como target del Share sheet de Android. Cuando el usuario comparte texto o URL desde otra app, SecondMind se abre y el Quick Capture modal aparece automáticamente con el contenido pre-llenado. Enter guarda al inbox con `source: 'share-intent'`.
 
 **Criterio de done:**
+
 - [ ] `@capgo/capacitor-share-target@^8` instalado y configurado
 - [ ] `AndroidManifest.xml` tiene intent filter para `text/*` en MainActivity
 - [ ] Compartir texto desde Chrome → SecondMind aparece en el share sheet
@@ -118,12 +125,14 @@ El usuario instala SecondMind en su teléfono Android. Desde cualquier app (Chro
 - [ ] Cloud Functions procesan el item normalmente (processInboxItem)
 
 **Archivos a crear/modificar:**
+
 - `src/hooks/useShareIntent.ts` (nuevo) — hook que escucha `CapacitorShareTarget.addListener('shareReceived', ...)`, extrae contenido, abre Quick Capture modal programáticamente
 - `src/components/capture/QuickCaptureProvider.tsx` — exponer función `openWithContent(text: string)` para que el share intent pueda pre-llenar y abrir el modal
 - `android/app/src/main/AndroidManifest.xml` — agregar `<intent-filter>` para `android.intent.action.SEND` + `text/*` en el `<activity>` principal con `android:launchMode="singleTask"`
 - `src/app/layout.tsx` o `src/main.tsx` — invocar `useShareIntent()` para que corra en cada mount
 
 **Notas de implementación:**
+
 - `@capgo/capacitor-share-target` v8 — soporta Capacitor 8 explícitamente. API: `addListener('shareReceived', callback)` con evento `{ title, texts, files }`.
 - Los intent filters van en el MainActivity directamente (no actividad separada como `send-intent`). El plugin maneja el routing internamente. `launchMode="singleTask"` previene múltiples instancias.
 - **Cold boot vs warm resume:** si la app no estaba corriendo, el share intent llega durante el boot. El hook debe esperar a que el auth esté listo (`user != null`) antes de intentar guardar. Si `user == null`, mostrar el login — tras login, volver a chequear.
@@ -137,6 +146,7 @@ El usuario instala SecondMind en su teléfono Android. Desde cualquier app (Chro
 **Qué:** Ajustar CSS para edge-to-edge de Capacitor 8, reemplazar el ícono default con el brain-circuit de SecondMind, configurar splash screen, y ajustar el color de la status bar.
 
 **Criterio de done:**
+
 - [ ] Contenido no se esconde detrás de la status bar ni la navigation bar (`env(safe-area-inset-*)` aplicado)
 - [ ] Ícono de la app es el brain-circuit purple (no el default de Capacitor)
 - [ ] Splash screen muestra el logo SecondMind centrado sobre fondo purple
@@ -144,6 +154,7 @@ El usuario instala SecondMind en su teléfono Android. Desde cualquier app (Chro
 - [ ] El nombre "SecondMind" aparece debajo del ícono en el launcher
 
 **Archivos a crear/modificar:**
+
 - `src/index.css` — agregar `padding-top: env(safe-area-inset-top)` y `padding-bottom: env(safe-area-inset-bottom)` al body o layout wrapper, condicionado a plataforma Capacitor si es necesario
 - `android/app/src/main/res/mipmap-*` — íconos generados con `npx @capacitor/assets generate --android` desde `public/pwa-512x512.png`
 - `android/app/src/main/res/values/styles.xml` — splash theme con `windowBackground`
@@ -152,6 +163,7 @@ El usuario instala SecondMind en su teléfono Android. Desde cualquier app (Chro
 - `src/main.tsx` — configurar `SystemBars` si se necesita control granular (Cap 8 lo maneja automáticamente en la mayoría de casos)
 
 **Notas de implementación:**
+
 - Cap 8 eliminó `adjustMarginsForEdgeToEdge` — ahora es CSS puro con `env(safe-area-inset-*)`. Si el layout ya usa flexbox/grid, agregar padding al container raíz suele ser suficiente.
 - `npx @capacitor/assets generate --android` genera mipmap en todas las densidades (mdpi→xxxhdpi) desde un ícono fuente. Usar `public/pwa-512x512.png`.
 - Para el splash, Capacitor 8 usa el tema XML nativo (Core Splash Screen API). El `styles.xml` define el `Theme.SplashScreen` con `windowBackground` apuntando a `@drawable/splash`.
@@ -164,6 +176,7 @@ El usuario instala SecondMind en su teléfono Android. Desde cualquier app (Chro
 **Qué:** Generar debug APK para instalación directa y documentar el proceso. Opcionalmente, configurar keystore de release para futuro.
 
 **Criterio de done:**
+
 - [ ] `npx cap build android` o `cd android && ./gradlew assembleDebug` genera debug APK
 - [ ] APK instalable en dispositivo físico via `adb install` o transferencia directa
 - [ ] La app instalada funciona: login → dashboard → share intent → inbox
@@ -171,11 +184,13 @@ El usuario instala SecondMind en su teléfono Android. Desde cualquier app (Chro
 - [ ] `01-arquitectura` y `03-convenciones` actualizados con Fase 5.2
 
 **Archivos a crear/modificar:**
+
 - `SPEC-fase-5.2-capacitor-mobile.md` — convertir de plan a registro
 - `01-arquitectura-hibrida-progresiva.md` — agregar Capacitor a Core stack, Fase 5.2 ✅, decisiones D24+, gotchas 45+
 - `03-convenciones-y-patrones.md` — agregar `android/` a estructura, scripts cap, helper `isCapacitor()`
 
 **Notas de implementación — release signing (opcional):**
+
 - Generar keystore: `keytool -genkey -v -keystore secondmind-release.keystore -alias secondmind -keyalg RSA -keysize 2048 -validity 10000`
 - Guardar keystore fuera del repo (gitignored). Configurar en `android/app/build.gradle` via `signingConfigs`.
 - Build release: `cd android && ./gradlew assembleRelease` — genera APK firmado.
@@ -239,26 +254,31 @@ src/
 ## Definiciones técnicas
 
 ### D1: Capacitor 8 sobre Capacitor 7
+
 - **Opciones:** Capacitor 7.6.x, Capacitor 8.3.x
 - **Decisión:** Capacitor 8
 - **Razón:** El proyecto usa Node 24.12.0 (Cap 8 requiere 22+). Android Studio se instala fresh (viene Otter+). Cap 8 es la versión activa con plugins actualizados primero. Edge-to-edge es el estándar Android moderno. Cloud Functions usan Node 22 en runtime, alineado con Cap 8.
 
 ### D2: `@capgo/capacitor-share-target` sobre `send-intent`
+
 - **Opciones:** `send-intent` v7, `@capgo/capacitor-share-target` v8, `@capawesome-team/capacitor-share-target` (premium)
 - **Decisión:** `@capgo/capacitor-share-target` v8
 - **Razón:** Soporte explícito Cap 8 (v8.x para Cap 8, activamente mantenido). `send-intent` v7 solo soporta hasta Cap 7. Capawesome es premium/pago. API de Capgo es limpia: `addListener('shareReceived', handler)` con `{ title, texts, files }`.
 
 ### D3: `@capgo/capacitor-social-login` sobre `@codetrix-studio/capacitor-google-auth`
+
 - **Opciones:** `@codetrix-studio/capacitor-google-auth` v3.x, `@capgo/capacitor-social-login` v8
 - **Decisión:** `@capgo/capacitor-social-login`
 - **Razón:** `@codetrix-studio` está abandonado — marcado como "virtually archived", máximo Cap 6, sin mantenedor activo. `@capgo/capacitor-social-login` es su sucesor oficial con soporte Cap 8, usa Credential Manager en Android 14+, y devuelve `idToken` compatible con `signInWithCredential` de Firebase.
 
 ### D4: Quick Capture modal reutilizado para share intent (no ruta separada)
+
 - **Opciones:** Ruta `/share` separada (como `/capture` de Tauri), reusar Quick Capture modal existente
 - **Decisión:** Reusar Quick Capture modal
 - **Razón:** A diferencia de Tauri (donde `/capture` es una ventana separada que no hidrata TinyBase), en Capacitor la app completa ya está cargada. Pre-llenar el modal existente es más simple y reutiliza código. No justifica una ruta nueva.
 
 ### D5: Solo Android en esta fase
+
 - **Opciones:** Android + iOS, solo Android
 - **Decisión:** Solo Android
 - **Razón:** iOS requiere Apple Developer ID ($99/año) + Xcode (solo macOS). El usuario está en Windows. Share Extension de iOS es significativamente más complejo que Android Share Intent.
