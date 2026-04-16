@@ -27,7 +27,12 @@ npm run deploy:functions  # Deploy solo Cloud Functions
 npm run logs:functions    # Logs de Cloud Functions
 npm run tauri:dev    # Abre la app nativa en modo dev (Vite + Tauri)
 npm run tauri:build  # Build release: genera MSI + NSIS en src-tauri/target/release/bundle/
+npm run cap:sync     # Build web + sync android/ (copia dist + plugins)
+npm run cap:run      # cap run android (Capacitor CLI, puede fallar en Windows por gradlew sin .bat)
+npm run cap:build    # Build web + sync + gradlew assembleDebug → APK en android/app/build/outputs/apk/debug/
 ```
+
+> Capacitor en Windows: si `cap:run` falla con `"gradlew" no se reconoce`, correr manualmente `cd android && ./gradlew.bat assembleDebug` + `adb install -r app/build/outputs/apk/debug/app-debug.apk` + `adb shell am start -n com.secondmind.app/.MainActivity`. Requiere `JAVA_HOME` y `ANDROID_HOME` en env (usar el JBR de Android Studio: `/c/Program Files/Android/Android Studio/jbr`).
 
 ## Toolkit Claude Code (Fase 0.1)
 
@@ -220,6 +225,11 @@ IMPORTANT: Siempre consultar el doc de arquitectura (01) para schemas de datos y
 - **IDE marca permissions "not accepted" tras agregar plugin Tauri.** El schema `src-tauri/gen/schemas/desktop-schema.json` se regenera en `cargo check`/`build`. Correr uno y recargar la IDE.
 - **Global shortcut usado: `Ctrl+Shift+Space`.** Cero conflictos en Windows (Chrome no lo usa; VS Code solo con editor enfocado para parameter hints). El `Alt+N` local sigue intacto para la web app.
 - **`--legacy-peer-deps` también para `@tauri-apps/*`.** Mismo issue con Vite 8 que vite-plugin-pwa.
+- **Capacitor 8: `server.androidScheme: 'https'` obligatorio.** Sin esto Firebase Auth rechaza el WebView por origen HTTP. Es default en Cap 8 para apps nuevas pero explícitamente en config.
+- **Google Sign-In Android: `@capgo/capacitor-social-login` con `MainActivity.java implements ModifiedMainActivityForSocialLoginPlugin`.** El plugin intercepta el intent result via `onActivityResult` forwarding a `SocialLoginPlugin.handleGoogleLoginIntent`. Sin esto, la promesa de login queda huérfana. `webClientId` = Web Client ID de GCP (compartido con Tauri), NO el Android Client ID.
+- **Ícono Android: VectorDrawable desde SVG source.** `@capacitor/assets generate` procesa el PNG para adaptive icon v26+ con fg/bg separados y distorsiona logos con diseño específico. Solución: copiar los `<path d="">` del `favicon.svg` a `<path android:pathData="">` del VectorDrawable XML (formatos compatibles), `<group translateX/Y>` para normalizar el viewBox. Background sólido `@color/ic_launcher_background`.
+- **Capacitor CLI `cap run android` falla en Windows por `gradlew` sin `.bat`.** Workaround: `cd android && ./gradlew.bat assembleDebug` + `adb install` + `adb shell am start -n com.secondmind.app/.MainActivity`. Requiere `JAVA_HOME` + `ANDROID_HOME`.
+- **Share Intent reusa QuickCaptureProvider (no ruta separada).** En Capacitor la app completa ya está cargada con el provider montado, a diferencia de Tauri `/capture` (ventana efímera). `useShareIntent` llama `quickCapture.open(content, { source, sourceUrl })`.
 
 ## Fases de desarrollo
 
@@ -232,5 +242,6 @@ IMPORTANT: Siempre consultar el doc de arquitectura (01) para schemas de datos y
 - **Fase 4 (Grafo + Resurfacing) ✅:** Knowledge graph (Reagraph WebGL), CF generateEmbedding (OpenAI), filtros del grafo, notas similares (cosine similarity), FSRS resurfacing (ts-fsrs), Daily Digest (client-side). Ver `Spec/SPEC-fase-4-grafo-resurfacing.md`
 - **Fase 5 (PWA + Extension) ✅:** PWA instalable (vite-plugin-pwa, manifest, SW offline, install prompt), offline support (navigateFallback, runtimeCaching, useOnlineStatus, OfflineBadge, guards AI), Chrome Extension MV3 (CRXJS, popup React, captura seleccion, auth chrome.identity + Firebase, write a inbox con firestore/lite). Ver `Spec/SPEC-fase-5-pwa-extension.md`
 - **Fase 5.1 (Tauri Desktop) ✅:** wrapper nativo Windows con system tray (close-to-tray, menu con Abrir/Captura/Autostart/Salir), global shortcut `Ctrl+Shift+Space` desde cualquier app → ventana frameless `/capture` que escribe directo a Firestore, single-instance plugin, window-state plugin con denylist capture, autostart opcional con CheckMenuItem toggle, CSP Firebase explícito. Build genera MSI + NSIS. Ver `Spec/SPEC-fase-5.1-tauri-desktop.md`
+- **Fase 5.2 (Capacitor Mobile Android) ✅:** wrapper nativo Android con Google Sign-In nativo (bottom sheet via `@capgo/capacitor-social-login`), Share Intent que pre-llena Quick Capture desde el menú "Compartir" de cualquier app (via `@capgo/capacitor-share-target`), adaptive icon VectorDrawable extraído del SVG del PWA (match exacto del branding), splash screen purple `#878bf9`, edge-to-edge via `env(safe-area-inset-*)`. Patrón de auth universal: `SocialLogin.login → idToken → signInWithCredential`. QuickCaptureProvider extendido con `open(content?, { source?, sourceUrl? })` + `pendingMetaRef` para threadear source hasta `save()`. Ver `Spec/SPEC-fase-5.2-capacitor-mobile.md`
 
 When compacting, preserve: current phase, modified files list, pending tasks, and any architectural decisions made during the conversation.
