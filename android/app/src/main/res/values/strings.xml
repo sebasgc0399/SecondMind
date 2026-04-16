@@ -1,0 +1,8 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">SecondMind</string>
+    <string name="title_activity_main">SecondMind</string>
+    <string name="package_name">com.secondmind.app</string>
+    <string name="custom_url_scheme">com.secondmind.app</string>
+    <string name="server_client_id">39583209123-tq6tp1hhuj2o329h8frf84ph2irqppj2.apps.googleusercontent.com</string>
+</resources>

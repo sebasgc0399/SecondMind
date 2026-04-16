@@ -6,7 +6,7 @@ export default function QuickCaptureButton() {
   return (
     <button
       type="button"
-      onClick={open}
+      onClick={() => open()}
       className="inline-flex items-center gap-2 rounded-md bg-primary px-3 py-2 text-sm font-medium text-primary-foreground shadow-sm transition-colors hover:bg-primary/90"
     >
       <Plus className="h-4 w-4" />

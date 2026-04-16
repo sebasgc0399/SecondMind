@@ -1,8 +1,14 @@
 import { createContext, useContext } from 'react';
 
+export interface QuickCaptureOpenOptions {
+  source?: string;
+  sourceUrl?: string;
+}
+
 export interface QuickCaptureContextValue {
   isOpen: boolean;
-  open: () => void;
+  initialContent: string;
+  open: (initialContent?: string, options?: QuickCaptureOpenOptions) => void;
   close: () => void;
   save: (rawContent: string) => void;
 }

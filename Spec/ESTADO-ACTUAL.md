@@ -1,6 +1,6 @@
 # Estado Actual — SecondMind (Snapshot consolidado)
 
-> Última actualización: Fase 5.1 (Abril 2026)
+> Última actualización: Fase 5.2 (Abril 2026)
 > Este archivo consolida el conocimiento no-obvio de todas las fases completadas.
 > Se actualiza al cerrar cada fase. Para detalle de features → README.md.
 > Para detalle de implementación → Spec/SPEC-fase-X.md individual.
@@ -18,6 +18,7 @@
 - **Fase 4** — Grafo + Resurfacing: Knowledge graph (Reagraph), embeddings (OpenAI), notas similares, FSRS spaced repetition, Daily Digest
 - **Fase 5** — PWA + Extension: PWA instalable (manifest, SW, offline support, install prompt), Chrome Extension MV3 (captura web, auth Google, write a inbox)
 - **Fase 5.1** — Tauri Desktop: wrapper nativo Windows con system tray, close-to-tray, global shortcut `Ctrl+Shift+Space`, ventana de captura frameless, autostart opcional, window-state persistido, single-instance
+- **Fase 5.2** — Capacitor Mobile (Android): wrapper nativo con Google Sign-In nativo (bottom sheet), Share Intent que pre-llena Quick Capture desde el sheet de Android, adaptive icon VectorDrawable extraído del SVG del PWA, splash purple, safe-area CSS edge-to-edge
 
 ---
 
@@ -71,6 +72,21 @@
 - **Credenciales OAuth Desktop en `.env.local` (gitignored):** `VITE_GOOGLE_OAUTH_CLIENT_ID` + `VITE_GOOGLE_OAUTH_CLIENT_SECRET`. OAuth Client tipo "Desktop app" creado en Google Cloud Console (proyecto `secondmindv1`). Google acepta redirect URIs loopback (`http://127.0.0.1:*`) automáticamente sin listarlas.
 - **Capability scoped `shell:allow-open`** con allowlist `accounts.google.com/**` y `oauth2.googleapis.com/**`. Sin scope, cualquier URL podría abrirse desde JS; con scope solo los dominios OAuth.
 - **OAuth listener es one-shot.** El thread del `TcpListener` acepta una conexión y termina. Si el usuario retry (cierra browser, reabre), hay que volver a llamar `start_oauth_listener` (pasa automáticamente porque el botón Sign in re-invoca el flujo completo).
+
+### Capacitor Mobile (Fase 5.2)
+
+- **`android/` commiteado al repo** — patrón Capacitor estándar: incluye `app/src/`, `variables.gradle`, `build.gradle`, Gradle wrapper. Gitignored: `android/app/build/`, `android/.gradle/`, `android/local.properties`, `*.apk`, `*.keystore`. Primera build requiere Android Studio + SDK 36 + `ANDROID_HOME` y `JAVA_HOME` env vars (Capacitor CLI `cap run android` falla silenciosamente sin ellas en Windows porque llama a `gradlew` sin `.bat`; workaround: `./gradlew.bat assembleDebug` directo + `adb install` + `adb shell am start`).
+- **`server.androidScheme: 'https'` obligatorio** en `capacitor.config.ts`. Sin esto, Firebase Auth rechaza el WebView por origen HTTP.
+- **Google Sign-In nativo: `SocialLogin.login({ provider: 'google' })` → `idToken` → `GoogleAuthProvider.credential(idToken)` → `signInWithCredential(auth, credential)`.** Mismo patrón universal que Tauri (`signInWithTauri`) y Chrome Extension (`signInWithChrome`) — solo cambia cómo se obtiene el idToken. El `signInWithPopup` de Firebase NO funciona en WebView Android (no hay proceso de browser para el popup).
+- **Web Client ID compartido para todas las plataformas.** El Android Client ID de GCP solo sirve para validar el SHA-1 del keystore; no se usa en código. `VITE_GOOGLE_WEB_CLIENT_ID` en `.env.local` + `<string name="server_client_id">` en `strings.xml` (necesario para el plugin nativo de Capgo).
+- **`MainActivity.java` implementa `ModifiedMainActivityForSocialLoginPlugin`** con `onActivityResult` forwarding a `SocialLoginPlugin.handleGoogleLoginIntent`. Obligatorio por design del plugin Capgo — sin esto, el intent result del Google Sign-In queda huérfano y la promesa nunca resuelve.
+- **Share Intent reusa QuickCaptureProvider (no ruta separada).** A diferencia de Tauri `/capture` (ventana efímera) o la Extension (popup), en Capacitor la app completa ya está cargada con el provider montado. `useShareIntent` llama `quickCapture.open(content, { source, sourceUrl })` → meta stasheado en `pendingMetaRef` → `save()` lo consume como defaults.
+- **`QuickCaptureProvider.open(content?, { source?, sourceUrl? })` y `save(rawContent)`**: los meta son stasheados en `pendingMetaRef` (ref, no state, para evitar re-renders) y consumidos por `save` como defaults. Callers previos (Alt+N, QuickCaptureButton) no cambian — todos los params son opcionales.
+- **Ícono Android: VectorDrawable extraído del `public/favicon.svg`.** `@capacitor/assets generate` distorsiona los íconos (recorta para adaptive icon v26+ sin respetar el diseño original). Solución: copiar los `<path d="">` del SVG a `<path android:pathData="">` del VectorDrawable (formato compatible), `<group android:translateX/Y>` para normalizar el viewBox del SVG. Background `#171617` (dark, matching el logo PWA). `pwa-maskable-512x512.png` en mipmap-\* como fallback para Android <8.
+- **Splash screen: drawable XML simple `@color/splashBackground` (`#878bf9`).** Los PNGs generados por `@capacitor/assets` usaban fondo gris default ignorando el flag `--splashBackgroundColor`. Un drawable XML con color sólido es más simple y confiable.
+- **Edge-to-edge via `env(safe-area-inset-*)` en el `body`** de `src/index.css`. Inocuo en web (env() evalúa a 0 sin `viewport-fit=cover`). Capacitor 8 aplica edge-to-edge automáticamente.
+- **`--legacy-peer-deps` también para todo `@capacitor/*` y `@capgo/*`** con Vite 8. Mismo issue que Tauri y vite-plugin-pwa.
+- **Gotcha HTML entities en share intent.** Chrome Android envía títulos con `&#34;` en vez de `"`. Decodeo via `DOMParser` o `textarea.innerHTML = title; title = textarea.innerText` es trivial. No implementado en la base — pulir si molesta en uso real.
 
 ### Chrome Extension
 
@@ -215,26 +231,39 @@ Ambas CFs usan `tools` + `tool_choice: { type: 'tool', name: '...' }` para forza
 
 ## Dependencias clave con historia
 
-| Paquete                        | Versión   | Nota                                                                                            |
-| ------------------------------ | --------- | ----------------------------------------------------------------------------------------------- |
-| `firebase-functions`           | `^7.2.5`  | v6 fallaba con timeout en discovery. Major bump obligatorio                                     |
-| `@anthropic-ai/sdk`            | `^0.40.1` | Soporta `tools` + `tool_choice` para schema enforcement                                         |
-| `tinybase`                     | v8        | Sin `persister-firestore` nativo. Custom persister con `createCustomPersister`                  |
-| `@orama/orama`                 | v3        | `search()` es sync at runtime aunque el tipo diga `Promise`. Cast a `Results<AnyDocument>`      |
-| `reagraph`                     | latest    | WebGL graph viz (Three.js). Compatible React 19. ~1.3MB bundle. API declarativa `<GraphCanvas>` |
-| `openai`                       | `^4.85`   | SDK para embeddings en CF generateEmbedding. Solo en `src/functions/`                           |
-| `ts-fsrs`                      | latest    | FSRS spaced repetition. Client-side (~15KB). `createEmptyCard`, `fsrs().next()`                 |
-| `vite-plugin-pwa`              | `^1.2.0`  | Requiere `--legacy-peer-deps` con Vite 8. `generateSW` + `autoUpdate`                           |
-| `@crxjs/vite-plugin`           | `^2.4.0`  | Named export `{ crx }`. Soporta Vite 8 + MV3 + React + HMR                                      |
-| `@tauri-apps/cli`              | `^2.10.1` | CLI para scaffold/dev/build. Requiere Rust + MSVC Build Tools en Windows                        |
-| `@tauri-apps/api`              | `^2.10.1` | Window management, webview, event system. Import dinámico para no romper build web              |
-| `tauri-plugin-global-shortcut` | `2.3.1`   | Registro OS-level de hotkeys. JS-side más simple que Rust-side                                  |
-| `tauri-plugin-autostart`       | `2.5.1`   | Autostart con Windows (registry key HKCU Run). `MacosLauncher::LaunchAgent` default             |
-| `tauri-plugin-window-state`    | `2.4.1`   | Persiste pos/size. `.with_denylist(&["capture"])` para excluir la ventana efímera               |
-| `tauri-plugin-single-instance` | `2.4.1`   | Previene múltiples procesos simultáneos. Crítico con autostart                                  |
+| Paquete                         | Versión   | Nota                                                                                                                         |
+| ------------------------------- | --------- | ---------------------------------------------------------------------------------------------------------------------------- |
+| `firebase-functions`            | `^7.2.5`  | v6 fallaba con timeout en discovery. Major bump obligatorio                                                                  |
+| `@anthropic-ai/sdk`             | `^0.40.1` | Soporta `tools` + `tool_choice` para schema enforcement                                                                      |
+| `tinybase`                      | v8        | Sin `persister-firestore` nativo. Custom persister con `createCustomPersister`                                               |
+| `@orama/orama`                  | v3        | `search()` es sync at runtime aunque el tipo diga `Promise`. Cast a `Results<AnyDocument>`                                   |
+| `reagraph`                      | latest    | WebGL graph viz (Three.js). Compatible React 19. ~1.3MB bundle. API declarativa `<GraphCanvas>`                              |
+| `openai`                        | `^4.85`   | SDK para embeddings en CF generateEmbedding. Solo en `src/functions/`                                                        |
+| `ts-fsrs`                       | latest    | FSRS spaced repetition. Client-side (~15KB). `createEmptyCard`, `fsrs().next()`                                              |
+| `vite-plugin-pwa`               | `^1.2.0`  | Requiere `--legacy-peer-deps` con Vite 8. `generateSW` + `autoUpdate`                                                        |
+| `@crxjs/vite-plugin`            | `^2.4.0`  | Named export `{ crx }`. Soporta Vite 8 + MV3 + React + HMR                                                                   |
+| `@tauri-apps/cli`               | `^2.10.1` | CLI para scaffold/dev/build. Requiere Rust + MSVC Build Tools en Windows                                                     |
+| `@tauri-apps/api`               | `^2.10.1` | Window management, webview, event system. Import dinámico para no romper build web                                           |
+| `tauri-plugin-global-shortcut`  | `2.3.1`   | Registro OS-level de hotkeys. JS-side más simple que Rust-side                                                               |
+| `tauri-plugin-autostart`        | `2.5.1`   | Autostart con Windows (registry key HKCU Run). `MacosLauncher::LaunchAgent` default                                          |
+| `tauri-plugin-window-state`     | `2.4.1`   | Persiste pos/size. `.with_denylist(&["capture"])` para excluir la ventana efímera                                            |
+| `tauri-plugin-single-instance`  | `2.4.1`   | Previene múltiples procesos simultáneos. Crítico con autostart                                                               |
+| `@capacitor/core`               | `^8.3.0`  | Runtime Cap 8. Requiere Node 22+ y Android Studio Otter+                                                                     |
+| `@capacitor/cli`                | `^8.3.0`  | CLI para init/sync. `cap run android` falla en Windows por `gradlew` sin `.bat` (workaround: `./gradlew.bat` directo)        |
+| `@capacitor/android`            | `^8.3.0`  | Plataforma Android. `minSdk 24`, `compileSdk 36`, `targetSdk 36`                                                             |
+| `@capacitor/splash-screen`      | `^8.0.1`  | `launchAutoHide: false` + `SplashScreen.hide()` manual                                                                       |
+| `@capgo/capacitor-social-login` | `^8.3.14` | Google Sign-In nativo. Devuelve `idToken` → `signInWithCredential`. `codetrix-studio` abandonado, este es el sucesor oficial |
+| `@capgo/capacitor-share-target` | `^8.0.27` | Listener `shareReceived` + intent-filter SEND en AndroidManifest. Único con soporte Cap 8 free                               |
 
 ---
 
 ## Siguiente fase
 
-**Fase 5.2 — Capacitor Mobile:** wrapper Android con Share Intent (capturar contenido desde el menú "Compartir" de cualquier app Android directamente al inbox de SecondMind). Fuera de scope: iOS (requiere Apple Developer ID $99/año), code signing Windows para MSI.
+**Fase 5.2 ✅ completada.** SecondMind disponible en todas las plataformas del usuario: web (PWA), desktop (Tauri Windows + Chrome Extension), mobile (Capacitor Android).
+
+Próximas iteraciones candidatas:
+
+- **Polish UX**: templates de notas, slash commands del editor, mejoras de búsqueda semántica híbrida (Orama + embeddings)
+- **Distribución**: code signing Windows para MSI, Play Store publish (requiere AAB + $25 one-time + privacy policy)
+- **iOS**: requiere macOS + Apple Developer ID ($99/año) + Share Extension más compleja que Android intent filter
+- **Release keystore Android**: crear SHA-1 de release y registrar en GCP para APKs firmados distribuibles fuera de debug

@@ -1,9 +1,32 @@
-# SPEC — SecondMind · Fase 5.2: Capacitor Mobile (Android)
+# REGISTRO — SecondMind · Fase 5.2: Capacitor Mobile (Android) ✅
 
+> **Estado:** Completada (Abril 2026). Este archivo era el SPEC de planning; se conserva como registro de lo implementado.
 > Alcance: SecondMind como app Android nativa con Share Intent — capturar texto/URLs desde el menú "Compartir" de cualquier app directamente al inbox
 > Dependencias: Fase 5 (PWA + Extension) completada, Fase 5.1 (Tauri) completada
-> Estimado: 1-2 semanas solo dev
-> Stack relevante: Capacitor 8, `@capgo/capacitor-share-target` v8, `@capgo/capacitor-social-login` v8, Android Studio
+> Stack implementado: Capacitor 8.3, `@capgo/capacitor-share-target` v8.0.27, `@capgo/capacitor-social-login` v8.3.14, Android Studio (SDK 36, AVD Pixel 7 API 34)
+
+## Resumen de implementación
+
+5 commits atómicos en `feat/f5.2-capacitor-mobile`:
+
+1. `feat(capacitor): scaffold Capacitor 8 + Android project` (dcbf66c) — F1
+2. `feat(capacitor): Google Sign-In nativo via capacitor-social-login` (920cf84) — F2
+3. `feat(capacitor): Share Intent recibe texto/URL de otras apps al inbox` (4f89a1b) — F3
+4. `feat(capacitor): edge-to-edge CSS + ícono VectorDrawable + splash purple` (a448d5d) — F4
+5. `docs(capacitor): Fase 5.2 registro + docs update` (F5, este commit)
+
+**Desviaciones del plan original:**
+
+- `@capacitor/assets generate --android` generó íconos distorsionados del logo PWA (recorta para adaptive icon v26+ sin respetar diseño). Solución: VectorDrawable XML extraído manualmente del `public/favicon.svg` (21 `<path d="">` del SVG → `<path android:pathData="">` compatible). Fondo `#171617` (dark del logo original). Esto dio match exacto con el PWA.
+- `npx cap run android` falla en Windows porque el CLI invoca `gradlew` sin `.bat`. Workaround adoptado: `./gradlew.bat assembleDebug` directo + `adb install` + `adb shell am start` manual.
+- Auto-login tras share intent: el SPEC mencionaba "si no autenticado → login → retry". En la práctica, `ShareIntentMount` solo se monta DENTRO del `QuickCaptureProvider` (que requiere user autenticado por el guard del Layout). Simplifica el flujo: si usuario no logueado, el intent se recibe pero la app va al login primero; tras login, al llegar al Layout se monta el listener y el siguiente share funciona. Edge case aceptable para MVP.
+- `save()` signature: inicialmente cambié a `save(content, source?, sourceUrl?)` pero ese cambio requería actualizar QuickCapture.tsx para pasar source. Revertí a `save(content)` + `pendingMetaRef` (stasheado por `open()`), lo cual mantiene la API externa más estable y concentra la lógica de meta en el provider.
+
+**Gotcha nuevo (no documentado antes del dev):** Chrome Android envía títulos con HTML entities (`&#34;` en vez de `"`). Decodeo trivial via `DOMParser` o `textarea.innerHTML`, no implementado en esta fase — pulir si molesta en uso real.
+
+---
+
+## SPEC original (referencia — plan pre-implementación)
 
 ---
 

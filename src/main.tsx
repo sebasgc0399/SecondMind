@@ -5,6 +5,9 @@ import { Provider } from 'tinybase/ui-react';
 import router from '@/app/router';
 import useCloseToTray from '@/hooks/useCloseToTray';
 import useGlobalShortcutRegistration from '@/hooks/useGlobalShortcutRegistration';
+import { isCapacitor } from '@/lib/capacitor';
+import { initCapacitorAuth } from '@/lib/capacitorAuth';
+import { SplashScreen } from '@capacitor/splash-screen';
 import { notesStore } from '@/stores/notesStore';
 import { linksStore } from '@/stores/linksStore';
 import { inboxStore } from '@/stores/inboxStore';
@@ -13,6 +16,13 @@ import { projectsStore } from '@/stores/projectsStore';
 import { objectivesStore } from '@/stores/objectivesStore';
 import { habitsStore } from '@/stores/habitsStore';
 import './index.css';
+
+if (isCapacitor()) {
+  void initCapacitorAuth().catch((error) => {
+    console.error('Failed to initialize Capacitor SocialLogin:', error);
+  });
+  void SplashScreen.hide().catch(() => {});
+}
 
 function TauriIntegration({ children }: { children: ReactNode }) {
   useCloseToTray();
