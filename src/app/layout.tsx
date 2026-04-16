@@ -6,7 +6,13 @@ import InstallPrompt from '@/components/layout/InstallPrompt';
 import OfflineBadge from '@/components/layout/OfflineBadge';
 import Sidebar from '@/components/layout/Sidebar';
 import useAuth from '@/hooks/useAuth';
+import useShareIntent from '@/hooks/useShareIntent';
 import useStoreInit from '@/hooks/useStoreInit';
+
+function ShareIntentMount() {
+  useShareIntent();
+  return null;
+}
 
 export default function Layout() {
   const { user, isLoading, signOut } = useAuth();
@@ -33,6 +39,7 @@ export default function Layout() {
             <Outlet />
           </main>
           <QuickCapture />
+          <ShareIntentMount />
           <CommandPalette />
           <InstallPrompt />
           <OfflineBadge />

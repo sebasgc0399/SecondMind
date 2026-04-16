@@ -6,17 +6,23 @@ import useQuickCapture from '@/hooks/useQuickCapture';
 type Status = 'editing' | 'saved';
 
 interface QuickCaptureContentProps {
+  initialContent: string;
   onSave: (rawContent: string) => void;
   onClose: () => void;
 }
 
-function QuickCaptureContent({ onSave, onClose }: QuickCaptureContentProps) {
-  const [rawContent, setRawContent] = useState('');
+function QuickCaptureContent({ initialContent, onSave, onClose }: QuickCaptureContentProps) {
+  const [rawContent, setRawContent] = useState(initialContent);
   const [status, setStatus] = useState<Status>('editing');
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
-    const id = requestAnimationFrame(() => textareaRef.current?.focus());
+    const id = requestAnimationFrame(() => {
+      const el = textareaRef.current;
+      if (!el) return;
+      el.focus();
+      el.setSelectionRange(el.value.length, el.value.length);
+    });
     return () => cancelAnimationFrame(id);
   }, []);
 
@@ -70,7 +76,7 @@ function QuickCaptureContent({ onSave, onClose }: QuickCaptureContentProps) {
 }
 
 export default function QuickCapture() {
-  const { isOpen, close, save } = useQuickCapture();
+  const { isOpen, initialContent, close, save } = useQuickCapture();
 
   function handleOpenChange(nextOpen: boolean) {
     if (!nextOpen) close();
@@ -82,7 +88,9 @@ export default function QuickCapture() {
         <Dialog.Backdrop className="fixed inset-0 z-40 bg-background-deep/80 backdrop-blur-sm transition-opacity duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] data-ending-style:opacity-0 data-starting-style:opacity-0" />
         <Dialog.Popup className="fixed top-1/2 left-1/2 z-50 w-[90vw] max-w-xl -translate-x-1/2 -translate-y-1/2 scale-100 rounded-2xl border border-border-strong bg-card p-6 opacity-100 shadow-[0_20px_40px_rgba(0,0,0,0.5)] outline-none transition-all duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] data-ending-style:scale-95 data-ending-style:opacity-0 data-starting-style:scale-95 data-starting-style:opacity-0">
           <Dialog.Title className="sr-only">Captura rápida</Dialog.Title>
-          {isOpen && <QuickCaptureContent onSave={save} onClose={close} />}
+          {isOpen && (
+            <QuickCaptureContent initialContent={initialContent} onSave={save} onClose={close} />
+          )}
         </Dialog.Popup>
       </Dialog.Portal>
     </Dialog.Root>

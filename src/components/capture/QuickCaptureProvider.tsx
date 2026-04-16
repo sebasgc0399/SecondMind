@@ -1,5 +1,9 @@
-import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
-import { QuickCaptureContext, type QuickCaptureContextValue } from '@/hooks/useQuickCapture';
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import {
+  QuickCaptureContext,
+  type QuickCaptureContextValue,
+  type QuickCaptureOpenOptions,
+} from '@/hooks/useQuickCapture';
 import { inboxStore } from '@/stores/inboxStore';
 
 interface QuickCaptureProviderProps {
@@ -8,21 +12,35 @@ interface QuickCaptureProviderProps {
 
 export default function QuickCaptureProvider({ children }: QuickCaptureProviderProps) {
   const [isOpen, setIsOpen] = useState(false);
+  const [initialContent, setInitialContent] = useState('');
+  const pendingMetaRef = useRef<QuickCaptureOpenOptions>({});
 
-  const open = useCallback(() => setIsOpen(true), []);
-  const close = useCallback(() => setIsOpen(false), []);
+  const open = useCallback((content?: string, options?: QuickCaptureOpenOptions) => {
+    setInitialContent(content ?? '');
+    pendingMetaRef.current = options ?? {};
+    setIsOpen(true);
+  }, []);
+
+  const close = useCallback(() => {
+    setIsOpen(false);
+    setInitialContent('');
+    pendingMetaRef.current = {};
+  }, []);
 
   const save = useCallback((rawContent: string) => {
     const trimmed = rawContent.trim();
     if (!trimmed) return;
     const id = crypto.randomUUID();
+    const { source = 'quick-capture', sourceUrl } = pendingMetaRef.current;
     inboxStore.setRow('inbox', id, {
       rawContent: trimmed,
-      source: 'quick-capture',
+      source,
       status: 'pending',
       aiProcessed: false,
       createdAt: Date.now(),
+      ...(sourceUrl ? { sourceUrl } : {}),
     });
+    pendingMetaRef.current = {};
   }, []);
 
   useEffect(() => {
@@ -40,8 +58,8 @@ export default function QuickCaptureProvider({ children }: QuickCaptureProviderP
   }, []);
 
   const value = useMemo<QuickCaptureContextValue>(
-    () => ({ isOpen, open, close, save }),
-    [isOpen, open, close, save],
+    () => ({ isOpen, initialContent, open, close, save }),
+    [isOpen, initialContent, open, close, save],
   );
 
   return <QuickCaptureContext.Provider value={value}>{children}</QuickCaptureContext.Provider>;
