@@ -7,6 +7,7 @@ import useCloseToTray from '@/hooks/useCloseToTray';
 import useGlobalShortcutRegistration from '@/hooks/useGlobalShortcutRegistration';
 import { isCapacitor } from '@/lib/capacitor';
 import { initCapacitorAuth } from '@/lib/capacitorAuth';
+import { SplashScreen } from '@capacitor/splash-screen';
 import { notesStore } from '@/stores/notesStore';
 import { linksStore } from '@/stores/linksStore';
 import { inboxStore } from '@/stores/inboxStore';
@@ -20,6 +21,7 @@ if (isCapacitor()) {
   void initCapacitorAuth().catch((error) => {
     console.error('Failed to initialize Capacitor SocialLogin:', error);
   });
+  void SplashScreen.hide().catch(() => {});
 }
 
 function TauriIntegration({ children }: { children: ReactNode }) {
