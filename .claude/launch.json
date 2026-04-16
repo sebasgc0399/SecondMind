@@ -1,0 +1,23 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "secondmind-dev",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "dev"],
+      "port": 5173
+    },
+    {
+      "name": "secondmind-tauri",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "tauri:dev"],
+      "port": 5173
+    },
+    {
+      "name": "secondmind-preview",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "preview"],
+      "port": 4173
+    }
+  ]
+}
