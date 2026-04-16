@@ -39,3 +39,16 @@ dist-ssr
 # Tauri — build artifacts y mobile gen (dev only)
 src-tauri/target/
 src-tauri/gen/
+
+# Capacitor Android — build artifacts, caches y secretos locales
+android/app/build/
+android/build/
+android/.gradle/
+android/captures/
+android/local.properties
+android/app/release/
+android/app/debug/
+*.apk
+*.aab
+*.keystore
+!android/app/debug.keystore
