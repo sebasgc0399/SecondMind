@@ -2,20 +2,18 @@
 
 > Documento de referencia arquitectónica para SecondMind.
 > Este documento NO es el SPEC — es la guía que informa al SPEC de cada fase.
-> Actualizado tras Fases 0–5.1 con correcciones factuales del stack y patterns descubiertos.
+> Actualizado tras Fases 0–5.2 con correcciones factuales del stack y patterns descubiertos.
 
 ---
 
 ## 1. Visión general
 
 Un sistema de productividad y conocimiento personal que combina:
-
 - **Ejecución** (tareas, proyectos, objetivos — lo que ya funciona en Notion)
 - **Conocimiento vivo** (notas atómicas, links bidireccionales, grafo — lo que falta)
 - **AI como copiloto** (procesamiento de inbox, auto-tagging, command palette, resurfacing)
 
 ### Principio rector
-
 Construir lo mínimo que genere valor diario, iterar basándose en uso real. Cada fase debe ser usable por sí sola — no hay "todo o nada".
 
 ---
@@ -24,40 +22,45 @@ Construir lo mínimo que genere valor diario, iterar basándose en uso real. Cad
 
 ### Core
 
-| Capa                | Tecnología                                                                                                        | Justificación                                                                                                   |
-| ------------------- | ----------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------- |
-| **UI Framework**    | React 19 + TypeScript strict                                                                                      | Stack conocido, máximo code-reuse                                                                               |
-| **Build**           | Vite                                                                                                              | Rápido, sin config extra                                                                                        |
-| **Estilos**         | Tailwind CSS v4 (CSS-first, `@theme` en `src/index.css`)                                                          | No existe `tailwind.config.ts` — toda la config vive en CSS                                                     |
-| **Editor de notas** | TipTap (ProseMirror)                                                                                              | Headless, extensible, wikilinks custom                                                                          |
-| **Store reactivo**  | TinyBase v8                                                                                                       | 13KB, hooks React. No tiene persister Firestore nativo — se usa `createCustomPersister`                         |
-| **Backend**         | Firebase (Firestore + Cloud Functions v2 + Auth + Storage + Hosting)                                              | Stack conocido, $0 en free tier                                                                                 |
-| **AI**              | Cloud Functions v2 + Anthropic SDK → Claude Haiku (`claude-haiku-4-5-20251001`) con tool use + schema enforcement | ~$0.02/mes para uso personal. JSON garantizado por schema, no por prompt                                        |
-| **Búsqueda local**  | Orama                                                                                                             | ~40KB, TypeScript-native, FTS client-side. 2 indexes: notas (Fase 1) + global unificado (Fase 3)                |
-| **UI Components**   | shadcn/ui (Base UI / `@base-ui/react`)                                                                            | **No es Radix UI** — usa `data-open`/`data-closed` + `data-starting-style`/`data-ending-style`, NO `data-state` |
-| **Routing**         | React Router v7 (`createBrowserRouter`)                                                                           | Client-side routing con layouts anidados                                                                        |
-| **Iconos**          | lucide-react                                                                                                      | Consistente, tree-shakeable                                                                                     |
-| **Grafo visual**    | Reagraph (WebGL, force-directed 2D)                                                                               | React-native, API declarativa `<GraphCanvas>`, suficiente para <500 nodos                                       |
-| **Embeddings**      | Cloud Functions v2 + OpenAI SDK → `text-embedding-3-small` (1536 dims)                                            | ~$0.002/500 notas. Guard por `contentHash` SHA-256 evita regeneraciones                                         |
-| **Resurfacing**     | ts-fsrs (~15KB, client-side)                                                                                      | Spaced repetition adaptado a knowledge notes. 2 ratings (Again/Good), opt-in por nota                           |
-| **PWA**             | vite-plugin-pwa + Workbox                                                                                         | Installable + offline. `registerType: 'autoUpdate'`, `navigateFallback`, runtimeCaching Google Fonts            |
-| **Desktop**         | Tauri v2 (Rust + WebView2)                                                                                        | Global hotkey `Ctrl+Shift+Space`, system tray, autostart, window-state, single-instance. MSI + NSIS installers  |
-| **Web clipper**     | Chrome Extension MV3 (CRXJS)                                                                                      | Popup React, `chrome.identity` auth, `firebase/firestore/lite`, fixed Extension ID via RSA key                  |
+| Capa | Tecnología | Justificación |
+|------|-----------|---------------|
+| **UI Framework** | React 19 + TypeScript strict | Stack conocido, máximo code-reuse |
+| **Build** | Vite | Rápido, sin config extra |
+| **Estilos** | Tailwind CSS v4 (CSS-first, `@theme` en `src/index.css`) | No existe `tailwind.config.ts` — toda la config vive en CSS |
+| **Editor de notas** | TipTap (ProseMirror) | Headless, extensible, wikilinks custom |
+| **Store reactivo** | TinyBase v8 | 13KB, hooks React. No tiene persister Firestore nativo — se usa `createCustomPersister` |
+| **Backend** | Firebase (Firestore + Cloud Functions v2 + Auth + Storage + Hosting) | Stack conocido, $0 en free tier |
+| **AI** | Cloud Functions v2 + Anthropic SDK → Claude Haiku (`claude-haiku-4-5-20251001`) con tool use + schema enforcement | ~$0.02/mes para uso personal. JSON garantizado por schema, no por prompt |
+| **Búsqueda local** | Orama | ~40KB, TypeScript-native, FTS client-side. 2 indexes: notas (Fase 1) + global unificado (Fase 3) |
+| **UI Components** | shadcn/ui (Base UI / `@base-ui/react`) | **No es Radix UI** — usa `data-open`/`data-closed` + `data-starting-style`/`data-ending-style`, NO `data-state` |
+| **Routing** | React Router v7 (`createBrowserRouter`) | Client-side routing con layouts anidados |
+| **Iconos** | lucide-react | Consistente, tree-shakeable |
+| **Grafo visual** | Reagraph (WebGL, force-directed 2D) | React-native, API declarativa `<GraphCanvas>`, suficiente para <500 nodos |
+| **Embeddings** | Cloud Functions v2 + OpenAI SDK → `text-embedding-3-small` (1536 dims) | ~$0.002/500 notas. Guard por `contentHash` SHA-256 evita regeneraciones |
+| **Resurfacing** | ts-fsrs (~15KB, client-side) | Spaced repetition adaptado a knowledge notes. 2 ratings (Again/Good), opt-in por nota |
 
-### Futuras
+### Multi-plataforma (Fase 5)
 
-| Capa                   | Tecnología                                                      | Fase     |
-| ---------------------- | --------------------------------------------------------------- | -------- |
-| **Mobile**             | Capacitor                                                       | Fase 5.2 |
-| **Búsqueda semántica** | Orama keyword + embeddings cosine (hybrid)                      | Fase 5+  |
-| **Grafo avanzado**     | Sigma.js + Graphology (migración desde Reagraph si >1000 nodos) | Fase 5+  |
+| Capa | Tecnología | Fase | Estado |
+|------|-----------|------|--------|
+| **PWA** | `vite-plugin-pwa` + Workbox (`maximumFileSizeToCacheInBytes: 4MB` para Reagraph) | 5.0 | ✅ |
+| **Desktop** | Tauri v2 (Rust, WebView2) — system tray, `Ctrl+Shift+Space` global, single-instance, autostart, window-state | 5.1 | ✅ |
+| **Mobile** | Capacitor 8 (Android) — Google Sign-In nativo (`@capgo/capacitor-social-login`), Share Intent (`@capgo/capacitor-share-target`) | 5.2 | ✅ |
+| **Web clipper** | Chrome Extension MV3 + CRXJS — `chrome.identity` Firebase auth, `firestore/lite` writes | 5.0 | ✅ |
+
+### Posibles iteraciones futuras
+
+| Capa | Tecnología | Notas |
+|------|-----------|-------|
+| **Búsqueda semántica** | Orama keyword + embeddings cosine (hybrid) | Pendiente |
+| **Grafo avanzado** | Sigma.js + Graphology (migración desde Reagraph si >1000 nodos) | Pendiente |
+| **iOS** | Capacitor (requiere macOS + Apple Developer ID $99/año) | Fuera de scope actual |
 
 ---
 
 ## 3. Modelo de datos (Firestore)
 
 ### Principios del modelo
-
 - **Notas son ciudadanos de primera clase** — no subcolecciones de proyectos
 - **Links como colección separada** — IDs determinísticos `${sourceId}__${targetId}` para dedup trivial y queries bidireccionales eficientes
 - **PARA como metadata** — no como estructura de carpetas
@@ -86,49 +89,49 @@ firestore/
 
 ```typescript
 interface Note {
-  id: string; // crypto.randomUUID()
-  title: string; // La idea, no el tema ("La fricción mata hábitos")
-  content: string; // TipTap JSON serializado (fuera del schema TinyBase, solo en Firestore)
-  contentPlain: string; // Texto plano para búsqueda (generado con editor.getText())
-
+  id: string;                    // crypto.randomUUID()
+  title: string;                 // La idea, no el tema ("La fricción mata hábitos")
+  content: string;               // TipTap JSON serializado (fuera del schema TinyBase, solo en Firestore)
+  contentPlain: string;          // Texto plano para búsqueda (generado con editor.getText())
+  
   // Clasificación PARA
   paraType: 'project' | 'area' | 'resource' | 'archive';
-
+  
   // Zettelkasten
   noteType: 'fleeting' | 'literature' | 'permanent';
-  source?: string; // De dónde viene (libro, podcast, conversación, etc.)
-
+  source?: string;               // De dónde viene (libro, podcast, conversación, etc.)
+  
   // Relaciones (IDs como JSON arrays serializados — parseIds/stringifyIds)
-  projectIds: string[]; // Proyectos vinculados
-  areaIds: string[]; // Áreas vinculadas
-  tagIds: string[]; // Tags/temas
-
+  projectIds: string[];          // Proyectos vinculados
+  areaIds: string[];             // Áreas vinculadas
+  tagIds: string[];              // Tags/temas
+  
   // Links bidireccionales (referencia rápida — la verdad está en links/)
-  outgoingLinkIds: string[]; // Notas a las que esta nota apunta
-  incomingLinkIds: string[]; // Notas que apuntan a esta nota
-  linkCount: number; // Total de conexiones (para ranking)
-
+  outgoingLinkIds: string[];     // Notas a las que esta nota apunta
+  incomingLinkIds: string[];     // Notas que apuntan a esta nota
+  linkCount: number;             // Total de conexiones (para ranking)
+  
   // Progressive Summarization
-  summaryL1?: string; // Pasajes clave resaltados
-  summaryL2?: string; // Lo más importante de L1
-  summaryL3?: string; // Resumen ejecutivo en tus palabras
-  distillLevel: 0 | 1 | 2 | 3; // Nivel actual de destilación
-
+  summaryL1?: string;            // Pasajes clave resaltados
+  summaryL2?: string;            // Lo más importante de L1
+  summaryL3?: string;            // Resumen ejecutivo en tus palabras
+  distillLevel: 0 | 1 | 2 | 3;  // Nivel actual de destilación
+  
   // AI-generated (escritos por Cloud Function autoTagNote via tool use)
-  aiTags?: string[]; // Tags sugeridos por Claude
-  aiSummary?: string; // Resumen de una línea generado
-  aiProcessed: boolean; // ¿Ya pasó por el pipeline AI?
-
+  aiTags?: string[];             // Tags sugeridos por Claude
+  aiSummary?: string;            // Resumen de una línea generado
+  aiProcessed: boolean;          // ¿Ya pasó por el pipeline AI?
+  
   // FSRS — Spaced Repetition (Fase 4, opt-in por nota)
-  fsrsState?: string; // Card de ts-fsrs serializado como JSON string
-  fsrsDue?: number; // Timestamp de próxima revisión (para queries eficientes)
-  fsrsLastReview?: number; // Timestamp de última revisión
-
+  fsrsState?: string;            // Card de ts-fsrs serializado como JSON string
+  fsrsDue?: number;              // Timestamp de próxima revisión (para queries eficientes)
+  fsrsLastReview?: number;       // Timestamp de última revisión
+  
   // Metadata
   createdAt: Timestamp;
   updatedAt: Timestamp;
-  lastViewedAt?: Timestamp; // Para resurfacing (FSRS)
-  viewCount: number; // Engagement tracking
+  lastViewedAt?: Timestamp;      // Para resurfacing (FSRS)
+  viewCount: number;             // Engagement tracking
   isFavorite: boolean;
   isArchived: boolean;
 }
@@ -138,18 +141,18 @@ interface Note {
 
 ```typescript
 interface NoteLink {
-  id: string; // Determinístico: `${sourceId}__${targetId}`
-  sourceId: string; // Nota origen
-  targetId: string; // Nota destino
-
+  id: string;                    // Determinístico: `${sourceId}__${targetId}`
+  sourceId: string;              // Nota origen
+  targetId: string;              // Nota destino
+  
   // Contexto del link
-  context?: string; // Texto alrededor del [[wikilink]] en la nota origen
-  linkType: 'explicit' | 'ai-suggested'; // ¿Lo creó el usuario o la AI?
-
+  context?: string;              // Texto alrededor del [[wikilink]] en la nota origen
+  linkType: 'explicit' | 'ai-suggested';  // ¿Lo creó el usuario o la AI?
+  
   // Metadata
   createdAt: Timestamp;
-  strength?: number; // AI: similitud semántica (0-1)
-  accepted: boolean; // Para links AI-suggested: ¿el usuario aceptó?
+  strength?: number;             // AI: similitud semántica (0-1)
+  accepted: boolean;             // Para links AI-suggested: ¿el usuario aceptó?
 }
 ```
 
@@ -160,11 +163,10 @@ interface NoteLink {
 ```typescript
 interface InboxItem {
   id: string;
-  rawContent: string; // Texto tal como se capturó
-  source: 'quick-capture' | 'web-clip' | 'desktop-capture' | 'voice' | 'share-intent' | 'email';
-  sourceUrl?: string; // Si viene de web clipper o extension
-  sourceTitle?: string; // Título de la página fuente (extension)
-
+  rawContent: string;            // Texto tal como se capturó
+  source: 'quick-capture' | 'web-clip' | 'desktop-capture' | 'share-intent' | 'voice' | 'email';
+  sourceUrl?: string;            // Si viene de web clipper
+  
   // AI processing results (campos flat en TinyBase, objeto en hook)
   aiProcessed: boolean;
   // En Firestore/TinyBase: campos flat aiSuggestedTitle, aiSuggestedType, etc.
@@ -174,19 +176,19 @@ interface InboxItem {
     suggestedTitle: string;
     suggestedType: 'task' | 'note' | 'project' | 'reference' | 'trash';
     suggestedTags: string[];
-    suggestedArea: AreaKey; // Key del map AREAS — enum enforced, nunca null
+    suggestedArea: AreaKey;       // Key del map AREAS — enum enforced, nunca null
     summary: string;
-    priority: Priority; // enum enforced
-    relatedNoteIds: string[]; // Notas similares encontradas (Fase 4 embeddings)
+    priority: Priority;           // enum enforced
+    relatedNoteIds: string[];    // Notas similares encontradas (Fase 4 embeddings)
   };
-
+  
   // Estado
   status: 'pending' | 'processed' | 'dismissed';
   processedAs?: {
     type: 'note' | 'task' | 'project';
-    resultId: string; // ID de la nota/tarea/proyecto creado
+    resultId: string;            // ID de la nota/tarea/proyecto creado
   };
-
+  
   createdAt: Timestamp;
 }
 ```
@@ -201,15 +203,15 @@ interface Task {
   name: string;
   status: 'inbox' | 'in-progress' | 'waiting' | 'delegated' | 'completed';
   priority: 'low' | 'medium' | 'high' | 'urgent';
-  dueDate?: Timestamp; // Cuándo hacerla
-
+  dueDate?: Timestamp;           // Cuándo hacerla
+  
   // Relaciones
-  projectId?: string; // Singular — una tarea pertenece a UN proyecto
+  projectId?: string;            // Singular — una tarea pertenece a UN proyecto
   areaId?: string;
-  noteIds: string[]; // Notas vinculadas
-
+  noteIds: string[];             // Notas vinculadas
+  
   description?: string;
-
+  
   createdAt: Timestamp;
   updatedAt: Timestamp;
   completedAt?: Timestamp;
@@ -226,17 +228,17 @@ interface Project {
   name: string;
   status: 'not-started' | 'in-progress' | 'on-hold' | 'completed';
   priority: 'low' | 'medium' | 'high' | 'urgent';
-
+  
   // Relaciones
   areaId?: string;
-  objectiveId?: string; // Singular — un proyecto pertenece a UN objetivo
+  objectiveId?: string;          // Singular — un proyecto pertenece a UN objetivo
   taskIds: string[];
   noteIds: string[];
-
+  
   // Fechas
   startDate?: Timestamp;
   deadline?: Timestamp;
-
+  
   isArchived: boolean;
   createdAt: Timestamp;
   updatedAt: Timestamp;
@@ -253,11 +255,11 @@ interface Objective {
   name: string;
   status: 'not-started' | 'in-progress' | 'completed';
   deadline?: Timestamp;
-
+  
   areaId?: string;
   projectIds: string[];
   taskIds: string[];
-
+  
   createdAt: Timestamp;
   updatedAt: Timestamp;
 }
@@ -270,10 +272,10 @@ interface Objective {
 ```typescript
 // Colección separada para no inflar los documentos de notas
 interface NoteEmbedding {
-  id: string; // Mismo ID que la nota
-  vector: number[]; // 1536 dimensiones (text-embedding-3-small)
-  model: string; // "text-embedding-3-small"
-  contentHash: string; // Hash del contenido — regenerar si cambia
+  id: string;                    // Mismo ID que la nota
+  vector: number[];              // 1536 dimensiones (text-embedding-3-small)
+  model: string;                 // "text-embedding-3-small"
+  contentHash: string;           // Hash del contenido — regenerar si cambia
   createdAt: Timestamp;
 }
 ```
@@ -285,36 +287,12 @@ interface NoteEmbedding {
 ### Estructura de carpetas
 
 ```
-src-tauri/                       # Tauri v2 backend (Rust) — Fase 5.1
-├── tauri.conf.json              # identifier, ventanas main+capture, CSP Firebase, bundle msi+nsis
-├── Cargo.toml                   # deps: tauri (feat tray-icon) + 5 plugins
-├── capabilities/
-│   ├── default.json             # windows: ["main"], todos los permisos
-│   └── capture.json             # windows: ["capture"], solo window controls
-├── icons/                       # generados con tauri icon
-└── src/
-    ├── main.rs                  # entry: secondmind_lib::run()
-    ├── lib.rs                   # setup: 5 plugins + tray::build + invoke_handler oauth
-    ├── tray.rs                  # TrayIconBuilder + menu + handlers
-    └── oauth.rs                 # start_oauth_listener (TcpListener + emit callback)
-
-extension/                       # Chrome Extension MV3 — Fase 5
-├── package.json                 # deps independientes (react, crxjs, firebase lite)
-├── manifest.json                # MV3, permisos, oauth2.client_id, key RSA fija
-├── src/
-│   ├── popup/                   # Popup React (textarea + auth + save)
-│   ├── content/                 # getSelection.ts inyectable
-│   └── lib/                     # firebaseConfig, auth, firestore (lite)
-└── icons/
-
 src/
 ├── app/                         # Rutas (React Router con createBrowserRouter)
 │   ├── router.tsx               # Definición de rutas
 │   ├── layout.tsx               # Layout compartido: Sidebar + Outlet + QuickCapture + CommandPalette
 │   ├── page.tsx                 # Dashboard
 │   ├── not-found.tsx            # 404
-│   ├── capture/                 # Ventana /capture Tauri — top-level, fuera de Layout (Fase 5.1)
-│   │   └── page.tsx
 │   ├── inbox/
 │   │   ├── page.tsx             # Lista de inbox items
 │   │   └── process/
@@ -378,9 +356,7 @@ src/
 │   └── layout/
 │       ├── Sidebar.tsx
 │       ├── CommandPalette.tsx   # Ctrl+K búsqueda global (Fase 3)
-│       ├── Breadcrumbs.tsx
-│       ├── InstallPrompt.tsx    # PWA install banner (Fase 5)
-│       └── OfflineBadge.tsx     # Indicador offline (Fase 5)
+│       └── Breadcrumbs.tsx
 │
 ├── stores/                      # TinyBase stores (uno por entidad)
 │   ├── notesStore.ts
@@ -392,7 +368,7 @@ src/
 │   └── habitsStore.ts
 │
 ├── hooks/
-│   ├── useAuth.ts               # signIn ramifica: isTauri → signInWithTauri; sino signInWithPopup (F5.1)
+│   ├── useAuth.ts
 │   ├── useStoreInit.ts          # Inicializa persisters + grace period
 │   ├── useNote.ts               # Carga content desde Firestore (getDoc one-shot)
 │   ├── useNoteSave.ts           # Autosave debounced + syncLinks
@@ -410,10 +386,9 @@ src/
 │   ├── useSimilarNotes.ts       # Cosine similarity embeddings (Fase 4)
 │   ├── useResurfacing.ts        # FSRS state + reviewNote() (Fase 4)
 │   ├── useDailyDigest.ts        # Digest client-side: review + hubs (Fase 4)
-│   ├── useInstallPrompt.ts      # PWA beforeinstallprompt (Fase 5)
-│   ├── useOnlineStatus.ts       # useSyncExternalStore navigator.onLine (Fase 5)
-│   ├── useCloseToTray.ts        # onCloseRequested → hide (Fase 5.1, no-op fuera de Tauri)
-│   └── useGlobalShortcutRegistration.ts  # Ctrl+Shift+Space (Fase 5.1, no-op fuera de Tauri)
+│   ├── useCloseToTray.ts        # Close-to-tray handler (Fase 5.1)
+│   ├── useGlobalShortcutRegistration.ts  # Ctrl+Shift+Space capture window (Fase 5.1)
+│   └── useShareIntent.ts        # Share Intent listener → Quick Capture (Fase 5.2)
 │
 ├── lib/
 │   ├── firebase.ts              # Config Firebase
@@ -422,14 +397,14 @@ src/
 │   ├── formatDate.ts            # Fecha relativa, startOfDay, isSameDay
 │   ├── embeddings.ts            # cosineSimilarity + fetchEmbedding/All (Fase 4)
 │   ├── fsrs.ts                  # Wrapper ts-fsrs: scheduleReview, serialize/deserialize (Fase 4)
-│   ├── tauri.ts                 # isTauri(), showMainWindow(), hideCurrentWindow() (Fase 5.1)
-│   ├── tauriAuth.ts             # signInWithTauri: PKCE + state + shell.open + token exchange (Fase 5.1)
+│   ├── tauri.ts                 # isTauri() helper + showMainWindow/hideCurrentWindow (Fase 5.1)
+│   ├── tauriAuth.ts             # signInWithTauri: OAuth Desktop flow PKCE (Fase 5.1)
+│   ├── capacitor.ts             # isCapacitor() helper via Capacitor.isNativePlatform() (Fase 5.2)
+│   ├── capacitorAuth.ts         # initCapacitorAuth + signInWithCapacitor: SocialLogin → signInWithCredential (Fase 5.2)
 │   └── editor/
 │       ├── syncLinks.ts         # Diff + write links bidireccionales client-side
 │       ├── extractLinks.ts      # Parser de [[wikilinks]] del contenido
 │       └── serialize.ts         # TipTap JSON ↔ Markdown
-│
-├── main.tsx                     # TauriIntegration wrapper: useCloseToTray + useGlobalShortcutRegistration
 │
 ├── types/
 │   ├── note.ts
@@ -455,6 +430,26 @@ src/
     │       └── generateEmbedding.ts  # onDocumentWritten → OpenAI text-embedding-3-small (Fase 4)
     ├── package.json             # CommonJS, Node 20, firebase-functions ^7.2.5
     └── tsconfig.json
+
+# Multi-plataforma (Fase 5)
+capacitor.config.ts              # appId, appName, webDir, server.androidScheme: 'https', plugins
+android/                         # Generado por `npx cap add android` (Gradle project)
+├── app/src/main/
+│   ├── AndroidManifest.xml      # intent-filter ACTION_SEND text/*, launchMode singleTask
+│   ├── java/.../MainActivity.java  # implements ModifiedMainActivityForSocialLoginPlugin
+│   └── res/                     # drawable/ (ícono VectorDrawable, splash), values/ (strings, colors)
+└── variables.gradle             # minSdk 24, compileSdk 36, targetSdk 36
+
+src-tauri/                       # Tauri v2 desktop app (Fase 5.1)
+├── src/
+│   ├── lib.rs                   # Plugins: tray, global-shortcut, autostart, window-state, single-instance
+│   └── tray.rs                  # System tray menu: Abrir, Captura rápida, Autostart, Salir
+├── Cargo.toml
+└── tauri.conf.json              # Bundle MSI+NSIS, identifier com.secondmind.app
+
+extension/                       # Chrome Extension MV3 (Fase 5.0)
+├── src/                         # Popup + content script + background
+└── manifest.json                # chrome.identity + firestore/lite
 ```
 
 > **Nota:** `syncBacklinks` Cloud Function fue eliminada del diseño. Los links bidireccionales se sincronizan 100% client-side en `syncLinks.ts` (decisión de diseño — ver sección 5, Flujo 2 y sección 10, D8).
@@ -499,7 +494,7 @@ Usuario ve sugerencias en el card del inbox (inline)
   - O procesa en batch via /inbox/process (one-by-one)
 ```
 
-> **Shortcuts:** `Alt+N` en la app web (cuando tiene foco). `Ctrl+Shift+Space` global via Tauri (desde cualquier app, escribe directo a Firestore sin hidratar TinyBase). Chrome Extension para captura desde cualquier página web (source: `web-clip`).
+> **Shortcut:** `Alt+N` en vez de `⌘+Shift+N` — este último choca con "Nueva ventana incógnito" de Chrome.
 
 ### Flujo 2: Escribir una nota atómica con links
 
@@ -626,12 +621,12 @@ En el editor, el usuario revisa la nota:
 
 ### ¿Por qué TinyBase y no Firestore directo?
 
-| Problema con Firestore directo                | Cómo TinyBase lo resuelve                                |
-| --------------------------------------------- | -------------------------------------------------------- |
-| Latencia en reads (50-200ms)                  | Store in-memory, reads instantáneos                      |
-| Sin reactividad granular                      | `useRow()`, `useCell()` re-renderizan solo lo que cambió |
-| Offline requiere enablePersistence (limitado) | Store local + persister async a Firestore                |
-| Reads se cobran por documento                 | Cache local, solo sync deltas                            |
+| Problema con Firestore directo | Cómo TinyBase lo resuelve |
+|-------------------------------|---------------------------|
+| Latencia en reads (50-200ms) | Store in-memory, reads instantáneos |
+| Sin reactividad granular | `useRow()`, `useCell()` re-renderizan solo lo que cambió |
+| Offline requiere enablePersistence (limitado) | Store local + persister async a Firestore |
+| Reads se cobran por documento | Cache local, solo sync deltas |
 
 ### Configuración (custom persister)
 
@@ -661,7 +656,7 @@ import { useRow, useCell, useRowIds } from 'tinybase/ui-react';
 function NoteCard({ noteId }: { noteId: string }) {
   const title = useCell('notes', noteId, 'title');
   const linkCount = useCell('notes', noteId, 'linkCount');
-
+  
   return (
     <div>
       <h3>{title}</h3>
@@ -728,30 +723,20 @@ TipTap guarda contenido como JSON (ProseMirror document). Para `contentPlain` (b
 ### 2 indexes independientes
 
 **Index de notas** (Fase 1) — usado por `useNoteSearch` en `/notes`:
-
 ```typescript
 const NOTES_SCHEMA = {
-  id: 'string',
-  title: 'string',
-  contentPlain: 'string',
-  noteType: 'string',
-  paraType: 'string',
-  linkCount: 'number',
-  updatedAt: 'number',
-  isArchived: 'boolean',
+  id: 'string', title: 'string', contentPlain: 'string',
+  noteType: 'string', paraType: 'string', linkCount: 'number',
+  updatedAt: 'number', isArchived: 'boolean',
 };
 ```
 
 **Index global unificado** (Fase 3) — usado por `useGlobalSearch` en Command Palette:
-
 ```typescript
 const GLOBAL_SCHEMA = {
-  id: 'string',
-  _type: 'string', // 'note' | 'task' | 'project'
-  title: 'string',
-  body: 'string',
-  updatedAt: 'number',
-  isArchived: 'boolean',
+  id: 'string', _type: 'string',  // 'note' | 'task' | 'project'
+  title: 'string', body: 'string',
+  updatedAt: 'number', isArchived: 'boolean',
 };
 ```
 
@@ -764,7 +749,6 @@ Full rebuild del índice en cada `addTableListener`. ~50ms para ~300 docs. El in
 ## 9. Fases de desarrollo
 
 ### Fase 0: Setup ✅
-
 - [x] Proyecto Vite + React 19 + TypeScript + Tailwind v4
 - [x] Firebase project + Firestore rules + Auth (Google sign-in)
 - [x] TinyBase v8 config + custom persister Firestore
@@ -772,7 +756,6 @@ Full rebuild del índice en cada `addTableListener`. ~50ms para ~300 docs. El in
 - [x] Deploy inicial a Firebase Hosting
 
 ### Fase 1: MVP — Captura + Notas + Links ✅
-
 - [x] Quick Capture (modal, `Alt+N`)
 - [x] TipTap editor con extensión WikiLink
 - [x] Lista de notas (búsqueda con Orama)
@@ -782,7 +765,6 @@ Full rebuild del índice en cada `addTableListener`. ~50ms para ~300 docs. El in
 - [x] Dashboard mínimo (notas recientes, inbox pendiente)
 
 ### Fase 2: Ejecución — Tareas + Proyectos + Objetivos + Hábitos ✅
-
 - [x] CRUD de tareas con vistas (hoy, pronto, completadas)
 - [x] CRUD de proyectos con status + detalle con tareas y notas vinculadas
 - [x] Vincular tareas ↔ proyectos ↔ notas (bidireccional client-side)
@@ -791,7 +773,6 @@ Full rebuild del índice en cada `addTableListener`. ~50ms para ~300 docs. El in
 - [x] Dashboard expandido (5 cards)
 
 ### Fase 3: AI Pipeline ✅
-
 - [x] Cloud Function `processInboxItem` con Claude Haiku
 - [x] Schema `aiResult` flat en inboxStore + mapping en useInbox
 - [x] InboxItem card con sugerencias AI inline (aceptar/editar/descartar)
@@ -800,13 +781,11 @@ Full rebuild del índice en cada `addTableListener`. ~50ms para ~300 docs. El in
 - [x] Cloud Function `autoTagNote` con Claude Haiku (`onDocumentWritten`)
 
 ### Fase 3.1: Schema Enforcement ✅
-
 - [x] Tool use con `tool_choice` forced + JSON Schema en ambas CFs
 - [x] `schemas.ts` compartido con `INBOX_CLASSIFICATION_SCHEMA` + `NOTE_TAGGING_SCHEMA`
 - [x] Eliminado `stripJsonFence`, fallbacks null, `parseJson.ts`
 
 ### Fase 4: Grafo + Resurfacing ✅
-
 - [x] Cloud Function `generateEmbedding` (OpenAI text-embedding-3-small, guard por contentHash)
 - [x] Reagraph: knowledge graph interactivo (force-directed WebGL, colores por paraType, tamaños por linkCount)
 - [x] Filtros del grafo (paraType + noteType + minLinks, AND, panel colapsable)
@@ -814,124 +793,84 @@ Full rebuild del índice en cada `addTableListener`. ~50ms para ~300 docs. El in
 - [x] ts-fsrs: resurfacing (opt-in, 2 ratings Again/Good, campos flat en notesStore)
 - [x] Daily Digest en dashboard (client-side, review FSRS + hubs por hash diario)
 
-### Fase 5: PWA + Chrome Extension ✅
-
-- [x] vite-plugin-pwa con manifest, iconos brain-circuit, InstallPrompt (beforeinstallprompt + localStorage dismiss)
-- [x] Workbox: navigateFallback, runtimeCaching Google Fonts, maximumFileSizeToCacheInBytes 4MB
-- [x] useOnlineStatus (useSyncExternalStore) + OfflineBadge + guards offline en inbox/embeddings
-- [x] Chrome Extension MV3 con CRXJS: popup React, chrome.scripting.executeScript para selección
-- [x] Extension auth: chrome.identity.getAuthToken + signInWithCredential
-- [x] Extension write: firebase/firestore/lite → setDoc a inbox con source 'web-clip'
-- [x] Fixed Extension ID via RSA key en manifest.json (mismo ID en cualquier PC)
-
-### Fase 5.1: Tauri Desktop ✅
-
-- [x] Tauri v2 scaffold integrado en raíz (src-tauri/), consume dist/ de Vite
-- [x] System tray: TrayIconBuilder + menú (Abrir, Captura, Iniciar con Windows toggle, Salir)
-- [x] Close-to-tray en JS (useCloseToTray: onCloseRequested → hide)
-- [x] Global shortcut `Ctrl+Shift+Space` → ventana /capture frameless centrada
-- [x] /capture como ruta top-level (fuera de Layout): textarea + setDoc directo a Firestore + hide
-- [x] Single-instance (tauri-plugin-single-instance) previene doble proceso con autostart
-- [x] Window-state persistido con denylist capture (siempre centrada)
-- [x] Autostart opcional con toggle en tray menu (registry HKCU\...\Run)
-- [x] OAuth Desktop flow: PKCE + TcpListener loopback + shell.open + signInWithCredential
-- [x] MSI + NSIS installers generados
+### Fase 5: Multi-plataforma ✅
+- [x] PWA optimizada (service worker, offline, `vite-plugin-pwa` + Workbox)
+- [x] Chrome Extension MV3 (web clipper, `chrome.identity`, `firestore/lite`)
+- [x] Tauri v2 desktop wrapper (system tray, `Ctrl+Shift+Space` global, autostart, OAuth Desktop flow PKCE)
+- [x] Capacitor 8 Android (Google Sign-In nativo, Share Intent desde cualquier app)
 
 ---
 
 ## 10. Decisiones de diseño clave
 
 ### D1: ¿Por qué notas y tareas en la misma app?
-
 Porque separar ejecución y conocimiento es el error que cometen la mayoría de tools. El poder está en vincular una nota a un proyecto, y que al abrir el proyecto veas el conocimiento relevante. Notion lo intenta pero con friction — aquí es nativo.
 
 ### D2: ¿Por qué no usar Firestore offline persistence nativa?
-
 Porque es limitada: no soporta queries complejas offline, tiene un límite de cache, y no ofrece reactividad granular. TinyBase como capa intermedia da instantaneidad + control total del cache.
 
 ### D3: ¿Por qué Claude Haiku y no modelos locales para inbox?
-
 Porque Haiku cuesta ~$1/1M tokens input y produce resultados consistentes sin GPU. Para procesamiento batch de inbox, la calidad/costo es imbatible. Modelos locales son plan B si los costos escalan (improbable para uso personal — ~100 items/mes ≈ $0.04/mes).
 
 ### D4: ¿Por qué empezar con PWA y no Tauri directo?
-
 Porque la PWA ya funciona en desktop (Chrome) y mobile (Android). Tauri añade hotkeys globales y system tray — features de conveniencia, no de funcionalidad core. Mejor tener la app funcionando antes de optimizar la captura.
 
 ### D5: ¿Por qué TinyBase en vez de RxDB?
-
 TinyBase es 13KB vs ~100KB de RxDB. Para single-user personal app, TinyBase es suficiente y mucho más simple. RxDB brilla en multi-user y sync complejo — overkill aquí.
 
 ### D6: ¿Por qué Orama en vez de FlexSearch?
-
 Orama es TypeScript-native, tiene faceted search (filtrar por tipo + área en una query), y pesa ~40KB. FlexSearch es más rápido en benchmarks puros pero no tiene facets ni tipado nativo.
 
 ### D7: ¿Cómo manejar conflictos de sync?
-
 Last-Writer-Wins (LWW) por campo. Para notas atómicas (documentos cortos editados por una persona), LWW es suficiente. TinyBase + Firestore persister ya implementa esto.
 
 ### D8: ¿Por qué links bidireccionales client-side y no Cloud Function?
-
 Una Cloud Function `syncBacklinks` agregaría latencia, costo, y un segundo write path. El sync client-side en `syncLinks.ts` es síncrono con el save, determinístico, y los títulos se resuelven in-memory sin cache stale.
 
 ### D9: ¿Por qué `onDocumentWritten` y no `onDocumentCreated` para auto-tagging?
-
 Las notas creadas desde `/notes` arrancan con `contentPlain: ''` — el contenido llega en el primer auto-save (2s después). `onDocumentCreated` se dispara con content vacío y el guard hace early return. `onDocumentWritten` detecta el primer write con contenido. El guard `aiProcessed` evita re-procesamiento en writes subsiguientes.
 
 ### D10: ¿Por qué campos flat en vez de objeto anidado para aiResult del inbox?
-
 TinyBase no soporta objetos anidados en su schema. Los campos `aiSuggestedTitle`, `aiSuggestedType`, etc. se almacenan flat en el store con defaults vacíos. El hook `useInbox` los agrupa en un objeto `InboxAiResult` solo al mappear — la hidratación bidireccional Firestore ↔ TinyBase funciona sin adaptadores.
 
 ### D11: ¿Por qué tool use en vez de prompt "Responde SOLO JSON"?
-
 Tool use con `tool_choice: { type: 'tool' }` fuerza a Claude a devolver un objeto que cumple el `input_schema`. Es schema enforcement a nivel de decodificador — no depende de que el modelo "obedezca" el prompt. Elimina `stripJsonFence`, nulls en campos con `enum`, y wrapping en markdown. Los schemas se definen una sola vez en `schemas.ts` y se reusan en ambas CFs.
 
 ### D12: ¿Por qué Reagraph y no Sigma.js para el grafo?
-
 Reagraph ofrece API declarativa (`<GraphCanvas nodes edges />`) que encaja con React. Para <500 nodos, el rendimiento WebGL es más que suficiente. Sigma.js requiere setup imperativo + Graphology como data layer — más potente pero más complejo. Si el grafo supera ~1000 nodos, migrar. Smoke test confirmó compatibilidad con React 19 + Vite sin issues.
 
 ### D13: ¿Por qué Daily Digest client-side y no Cloud Function scheduled?
-
 Los datos ya están en TinyBase al cargar el dashboard. Computar 3-5 notas del digest es O(n) trivial. Una CF scheduled agregaría cron + colección `digest/{date}` + sync, y el digest sería stale si el usuario revisa una nota entre el cron y la apertura. Client-side siempre fresh.
 
 ### D14: ¿Por qué embeddings en Firestore directo y no en TinyBase?
-
 Cada embedding es 1536 floats (~6KB). Con 500 notas = ~3MB permanente en TinyBase. Los embeddings solo se usan al abrir el editor ("Notas similares") — no justifica tenerlos en memoria siempre. Carga on-demand con `getDocs` + cache en `useRef`.
 
 ### D15: ¿Por qué solo 2 ratings FSRS (Again/Good) en vez de 4?
-
 SecondMind no es Anki. El objetivo es re-exponer notas olvidadas, no optimizar memorización. Again + Good reducen la decisión a un click significativo. ts-fsrs funciona perfectamente con un subconjunto de ratings.
 
-### D16: ¿Por qué vite-plugin-pwa y no Service Worker manual?
+### D16: ¿Por qué Tauri en vez de Electron para desktop?
+Tauri genera binarios de ~5MB (vs ~150MB de Electron), usa el WebView del sistema (no Chromium embebido), y expone APIs nativas de Rust (global shortcuts, system tray, autostart). Para una app single-user, el tradeoff de no tener control total del WebView es aceptable.
 
-Zero-config para precache + manifest. generateSW produce un SW optimizado con Workbox. runtimeCaching para Google Fonts y navigateFallback para SPA routing offline. No requiere mantener lista de precache manual.
+### D17: ¿Por qué OAuth Desktop flow en Tauri en vez de `signInWithPopup`?
+`signInWithPopup` usa `window.open` + `postMessage`. Tauri WebView2 abre `window.open` en el browser del sistema (proceso distinto), y el popup no puede `postMessage` de vuelta. Además `tauri://localhost` no es un origen autorizable en Firebase. La solución es OAuth 2.0 Desktop flow: PKCE + HTTP listener local + redirect.
 
-### D17: ¿Por qué CRXJS y no build manual para la extension?
+### D18: ¿Por qué Capacitor 8 en vez de 7?
+Node 24 ✅, Android Studio Otter ✅, edge-to-edge default en Android 15+, plugins Capgo v8 activos. Cap 7 habría requerido downgrade del ecosistema sin beneficio.
 
-CRXJS soporta Vite 8 + React + TypeScript + MV3 con HMR en dev. Build manual con multi-entry Vite era el plan B pero no fue necesario. `{ crx }` es named export, no default.
+### D19: ¿Por qué `@capgo/capacitor-social-login` en vez de `@codetrix-studio/capacitor-google-auth`?
+`codetrix-studio` está abandonado (máx Cap 6, sin mantenedor activo). `@capgo/capacitor-social-login` es su sucesor oficial con soporte Cap 8, Credential Manager en Android 14+, y `idToken` compatible con `signInWithCredential`.
 
-### D18: ¿Por qué chrome.identity y no offscreen document para auth en extension?
+### D20: ¿Por qué reusar QuickCaptureProvider para share intent en vez de ruta `/share`?
+En Capacitor la app completa ya está cargada con TinyBase hidratado. A diferencia de Tauri `/capture` (ventana efímera que no hidrata el store) o la extension (popup sin store), pre-llenar el modal existente reutiliza el write-path de `Alt+N` sin ruta nueva.
 
-`chrome.identity.getAuthToken()` + `signInWithCredential()` es el approach más simple para Google sign-in en MV3. No requiere offscreen documents ni hosting de página auth.
+### D21: ¿Por qué `server.androidScheme: 'https'` en Capacitor?
+Firebase Auth requiere origen HTTPS. Capacitor sirve desde `https://localhost` en el WebView. Sin esto, `signInWithCredential` falla por origen no autorizado.
 
-### D19: ¿Por qué firebase/firestore/lite en la extension y no el SDK completo?
+### D22: ¿Por qué VectorDrawable manual en vez de `@capacitor/assets generate`?
+El generador procesa PNGs para adaptive icon format (insets de 16.7%) y distorsiona logos con diseño específico. Copiar los `<path d="">` del SVG a `android:pathData` produce un match exacto con el PWA.
 
-Solo necesita `setDoc`. El lite SDK pesa ~75% menos (~30KB vs ~120KB gzip). La extension no necesita listeners, snapshots, ni cache offline.
-
-### D20: ¿Por qué /capture como ruta top-level y no dentro del Layout?
-
-El Layout hidrata sidebar + TinyBase stores + TipTap (~2.7MB). La ventana de captura debe renderizar en <200ms. Top-level = solo auth + textarea + 1 llamada Firestore. Mismo pattern que /login.
-
-### D21: ¿Por qué escritura directa a Firestore desde /capture y no via TinyBase?
-
-El persister de TinyBase requiere el store hidratado y el listener activo para que setRow persista. En una ventana efímera no tiene sentido. Firestore directo es el patrón de la extension. Main window recibe snapshot reactivo y reconcilia automáticamente (~200-800ms).
-
-### D22: ¿Por qué OAuth Desktop flow custom en Tauri en vez de signInWithPopup?
-
-Firebase `signInWithPopup` usa `window.open` + `postMessage`. Tauri WebView2 abre el popup en el browser del sistema (proceso distinto) que no puede postMessage back. OAuth loopback (PKCE + TcpListener en 127.0.0.1:random + `signInWithCredential`) es el patrón oficial para desktop apps.
-
-### D23: ¿Por qué fixed Extension ID con RSA key?
-
-Cuando la extension se carga unpacked, Chrome deriva el Extension ID del path de instalación. En otra PC el path cambia → ID cambia → OAuth Client ID no reconoce la instancia. Un campo `"key"` RSA 2048 en manifest.json fija el ID independiente del path.
+### D23: ¿Por qué `pendingMetaRef` en QuickCaptureProvider en vez de extender `save(content, source, sourceUrl)`?
+Cambiar la firma de `save()` requería actualizar todos los callers (QuickCapture.tsx pasa `trimmed` directo). `useRef` stashea meta desde `open()`, `save()` lo consume y resetea. API estable, lógica concentrada.
 
 ---
 
@@ -939,27 +878,27 @@ Cuando la extension se carga unpacked, Chrome deriva el Extension ID del path de
 
 El sistema funciona si:
 
-| Métrica                                | Target                          |
-| -------------------------------------- | ------------------------------- |
-| Tiempo de captura (idea → guardado)    | < 3 segundos                    |
-| Notas creadas por semana               | > 5 (vs. ~1-2 en Notion actual) |
-| % de notas con al menos 1 link         | > 50%                           |
-| Inbox procesado en < 24h               | > 80% de items                  |
-| Notas resurfaceadas y revisadas/semana | > 3                             |
-| Notas reutilizadas en proyectos        | > 20%                           |
+| Métrica | Target |
+|---------|--------|
+| Tiempo de captura (idea → guardado) | < 3 segundos |
+| Notas creadas por semana | > 5 (vs. ~1-2 en Notion actual) |
+| % de notas con al menos 1 link | > 50% |
+| Inbox procesado en < 24h | > 80% de items |
+| Notas resurfaceadas y revisadas/semana | > 3 |
+| Notas reutilizadas en proyectos | > 20% |
 
 ---
 
 ## 12. Riesgos y mitigaciones
 
-| Riesgo                            | Probabilidad | Impacto | Mitigación                                                       |
-| --------------------------------- | ------------ | ------- | ---------------------------------------------------------------- |
-| TinyBase no escala a >5K notas    | Baja         | Alto    | Content ya va directo a Firestore; migrar metadata si necesario  |
-| Costos de Claude/OpenAI escalan   | Baja         | Bajo    | Batch API (-50%), o migrar a modelos locales                     |
-| Orama rebuild lento con >1K notas | Media        | Bajo    | Migrar a sync incremental (update/remove por row)                |
-| Tauri mobile no madura            | Media        | Bajo    | Capacitor como alternativa probada                               |
-| Reagraph lento con >1000 nodos    | Baja         | Medio   | Migrar a Sigma.js + Graphology (más potente para grafos grandes) |
-| Over-engineering antes de validar | Alta         | Alto    | MVP en 4 semanas o menos. Si no lo uso diario, pivotar.          |
+| Riesgo | Probabilidad | Impacto | Mitigación |
+|--------|-------------|---------|------------|
+| TinyBase no escala a >5K notas | Baja | Alto | Content ya va directo a Firestore; migrar metadata si necesario |
+| Costos de Claude/OpenAI escalan | Baja | Bajo | Batch API (-50%), o migrar a modelos locales |
+| Orama rebuild lento con >1K notas | Media | Bajo | Migrar a sync incremental (update/remove por row) |
+| Tauri mobile no madura | ~~Media~~ | ~~Bajo~~ | ✅ Resuelto: Capacitor 8 para mobile Android (Fase 5.2) |
+| Reagraph lento con >1000 nodos | Baja | Medio | Migrar a Sigma.js + Graphology (más potente para grafos grandes) |
+| Over-engineering antes de validar | Alta | Alto | MVP en 4 semanas o menos. Si no lo uso diario, pivotar. |
 
 ---
 
@@ -1003,29 +942,33 @@ Conocimiento acumulado de las Fases 0–4. Toda sesión de desarrollo debe respe
 26. **Guard de embeddings CF es `contentHash`, no `aiProcessed`** — A diferencia de `autoTagNote` (que guarda `aiProcessed: true` para nunca reprocesar), `generateEmbedding` debe regenerar cuando el contenido cambia. Comparar SHA-256 de `contentPlain` con el hash guardado en `embeddings/{noteId}`
 27. **Reagraph agrega ~1.3MB al bundle** — Three.js/WebGL. Code-splitting pendiente para fase futura. Compatible con React 19 sin issues (smoke test previo a implementación)
 
-**Fase 5 (PWA + Chrome Extension):**
+**Fase 5.0 (PWA + Chrome Extension):**
 
-28. **`maximumFileSizeToCacheInBytes: 4MB`** necesario en Workbox por bundle ~2.7MB (Reagraph/Three.js). Sin esto, Workbox ignora el chunk principal y la app no funciona offline
-29. **`navigateFallbackDenylist: [/^\/api/, /^\/__\//]`** en Workbox para no interceptar Firebase auth redirects
-30. **CRXJS exporta `{ crx }` como named export** en v2.4.0, no default export como muestran algunos ejemplos
-31. **`scripting` permission requerido** por `chrome.scripting.executeScript()` — no estaba en el SPEC original, falla en runtime sin él
-32. **`chrome.identity.getAuthToken()` devuelve `{ token }` object** — acceder con `result.token`, no `result` directamente
-33. **`firebase/auth/web-extension`** obligatorio en MV3 (no `firebase/auth` estándar)
-34. **Config Firebase hardcoded en extension** — `import.meta.env` no está disponible en contexto de extension, copiar las 10 líneas de config
-35. **`vite-plugin-pwa@1.2.0` no lista Vite 8 en peerDependencies** — funciona, pero requiere `--legacy-peer-deps` en npm install
-36. **Recraft genera JPEG disfrazado de PNG** — usar SVG para manipulación (quitar esquinas para maskable icon)
-37. **Extension ID path-derived cambia entre PCs** — fix con campo `"key"` RSA 2048 en manifest.json. Si se pierde el .pem, regenerar keypair y actualizar Application ID en Google Cloud Console
+28. **Reagraph + PWA Workbox:** requiere `maximumFileSizeToCacheInBytes: 4_000_000` en config de Workbox para cachear el bundle de Reagraph (~1.3MB). Sin esto, el SW no lo pre-cachea y el grafo no funciona offline
+29. **Chrome Extension auth:** usar `chrome.identity.getAuthToken` → `GoogleAuthProvider.credential(null, token)` → `signInWithCredential`. No `signInWithPopup` (no funciona en service workers)
+30. **CRXJS:** usa named export `{ crx }` en la config de Vite. Import default rompe el build
+31. **Extension `firestore/lite`:** writes directos sin TinyBase. El popup no tiene store — cada write es `setDoc` directo
 
 **Fase 5.1 (Tauri Desktop):**
 
-38. **`signInWithPopup` no funciona en Tauri** — WebView2 abre popup en browser del sistema, `postMessage` no puede comunicarse back. Usar OAuth Desktop flow (PKCE + TcpListener loopback)
-39. **CSP explícito obligatorio en Tauri release build** — `csp: null` funciona en dev, pero release build necesita listar `*.googleapis.com`, `*.firebaseio.com`, `wss://*.firebaseio.com`, etc. Sin CSP correcto, auth y Firestore se rompen silenciosamente
-40. **`strictPort: true` en Vite para Tauri** — si el puerto 5173 está ocupado, `tauri dev` falla limpio en vez de saltar a 5174 (Tauri espera ese puerto exacto en devUrl)
-41. **Window-state plugin con denylist** — sin `with_denylist(&["capture"])`, el plugin persiste la posición de la ventana capture y deja de centrarla en cada apertura
-42. **Single-instance plugin obligatorio con autostart** — sin él, autostart + doble click manual crea dos procesos → dos trays → el segundo falla al registrar global shortcut
-43. **`data-tauri-drag-region`** — atributo HTML para arrastrar ventanas frameless, no requiere JS
-44. **Global shortcut guard por HMR** — `isRegistered()` + `unregister()` previo antes de `register()` en useEffect para evitar duplicados cuando HMR re-ejecuta el hook
+32. **`signInWithPopup` no funciona en Tauri:** WebView2 abre `window.open` en browser del sistema (otro proceso), `postMessage` no llega de vuelta. OAuth Desktop flow con PKCE + HTTP listener local es la solución
+33. **`tauri://localhost` no es autorizable en Firebase:** el redirect de OAuth va a `http://localhost:{port}` (el listener local), no al WebView
+34. **Close-to-tray hook en capture window:** `useCloseToTray` se monta en ambas WebViews (main + capture). Sin él, cerrar la capture mata el proceso
+35. **`window_state` denylist capture:** el plugin debe excluir `["capture"]` para que la ventana capture siempre se centre, no recuerde posición
+36. **Tauri menu items inmutables post-build:** `CheckMenuItem` de autostart lee `is_enabled()` al construir. Toggle alterna `enable()/disable()` + `set_checked(!enabled)`. No se puede reconstruir el menú
+
+**Fase 5.2 (Capacitor Android):**
+
+37. **`npx cap run android` falla en Windows:** `gradlew` sin `.bat`. Workaround: `./gradlew.bat assembleDebug` + `adb install -r` + `adb shell am start` manual
+38. **`@capgo/capacitor-social-login` response es union type:** `GoogleLoginResponseOnline | GoogleLoginResponseOffline`. `idToken` solo existe en `Online`. Type narrowing con `'idToken' in res.result`
+39. **Chrome Android envía títulos con HTML entities** (`&#34;` en vez de `"`) en el share intent. Decodeo trivial pero no implementado en MVP
+40. **Launcher cache Android:** no invalida ícono tras reinstalar APK. `adb uninstall` + `adb install` es la forma confiable de refrescar
+41. **Primer build Gradle:** descarga ~400 deps + distribución Gradle 8.14.3 (~3min). Incrementales después son 5-10s
+42. **`@capacitor/assets generate` distorsiona logos:** adaptive icon processing separa fg/bg con insets 16.7%. Solución: VectorDrawable manual desde SVG
+43. **Splash `--splashBackgroundColor` ignorado:** `@capacitor/assets` genera PNGs con gris default. Solución: drawable XML con `@color`
+44. **Auth branching order:** `isCapacitor()` ANTES de `isTauri()` ANTES de web. Mutuamente excluyentes por plataforma
+45. **`ShareIntentMount` dentro del Layout guard:** no necesita manejo de pending pre-auth — el guard de auth del Layout garantiza que el user ya está autenticado cuando el listener se monta
 
 ---
 
-> **Siguiente paso**: Fase 5.2 — Capacitor Mobile (Android Share Intent).
+> **Estado actual**: SecondMind tiene presencia en todas las plataformas: web (PWA), desktop Windows (Tauri), Chrome Extension, y Android (Capacitor). La siguiente iteración puede ser polish UX (templates, slash commands, búsqueda semántica híbrida), distribución (code signing Windows, Play Store), o features nuevas.

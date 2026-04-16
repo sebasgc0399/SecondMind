@@ -2,35 +2,19 @@
 
 > Reglas de código para mantener consistencia en el proyecto.
 > Fuente: `01-arquitectura-hibrida-progresiva.md`
-> Stack: React 19 + TypeScript strict + Vite + Tailwind CSS + TinyBase + Firebase + TipTap + Tauri v2
+> Stack: React 19 + TypeScript strict + Vite + Tailwind CSS + TinyBase + Firebase + TipTap + Tauri (desktop) + Capacitor (Android)
 > Escala: Solo developer
-> Última actualización: Abril 2026 (post Fases 5 + 5.1)
+> Última actualización: Abril 2026
 
 ---
 
 ## 1. Estructura de carpetas
 
 ```
-src-tauri/                       # Tauri v2 backend (Rust) — no tocar salvo cambios en tray/plugins
-├── tauri.conf.json              # ventanas, CSP, bundle
-├── Cargo.toml
-├── capabilities/                # permisos por ventana (default.json, capture.json)
-└── src/                         # main.rs, lib.rs, tray.rs, oauth.rs
-
-extension/                       # Chrome Extension MV3 — proyecto independiente
-├── package.json                 # deps propias (react, crxjs, firebase lite)
-├── manifest.json                # MV3, key RSA fija, oauth2.client_id
-└── src/
-    ├── popup/                   # Popup.tsx, popup.css
-    ├── content/                 # getSelection.ts
-    └── lib/                     # firebaseConfig.ts, auth.ts, firestore.ts
-
 src/
 ├── app/                         # Rutas y layouts (React Router)
 │   ├── layout.tsx               # Layout raíz (sidebar + content area)
 │   ├── page.tsx                 # Dashboard (ruta /)
-│   ├── capture/                 # Ventana /capture Tauri — TOP-LEVEL, fuera de Layout
-│   │   └── page.tsx
 │   ├── inbox/
 │   │   ├── page.tsx             # Lista de inbox
 │   │   └── process/
@@ -55,40 +39,40 @@ src/
 │   ├── graph/                   # Reagraph: knowledge graph WebGL
 │   ├── capture/                 # Quick Capture modal, Inbox Processor
 │   ├── dashboard/               # Cards del dashboard
-│   └── layout/                  # Sidebar, CommandPalette, Breadcrumbs, InstallPrompt, OfflineBadge
+│   └── layout/                  # Sidebar, CommandPalette, Breadcrumbs
 │
 ├── stores/                      # TinyBase stores (1 archivo por entidad)
 ├── hooks/                       # Custom hooks (1 archivo por hook)
-│   ├── useAuth.ts               # signIn: isTauri → signInWithTauri; sino signInWithPopup
-│   ├── useCloseToTray.ts        # onCloseRequested → hide (no-op fuera de Tauri)
-│   ├── useGlobalShortcutRegistration.ts  # Ctrl+Shift+Space (no-op fuera de Tauri)
-│   ├── useInstallPrompt.ts      # PWA beforeinstallprompt
-│   ├── useOnlineStatus.ts       # useSyncExternalStore navigator.onLine
-│   └── ...                      # resto de hooks (useNote, useTasks, etc.)
 ├── lib/                         # Configs y utilidades
 │   ├── firebase.ts              # Config Firebase (singleton)
 │   ├── tinybase.ts              # Config TinyBase + persisters
 │   ├── orama.ts                 # Config búsqueda
-│   ├── tauri.ts                 # isTauri(), showMainWindow(), hideCurrentWindow()
-│   ├── tauriAuth.ts             # signInWithTauri: PKCE + state + shell.open + token exchange
 │   ├── editor/                  # Serialización TipTap, extractLinks
 │   ├── embeddings.ts            # cosineSimilarity + fetchEmbedding/All
-│   └── fsrs.ts                  # Wrapper ts-fsrs
-├── main.tsx                     # TauriIntegration wrapper (useCloseToTray + useGlobalShortcutRegistration)
+│   ├── fsrs.ts                  # Wrapper ts-fsrs: scheduleReview, serialize/deserialize
+│   ├── tauri.ts                 # isTauri() + showMainWindow/hideCurrentWindow
+│   ├── tauriAuth.ts             # signInWithTauri: OAuth Desktop flow PKCE
+│   ├── capacitor.ts             # isCapacitor() via Capacitor.isNativePlatform()
+│   └── capacitorAuth.ts         # initCapacitorAuth + signInWithCapacitor
 ├── types/                       # Interfaces TypeScript (1 archivo por entidad)
 │
-└── functions/                   # Cloud Functions v2 (deploy separado)
-    ├── src/
-    │   ├── inbox/               # processInboxItem
-    │   ├── notes/               # autoTagNote
-    │   └── embeddings/          # generateEmbedding
-    └── package.json
+├── functions/                   # Cloud Functions v2 (deploy separado)
+│   ├── src/
+│   │   ├── inbox/               # processInboxItem
+│   │   ├── notes/               # autoTagNote
+│   │   └── embeddings/          # generateEmbedding
+│   └── package.json
+│
+# Multi-plataforma (raíz del proyecto)
+capacitor.config.ts              # Capacitor 8: appId, androidScheme, plugins
+android/                         # Proyecto Gradle Android (generado por cap add android)
+src-tauri/                       # Tauri v2: Rust backend, tray, global shortcuts
+extension/                       # Chrome Extension MV3: web clipper
 ```
 
 ### Reglas de organización
 
 **Componentes agrupados por feature, no por tipo.**
-
 ```
 ✅ components/editor/Editor.tsx
 ✅ components/editor/extensions/wikilink.ts
@@ -99,7 +83,6 @@ src/
 ```
 
 **Un componente por archivo. El archivo se llama como el componente.**
-
 ```
 ✅ components/capture/QuickCapture.tsx → export default function QuickCapture()
 ❌ components/capture/index.tsx → export function QuickCapture()
@@ -113,45 +96,43 @@ src/
 
 ### Archivos y carpetas
 
-| Tipo             | Convención              | Ejemplo                               |
-| ---------------- | ----------------------- | ------------------------------------- |
-| Componente React | PascalCase.tsx          | `NoteCard.tsx`, `QuickCapture.tsx`    |
-| Hook custom      | use[Entidad][Acción].ts | `useNoteSearch.ts`, `useBacklinks.ts` |
-| Store TinyBase   | [entidad]Store.ts       | `notesStore.ts`, `linksStore.ts`      |
-| Tipo/Interface   | [entidad].ts            | `note.ts`, `inbox.ts`                 |
-| Utilidad/helper  | camelCase.ts            | `extractLinks.ts`, `serialize.ts`     |
-| Cloud Function   | camelCase.ts            | `processInboxItem.ts`                 |
-| Página/ruta      | page.tsx (siempre)      | `app/notes/page.tsx`                  |
-| Tauri helper     | camelCase.ts            | `tauri.ts`, `tauriAuth.ts`            |
-| Rust module      | snake_case.rs           | `tray.rs`, `oauth.rs`                 |
+| Tipo | Convención | Ejemplo |
+|---|---|---|
+| Componente React | PascalCase.tsx | `NoteCard.tsx`, `QuickCapture.tsx` |
+| Hook custom | use[Entidad][Acción].ts | `useNoteSearch.ts`, `useBacklinks.ts` |
+| Store TinyBase | [entidad]Store.ts | `notesStore.ts`, `linksStore.ts` |
+| Tipo/Interface | [entidad].ts | `note.ts`, `inbox.ts` |
+| Utilidad/helper | camelCase.ts | `extractLinks.ts`, `serialize.ts` |
+| Cloud Function | camelCase.ts | `processInboxItem.ts` |
+| Página/ruta | page.tsx (siempre) | `app/notes/page.tsx` |
 
 ### Variables y funciones
 
-| Tipo                 | Convención        | Ejemplo                                 |
-| -------------------- | ----------------- | --------------------------------------- |
-| Componente           | PascalCase        | `function NoteCard()`                   |
-| Hook                 | use + PascalCase  | `function useBacklinks(noteId: string)` |
-| Handler de evento    | handle + Acción   | `handleSave()`, `handleCapture()`       |
-| Booleano             | is/has/can/should | `isArchived`, `hasBacklinks`, `canEdit` |
-| Constante global     | UPPER_SNAKE_CASE  | `MAX_INBOX_ITEMS`, `DEBOUNCE_MS`        |
-| Firestore collection | camelCase plural  | `notes`, `inboxItems`, `noteLinks`      |
+| Tipo | Convención | Ejemplo |
+|---|---|---|
+| Componente | PascalCase | `function NoteCard()` |
+| Hook | use + PascalCase | `function useBacklinks(noteId: string)` |
+| Handler de evento | handle + Acción | `handleSave()`, `handleCapture()` |
+| Booleano | is/has/can/should | `isArchived`, `hasBacklinks`, `canEdit` |
+| Constante global | UPPER_SNAKE_CASE | `MAX_INBOX_ITEMS`, `DEBOUNCE_MS` |
+| Firestore collection | camelCase plural | `notes`, `inboxItems`, `noteLinks` |
 
 ### Entidades del dominio
 
 Las entidades del proyecto usan estos nombres consistentemente en todo el código:
 
-| Entidad          | Singular    | Plural       | ID                        |
-| ---------------- | ----------- | ------------ | ------------------------- |
-| Nota             | `note`      | `notes`      | `noteId`                  |
-| Link entre notas | `noteLink`  | `noteLinks`  | `linkId`                  |
-| Tarea            | `task`      | `tasks`      | `taskId`                  |
-| Proyecto         | `project`   | `projects`   | `projectId`               |
-| Objetivo         | `objective` | `objectives` | `objectiveId`             |
-| Área             | `area`      | `areas`      | `areaId`                  |
-| Item de inbox    | `inboxItem` | `inboxItems` | `itemId`                  |
-| Tag/Tema         | `tag`       | `tags`       | `tagId`                   |
-| Hábito           | `habit`     | `habits`     | `habitId`                 |
-| Embedding        | `embedding` | `embeddings` | `noteId` (mismo que nota) |
+| Entidad | Singular | Plural | ID |
+|---|---|---|---|
+| Nota | `note` | `notes` | `noteId` |
+| Link entre notas | `noteLink` | `noteLinks` | `linkId` |
+| Tarea | `task` | `tasks` | `taskId` |
+| Proyecto | `project` | `projects` | `projectId` |
+| Objetivo | `objective` | `objectives` | `objectiveId` |
+| Área | `area` | `areas` | `areaId` |
+| Item de inbox | `inboxItem` | `inboxItems` | `itemId` |
+| Tag/Tema | `tag` | `tags` | `tagId` |
+| Hábito | `habit` | `habits` | `habitId` |
+| Embedding | `embedding` | `embeddings` | `noteId` (mismo que nota) |
 
 **Nunca abreviar entidades.** `proj`, `obj`, `tsk` → prohibido.
 
@@ -163,11 +144,11 @@ Las entidades del proyecto usan estos nombres consistentemente en todo el códig
 
 ```tsx
 // ─── 1. Imports ─────────────────────────────────
-import { useState } from 'react'; // React
-import { useCell } from 'tinybase/ui-react'; // Libs externas
-import { Button } from '@/components/ui/button'; // UI components
-import { useBacklinks } from '@/hooks/useBacklinks'; // Hooks custom
-import type { Note } from '@/types/note'; // Types
+import { useState } from 'react';                    // React
+import { useCell } from 'tinybase/ui-react';         // Libs externas
+import { Button } from '@/components/ui/button';      // UI components
+import { useBacklinks } from '@/hooks/useBacklinks';  // Hooks custom
+import type { Note } from '@/types/note';             // Types
 
 // ─── 2. Types ───────────────────────────────────
 interface NoteCardProps {
@@ -186,7 +167,9 @@ export default function NoteCard({ noteId, onSelect }: NoteCardProps) {
       onClick={() => onSelect?.(noteId)}
     >
       <h3 className="font-medium">{title}</h3>
-      <span className="text-sm text-muted-foreground">{linkCount} conexiones</span>
+      <span className="text-sm text-muted-foreground">
+        {linkCount} conexiones
+      </span>
     </div>
   );
 }
@@ -221,12 +204,8 @@ function NoteEditor({ noteId }: NoteEditorProps) {
 // ❌ Lógica en componente
 function NoteEditor({ noteId }: NoteEditorProps) {
   const [note, setNote] = useState(null);
-  useEffect(() => {
-    /* fetch */
-  }, [noteId]);
-  const save = async () => {
-    /* 15 líneas de lógica */
-  };
+  useEffect(() => { /* fetch */ }, [noteId]);
+  const save = async () => { /* 15 líneas de lógica */ };
   // Mezclando lógica y renderizado
 }
 ```
@@ -239,13 +218,13 @@ function NoteEditor({ noteId }: NoteEditorProps) {
 
 ### Cuándo usar qué
 
-| Situación                         | Usar                     | Ejemplo                                       |
-| --------------------------------- | ------------------------ | --------------------------------------------- |
-| UI local (toggle, modal open)     | `useState`               | `const [isOpen, setIsOpen] = useState(false)` |
-| Datos persistidos (notas, tareas) | TinyBase store           | `useCell('notes', noteId, 'title')`           |
-| Datos derivados del store         | TinyBase `useResultRow`  | Notas filtradas por área                      |
-| Estado de formularios             | `useState` local         | Campos editables en Inbox Processor           |
-| Búsqueda                          | Orama index + `useState` | Query del search input                        |
+| Situación | Usar | Ejemplo |
+|---|---|---|
+| UI local (toggle, modal open) | `useState` | `const [isOpen, setIsOpen] = useState(false)` |
+| Datos persistidos (notas, tareas) | TinyBase store | `useCell('notes', noteId, 'title')` |
+| Datos derivados del store | TinyBase `useResultRow` | Notas filtradas por área |
+| Estado de formularios | `useState` local | Campos editables en Inbox Processor |
+| Búsqueda | Orama index + `useState` | Query del search input |
 
 ### Patrones de TinyBase
 
@@ -253,13 +232,13 @@ function NoteEditor({ noteId }: NoteEditorProps) {
 
 ```typescript
 // ✅ Stores separados
-const notesStore = createStore(); // notas + metadata
-const linksStore = createStore(); // links bidireccionales
-const tasksStore = createStore(); // tareas
-const inboxStore = createStore(); // inbox items
+const notesStore = createStore();    // notas + metadata
+const linksStore = createStore();    // links bidireccionales
+const tasksStore = createStore();    // tareas
+const inboxStore = createStore();    // inbox items
 
 // ❌ Un solo store
-const appStore = createStore(); // todo junto
+const appStore = createStore();      // todo junto
 ```
 
 **Acceder datos con hooks de TinyBase, nunca con getters directos en componentes.**
@@ -317,7 +296,7 @@ type NoteType = 'fleeting' | 'literature' | 'permanent';
 type Priority = 'low' | 'medium' | 'high' | 'urgent';
 
 // ❌ Type para shapes
-type Note = { id: string; title: string };
+type Note = { id: string; title: string; };
 ```
 
 **Nunca `any`. Usar `unknown` + type guard si el tipo es incierto.**
@@ -337,12 +316,12 @@ function parseAiResult(raw: any): AiResult {
 
 **Ubicación de tipos:**
 
-| Tipo                                   | Ubicación                    |
-| -------------------------------------- | ---------------------------- |
-| Props de componente                    | Mismo archivo del componente |
-| Entidad de dominio (Note, Task, etc.)  | `types/[entidad].ts`         |
-| Response de Cloud Function             | `types/api.ts`               |
-| Tipos compartidos (ParaType, Priority) | `types/common.ts`            |
+| Tipo | Ubicación |
+|---|---|
+| Props de componente | Mismo archivo del componente |
+| Entidad de dominio (Note, Task, etc.) | `types/[entidad].ts` |
+| Response de Cloud Function | `types/api.ts` |
+| Tipos compartidos (ParaType, Priority) | `types/common.ts` |
 
 ---
 
@@ -374,10 +353,10 @@ function parseAiResult(raw: any): AiResult {
 
 ```tsx
 // ✅ Variables semánticas
-className = 'text-foreground bg-background border-border text-muted-foreground';
+className="text-foreground bg-background border-border text-muted-foreground"
 
 // ❌ Colores directos
-className = 'text-gray-900 bg-white border-gray-200 text-gray-500';
+className="text-gray-900 bg-white border-gray-200 text-gray-500"
 ```
 
 **No crear clases custom con `@apply`.** Si se repite un patrón, extraer a componente.
@@ -398,13 +377,13 @@ function Card({ children, className }: CardProps) {
 
 ### Patrones por capa
 
-| Capa                  | Patrón                              | Ejemplo                                                       |
-| --------------------- | ----------------------------------- | ------------------------------------------------------------- |
-| Componente            | Error boundary por sección          | `<ErrorBoundary fallback={<SectionError />}>`                 |
-| Hook con datos        | Return `{ data, error, isLoading }` | `const { notes, error } = useNotes()`                         |
-| TinyBase persister    | Listener de error + toast           | `persister.addStatusListener(...)`                            |
-| Cloud Function        | Structured error + HTTP code        | `{ error: { code: 'INBOX_PROCESS_FAILED', message: '...' } }` |
-| Operaciones Firestore | try-catch + retry 1x                | Guardar nota, crear link                                      |
+| Capa | Patrón | Ejemplo |
+|---|---|---|
+| Componente | Error boundary por sección | `<ErrorBoundary fallback={<SectionError />}>` |
+| Hook con datos | Return `{ data, error, isLoading }` | `const { notes, error } = useNotes()` |
+| TinyBase persister | Listener de error + toast | `persister.addStatusListener(...)` |
+| Cloud Function | Structured error + HTTP code | `{ error: { code: 'INBOX_PROCESS_FAILED', message: '...' } }` |
+| Operaciones Firestore | try-catch + retry 1x | Guardar nota, crear link |
 
 ### Reglas
 
@@ -412,15 +391,10 @@ function Card({ children, className }: CardProps) {
 
 ```tsx
 // Toast para errores recuperables
-toast.error('No se pudo guardar. Reintentando...');
+toast.error("No se pudo guardar. Reintentando...");
 
 // Inline para errores que bloquean la vista
-if (error)
-  return (
-    <div className="p-4 text-destructive">
-      Error cargando notas. <button onClick={retry}>Reintentar</button>
-    </div>
-  );
+if (error) return <div className="p-4 text-destructive">Error cargando notas. <button onClick={retry}>Reintentar</button></div>;
 ```
 
 **Los datos nunca se pierden.** TinyBase guarda localmente primero. Si Firestore falla, el dato sigue en el store local y se sincroniza después.
@@ -457,25 +431,6 @@ const doc = await getDoc(doc(db, `users/${uid}/notes/${noteId}`));
 ```
 
 **Excepción: embeddings.** Los vectores de 1536 floats se cargan on-demand desde Firestore con `getDocs` + cache en `useRef`. Son demasiado grandes para TinyBase.
-
-**Browser APIs reactivas con `useSyncExternalStore`.** Para suscribirse a APIs del browser (ej: `navigator.onLine`), usar `useSyncExternalStore` en vez de `useState` + `useEffect`. Es el approach correcto en React 19:
-
-```typescript
-// ✅ useSyncExternalStore (correcto)
-const isOnline = useSyncExternalStore(
-  (cb) => {
-    window.addEventListener('online', cb);
-    window.addEventListener('offline', cb);
-    return () => {
-      window.removeEventListener('online', cb);
-      window.removeEventListener('offline', cb);
-    };
-  },
-  () => navigator.onLine,
-);
-
-// ❌ useState + useEffect (incorrect en React 19, puede causar tearing)
-```
 
 **Loading states: skeleton siempre, spinner nunca.** Los skeletons mantienen el layout y reducen el "salto" visual.
 
@@ -616,7 +571,7 @@ import NoteCard from '../../../components/editor/NoteCard';
 import { useBacklinks } from '@/hooks/useBacklinks';
 
 // ❌ Barrel
-import { useBacklinks } from '@/hooks'; // via index.ts
+import { useBacklinks } from '@/hooks';  // via index.ts
 ```
 
 ---
@@ -662,7 +617,7 @@ export const onInboxItemCreated = onDocumentCreated(
       logger.error('Error procesando inbox', { userId, itemId, error });
       await event.data.ref.update({ aiProcessed: false });
     }
-  },
+  }
 );
 ```
 
@@ -679,11 +634,9 @@ export const onInboxItemCreated = onDocumentCreated(
   {
     document: 'users/{userId}/inbox/{itemId}',
     timeoutSeconds: 60,
-    retry: false, // No reintentar — procesamiento no es idempotente
+    retry: false,  // No reintentar — procesamiento no es idempotente
   },
-  async (event) => {
-    /* ... */
-  },
+  async (event) => { /* ... */ }
 );
 ```
 
@@ -778,13 +731,13 @@ extensions/
 
 ### Configuración base
 
-| Herramienta | Config                                                                                                           |
-| ----------- | ---------------------------------------------------------------------------------------------------------------- |
-| TypeScript  | `strict: true`, `noUncheckedIndexedAccess: true`                                                                 |
-| Vite        | Path alias `@/` → `src/`. `server.port: 5173` + `strictPort: true` (Tauri). `envPrefix: ['VITE_', 'TAURI_ENV_']` |
-| ESLint      | Flat config (`eslint.config.js`, NO `.eslintrc.cjs`) + `@typescript-eslint/recommended` + import order           |
-| Prettier    | Single quotes, trailing commas, 100 char width                                                                   |
-| Tailwind    | CSS-first: `@theme` en `src/index.css`. No existe `tailwind.config.ts`                                           |
+| Herramienta | Config |
+|---|---|
+| TypeScript | `strict: true`, `noUncheckedIndexedAccess: true` |
+| Vite | Path alias `@/` → `src/` |
+| ESLint | Flat config (`eslint.config.js`, NO `.eslintrc.cjs`) + `@typescript-eslint/recommended` + import order |
+| Prettier | Single quotes, trailing commas, 100 char width |
+| Tailwind | CSS-first: `@theme` en `src/index.css`. No existe `tailwind.config.ts` |
 
 ### Scripts en package.json
 
@@ -798,89 +751,71 @@ extensions/
   "deploy:functions": "firebase deploy --only functions",
   "tauri": "tauri",
   "tauri:dev": "tauri dev",
-  "tauri:build": "tauri build"
+  "tauri:build": "tauri build",
+  "cap:sync": "npm run build && npx cap sync",
+  "cap:run": "npx cap run android",
+  "cap:build": "cd android && ./gradlew.bat assembleDebug"
 }
 ```
+
+> **Nota Windows:** `npx cap run android` falla por `gradlew` sin `.bat`. Usar `cap:build` + `adb install -r android/app/build/outputs/apk/debug/app-debug.apk` + `adb shell am start -n com.secondmind.app/.MainActivity`.
 
 ---
 
-## 15. Multi-plataforma (PWA + Extension + Tauri)
+## 15. Multi-plataforma — Patrones
 
-### Detección de entorno Tauri
+### Platform detection helpers
+
+Cada plataforma tiene su helper en `src/lib/`. El orden de evaluación en auth es: `isCapacitor()` → `isTauri()` → web (default).
 
 ```typescript
-// src/lib/tauri.ts — helper central
+// src/lib/capacitor.ts — SDK oficial, más robusto que window check
+import { Capacitor } from '@capacitor/core';
+export function isCapacitor(): boolean {
+  return Capacitor.isNativePlatform();
+}
+
+// src/lib/tauri.ts — internals check (no hay SDK helper equivalente)
 export function isTauri(): boolean {
-  return '__TAURI_INTERNALS__' in window;
+  return typeof window !== 'undefined' && '__TAURI_INTERNALS__' in window;
 }
 ```
 
-**Usar `isTauri()` para ramificar lógica, no para import condicional.** Los imports de `@tauri-apps/api/*` se hacen con `import()` dinámico dentro de funciones que solo se llaman si `isTauri()` es true. Esto evita romper el build web.
+### Auth branching
+
+El hook `useAuth.ts` usa un `if/else if/else` con platform detection. Cada plataforma tiene su propio módulo de auth (`capacitorAuth.ts`, `tauriAuth.ts`, web usa `signInWithPopup` directo).
 
 ```typescript
-// ✅ Import dinámico protegido
-export async function hideCurrentWindow() {
-  if (!isTauri()) return;
-  const { getCurrentWindow } = await import('@tauri-apps/api/window');
-  await getCurrentWindow().hide();
-}
-
-// ❌ Import estático que rompe build web
-import { getCurrentWindow } from '@tauri-apps/api/window';
-```
-
-### Escritura directa a Firestore desde entornos efímeros
-
-**Patrón compartido entre Chrome Extension y ventana /capture de Tauri.** Ambos contextos son efímeros (popup que se cierra, ventana que se oculta) y no justifican hidratar TinyBase:
-
-```typescript
-// Patrón de escritura directa (extension y /capture)
-await setDoc(doc(db, 'users', uid, 'inbox', id), {
-  rawContent,
-  source: 'web-clip' | 'desktop-capture', // según origen
-  sourceUrl, // solo extension
-  sourceTitle, // solo extension
-  status: 'pending',
-  aiProcessed: false,
-  createdAt: serverTimestamp(),
-});
-```
-
-La main window recibe el nuevo item via snapshot reactivo del persister TinyBase (~200-800ms de latencia). No hay race destructiva.
-
-### Rutas top-level (fuera de Layout)
-
-Las rutas que deben cargar rápido sin providers pesados van como top-level en `router.tsx`, antes del Layout:
-
-```typescript
-// router.tsx — orden importa
-{ path: '/capture', Component: CapturePage },  // Tauri capture: <200ms
-{ path: '/login', Component: LoginPage },
-{
-  Component: Layout,  // Sidebar + TinyBase + Providers (~2.7MB)
-  children: [
-    { path: '/', Component: DashboardPage },
-    // ... resto de rutas
-  ],
+// src/hooks/useAuth.ts — patrón de branching
+if (isCapacitor()) {
+  await signInWithCapacitor(auth);      // SocialLogin → idToken → signInWithCredential
+} else if (isTauri()) {
+  await signInWithTauri(auth);          // OAuth PKCE → HTTP listener → signInWithCredential
+} else {
+  await signInWithPopup(auth, provider); // Web standard
 }
 ```
 
-### Hooks Tauri como no-op fuera de WebView
+### Write paths por plataforma
 
-Los hooks `useCloseToTray` y `useGlobalShortcutRegistration` hacen early return si `!isTauri()`. Se montan en `TauriIntegration` wrapper en `main.tsx`, que envuelve toda la app. No agregan overhead fuera de Tauri.
+| Plataforma | Write path | Razón |
+|---|---|---|
+| Web (Alt+N) | TinyBase → persister → Firestore | App completa cargada con store |
+| Capacitor (Share Intent) | TinyBase via QuickCaptureProvider | App completa cargada — reusar modal |
+| Tauri (`Ctrl+Shift+Space`) | `setDoc` directo a Firestore | Ventana efímera, no hidrata TinyBase |
+| Chrome Extension | `setDoc` via `firestore/lite` | Popup sin store |
 
-### Extension: proyecto separado
+### Imports condicionales
 
-`extension/` tiene su propio `package.json`, `tsconfig.json`, y `vite.config.ts`. Lo que se comparte con la app principal (Firebase config) se copia — son 10 líneas. No usar imports cruzados entre `src/` y `extension/src/`.
+Los imports de SDKs nativos (`@capacitor/core`, `@tauri-apps/api`) deben ser dinámicos para no pesar en el bundle web:
 
+```typescript
+// ✅ Import dinámico — solo se carga en la plataforma correcta
+const { SocialLogin } = await import('@capgo/capacitor-social-login');
+
+// ❌ Import estático — infla el bundle web
+import { SocialLogin } from '@capgo/capacitor-social-login';
 ```
-✅ extension/src/lib/firebaseConfig.ts  (copia local)
-❌ import { db } from '../../src/lib/firebase';  (import cruzado)
-```
-
-### Extension: fixed Extension ID
-
-El `manifest.json` incluye un campo `"key"` (RSA 2048 base64) que fija el Extension ID independiente del path de instalación. Esto es necesario para que el OAuth Client ID de Google funcione en cualquier PC. El `.pem` privado está gitignored — si se pierde, regenerar keypair y actualizar Application ID en Google Cloud Console.
 
 ---
 
