@@ -52,7 +52,7 @@ export default function InboxItemCard({
           <button
             type="button"
             onClick={onConvert}
-            className="inline-flex items-center gap-1.5 rounded-md border border-border bg-card px-2.5 py-1 text-xs font-medium text-muted-foreground transition-colors hover:bg-accent/40 hover:text-foreground"
+            className="inline-flex min-h-11 items-center gap-1.5 rounded-md border border-border bg-card px-3 py-2 text-xs font-medium text-muted-foreground transition-colors hover:bg-accent/40 hover:text-foreground"
           >
             <FileText className="h-3 w-3" />
             Nota
@@ -60,7 +60,7 @@ export default function InboxItemCard({
           <button
             type="button"
             onClick={onDismiss}
-            className="inline-flex items-center gap-1.5 rounded-md border border-border bg-card px-2.5 py-1 text-xs font-medium text-muted-foreground transition-colors hover:bg-accent/40 hover:text-foreground"
+            className="inline-flex min-h-11 items-center gap-1.5 rounded-md border border-border bg-card px-3 py-2 text-xs font-medium text-muted-foreground transition-colors hover:bg-accent/40 hover:text-foreground"
           >
             <Trash2 className="h-3 w-3" />
             Descartar

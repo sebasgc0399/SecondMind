@@ -1,6 +1,6 @@
 # Estado Actual — SecondMind (Snapshot consolidado)
 
-> Última actualización: Fase 5.2 (Abril 2026)
+> Última actualización: Feature 1 Responsive & Mobile UX (Abril 2026)
 > Este archivo consolida el conocimiento no-obvio de todas las fases completadas.
 > Se actualiza al cerrar cada fase. Para detalle de features → README.md.
 > Para detalle de implementación → Spec/SPEC-fase-X.md individual.
@@ -19,6 +19,7 @@
 - **Fase 5** — PWA + Extension: PWA instalable (manifest, SW, offline support, install prompt), Chrome Extension MV3 (captura web, auth Google, write a inbox)
 - **Fase 5.1** — Tauri Desktop: wrapper nativo Windows con system tray, close-to-tray, global shortcut `Ctrl+Shift+Space`, ventana de captura frameless, autostart opcional, window-state persistido, single-instance
 - **Fase 5.2** — Capacitor Mobile (Android): wrapper nativo con Google Sign-In nativo (bottom sheet), Share Intent que pre-llena Quick Capture desde el sheet de Android, adaptive icon VectorDrawable extraído del SVG del PWA, splash purple, safe-area CSS edge-to-edge
+- **Feature 1 — Responsive & Mobile UX**: shell responsive con breakpoints `mobile <768` / `tablet 768–1023` / `desktop ≥1024`. Mobile sin sidebar: MobileHeader + BottomNav (Dashboard/Notas/Tareas/Inbox/Más) + FAB para Quick Capture + NavigationDrawer (Dialog slide-in). Tablet con Sidebar collapsed 64px iconos-only + hamburger que abre el mismo NavigationDrawer. Desktop idéntico al previo. Tap targets ≥44×44, safe-area top/bottom/left/right, `viewport-fit=cover`. HabitGrid `<table>` con sticky `th/td:first-child` + botones 44×44 con visual 28×28 interno. QuickCapture con botones "Cancelar/Guardar" visibles en mobile (hints de teclado ocultos).
 
 ---
 
@@ -97,6 +98,20 @@
 - **Items del extension se crean con `source: 'web-clip'`** y `sourceUrl` del tab activo. El campo `id` se incluye en el document data ademas del docId.
 - **Sin encolamiento offline** — el popup es efimero, si no hay red muestra error.
 - **OAuth2 Client ID:** `39583209123-fgs84i873hvghkf1u39tooc5n00du8d5.apps.googleusercontent.com` en `manifest.json`.
+
+### Responsive & Mobile UX (Feature 1)
+
+- **Breakpoint detection via `useSyncExternalStore` + `matchMedia`** — `useMediaQuery(query)` + `useBreakpoint()` en [src/hooks/useMediaQuery.ts](src/hooks/useMediaQuery.ts). Mismo patrón que `useOnlineStatus`. Evita el flash de useEffect+useState. Constantes en `src/lib/breakpoints.ts`.
+- **Render condicional JSX para shell, CSS para layouts internos.** Sidebar oculta en mobile vía condicional (`!isMobile && <Sidebar>`); BottomNav/FAB ocultos en desktop igual. Dentro de cada página, responsive con clases Tailwind (`flex-col md:flex-row`). Mantener DOM consistente cuando solo cambia el layout; recortarlo cuando cambian componentes enteros.
+- **`SidebarContent` exportado y reusado por `NavigationDrawer`.** El drawer mobile/tablet renderiza el mismo árbol del sidebar collapsed=false, con callback `onNavigate` que cierra el dialog al click en link. Evita duplicar array de nav items y handlers.
+- **`<table>` + sticky `th/td:first-child` para HabitGrid.** No migrar a CSS grid — `position: sticky; left: 0; background: var(--background); z-index: 10` en la columna de nombres + wrapper con `overflow-x-auto` resuelve. Celdas externas con `<button class="h-11 w-11">` + `<span class="h-7 w-7">` interno para 44px de hit area con visual 28px.
+- **`grid gap-4 lg:grid-cols-2` sin `grid-cols-1` explícito fuerza implicit grid que deja children crecer.** Bug raro: children con content largo (notas recientes) estiraban la implicit column auto a 1489px en viewport 375. Fix: siempre `grid-cols-1 lg:grid-cols-2` (primer `grid-cols-1` obligatorio). Aplica a todo grid responsive.
+- **`min-w-0 flex-1 truncate` es obligatorio** en `<span>` dentro de `<a className="flex">`. Solo `truncate` no funciona si el padre no tiene `min-w-0` — el flex child se expande a content-size. Ya aplicado en DailyDigest, ProjectsActiveCard, RecentNotesCard, TasksTodayCard.
+- **Radix checkbox con hit area via label wrapper**: el input `h-4 w-4` queda chico visualmente pero envuelto en `<label class="h-11 w-11 flex items-center justify-center">` da 44×44 de target. Patrón aplicado a `TaskCard`. El label recibe `onClick` del browser y toggles el checkbox por `htmlFor` implícito.
+- **`viewport-fit=cover` en `index.html`** + `--sai-top/bottom/left/right: env(safe-area-inset-*)` en `src/index.css`. El body aplica `padding-left/right` globalmente; top/bottom se aplica granular en MobileHeader (top) y BottomNav/FAB (bottom) para no duplicar con el body.
+- **MobileHeader lee título de la ruta con map estático** `path → title` dentro del componente. YAGNI: no hay context provider ni registry separado. El map reusa `navItems` exportado desde Sidebar.
+- **Graph filters usa toggle con `useState`, no `<details>/<summary>`**: el componente existente ya tenía accordion con React state funcional. El plan original sugería `<details>` por YAGNI, pero el toggle existente ya cubre el caso, así que mantener en lugar de refactorizar.
+- **BottomNav fixed + `calc(80px + var(--sai-bottom))` height**: el main tiene `padding-bottom: calc(80px + var(--sai-bottom))` para que el content no quede tapado por el nav. FAB bottom: `calc(80px + 16px + var(--sai-bottom))` para quedar por encima de BottomNav.
 
 ### IDs y timestamps
 
@@ -211,6 +226,8 @@ Ambas CFs usan `tools` + `tool_choice: { type: 'tool', name: '...' }` para forza
 
 24. **ui-ux-pro-max symlinks rotos en Windows** sin Developer Mode. Los scripts reales viven en `src/ui-ux-pro-max/scripts/search.py`. Fix: Developer Mode + `git config --global core.symlinks true` + reinstalar plugin.
 
+25. **Vite `resolve.dedupe` obligatorio para Firebase** (`firebase`, `@firebase/app`, `@firebase/component`, `@firebase/auth`, `@firebase/firestore`). Sin esto, el optimizer picks up paquetes `@firebase/*` desde `extension/node_modules/` (Chrome Extension tiene su propio npm install) y duplica el component registry — `getAuth` falla con `Component auth has not been registered yet` y React no monta. Configurado en `vite.config.ts`.
+
 ---
 
 ## Patrones establecidos
@@ -259,7 +276,7 @@ Ambas CFs usan `tools` + `tool_choice: { type: 'tool', name: '...' }` para forza
 
 ## Siguiente fase
 
-**Fase 5.2 ✅ completada.** SecondMind disponible en todas las plataformas del usuario: web (PWA), desktop (Tauri Windows + Chrome Extension), mobile (Capacitor Android).
+**Feature 1 (Responsive & Mobile UX) ✅ completada.** SecondMind es ahora usable en todos los viewports: mobile (375px+), tablet (768px+) y desktop (1024px+), tanto en web como en Capacitor Android.
 
 Próximas iteraciones candidatas:
 

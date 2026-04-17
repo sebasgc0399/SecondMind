@@ -83,15 +83,19 @@ export default function TaskCard({
 
   return (
     <div className="rounded-lg border border-border bg-card p-4 transition-colors hover:border-border/80">
-      <div className="flex items-start gap-3">
-        <input
-          type="checkbox"
-          checked={isCompleted}
-          onChange={() => onToggleComplete(task.id)}
-          className="mt-0.5 h-4 w-4 shrink-0 cursor-pointer accent-primary"
+      <div className="flex items-start gap-2">
+        <label
+          className="-my-2 -ml-2 flex h-11 w-11 shrink-0 cursor-pointer items-center justify-center"
           aria-label={isCompleted ? 'Marcar pendiente' : 'Completar tarea'}
-        />
-        <div className="flex-1 min-w-0">
+        >
+          <input
+            type="checkbox"
+            checked={isCompleted}
+            onChange={() => onToggleComplete(task.id)}
+            className="h-4 w-4 cursor-pointer accent-primary"
+          />
+        </label>
+        <div className="mt-1.5 flex-1 min-w-0">
           <p
             className={`text-sm font-medium ${
               isCompleted ? 'text-muted-foreground line-through' : 'text-foreground'
@@ -122,7 +126,7 @@ export default function TaskCard({
         <button
           type="button"
           onClick={() => setIsExpanded((v) => !v)}
-          className="shrink-0 rounded-md p-1 text-muted-foreground transition-colors hover:bg-accent/40 hover:text-foreground"
+          className="-my-2 -mr-2 flex h-11 w-11 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent/40 hover:text-foreground"
           aria-label={isExpanded ? 'Ocultar detalles' : 'Editar tarea'}
         >
           {isExpanded ? <ChevronUp className="h-4 w-4" /> : <MoreHorizontal className="h-4 w-4" />}

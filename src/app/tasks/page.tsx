@@ -106,7 +106,7 @@ export default function TasksPage() {
         <TaskInlineCreate onCreate={(name) => void createTask(name)} />
       </div>
 
-      <nav className="mb-6 flex gap-1 border-b border-border">
+      <nav className="mb-6 flex gap-1 overflow-x-auto border-b border-border">
         {TABS.map((tab) => {
           const isActive = tab.key === activeTab;
           return (
@@ -114,7 +114,7 @@ export default function TasksPage() {
               key={tab.key}
               type="button"
               onClick={() => setActiveTab(tab.key)}
-              className={`-mb-px border-b-2 px-4 py-2 text-sm font-medium transition-colors ${
+              className={`-mb-px shrink-0 border-b-2 px-4 py-3 text-sm font-medium transition-colors md:py-2 ${
                 isActive
                   ? 'border-primary text-foreground'
                   : 'border-transparent text-muted-foreground hover:text-foreground'

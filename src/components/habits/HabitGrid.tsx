@@ -29,7 +29,7 @@ export default function HabitGrid({
       <table className="w-full border-collapse">
         <thead>
           <tr className="border-b border-border">
-            <th className="py-2 pr-3 text-left text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+            <th className="sticky left-0 z-10 bg-background py-2 pr-3 pl-2 text-left text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
               Hábito
             </th>
             {days.map((d) => {

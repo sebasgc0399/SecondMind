@@ -28,7 +28,7 @@ export default function GraphPage() {
     <div
       className={`flex h-full flex-col ${isFullscreen ? 'fixed inset-0 z-50 bg-background' : ''}`}
     >
-      <div className="flex items-center gap-3 border-b border-border px-6 py-4">
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 border-b border-border px-4 py-3 md:px-6 md:py-4">
         <Link
           to="/notes"
           className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
@@ -36,15 +36,15 @@ export default function GraphPage() {
           <ArrowLeft className="h-4 w-4" />
           Notas
         </Link>
-        <h1 className="text-lg font-semibold text-foreground">Knowledge Graph</h1>
-        <span className="text-sm text-muted-foreground">
+        <h1 className="text-base font-semibold text-foreground md:text-lg">Grafo</h1>
+        <span className="text-xs text-muted-foreground md:text-sm">
           {nodes.length} {nodes.length === 1 ? 'nota' : 'notas'} &middot; {edges.length}{' '}
           {edges.length === 1 ? 'conexion' : 'conexiones'}
         </span>
         <button
           type="button"
           onClick={() => setIsFullscreen((prev) => !prev)}
-          className="ml-auto rounded-md p-1.5 text-muted-foreground hover:bg-accent hover:text-foreground"
+          className="ml-auto flex h-9 w-9 items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-foreground"
           title={isFullscreen ? 'Salir de pantalla completa' : 'Pantalla completa'}
         >
           {isFullscreen ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}

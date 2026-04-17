@@ -26,14 +26,18 @@ function QuickCaptureContent({ initialContent, onSave, onClose }: QuickCaptureCo
     return () => cancelAnimationFrame(id);
   }, []);
 
-  function handleKeyDown(event: React.KeyboardEvent<HTMLTextAreaElement>) {
-    if (event.key !== 'Enter' || event.shiftKey) return;
-    event.preventDefault();
+  function submit() {
     const trimmed = rawContent.trim();
     if (!trimmed) return;
     onSave(trimmed);
     setStatus('saved');
     window.setTimeout(onClose, 300);
+  }
+
+  function handleKeyDown(event: React.KeyboardEvent<HTMLTextAreaElement>) {
+    if (event.key !== 'Enter' || event.shiftKey) return;
+    event.preventDefault();
+    submit();
   }
 
   if (status === 'saved') {
@@ -55,8 +59,8 @@ function QuickCaptureContent({ initialContent, onSave, onClose }: QuickCaptureCo
         rows={4}
         className="min-h-30 w-full resize-none border-none bg-transparent text-base leading-relaxed text-foreground outline-none placeholder:text-muted-foreground"
       />
-      <div className="mt-4 flex items-center justify-between text-xs text-muted-foreground">
-        <span>
+      <div className="mt-4 flex items-center justify-between gap-3 text-xs text-muted-foreground">
+        <span className="hidden md:inline">
           <kbd className="rounded bg-muted px-1.5 py-0.5 font-mono text-[10px] text-foreground">
             Enter
           </kbd>{' '}
@@ -70,6 +74,23 @@ function QuickCaptureContent({ initialContent, onSave, onClose }: QuickCaptureCo
           </kbd>{' '}
           cancelar
         </span>
+        <div className="ml-auto flex gap-2 md:hidden">
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-md border border-border bg-card px-4 py-2 text-sm font-medium text-muted-foreground hover:bg-accent/40 hover:text-foreground"
+          >
+            Cancelar
+          </button>
+          <button
+            type="button"
+            onClick={submit}
+            disabled={!rawContent.trim()}
+            className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            Guardar
+          </button>
+        </div>
       </div>
     </>
   );

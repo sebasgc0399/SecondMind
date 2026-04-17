@@ -74,5 +74,12 @@ export default defineConfig({
     alias: {
       '@': path.resolve(__dirname, './src'),
     },
+    dedupe: [
+      'firebase',
+      '@firebase/app',
+      '@firebase/component',
+      '@firebase/auth',
+      '@firebase/firestore',
+    ],
   },
 });

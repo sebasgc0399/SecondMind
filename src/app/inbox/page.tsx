@@ -43,7 +43,7 @@ export default function InboxPage() {
 
   return (
     <div className="mx-auto max-w-3xl">
-      <header className="mb-6 flex items-end justify-between gap-4">
+      <header className="mb-6 flex flex-wrap items-end justify-between gap-3">
         <div className="flex items-end gap-3">
           <h1 className="text-2xl font-bold tracking-tight">Inbox</h1>
           {items.length > 0 && (
