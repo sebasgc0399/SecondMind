@@ -218,14 +218,25 @@
 }
 
 .note-editor .wikilink {
+  display: inline-block;
+  padding: 0 0.375rem;
+  border-radius: 0.375rem;
+  background: color-mix(in oklch, var(--primary) 12%, transparent);
   color: var(--primary);
   font-weight: 500;
   text-decoration: none;
   cursor: pointer;
+  transition: background 0.15s ease;
+  line-height: 1.5;
 }
 
 .note-editor .wikilink:hover {
-  text-decoration: underline;
-  text-decoration-color: color-mix(in oklch, var(--primary) 40%, transparent);
-  text-underline-offset: 2px;
+  background: color-mix(in oklch, var(--primary) 22%, transparent);
+  text-decoration: none;
+}
+
+.note-editor .wikilink::before {
+  content: '@';
+  opacity: 0.6;
+  margin-right: 0.05rem;
 }

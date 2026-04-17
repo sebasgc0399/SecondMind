@@ -46,11 +46,20 @@ function queryItems(query: string): WikilinkSuggestionItem[] {
     .map(({ id, title }) => ({ id, title }));
 }
 
+const ALPHANUMERIC = /[a-zA-Z0-9]/;
+
 export const wikilinkSuggestion: Omit<SuggestionOptions<WikilinkSuggestionItem>, 'editor'> = {
-  char: '[[',
+  char: '@',
   allowSpaces: true,
   startOfLine: false,
   allowedPrefixes: null,
+
+  allow: ({ state, range }) => {
+    if (range.from === 0) return true;
+    const prevChar = state.doc.textBetween(range.from - 1, range.from, undefined, '\n');
+    if (!prevChar) return true;
+    return !ALPHANUMERIC.test(prevChar);
+  },
 
   items: ({ query }) => queryItems(query),
 
