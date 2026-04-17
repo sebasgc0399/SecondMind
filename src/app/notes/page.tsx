@@ -2,17 +2,18 @@ import { useCallback } from 'react';
 import { useNavigate } from 'react-router';
 import { doc, setDoc } from 'firebase/firestore';
 import { Link } from 'react-router';
-import { Plus, Search, Network } from 'lucide-react';
+import { Plus, Search, Network, Sparkles } from 'lucide-react';
 import { db } from '@/lib/firebase';
 import { notesStore } from '@/stores/notesStore';
 import useAuth from '@/hooks/useAuth';
-import useNoteSearch from '@/hooks/useNoteSearch';
+import useHybridSearch, { type SemanticResult } from '@/hooks/useHybridSearch';
 import NoteCard from '@/components/editor/NoteCard';
 
 export default function NotesListPage() {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { query, setQuery, results, isInitializing } = useNoteSearch();
+  const { query, setQuery, keywordResults, semanticResults, isInitializing, isLoadingSemantic } =
+    useHybridSearch();
 
   const handleCreate = useCallback(async () => {
     if (!user) return;
@@ -51,8 +52,10 @@ export default function NotesListPage() {
     navigate(`/notes/${newId}`);
   }, [navigate, user]);
 
-  const showSkeleton = isInitializing && results.length === 0;
-  const showEmpty = !isInitializing && results.length === 0;
+  const hasQuery = query.trim().length > 0;
+  const showSkeleton = isInitializing && keywordResults.length === 0;
+  const showKeywordEmpty = !isInitializing && hasQuery && keywordResults.length === 0;
+  const showNotesEmpty = !isInitializing && !hasQuery && keywordResults.length === 0;
 
   return (
     <div className="mx-auto max-w-3xl">
@@ -92,22 +95,91 @@ export default function NotesListPage() {
 
       {showSkeleton && <NoteListSkeleton />}
 
-      {showEmpty &&
-        (query.trim() ? (
-          <EmptySearchState query={query} />
-        ) : (
-          <EmptyNotesState onCreate={handleCreate} />
-        ))}
+      {showNotesEmpty && <EmptyNotesState onCreate={handleCreate} />}
 
-      {results.length > 0 && (
+      {keywordResults.length > 0 && (
         <ul className="flex flex-col gap-3">
-          {results.map((note) => (
+          {keywordResults.map((note) => (
             <li key={note.id}>
               <NoteCard note={note} />
             </li>
           ))}
         </ul>
       )}
+
+      {hasQuery && (
+        <SemanticSection
+          results={semanticResults}
+          isLoading={isLoadingSemantic}
+          hasKeywordResults={keywordResults.length > 0}
+          showKeywordEmpty={showKeywordEmpty}
+        />
+      )}
+    </div>
+  );
+}
+
+interface SemanticSectionProps {
+  results: SemanticResult[];
+  isLoading: boolean;
+  hasKeywordResults: boolean;
+  showKeywordEmpty: boolean;
+}
+
+function SemanticSection({
+  results,
+  isLoading,
+  hasKeywordResults,
+  showKeywordEmpty,
+}: SemanticSectionProps) {
+  if (!isLoading && results.length === 0) {
+    if (showKeywordEmpty) {
+      return (
+        <div className="rounded-lg border border-dashed border-border p-8 text-center">
+          <p className="text-sm text-muted-foreground">Sin resultados.</p>
+        </div>
+      );
+    }
+    return null;
+  }
+
+  return (
+    <section className={hasKeywordResults ? 'mt-8' : 'mt-0'}>
+      <div className="mb-3 flex items-center gap-2">
+        <Sparkles className="h-4 w-4 text-violet-500" />
+        <h2 className="text-sm font-semibold text-foreground">
+          {hasKeywordResults ? 'Semánticamente similares' : 'Notas temáticamente similares'}
+        </h2>
+      </div>
+      {!hasKeywordResults && !isLoading && results.length > 0 && (
+        <p className="mb-3 text-xs text-muted-foreground">
+          No hay coincidencias exactas, pero estas notas son temáticamente similares.
+        </p>
+      )}
+      {isLoading && <SemanticSkeleton />}
+      {!isLoading && results.length > 0 && (
+        <ul className="flex flex-col gap-3">
+          {results.map(({ note, score }) => (
+            <li key={note.id}>
+              <NoteCard note={note} semanticScore={score} />
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
+  );
+}
+
+function SemanticSkeleton() {
+  return (
+    <div className="flex flex-col gap-3">
+      {[0, 1].map((i) => (
+        <div key={i} className="rounded-lg border border-border bg-card p-4">
+          <div className="h-5 w-1/3 animate-pulse rounded bg-muted" />
+          <div className="mt-2 h-4 w-full animate-pulse rounded bg-muted" />
+          <div className="mt-2 h-4 w-2/3 animate-pulse rounded bg-muted" />
+        </div>
+      ))}
     </div>
   );
 }
@@ -122,16 +194,6 @@ function NoteListSkeleton() {
           <div className="mt-2 h-4 w-2/3 animate-pulse rounded bg-muted" />
         </div>
       ))}
-    </div>
-  );
-}
-
-function EmptySearchState({ query }: { query: string }) {
-  return (
-    <div className="rounded-lg border border-dashed border-border p-8 text-center">
-      <p className="text-sm text-muted-foreground">
-        Sin resultados para <span className="font-medium text-foreground">"{query}"</span>
-      </p>
     </div>
   );
 }

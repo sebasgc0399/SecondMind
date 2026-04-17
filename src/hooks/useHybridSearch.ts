@@ -24,6 +24,8 @@ const SEMANTIC_THRESHOLD = 0.45;
 const SEMANTIC_MAX_RESULTS = 5;
 const MIN_QUERY_LENGTH = 3;
 
+const EMPTY_SEMANTIC_RESULTS: SemanticResult[] = [];
+
 function getNoteDoc(id: string): NoteOramaDoc | null {
   const row = notesStore.getRow('notes', id);
   if (!row || Object.keys(row).length === 0) return null;
@@ -40,27 +42,23 @@ export default function useHybridSearch(): UseHybridSearchReturn {
 
   const timerRef = useRef<number | null>(null);
 
+  const trimmed = query.trim();
+  const shouldSearch = !!user && trimmed.length >= MIN_QUERY_LENGTH;
+
   useEffect(() => {
     if (timerRef.current !== null) {
       window.clearTimeout(timerRef.current);
       timerRef.current = null;
     }
 
-    const trimmed = query.trim();
-
-    if (!user || trimmed.length < MIN_QUERY_LENGTH) {
-      setSemanticResults([]);
-      setIsLoadingSemantic(false);
-      return;
-    }
+    if (!shouldSearch || !user) return;
 
     const userId = user.uid;
     const frozenQuery = trimmed;
     const keywordIds = new Set(keywordResults.map((note) => note.id));
 
-    setIsLoadingSemantic(true);
-
     timerRef.current = window.setTimeout(() => {
+      setIsLoadingSemantic(true);
       void (async () => {
         try {
           const [queryVector, cache] = await Promise.all([
@@ -100,14 +98,14 @@ export default function useHybridSearch(): UseHybridSearchReturn {
         timerRef.current = null;
       }
     };
-  }, [query, keywordResults, user]);
+  }, [trimmed, shouldSearch, user, keywordResults, query]);
 
   return {
     query,
     setQuery,
     keywordResults,
-    semanticResults,
+    semanticResults: shouldSearch ? semanticResults : EMPTY_SEMANTIC_RESULTS,
     isInitializing,
-    isLoadingSemantic,
+    isLoadingSemantic: shouldSearch ? isLoadingSemantic : false,
   };
 }
