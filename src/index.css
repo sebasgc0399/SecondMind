@@ -209,6 +209,17 @@
   padding: 0;
 }
 
+.note-editor .ProseMirror mark {
+  background: oklch(0.9 0.15 85 / 0.35);
+  color: inherit;
+  padding: 0 0.15em;
+  border-radius: 0.125rem;
+}
+
+.dark .note-editor .ProseMirror mark {
+  background: oklch(0.85 0.15 85 / 0.22);
+}
+
 .note-editor .ProseMirror p.is-editor-empty:first-child::before {
   content: attr(data-placeholder);
   color: var(--muted-foreground);

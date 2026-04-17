@@ -5,6 +5,7 @@ import StarterKit from '@tiptap/starter-kit';
 import Placeholder from '@tiptap/extension-placeholder';
 import TaskList from '@tiptap/extension-task-list';
 import TaskItem from '@tiptap/extension-task-item';
+import Highlight from '@tiptap/extension-highlight';
 import Wikilink from '@/components/editor/extensions/wikilink';
 import SlashCommand from '@/components/editor/extensions/slash-command';
 import WikilinkMenu from '@/components/editor/menus/WikilinkMenu';
@@ -25,6 +26,7 @@ export default function NoteEditor({ noteId, initialContent, headerSlot }: NoteE
       StarterKit,
       TaskList,
       TaskItem.configure({ nested: true }),
+      Highlight,
       Placeholder.configure({ placeholder: 'Escribe una idea...' }),
       Wikilink,
       SlashCommand.configure({ noteId }),
