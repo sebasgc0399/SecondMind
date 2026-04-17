@@ -63,7 +63,7 @@ export default function ProjectsActiveCard() {
                   to={`/projects/${project.id}`}
                   className="group flex items-center justify-between gap-3 rounded-md border border-border/60 bg-background/40 p-2 transition-colors hover:border-border hover:bg-accent/30"
                 >
-                  <span className="truncate text-sm font-medium text-foreground">
+                  <span className="min-w-0 flex-1 truncate text-sm font-medium text-foreground">
                     {project.name}
                   </span>
                   <span className="shrink-0 text-[11px] text-muted-foreground">

@@ -61,7 +61,9 @@ function RecentNoteItem({ note }: { note: NoteOramaDoc }) {
       to={`/notes/${note.id}`}
       className="flex items-baseline justify-between gap-3 rounded-md px-2 py-1.5 transition-colors hover:bg-accent/40"
     >
-      <span className="truncate text-sm font-medium text-foreground">{note.title}</span>
+      <span className="min-w-0 flex-1 truncate text-sm font-medium text-foreground">
+        {note.title}
+      </span>
       <span className="flex-shrink-0 text-[11px] text-muted-foreground">
         {formatRelative(note.updatedAt)}
       </span>

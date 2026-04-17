@@ -66,7 +66,7 @@ export default function TasksTodayCard() {
               />
               <Link
                 to="/tasks"
-                className="flex-1 truncate text-sm text-foreground transition-colors hover:text-primary"
+                className="min-w-0 flex-1 truncate text-sm text-foreground transition-colors hover:text-primary"
               >
                 {task.name}
               </Link>

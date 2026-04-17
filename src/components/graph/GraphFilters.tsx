@@ -41,7 +41,7 @@ export default function GraphFilters({ filters, onChange }: GraphFiltersProps) {
       <button
         type="button"
         onClick={() => setIsOpen((prev) => !prev)}
-        className="flex w-full items-center gap-2 px-6 py-2 text-sm text-muted-foreground hover:text-foreground"
+        className="flex w-full items-center gap-2 px-4 py-2 text-sm text-muted-foreground hover:text-foreground md:px-6"
       >
         {isOpen ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
         Filtros
@@ -53,7 +53,7 @@ export default function GraphFilters({ filters, onChange }: GraphFiltersProps) {
       </button>
 
       {isOpen && (
-        <div className="flex flex-wrap items-end gap-4 px-6 pb-3">
+        <div className="flex flex-wrap items-end gap-3 px-4 pb-3 md:gap-4 md:px-6">
           <label className="flex flex-col gap-1">
             <span className="text-xs text-muted-foreground">Area</span>
             <select
