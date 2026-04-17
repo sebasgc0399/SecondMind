@@ -5,6 +5,7 @@ import { db } from '@/lib/firebase';
 import { notesStore } from '@/stores/notesStore';
 import { stringifyIds } from '@/lib/tinybase';
 import { extractLinks } from '@/lib/editor/extractLinks';
+import { computeDistillLevel } from '@/lib/editor/computeDistillLevel';
 import { syncLinks } from '@/lib/editor/syncLinks';
 import useAuth from '@/hooks/useAuth';
 
@@ -31,6 +32,7 @@ export default function useNoteSave(
   const noteIdRef = useRef<string | undefined>(noteId);
   const uidRef = useRef<string | null>(null);
   const pendingRef = useRef<boolean>(false);
+  const summaryL3Ref = useRef<string>('');
 
   editorRef.current = editor;
   noteIdRef.current = noteId;
@@ -52,13 +54,8 @@ export default function useNoteSave(
       const firstLine = contentPlain.split('\n', 1)[0]?.trim() ?? '';
       const title = firstLine.slice(0, 200) || 'Sin título';
       const updatedAt = Date.now();
-
-      await updateDoc(doc(db, 'users', currentUid, 'notes', currentNoteId), {
-        content: JSON.stringify(json),
-        contentPlain,
-        title,
-        updatedAt,
-      });
+      const summaryL3 = summaryL3Ref.current;
+      const distillLevel = computeDistillLevel(json, summaryL3);
 
       const extracted = extractLinks(json);
       const { outgoingLinkIds, linkCount } = await syncLinks({
@@ -68,12 +65,27 @@ export default function useNoteSave(
         newLinks: extracted,
       });
 
+      // Optimistic: TinyBase se actualiza sync antes del updateDoc. Si el
+      // write a Firestore falla, pendingRef vuelve a true y el retry re-escribe
+      // los mismos datos (idempotente). Reduce latency percibido del badge
+      // distillLevel de "2s + red" a "2s puros" (consistente con useHabits).
       notesStore.setPartialRow('notes', currentNoteId, {
         title,
         contentPlain,
         updatedAt,
         linkCount,
         outgoingLinkIds: stringifyIds(outgoingLinkIds),
+        summaryL3,
+        distillLevel,
+      });
+
+      await updateDoc(doc(db, 'users', currentUid, 'notes', currentNoteId), {
+        content: JSON.stringify(json),
+        contentPlain,
+        title,
+        updatedAt,
+        summaryL3,
+        distillLevel,
       });
 
       setStatus('saved');
