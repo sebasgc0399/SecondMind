@@ -1,10 +1,11 @@
 import { Link } from 'react-router';
-import { Link2 } from 'lucide-react';
+import { Link2, Sparkles } from 'lucide-react';
 import type { NoteOramaDoc } from '@/lib/orama';
 import { formatRelative } from '@/lib/formatDate';
 
 interface NoteCardProps {
   note: NoteOramaDoc;
+  semanticScore?: number;
 }
 
 const NOTE_TYPE_LABELS: Record<string, string> = {
@@ -20,7 +21,7 @@ const PARA_TYPE_LABELS: Record<string, string> = {
   archive: 'Archivo',
 };
 
-export default function NoteCard({ note }: NoteCardProps) {
+export default function NoteCard({ note, semanticScore }: NoteCardProps) {
   const snippet = note.contentPlain.trim().slice(0, 200);
   const showSnippet = snippet.length > 0;
 
@@ -29,7 +30,17 @@ export default function NoteCard({ note }: NoteCardProps) {
       to={`/notes/${note.id}`}
       className="group block rounded-lg border border-border bg-card p-4 transition-colors hover:border-border/80 hover:bg-accent/40"
     >
-      <h2 className="truncate text-base font-semibold text-foreground">{note.title}</h2>
+      <div className="flex items-start justify-between gap-3">
+        <h2 className="min-w-0 flex-1 truncate text-base font-semibold text-foreground">
+          {note.title}
+        </h2>
+        {semanticScore !== undefined && (
+          <span className="inline-flex shrink-0 items-center gap-1 rounded-md bg-violet-500/10 px-1.5 py-0.5 text-xs font-medium text-violet-500">
+            <Sparkles className="h-3 w-3" />
+            {Math.round(semanticScore * 100)}%
+          </span>
+        )}
+      </div>
       {showSnippet && <p className="mt-1 line-clamp-2 text-sm text-muted-foreground">{snippet}</p>}
       <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
         <Badge>{NOTE_TYPE_LABELS[note.noteType] ?? note.noteType}</Badge>

@@ -21,6 +21,7 @@
 - **Fase 5.2** — Capacitor Mobile (Android): wrapper nativo con Google Sign-In nativo (bottom sheet), Share Intent que pre-llena Quick Capture desde el sheet de Android, adaptive icon VectorDrawable extraído del SVG del PWA, splash purple, safe-area CSS edge-to-edge
 - **Feature 1 — Responsive & Mobile UX**: shell responsive con breakpoints `mobile <768` / `tablet 768–1023` / `desktop ≥1024`. Mobile sin sidebar: MobileHeader + BottomNav (Dashboard/Notas/Tareas/Inbox/Más) + FAB para Quick Capture + NavigationDrawer (Dialog slide-in). Tablet con Sidebar collapsed 64px iconos-only + hamburger que abre el mismo NavigationDrawer. Desktop idéntico al previo. Tap targets ≥44×44, safe-area top/bottom/left/right, `viewport-fit=cover`. HabitGrid `<table>` con sticky `th/td:first-child` + botones 44×44 con visual 28×28 interno. QuickCapture con botones "Cancelar/Guardar" visibles en mobile (hints de teclado ocultos).
 - **Feature 2 — Editor Polish**: `@` reemplaza `[[` como trigger de menciones con `allow()` blacklist alfanumérica (no dispara en emails/URLs), pill styling via CSS `::before: '@'` sin migración de datos (nodos `wikilink` existentes rehidratan con el nuevo look). Slash commands `/` con 12 items en 5 categorías (Texto, Listas, Bloques, Menciones, Templates) usando el mismo listener pattern + `createPortal` que WikilinkMenu, con `pluginKey` explícito por plugin para no colisionar. Templates Zettelkasten Literature y Permanent insertan scaffolding como `JSONContent[]` + actualizan `noteType` en TinyBase + Firestore via `auth.currentUser?.uid` en runtime. Fix Vite `dedupe: ['react', 'react-dom']` agregado para eliminar pantalla blanca por React duplicada desde `extension/node_modules/`. Deps nuevas: `@tiptap/extension-task-list` + `@tiptap/extension-task-item` (con `--legacy-peer-deps`).
+- **Feature 3 — Búsqueda Híbrida**: `/notes` combina keyword (Orama BM25, instant) con semántica (embeddings existentes + cosine client-side, debounced 500ms). Primera CF callable del proyecto (`embedQuery` con `onCall` v2 de `firebase-functions/v2/https`, valida `request.auth` + text ≤500 chars, reusa secret `OPENAI_API_KEY` y modelo `text-embedding-3-small`). Cliente extendido con `getFunctions(app, 'us-central1')` + `httpsCallable`. Cache de embeddings module-level compartido entre `useSimilarNotes` y `useHybridSearch` (deduplica fetches, invalida en `signOut`). Hook `useHybridSearch` compone `useNoteSearch` + pipeline semántico: `filter isArchived → exclude keyword IDs → sort score desc → slice(0, 5)`. Race handling por snapshot del query (sin `AbortController` porque callable no lo expone). Degradación graceful: error de CF → `semanticResults: []` sin toast. UI: sección "Semánticamente similares" con heading + badge violet `bg-violet-500/10 text-violet-500` + Sparkles + score %. Si keyword vacío pero semántico presente: leyenda "No hay coincidencias exactas, pero estas notas son temáticamente similares." Threshold 0.30 calibrado empíricamente en E2E (0.45 del SPEC dejaba los matches genuinos justo debajo).
 
 ---
 
@@ -126,11 +127,12 @@
 
 ### Estado del deployment
 
-3 Cloud Functions v2 desplegadas en `us-central1`, todas con `retry: false`, `timeoutSeconds: 60`:
+4 Cloud Functions v2 desplegadas en `us-central1`, todas con `retry: false`:
 
-- **processInboxItem** — `onDocumentCreated('users/{userId}/inbox/{itemId}')`. Llama a Claude Haiku con tool `classify_inbox` + `INBOX_CLASSIFICATION_SCHEMA`. Escribe 6 campos flat `aiSuggested*` + `aiProcessed: true`.
-- **autoTagNote** — `onDocumentWritten('users/{userId}/notes/{noteId}')`. Llama a Claude Haiku con tool `tag_note` + `NOTE_TAGGING_SCHEMA`. Escribe `aiTags`, `aiSummary`, `aiProcessed: true`.
-- **generateEmbedding** — `onDocumentWritten('users/{userId}/notes/{noteId}')`. Genera embedding con OpenAI `text-embedding-3-small` (1536 dims). Guard por `contentPlain` vacío + `contentHash` SHA-256 para evitar regeneraciones. Escribe a `users/{userId}/embeddings/{noteId}`.
+- **processInboxItem** — `onDocumentCreated('users/{userId}/inbox/{itemId}')`, `timeoutSeconds: 60`. Llama a Claude Haiku con tool `classify_inbox` + `INBOX_CLASSIFICATION_SCHEMA`. Escribe 6 campos flat `aiSuggested*` + `aiProcessed: true`.
+- **autoTagNote** — `onDocumentWritten('users/{userId}/notes/{noteId}')`, `timeoutSeconds: 60`. Llama a Claude Haiku con tool `tag_note` + `NOTE_TAGGING_SCHEMA`. Escribe `aiTags`, `aiSummary`, `aiProcessed: true`.
+- **generateEmbedding** — `onDocumentWritten('users/{userId}/notes/{noteId}')`, `timeoutSeconds: 60`. Genera embedding con OpenAI `text-embedding-3-small` (1536 dims). Guard por `contentPlain` vacío + `contentHash` SHA-256 para evitar regeneraciones. Escribe a `users/{userId}/embeddings/{noteId}`.
+- **embedQuery** — `onCall` v2 (`firebase-functions/v2/https`), `timeoutSeconds: 10`. Primer callable del proyecto. Input `{ text: string }` ≤500 chars, output `{ vector: number[] }` 1536 dims. Mismo modelo que `generateEmbedding` para que los vectores sean comparables. Auth via `request.auth`, errores via `HttpsError`.
 
 ### Tool use con schema enforcement (Fase 3.1)
 
@@ -178,7 +180,23 @@ Ambas CFs usan `tools` + `tool_choice: { type: 'tool', name: '...' }` para forza
 
 ### Embeddings y similares
 
-11. **Embeddings NO van en TinyBase.** Vectores de 1536 floats (~6KB c/u) son demasiado grandes para store in-memory. Carga on-demand desde Firestore con cache en `useRef`. Para <500 notas (~1.2MB total), fetch all es viable.
+11. **Embeddings NO van en TinyBase.** Vectores de 1536 floats (~6KB c/u) son demasiado grandes para store in-memory. Carga on-demand desde Firestore con cache module-level en `src/lib/embeddings.ts`. Para <500 notas (~1.2MB total), fetch all es viable.
+
+11.1 **Cache de embeddings es module-level, no per-hook.** Compartido entre `useSimilarNotes` (panel de nota) y `useHybridSearch` (lista). `getEmbeddingsCache(uid)` deduplica fetches concurrentes via `fetchPromise`; reusa si el uid no cambió. `invalidateEmbeddingsCache()` se llama en `signOut` (antes de `firebaseSignOut` — defensivo) para no filtrar embeddings entre cuentas en la misma sesión.
+
+11.2 **Threshold empírico con `text-embedding-3-small` + notas cortas en español: 0.30.** El rango de cosine similarity satura en 0.15–0.45 para documentos cortos (vs `ada-002` que llegaba a 0.8+). `SimilarNotesPanel` usa 0.5 por comparar notas completas; `useHybridSearch` usa 0.3 porque queries son más cortas que documentos. Recalibrar si el corpus cambia de estilo.
+
+### Búsqueda Híbrida (Feature 3)
+
+11.3 **Primera Cloud Function callable del proyecto usa `onCall` v2.** `import { onCall, HttpsError } from 'firebase-functions/v2/https'`. Signature: `(request) => { request.auth?.uid; request.data }` — NO es v1 (`context.auth`). Cliente via `getFunctions(app, 'us-central1') + httpsCallable`. La referencia al callable se crea una vez a nivel de módulo, no en cada call.
+
+11.4 **Pipeline semántico en orden estricto**: `filter isArchived → exclude keyword IDs → sort score desc → slice(0, 5)`. Si se slicea antes de excluir, con 5 keyword matches el `semanticResults` queda vacío aunque haya hits válidos. Aplica a cualquier feature que mezcle dos pipelines de resultados con filtros mutuamente excluyentes.
+
+11.5 **Race handling con snapshot del query, no `AbortController`.** Firebase callable no expone abort. Patrón: `const frozenQuery = trimmed` al iniciar, `if (frozenQuery !== query.trim()) return` al volver del CF. Si el user ya está buscando otra cosa, el resultado obsoleto se descarta sin tocar state.
+
+11.6 **`setIsLoadingSemantic(true)` dentro del `setTimeout` callback, no síncrono en el effect body.** La regla `react-hooks/set-state-in-effect` rechaza setState síncrono. Además alinea UX: skeleton aparece cuando arranca la llamada real, no durante los 500ms de debounce.
+
+11.7 **Mismatch Node 20 vs 22 en functions.** `firebase.json.runtime: nodejs20` vs `src/functions/package.json.engines.node: 22`. `firebase.json` manda en deploy — runtime efectivo es Node 20. Si alguien alinea `firebase.json` a 22 sin coordinar, cambia el runtime de deploy sin otras señales visibles en CI.
 
 ### FSRS y resurfacing
 
@@ -291,11 +309,12 @@ Ambas CFs usan `tools` + `tool_choice: { type: 'tool', name: '...' }` para forza
 
 ## Siguiente fase
 
-**Feature 2 (Editor Polish) ✅ completada.** El editor ahora tiene `@` para mentions y `/` para insertar bloques/templates — UX alineada con Notion/Linear/Anytype. Dos bugs runtime del dev server descubiertos y arreglados (React duplicada por `extension/node_modules/` + `pluginKey` colisionando entre Suggestion plugins).
+**Feature 3 (Búsqueda Híbrida) ✅ completada.** `/notes` surfacea resultados por significado además de palabras exactas. Primera CF callable del proyecto (`embedQuery`), cache de embeddings module-level compartido, threshold calibrado empíricamente en E2E.
 
 Próximas iteraciones candidatas:
 
-- **Feature 3: Búsqueda híbrida** — combinar Orama keyword FTS con embeddings semánticos (ya generados por CF `generateEmbedding`). Scope: Command Palette con tabs keyword/semántica + re-ranking con score combinado + preview on-hover.
+- **Command Palette con tab "semántico"** — hoy Ctrl+K es keyword-only por velocidad. Agregar toggle opcional con el mismo `useHybridSearch` si el uso real muestra que vale.
+- **AI-suggested links en el editor** — usar los embeddings para sugerir wikilinks mientras el usuario escribe. Inline, debounced.
 - **Bubble menu contextual sobre selección** — formato inline (bold/italic/link/highlight) + convertir selección a callout o a nota nueva (atomización Zettelkasten).
 - **Code blocks con syntax highlighting** — `@tiptap/extension-code-block-lowlight` + Prism/highlight.js.
 - **Task items del editor → Tasks reales** — hoy TipTap TaskItem es rich-text; un comando podría crear un `task` en TaskStore con sourceId = noteId.

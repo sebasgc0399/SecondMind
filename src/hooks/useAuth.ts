@@ -6,6 +6,7 @@ import {
   GoogleAuthProvider,
 } from 'firebase/auth';
 import { auth } from '@/lib/firebase';
+import { invalidateEmbeddingsCache } from '@/lib/embeddings';
 import { isCapacitor } from '@/lib/capacitor';
 import { signInWithCapacitor } from '@/lib/capacitorAuth';
 import { isTauri } from '@/lib/tauri';
@@ -45,6 +46,7 @@ export default function useAuth(): UseAuthReturn {
   }, []);
 
   const signOut = useCallback(async () => {
+    invalidateEmbeddingsCache();
     await firebaseSignOut(auth);
   }, []);
 
