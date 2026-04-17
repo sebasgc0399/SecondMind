@@ -20,7 +20,11 @@ interface UseHybridSearchReturn {
 }
 
 const SEMANTIC_DEBOUNCE_MS = 500;
-const SEMANTIC_THRESHOLD = 0.45;
+// Empiricamente calibrado con text-embedding-3-small + notas cortas en espanol.
+// Con 0.45 (SPEC original) el top match genuino "Claude Mythos IA" para query
+// "inteligencia artificial" quedaba en 0.43. 0.30 captura los matches claros
+// (IA/ciberseguridad) y corta antes del ruido (metodologias dispares, templates).
+const SEMANTIC_THRESHOLD = 0.3;
 const SEMANTIC_MAX_RESULTS = 5;
 const MIN_QUERY_LENGTH = 3;
 
