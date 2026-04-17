@@ -1,7 +1,12 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { notesStore } from '@/stores/notesStore';
 import useAuth from '@/hooks/useAuth';
-import { cosineSimilarity, fetchEmbedding, fetchAllEmbeddings } from '@/lib/embeddings';
+import {
+  cosineSimilarity,
+  fetchEmbedding,
+  getEmbeddingsCache,
+  updateEmbeddingInCache,
+} from '@/lib/embeddings';
 
 export interface SimilarNote {
   noteId: string;
@@ -23,7 +28,6 @@ export default function useSimilarNotes(noteId: string): UseSimilarNotesReturn {
   const [notes, setNotes] = useState<SimilarNote[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [noEmbedding, setNoEmbedding] = useState(false);
-  const cacheRef = useRef<Map<string, number[]>>(new Map());
 
   useEffect(() => {
     if (!user || !noteId) return;
@@ -45,16 +49,13 @@ export default function useSimilarNotes(noteId: string): UseSimilarNotesReturn {
         return;
       }
 
-      if (cacheRef.current.size === 0) {
-        const all = await fetchAllEmbeddings(userId);
-        if (cancelled) return;
-        cacheRef.current = all;
-      }
+      const cache = await getEmbeddingsCache(userId);
+      if (cancelled) return;
 
-      cacheRef.current.set(noteId, currentVector);
+      updateEmbeddingInCache(noteId, currentVector);
 
       const scored: SimilarNote[] = [];
-      for (const [otherId, otherVector] of cacheRef.current) {
+      for (const [otherId, otherVector] of cache) {
         if (otherId === noteId) continue;
         const score = cosineSimilarity(currentVector, otherVector);
         if (score >= SIMILARITY_THRESHOLD) {
