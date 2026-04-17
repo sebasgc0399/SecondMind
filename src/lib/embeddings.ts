@@ -1,5 +1,6 @@
 import { collection, doc, getDoc, getDocs } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
+import { httpsCallable } from 'firebase/functions';
+import { db, functions } from '@/lib/firebase';
 
 export function cosineSimilarity(a: number[], b: number[]): number {
   let dot = 0;
@@ -69,4 +70,15 @@ export function invalidateEmbeddingsCache(): void {
   cachedUid = null;
   cachedEmbeddings = null;
   fetchPromise = null;
+}
+
+interface EmbedQueryResponse {
+  vector: number[];
+}
+
+const embedQueryFn = httpsCallable<{ text: string }, EmbedQueryResponse>(functions, 'embedQuery');
+
+export async function embedQueryText(text: string): Promise<number[]> {
+  const result = await embedQueryFn({ text });
+  return result.data.vector;
 }
