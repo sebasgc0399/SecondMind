@@ -1,7 +1,10 @@
 import type { Editor } from '@tiptap/core';
+import { doc, updateDoc } from 'firebase/firestore';
 import {
   AtSign,
+  BookOpen,
   Code,
+  FileCheck,
   Heading1,
   Heading2,
   Heading3,
@@ -12,9 +15,25 @@ import {
   Quote,
   type LucideIcon,
 } from 'lucide-react';
+import { auth, db } from '@/lib/firebase';
+import { notesStore } from '@/stores/notesStore';
+import type { NoteType } from '@/types/common';
+import { literatureTemplate } from '@/components/editor/templates/literatureTemplate';
+import { permanentTemplate } from '@/components/editor/templates/permanentTemplate';
 
 export interface SlashCommandContext {
   noteId: string;
+}
+
+async function updateNoteType(noteId: string, type: NoteType): Promise<void> {
+  const uid = auth.currentUser?.uid;
+  if (!uid) return;
+  notesStore.setPartialRow('notes', noteId, { noteType: type });
+  try {
+    await updateDoc(doc(db, 'users', uid, 'notes', noteId), { noteType: type });
+  } catch (error) {
+    console.error('[slashMenu] updateNoteType failed', error);
+  }
 }
 
 export type SlashMenuCategory = 'Texto' | 'Listas' | 'Bloques' | 'Menciones' | 'Templates';
@@ -116,6 +135,28 @@ export const slashMenuItems: SlashMenuItem[] = [
     icon: AtSign,
     category: 'Menciones',
     action: (editor) => editor.chain().focus().insertContent('@').run(),
+  },
+  {
+    id: 'template-literature',
+    label: 'Nota Literature',
+    description: 'Template para notas de fuentes',
+    icon: BookOpen,
+    category: 'Templates',
+    action: (editor, ctx) => {
+      editor.chain().focus().insertContent(literatureTemplate).run();
+      void updateNoteType(ctx.noteId, 'literature');
+    },
+  },
+  {
+    id: 'template-permanent',
+    label: 'Nota Permanent',
+    description: 'Template para ideas permanentes',
+    icon: FileCheck,
+    category: 'Templates',
+    action: (editor, ctx) => {
+      editor.chain().focus().insertContent(permanentTemplate).run();
+      void updateNoteType(ctx.noteId, 'permanent');
+    },
   },
 ];
 
