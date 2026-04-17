@@ -1,4 +1,3 @@
-import type { Editor } from '@tiptap/core';
 import { doc, updateDoc } from 'firebase/firestore';
 import {
   AtSign,
@@ -20,6 +19,7 @@ import { notesStore } from '@/stores/notesStore';
 import type { NoteType } from '@/types/common';
 import { literatureTemplate } from '@/components/editor/templates/literatureTemplate';
 import { permanentTemplate } from '@/components/editor/templates/permanentTemplate';
+import type { Editor } from '@tiptap/core';
 
 export interface SlashCommandContext {
   noteId: string;
@@ -44,6 +44,7 @@ export interface SlashMenuItem {
   description: string;
   icon: LucideIcon;
   category: SlashMenuCategory;
+  keywords?: string[];
   action: (editor: Editor, ctx: SlashCommandContext) => void;
 }
 
@@ -62,6 +63,7 @@ export const slashMenuItems: SlashMenuItem[] = [
     description: 'Título principal',
     icon: Heading1,
     category: 'Texto',
+    keywords: ['h1', 'titulo'],
     action: (editor) => editor.chain().focus().setNode('heading', { level: 1 }).run(),
   },
   {
@@ -70,6 +72,7 @@ export const slashMenuItems: SlashMenuItem[] = [
     description: 'Subtítulo',
     icon: Heading2,
     category: 'Texto',
+    keywords: ['h2', 'subtitulo'],
     action: (editor) => editor.chain().focus().setNode('heading', { level: 2 }).run(),
   },
   {
@@ -78,6 +81,7 @@ export const slashMenuItems: SlashMenuItem[] = [
     description: 'Subtítulo menor',
     icon: Heading3,
     category: 'Texto',
+    keywords: ['h3'],
     action: (editor) => editor.chain().focus().setNode('heading', { level: 3 }).run(),
   },
   {
@@ -86,6 +90,7 @@ export const slashMenuItems: SlashMenuItem[] = [
     description: 'Lista con viñetas',
     icon: List,
     category: 'Listas',
+    keywords: ['ul', 'vinetas'],
     action: (editor) => editor.chain().focus().toggleBulletList().run(),
   },
   {
@@ -94,6 +99,7 @@ export const slashMenuItems: SlashMenuItem[] = [
     description: 'Lista numerada',
     icon: ListOrdered,
     category: 'Listas',
+    keywords: ['ol', 'numerada'],
     action: (editor) => editor.chain().focus().toggleOrderedList().run(),
   },
   {
@@ -102,6 +108,7 @@ export const slashMenuItems: SlashMenuItem[] = [
     description: 'Lista con checkboxes',
     icon: ListChecks,
     category: 'Listas',
+    keywords: ['tareas', 'checkbox', 'todo'],
     action: (editor) => editor.chain().focus().toggleTaskList().run(),
   },
   {
@@ -110,6 +117,7 @@ export const slashMenuItems: SlashMenuItem[] = [
     description: 'Bloque de código',
     icon: Code,
     category: 'Bloques',
+    keywords: ['codigo', 'pre'],
     action: (editor) => editor.chain().focus().toggleCodeBlock().run(),
   },
   {
@@ -118,6 +126,7 @@ export const slashMenuItems: SlashMenuItem[] = [
     description: 'Cita textual',
     icon: Quote,
     category: 'Bloques',
+    keywords: ['cita', 'quote'],
     action: (editor) => editor.chain().focus().toggleBlockquote().run(),
   },
   {
@@ -126,6 +135,7 @@ export const slashMenuItems: SlashMenuItem[] = [
     description: 'Línea horizontal',
     icon: Minus,
     category: 'Bloques',
+    keywords: ['hr', 'linea', 'separador'],
     action: (editor) => editor.chain().focus().setHorizontalRule().run(),
   },
   {
@@ -163,7 +173,8 @@ export const slashMenuItems: SlashMenuItem[] = [
 export function filterSlashMenuItems(query: string): SlashMenuItem[] {
   const q = query.trim().toLowerCase();
   if (!q) return slashMenuItems;
-  return slashMenuItems.filter(
-    (item) => item.label.toLowerCase().includes(q) || item.id.toLowerCase().includes(q),
-  );
+  return slashMenuItems.filter((item) => {
+    const haystack = [item.label, item.id, ...(item.keywords ?? [])].join(' ').toLowerCase();
+    return haystack.includes(q);
+  });
 }

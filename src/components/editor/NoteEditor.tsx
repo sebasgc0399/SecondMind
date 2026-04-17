@@ -5,12 +5,12 @@ import StarterKit from '@tiptap/starter-kit';
 import Placeholder from '@tiptap/extension-placeholder';
 import TaskList from '@tiptap/extension-task-list';
 import TaskItem from '@tiptap/extension-task-item';
-import type { JSONContent } from '@tiptap/core';
 import Wikilink from '@/components/editor/extensions/wikilink';
 import SlashCommand from '@/components/editor/extensions/slash-command';
 import WikilinkMenu from '@/components/editor/menus/WikilinkMenu';
 import SlashMenu from '@/components/editor/menus/SlashMenu';
 import useNoteSave, { type SaveStatus } from '@/hooks/useNoteSave';
+import type { JSONContent } from '@tiptap/core';
 
 interface NoteEditorProps {
   noteId: string;

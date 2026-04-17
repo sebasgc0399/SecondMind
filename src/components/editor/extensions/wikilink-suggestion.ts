@@ -1,10 +1,11 @@
+import { PluginKey } from '@tiptap/pm/state';
+import { notesStore } from '@/stores/notesStore';
 import type { Editor, Range } from '@tiptap/core';
 import type {
   SuggestionKeyDownProps,
   SuggestionOptions,
   SuggestionProps,
 } from '@tiptap/suggestion';
-import { notesStore } from '@/stores/notesStore';
 
 export interface WikilinkSuggestionItem {
   id: string;
@@ -48,7 +49,10 @@ function queryItems(query: string): WikilinkSuggestionItem[] {
 
 const ALPHANUMERIC = /[a-zA-Z0-9]/;
 
+export const wikilinkSuggestionPluginKey = new PluginKey('wikilink-suggestion');
+
 export const wikilinkSuggestion: Omit<SuggestionOptions<WikilinkSuggestionItem>, 'editor'> = {
+  pluginKey: wikilinkSuggestionPluginKey,
   char: '@',
   allowSpaces: true,
   startOfLine: false,

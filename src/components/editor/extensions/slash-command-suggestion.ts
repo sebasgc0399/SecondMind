@@ -1,14 +1,17 @@
+import { PluginKey } from '@tiptap/pm/state';
+import {
+  filterSlashMenuItems,
+  type SlashCommandContext,
+  type SlashMenuItem,
+} from '@/components/editor/menus/slashMenuItems';
 import type { Editor, Range } from '@tiptap/core';
 import type {
   SuggestionKeyDownProps,
   SuggestionOptions,
   SuggestionProps,
 } from '@tiptap/suggestion';
-import {
-  filterSlashMenuItems,
-  type SlashCommandContext,
-  type SlashMenuItem,
-} from '@/components/editor/menus/slashMenuItems';
+
+export const slashCommandPluginKey = new PluginKey('slash-command-suggestion');
 
 export interface SlashMenuListener {
   onStart: (props: SuggestionProps<SlashMenuItem>) => void;
@@ -29,6 +32,7 @@ export function slashCommandSuggestion(
   context: SlashCommandContext,
 ): Omit<SuggestionOptions<SlashMenuItem>, 'editor'> {
   return {
+    pluginKey: slashCommandPluginKey,
     char: '/',
     allowSpaces: false,
     startOfLine: false,

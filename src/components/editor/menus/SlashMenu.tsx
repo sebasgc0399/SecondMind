@@ -1,12 +1,12 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import type { SuggestionKeyDownProps, SuggestionProps } from '@tiptap/suggestion';
 import { setSlashMenuListener } from '@/components/editor/extensions/slash-command-suggestion';
 import {
   CATEGORY_ORDER,
   type SlashMenuCategory,
   type SlashMenuItem,
 } from '@/components/editor/menus/slashMenuItems';
+import type { SuggestionKeyDownProps, SuggestionProps } from '@tiptap/suggestion';
 
 interface MenuState {
   isOpen: boolean;
@@ -29,7 +29,10 @@ const INITIAL_STATE: MenuState = {
 export default function SlashMenu() {
   const [state, setState] = useState<MenuState>(INITIAL_STATE);
   const stateRef = useRef<MenuState>(INITIAL_STATE);
-  stateRef.current = state;
+
+  useEffect(() => {
+    stateRef.current = state;
+  }, [state]);
 
   useEffect(() => {
     function syncFromProps(props: SuggestionProps<SlashMenuItem>): MenuState {
