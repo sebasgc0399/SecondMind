@@ -6,6 +6,7 @@ import useAuth from '@/hooks/useAuth';
 
 interface UseNoteReturn {
   initialContent: JSONContent | null;
+  initialSummaryL3: string;
   isLoading: boolean;
   error: Error | null;
   notFound: boolean;
@@ -18,6 +19,7 @@ export default function useNote(noteId: string | undefined): UseNoteReturn {
   const { user } = useAuth();
   const [state, setState] = useState<UseNoteReturn>({
     initialContent: null,
+    initialSummaryL3: '',
     isLoading: true,
     error: null,
     notFound: false,
@@ -25,12 +27,24 @@ export default function useNote(noteId: string | undefined): UseNoteReturn {
 
   useEffect(() => {
     if (!user || !noteId) {
-      setState({ initialContent: null, isLoading: true, error: null, notFound: false });
+      setState({
+        initialContent: null,
+        initialSummaryL3: '',
+        isLoading: true,
+        error: null,
+        notFound: false,
+      });
       return;
     }
 
     let ignore = false;
-    setState({ initialContent: null, isLoading: true, error: null, notFound: false });
+    setState({
+      initialContent: null,
+      initialSummaryL3: '',
+      isLoading: true,
+      error: null,
+      notFound: false,
+    });
 
     (async () => {
       try {
@@ -39,14 +53,23 @@ export default function useNote(noteId: string | undefined): UseNoteReturn {
         if (ignore) return;
 
         if (!snap.exists()) {
-          setState({ initialContent: null, isLoading: false, error: null, notFound: true });
+          setState({
+            initialContent: null,
+            initialSummaryL3: '',
+            isLoading: false,
+            error: null,
+            notFound: true,
+          });
           return;
         }
 
-        const raw = snap.data().content as string | undefined;
+        const data = snap.data();
+        const raw = data.content as string | undefined;
         const parsed = parseContent(raw);
+        const summaryL3 = (data.summaryL3 as string | undefined) ?? '';
         setState({
           initialContent: parsed,
+          initialSummaryL3: summaryL3,
           isLoading: false,
           error: null,
           notFound: false,
@@ -55,6 +78,7 @@ export default function useNote(noteId: string | undefined): UseNoteReturn {
         if (ignore) return;
         setState({
           initialContent: null,
+          initialSummaryL3: '',
           isLoading: false,
           error: error as Error,
           notFound: false,

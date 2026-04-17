@@ -17,14 +17,18 @@ export type SaveStatus = 'idle' | 'saving' | 'saved';
 interface UseNoteSaveReturn {
   status: SaveStatus;
   flush: () => Promise<void>;
+  summaryL3: string;
+  setSummaryL3: (next: string) => void;
 }
 
 export default function useNoteSave(
   noteId: string | undefined,
   editor: Editor | null,
+  initialSummaryL3: string,
 ): UseNoteSaveReturn {
   const { user } = useAuth();
   const [status, setStatus] = useState<SaveStatus>('idle');
+  const [summaryL3, setSummaryL3State] = useState<string>(() => initialSummaryL3);
 
   const timerRef = useRef<number | null>(null);
   const savedBadgeRef = useRef<number | null>(null);
@@ -32,11 +36,12 @@ export default function useNoteSave(
   const noteIdRef = useRef<string | undefined>(noteId);
   const uidRef = useRef<string | null>(null);
   const pendingRef = useRef<boolean>(false);
-  const summaryL3Ref = useRef<string>('');
+  const summaryL3Ref = useRef<string>(initialSummaryL3);
 
   editorRef.current = editor;
   noteIdRef.current = noteId;
   uidRef.current = user?.uid ?? null;
+  summaryL3Ref.current = summaryL3;
 
   const save = useCallback(async () => {
     const currentEditor = editorRef.current;
@@ -108,6 +113,23 @@ export default function useNoteSave(
     await save();
   }, [save]);
 
+  // Un solo timer compartido entre editor y textarea del summary: el ultimo
+  // keystroke de cualquiera de los dos reinicia el debounce. Intencional, evita
+  // writes paralelos con distillLevel stale.
+  const setSummaryL3 = useCallback(
+    (next: string) => {
+      setSummaryL3State(next);
+      pendingRef.current = true;
+      setStatus('idle');
+      if (timerRef.current) window.clearTimeout(timerRef.current);
+      timerRef.current = window.setTimeout(() => {
+        timerRef.current = null;
+        void save();
+      }, AUTOSAVE_DEBOUNCE_MS);
+    },
+    [save],
+  );
+
   useEffect(() => {
     if (!editor) return;
 
@@ -143,5 +165,5 @@ export default function useNoteSave(
     };
   }, [save]);
 
-  return { status, flush };
+  return { status, flush, summaryL3, setSummaryL3 };
 }
