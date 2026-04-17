@@ -37,6 +37,8 @@
     "@tauri-apps/plugin-window-state": "^2.4.1",
     "@tiptap/core": "^3.22.3",
     "@tiptap/extension-placeholder": "^3.22.3",
+    "@tiptap/extension-task-item": "^3.22.3",
+    "@tiptap/extension-task-list": "^3.22.3",
     "@tiptap/pm": "^3.22.3",
     "@tiptap/react": "^3.22.3",
     "@tiptap/starter-kit": "^3.22.3",

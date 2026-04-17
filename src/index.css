@@ -240,3 +240,35 @@
   opacity: 0.6;
   margin-right: 0.05rem;
 }
+
+.note-editor .ProseMirror ul[data-type='taskList'] {
+  list-style: none;
+  padding-left: 0;
+}
+
+.note-editor .ProseMirror ul[data-type='taskList'] li {
+  display: flex;
+  gap: 0.5rem;
+  align-items: flex-start;
+}
+
+.note-editor .ProseMirror ul[data-type='taskList'] li > label {
+  flex-shrink: 0;
+  user-select: none;
+  margin-top: 0.25rem;
+}
+
+.note-editor .ProseMirror ul[data-type='taskList'] li > label input[type='checkbox'] {
+  cursor: pointer;
+  accent-color: var(--primary);
+}
+
+.note-editor .ProseMirror ul[data-type='taskList'] li > div {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.note-editor .ProseMirror ul[data-type='taskList'] li[data-checked='true'] > div {
+  opacity: 0.6;
+  text-decoration: line-through;
+}
