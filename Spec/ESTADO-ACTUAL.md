@@ -1,6 +1,6 @@
 # Estado Actual — SecondMind (Snapshot consolidado)
 
-> Última actualización: Feature 1 Responsive & Mobile UX (Abril 2026)
+> Última actualización: Feature 2 Editor Polish (Abril 2026)
 > Este archivo consolida el conocimiento no-obvio de todas las fases completadas.
 > Se actualiza al cerrar cada fase. Para detalle de features → README.md.
 > Para detalle de implementación → Spec/SPEC-fase-X.md individual.
@@ -20,6 +20,7 @@
 - **Fase 5.1** — Tauri Desktop: wrapper nativo Windows con system tray, close-to-tray, global shortcut `Ctrl+Shift+Space`, ventana de captura frameless, autostart opcional, window-state persistido, single-instance
 - **Fase 5.2** — Capacitor Mobile (Android): wrapper nativo con Google Sign-In nativo (bottom sheet), Share Intent que pre-llena Quick Capture desde el sheet de Android, adaptive icon VectorDrawable extraído del SVG del PWA, splash purple, safe-area CSS edge-to-edge
 - **Feature 1 — Responsive & Mobile UX**: shell responsive con breakpoints `mobile <768` / `tablet 768–1023` / `desktop ≥1024`. Mobile sin sidebar: MobileHeader + BottomNav (Dashboard/Notas/Tareas/Inbox/Más) + FAB para Quick Capture + NavigationDrawer (Dialog slide-in). Tablet con Sidebar collapsed 64px iconos-only + hamburger que abre el mismo NavigationDrawer. Desktop idéntico al previo. Tap targets ≥44×44, safe-area top/bottom/left/right, `viewport-fit=cover`. HabitGrid `<table>` con sticky `th/td:first-child` + botones 44×44 con visual 28×28 interno. QuickCapture con botones "Cancelar/Guardar" visibles en mobile (hints de teclado ocultos).
+- **Feature 2 — Editor Polish**: `@` reemplaza `[[` como trigger de menciones con `allow()` blacklist alfanumérica (no dispara en emails/URLs), pill styling via CSS `::before: '@'` sin migración de datos (nodos `wikilink` existentes rehidratan con el nuevo look). Slash commands `/` con 12 items en 5 categorías (Texto, Listas, Bloques, Menciones, Templates) usando el mismo listener pattern + `createPortal` que WikilinkMenu, con `pluginKey` explícito por plugin para no colisionar. Templates Zettelkasten Literature y Permanent insertan scaffolding como `JSONContent[]` + actualizan `noteType` en TinyBase + Firestore via `auth.currentUser?.uid` en runtime. Fix Vite `dedupe: ['react', 'react-dom']` agregado para eliminar pantalla blanca por React duplicada desde `extension/node_modules/`. Deps nuevas: `@tiptap/extension-task-list` + `@tiptap/extension-task-item` (con `--legacy-peer-deps`).
 
 ---
 
@@ -239,6 +240,19 @@ Ambas CFs usan `tools` + `tool_choice: { type: 'tool', name: '...' }` para forza
 - **Helpers compartidos existentes:** `formatDate`, `startOfDay`, `isSameDay`, `getWeekStart`, `addDays` en `src/lib/dateUtils.ts`; `parseIds`, `stringifyIds` en `src/lib/tinybase.ts`.
 - **Popup wikilinks sin tippy.js** — `createPortal` + virtual anchor del `clientRect()` de TipTap. ~30 líneas, sin dep extra.
 
+### Editor Polish (Feature 2)
+
+- **`@` como trigger de menciones, no `[[`.** El Node ProseMirror `wikilink` (atom + inline) sigue intacto — solo cambió el `char` del Suggestion plugin. Los documentos existentes rehidratan con el nuevo look sin migración. Pill styling via `.wikilink { bg: primary/12% + padding + border-radius }` + `::before { content: '@'; opacity: .6 }` CSS-only.
+- **`allow()` custom con blacklist alfanumérica** (no whitelist). Rechaza solo si el char previo matchea `/[a-zA-Z0-9]/`. Cubre `sebas@gmail.com` (bloquea) pero permite `(@nota)`, `"@nota"`, `según: @nota`, `—@nota`, emoji. Menos false negatives que enumerar caracteres válidos.
+- **`pluginKey` explícito por Suggestion plugin.** Múltiples instancias de `@tiptap/suggestion` en el mismo editor colisionan por `pluginKey` default (`suggestion$`) → `RangeError: Adding different instances of a keyed plugin`. Fix: `new PluginKey('wikilink-suggestion')` y `PluginKey('slash-command-suggestion')`. Aplica a cualquier extensión futura que sume Suggestion.
+- **Listener pattern reusable para Suggestion → popup React.** Un archivo `*-suggestion.ts` tiene `let activeListener = null` módulo-level + `setXMenuListener()` export. El componente popup registra el listener en `useEffect` y delega `onStart/onUpdate/onKeyDown/onExit`. Render usa `createPortal(..., document.body)` + virtual anchor (`fixed top: rect.bottom + 6, left: rect.left`). Reusado en `WikilinkMenu` (Feature 1) y `SlashMenu` (Feature 2).
+- **SlashCommand context vía `.configure({ noteId })`.** El `noteId` se captura en el closure de la factory `slashCommandSuggestion(ctx)` al construirse la extension. Stale-closure safe **solo si** el editor se remonta por nota — se cumple porque `src/app/notes/[noteId]/page.tsx` pasa `key={noteId}` al `<NoteEditor>`. Si en el futuro se comparte el editor entre notas sin remount, el contrato se rompe.
+- **`currentUid` leído en runtime, no capturado en config.** `updateNoteType()` del slash menu lee `auth.currentUser?.uid` dentro de la función. Esto permite logout/login en la misma sesión sin re-instanciar la extension. Mismo patrón que `useNoteSave`.
+- **Templates como `JSONContent[]`, no HTML/Markdown.** Array de nodos ProseMirror (H2, P, bulletList con listItems vacíos) que `insertContent()` aplica directamente. Sin parsing intermedio. Literature y Permanent son 6 nodos c/u en `src/components/editor/templates/`.
+- **Slash menu filter con `keywords?: string[]`.** Haystack = `[label, id, ...keywords].join(' ').toLowerCase()`. Cubre `/h1`, `/h2`, `/h3`, `/ul`, `/ol`, `/tareas`, `/codigo`, `/cita`, `/hr` aunque el label no contenga la abreviación. Agregado durante E2E al notar que `/h2` no matcheaba "Heading 2".
+- **Node `atom` + `contenteditable="false"` excluyen textContent del DOM.** El wikilink NO aparece en `document.querySelector('.ProseMirror').textContent`, pero SÍ en `editor.getText()` (TipTap serializa el node via su `renderText`). Importante para testing E2E con Playwright: usar `editor.getText()` si querés verificar que la mención está en el contenido plain.
+- **Pill `::before: '@'` NO se copia al clipboard.** Chrome/Firefox excluyen pseudo-elementos del copy. Al pegar una mención en otro lugar sale solo el título, sin `@`.
+
 ### Performance
 
 - **Full rebuild de índices < 50ms** para ~100 entidades. Patrón `addTableListener` + rebuild completo, sin sync incremental.
@@ -277,11 +291,15 @@ Ambas CFs usan `tools` + `tool_choice: { type: 'tool', name: '...' }` para forza
 
 ## Siguiente fase
 
-**Feature 1 (Responsive & Mobile UX) ✅ completada.** SecondMind es ahora usable en todos los viewports: mobile (375px+), tablet (768px+) y desktop (1024px+), tanto en web como en Capacitor Android.
+**Feature 2 (Editor Polish) ✅ completada.** El editor ahora tiene `@` para mentions y `/` para insertar bloques/templates — UX alineada con Notion/Linear/Anytype. Dos bugs runtime del dev server descubiertos y arreglados (React duplicada por `extension/node_modules/` + `pluginKey` colisionando entre Suggestion plugins).
 
 Próximas iteraciones candidatas:
 
-- **Polish UX**: templates de notas, slash commands del editor, mejoras de búsqueda semántica híbrida (Orama + embeddings)
-- **Distribución**: code signing Windows para MSI, Play Store publish (requiere AAB + $25 one-time + privacy policy)
-- **iOS**: requiere macOS + Apple Developer ID ($99/año) + Share Extension más compleja que Android intent filter
-- **Release keystore Android**: crear SHA-1 de release y registrar en GCP para APKs firmados distribuibles fuera de debug
+- **Feature 3: Búsqueda híbrida** — combinar Orama keyword FTS con embeddings semánticos (ya generados por CF `generateEmbedding`). Scope: Command Palette con tabs keyword/semántica + re-ranking con score combinado + preview on-hover.
+- **Bubble menu contextual sobre selección** — formato inline (bold/italic/link/highlight) + convertir selección a callout o a nota nueva (atomización Zettelkasten).
+- **Code blocks con syntax highlighting** — `@tiptap/extension-code-block-lowlight` + Prism/highlight.js.
+- **Task items del editor → Tasks reales** — hoy TipTap TaskItem es rich-text; un comando podría crear un `task` en TaskStore con sourceId = noteId.
+- **Drag & drop de imágenes al editor** — upload a Firebase Storage, Node custom `image` con attrs `{ src, alt, width }`.
+- **Distribución**: code signing Windows para MSI, Play Store publish (AAB + $25 one-time + privacy policy).
+- **iOS**: macOS + Apple Developer ID ($99/año) + Share Extension nativa (más compleja que Android intent filter).
+- **Release keystore Android**: SHA-1 de release registrado en GCP para APKs distribuibles fuera de debug.
