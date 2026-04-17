@@ -112,6 +112,7 @@
 - **MobileHeader lee título de la ruta con map estático** `path → title` dentro del componente. YAGNI: no hay context provider ni registry separado. El map reusa `navItems` exportado desde Sidebar.
 - **Graph filters usa toggle con `useState`, no `<details>/<summary>`**: el componente existente ya tenía accordion con React state funcional. El plan original sugería `<details>` por YAGNI, pero el toggle existente ya cubre el caso, así que mantener en lugar de refactorizar.
 - **BottomNav fixed + `calc(80px + var(--sai-bottom))` height**: el main tiene `padding-bottom: calc(80px + var(--sai-bottom))` para que el content no quede tapado por el nav. FAB bottom: `calc(80px + 16px + var(--sai-bottom))` para quedar por encima de BottomNav.
+- **Cache del Service Worker persiste entre reinstalaciones del APK en Capacitor.** Al reinstalar un APK con `adb install -r` (o vía transferencia manual), el WebView puede retener el bundle viejo del SW de `vite-plugin-pwa` y servirlo al abrir — el layout se ve con la versión anterior del build. El `registerType: 'autoUpdate'` del plugin resuelve en reloads subsiguientes, pero la primera apertura puede engañar. Solución de debug: desde el celular, Ajustes → Apps → SecondMind → Almacenamiento → Borrar caché. Para E2E confiable, probar primero desinstalación completa + install fresh.
 
 ### IDs y timestamps
 
