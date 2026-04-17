@@ -3,6 +3,7 @@ import { useNavigate, useParams } from 'react-router';
 import { useRow } from 'tinybase/ui-react';
 import NoteEditor from '@/components/editor/NoteEditor';
 import BacklinksPanel, { BacklinksToggle } from '@/components/editor/BacklinksPanel';
+import DistillIndicator from '@/components/editor/DistillIndicator';
 import ReviewBanner from '@/components/editor/ReviewBanner';
 import SimilarNotesPanel from '@/components/editor/SimilarNotesPanel';
 import useNote from '@/hooks/useNote';
@@ -54,9 +55,12 @@ export default function NoteDetailPage() {
           noteId={noteId}
           initialContent={initialContent}
           headerSlot={
-            !isPanelOpen ? (
-              <BacklinksToggle count={backlinks.length} onClick={() => setIsPanelOpen(true)} />
-            ) : null
+            <>
+              <DistillIndicator noteId={noteId} onOpenSummary={() => {}} />
+              {!isPanelOpen && (
+                <BacklinksToggle count={backlinks.length} onClick={() => setIsPanelOpen(true)} />
+              )}
+            </>
           }
         />
       </div>
