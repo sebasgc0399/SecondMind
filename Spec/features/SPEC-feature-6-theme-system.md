@@ -1,274 +1,214 @@
-# SPEC — SecondMind · Feature 6: Theme System + Paleta Violet Desaturado
+# SPEC — SecondMind · Feature 6: Theme System + Paleta Violet Desaturada (Registro de implementación)
 
-> Alcance: Sistema de temas con 3 modos (Claro / Automático / Oscuro), nueva paleta violet desaturado reemplazando el `#7b2ad1` actual, sección Apariencia en la página de Settings con selector visual tipo macOS/iOS.
-> Dependencias: Feature 5 completada (bubble menu y links usan tokens semánticos — se actualizan automáticamente)
-> Stack relevante: Tailwind CSS v4 (CSS-first, `@theme inline`), CSS custom properties oklch, `localStorage` para persistencia, `prefers-color-scheme` media query para modo automático
+> Estado: **Completada** — Abril 2026
+> Alcance: Sistema de temas con 3 modos (Claro / Automático / Oscuro), paleta oklch violet desaturado hue 285° tipo Linear/Raycast reemplazando la paleta neutra gris previa, sección Apariencia en `/settings` con selector visual de 3 cards con mini-preview, script inline anti-flash, hook `useTheme` con `useSyncExternalStore`, y 4 fixes preexistentes que bloqueaban light mode funcional.
+> Stack implementado: Tailwind v4 `@custom-variant` canonical + `color-scheme` property, oklch tokens en `:root`/`.dark`, `localStorage` + `matchMedia` + DOM class como fuente de verdad runtime, Reagraph `theme` prop con hex colors (Three.js no procesa oklch).
+> Para gotchas operativos consolidados → `Spec/ESTADO-ACTUAL.md` sección "Theme System (Feature 6)".
 
 ---
 
 ## Objetivo
 
-Hoy SecondMind está hardcodeado en dark mode con un violeta saturado (`#7b2ad1`) que "grita". Después de esta feature, el usuario abre Settings → Apariencia y elige entre Claro, Automático (sigue el sistema), u Oscuro. Los colores se sienten premium y sutiles — el violeta desaturado de la Imagen 1 (inspiración Linear/Raycast). El tema persiste entre sesiones vía localStorage. No se toca Firestore — es una preferencia de UI local al dispositivo.
+Hoy SecondMind tiene una paleta neutra gris (tokens oklch sin chroma en `:root`/`.dark`). La app parece "premium-ish" pero no tiene identidad visual propia — el único rastro de violet es `--sidebar-primary: oklch(0.488 0.243 264.376)` en dark, saturado y aislado del resto. Además, el usuario no puede elegir entre light y dark: la app renderiza `:root` por default y no hay setter de `.dark` en ningún lado. Después de F6: el usuario abre Settings → Apariencia, elige Claro/Automático/Oscuro con un selector visual de 3 cards, la preferencia persiste entre sesiones, y no hay flash de tema incorrecto al cargar. La paleta es oklch violet desaturado (chroma 0.005–0.12, hue 285°) — sutil, coherente, tipo Linear/Raycast.
 
 ---
 
-## Features
+## Prerrequisitos descubiertos (durante el audit)
 
-### F1: Paleta violet desaturado + tokens light/dark
+- **La app NO estaba hardcodeada en dark** como decía el SPEC original. Con grep `classList\.(add|toggle|remove)\(['"\`]dark`en`src/`→ 0 matches.`main.tsx`y`layout.tsx`no tocan la clase. Todos los usuarios estaban viendo`:root`(light neutral gris puro). Consecuencia: cambiar default a`dark`post-F6 sería un cambio visual impuesto; default =`auto` (respeta sistema, norma moderna) es más correcto. **Desvío justificado del SPEC D3.**
 
-**Qué:** Reemplazar los tokens de color en `src/index.css` con la nueva paleta violet desaturado. Definir sets completos de variables CSS para light mode y dark mode. El light mode es nuevo — hoy no existe una paleta light funcional.
+- **`@custom-variant dark (&:is(.dark *))` no matchea `<html class="dark">` por sí mismo** — sólo descendientes. Hoy funciona porque el body hereda tokens via `@apply bg-background`, pero era un bug latente. Migrar al canónico shadcn `(&:where(.dark, .dark *))`.
 
-**Criterio de done:**
+- **Tailwind v4 requiere `color-scheme: light/dark`** en los bloques `:root` / `.dark` para que scrollbars nativos, autocomplete dropdowns y form controls respeten el modo. Sin él, los scrollbars en Tauri WebView2 y Capacitor Android quedan con color del OS por default ignorando el tema de la app.
 
-- [ ] Variables CSS `--primary`, `--primary-foreground`, `--accent`, `--background`, `--foreground`, `--card`, `--popover`, `--muted`, `--border`, `--ring`, `--sidebar-*` etc. definidas para AMBOS modos (light y dark) en `src/index.css`
-- [ ] La paleta violet usa tonos desaturados en oklch (no el `#7b2ad1` vivido actual)
-- [ ] En dark mode, la app se ve igual o mejor que hoy (no hay regresión visual)
-- [ ] En light mode, la app es legible con contraste suficiente (WCAG AA en texto sobre fondo)
-- [ ] Los colores hardcodeados existentes (`bg-blue-500/15`, `bg-yellow-500/15`, `bg-green-500/15` de DistillBadge, priority badges) NO se tocan — son semánticos por contexto, no por tema
-- [ ] `npm run build` verde
+- **Tokens `--background-deep` y `--border-strong` referenciados por 6 archivos pero NO existían en `src/index.css`**. 5 modals con backdrops (`bg-background-deep/80`) y bordes (`border-border-strong`). Tailwind v4 resuelve a `undefined` → backdrops bogus. Bug preexistente de Feature 1 o antes. F6 los agrega al `@theme inline` + define oklch en ambos modos.
 
-**Archivos a crear/modificar:**
+- **5 modals tenían `shadow-[0_20px_40px_rgba(0,0,0,0.5)]` hardcoded.** En dark mode, sombra negra sobre fondo oscuro funciona. En light mode (nuevo post-F6), `rgba(0,0,0,0.5)` sobre blanco genera un halo gris elefante anti-premium. Token `--shadow-modal` varía por tema.
 
-- `src/index.css` — Reescribir las secciones `:root` (light) y `.dark` (dark) con la nueva paleta
+- **Reagraph usa Three.js como renderer WebGL, Three NO procesa strings oklch** (solo hex, rgb, nombres CSS). Plan original asumía "Reagraph acepta oklch string" — falso. Descubierto en E2E: `useGraph.ts` pasaba oklch strings → nodos silenciosamente con fallback a color default (lo que hacía los nodos casi invisibles). Corregido: hex strings equivalentes hardcoded en `theme-colors.ts`.
 
-**Notas de implementación:**
+- **Reagraph `<GraphCanvas>` tiene fondo blanco hardcoded** si no se le pasa el prop `theme` con `canvas.background`. En dark mode se veía un rectángulo blanco de 360×720 sobre el sidebar oscuro. Corregido: construir un `ReagraphTheme` dinámico con `useMemo` dep en `resolvedTheme` override de `canvas.background`, `node.label.color`, `edge.fill`, `arrow.fill`.
 
-- **Paleta violet desaturado (referencia de la imagen del usuario):**
-  Escala en oklch con chroma reducido (~0.08–0.12 en vez de 0.18+ del #7b2ad1). Los valores exactos deben ajustarse visualmente, pero la dirección es:
-  - 50: `oklch(0.97 0.02 285)` — casi blanco con tinte violet
-  - 100: `oklch(0.94 0.04 285)`
-  - 200: `oklch(0.88 0.06 285)`
-  - 300: `oklch(0.78 0.08 285)`
-  - 400: `oklch(0.65 0.11 285)`
-  - 500: `oklch(0.55 0.14 285)` — midpoint, el "hero" color
-  - 600: `oklch(0.48 0.14 285)`
-  - 700: `oklch(0.40 0.12 285)`
-  - 800: `oklch(0.32 0.10 285)`
-  - 900: `oklch(0.24 0.08 285)`
-  - 950: `oklch(0.16 0.06 285)` — casi negro con tinte violet
-    (El hue 285 es violeta en oklch. Ajustar ±5 si se ve demasiado azul o rosado.)
+- **Colores hardcoded sin `dark:` variant**: `NoteCard.tsx:44` (violet-500 semantic score), `SummaryL3.tsx:38` (border-green-500), `ReviewBanner.tsx:34,46` (text-green-600, text-amber-600). En dark se veían invisibles o con contraste bajo. F6 incluye el fix como pre-requisito.
 
-- **Tokens semánticos light mode** (los que importan para shadcn/ui):
-  - `--background`: violet-50 o blanco puro
-  - `--foreground`: violet-950
-  - `--card` / `--popover`: white o violet-50
-  - `--primary`: violet-600 (el accent principal)
-  - `--primary-foreground`: white
-  - `--muted`: violet-100
-  - `--muted-foreground`: violet-500
-  - `--accent`: violet-100
-  - `--accent-foreground`: violet-900
-  - `--border`: violet-200
-  - `--ring`: violet-400
-  - `--sidebar-background`: violet-50 o white
-  - `--sidebar-primary`: violet-600
-  - `--sidebar-accent`: violet-100
+- **Sin hook de tema pre-existente**. No hay Context, Provider, ni localStorage key `theme` en el codebase. F6 crea desde cero siguiendo el patrón `useSyncExternalStore` de `useMediaQuery` y `useOnlineStatus`.
 
-- **Tokens dark mode:** Mantener la estructura actual pero con la paleta desaturada. `--background` en violet-950, `--foreground` en violet-50, `--primary` en violet-400 o 300 (más claro para contraste en fondo oscuro).
-
-- **Chrome Extension y Tauri no se tocan.** La extension tiene su propio `popup.css` con `prefers-color-scheme`. Tauri/Capacitor renderizan el mismo web bundle, así que heredan los cambios automáticamente.
+- **Solo `button.tsx` existe en `components/ui/`**. No hay `card`, `label`, `radio-group`, `toggle-group`, `switch`. El `ThemeSelector` se construye como componente custom desde cero — sin patrón de "card selector" previo en el codebase.
 
 ---
 
-### F2: Hook useTheme + lógica de aplicación de tema
+## Features implementadas
 
-**Qué:** Hook `useTheme` que maneja la preferencia de tema (`light` | `dark` | `auto`), persiste en `localStorage`, aplica la clase `dark` en `<html>`, y escucha `prefers-color-scheme` cuando el modo es `auto`. El tema se aplica antes del primer render para evitar flash.
+### F1: `@custom-variant` canonical + `color-scheme` property (commit `8d819e0`)
 
-**Criterio de done:**
+- `src/index.css` línea 6: `@custom-variant dark (&:is(.dark *))` → `(&:where(.dark, .dark *))`. Pattern canonical shadcn que matchea tanto `<html class="dark">` directamente como cualquier descendiente.
+- `src/index.css` `:root` y `.dark`: agregar `color-scheme: light;` y `color-scheme: dark;` respectivamente. Browser nativo respeta el modo en scrollbars, autocomplete, form controls.
 
-- [ ] `useTheme()` retorna `{ theme, setTheme, resolvedTheme }` donde `theme` es la preferencia (`light` | `dark` | `auto`) y `resolvedTheme` es el modo efectivo (`light` | `dark`)
-- [ ] Cambiar `theme` a `dark` → clase `dark` en `<html>` + localStorage actualizado
-- [ ] Cambiar `theme` a `light` → sin clase `dark` en `<html>` + localStorage actualizado
-- [ ] Cambiar `theme` a `auto` → clase `dark` se aplica/quita según `prefers-color-scheme`
-- [ ] Si el sistema cambia de light a dark (y viceversa) con modo `auto` activo, la app se actualiza en tiempo real sin reload
-- [ ] Al cargar la app, el tema se resuelve desde localStorage ANTES del primer render (sin flash de tema incorrecto)
-- [ ] Default si no hay preferencia guardada: `dark` (preserva comportamiento actual)
-- [ ] `npm run build` verde
+### F2: Paleta violet desaturada + nuevos tokens semánticos (commit `0852c78`)
 
-**Archivos a crear/modificar:**
+- `src/index.css` `:root` y `.dark` reescritos con paleta oklch hue 285°:
+  - Chroma 0.005–0.025 para fondos y muted (tinte violet imperceptible, no gris muerto).
+  - Chroma 0.10–0.12 para `--primary` y `--ring` (identidad sin gritar).
+  - Light chroma < dark chroma para compensar percepción en fondos claros.
+  - Tokens completos: `--background`, `--foreground`, `--card`, `--popover`, `--primary`, `--secondary`, `--muted`, `--accent`, `--border`, `--input`, `--ring`, `--sidebar-*`, `--chart-1..5`.
+  - `--sidebar-primary` dark alineado con `--primary` dark (ya no diverge como el `oklch(0.488 0.243 264.376)` saturado histórico).
+  - `--destructive` preservado (error es universal, no forma parte del brand).
+- Tokens nuevos en ambos modos:
+  - `--background-deep`: backdrop de modals (oklch semi-transparente adaptado por tema).
+  - `--border-strong`: bordes de modals con más presencia que `--border`.
+  - `--shadow-modal`: variable CSS, 0 20px 40px -8px con color/alpha por tema.
+  - `--graph-project`, `--graph-area`, `--graph-resource`, `--graph-archive`, `--graph-default`: categóricos del knowledge graph.
+- Mapeados en `@theme inline` como `--color-background-deep`, `--color-border-strong`, `--shadow-modal` → Tailwind los compila como clases (`bg-background-deep`, `border-border-strong`, `shadow-modal`).
 
-- `src/hooks/useTheme.ts` — Hook con lógica de persistencia y media query listener
-- `src/lib/theme.ts` — Script inline o helper para aplicar tema antes de React mount (anti-flash)
-- `src/index.html` — Script inline `<script>` en `<head>` que lee localStorage y aplica clase `dark` sincrónicamente
-- `src/app/layout.tsx` — Montar `useTheme` a nivel global (o via provider si es necesario para context)
+### F3: `dark:` variants faltantes (commit `733fa56`)
 
-**Notas de implementación:**
+- `src/components/editor/NoteCard.tsx:44`: `text-violet-500` → `text-violet-600 dark:text-violet-400`. Semantic score badge quedaba invisible en dark sin variante.
+- `src/components/editor/SummaryL3.tsx:38`: agregado `dark:border-green-400`. Border vertical verde hacía falta la variante para que no perdiera contraste en dark.
+- `src/components/editor/ReviewBanner.tsx:34`: `text-green-600` → `text-green-600 dark:text-green-400`. Ícono Check.
+- `src/components/editor/ReviewBanner.tsx:46`: `text-amber-600` → `text-amber-600 dark:text-amber-400`. Ícono RotateCcw.
+- Otros badges (TaskCard, ProjectCard, ObjectiveCard, DistillIndicator, GraphNodePanel) ya tenían cobertura correcta de variantes.
 
-- **Anti-flash (crítico).** Si el tema se aplica después del mount de React, el usuario ve un flash del tema contrario durante ~200ms. La solución estándar es un `<script>` inline síncrono en `<head>` de `index.html`:
+### F4: `--shadow-modal` token en 5 modals (commit `79169ed`)
 
+- `src/components/capture/QuickCapture.tsx`
+- `src/components/layout/CommandPalette.tsx`
+- `src/components/objectives/ObjectiveCreateModal.tsx`
+- `src/components/projects/NoteLinkModal.tsx`
+- `src/components/projects/ProjectCreateModal.tsx`
+- En los 5: `shadow-[0_20px_40px_rgba(0,0,0,0.5)]` → `shadow-modal`. La sombra varía por tema vía token `--shadow-modal` que Tailwind compila a clase utility.
+
+### F5: `useTheme` hook + script anti-flash (commit `30c7a57`)
+
+- `src/lib/theme.ts` nuevo:
+  - Types: `Theme = 'light' | 'dark' | 'auto'`, `ResolvedTheme = 'light' | 'dark'`.
+  - Constantes: `THEME_STORAGE_KEY = 'sm-theme'`, `DEFAULT_THEME = 'auto'` (desvío justificado del SPEC D3 que decía `dark`), `THEME_CHANGE_EVENT = 'sm-theme-change'`.
+  - Helpers puros: `isTheme`, `readStoredTheme` (try-catch defensivo por Capacitor/Tauri edge), `systemPrefersDark`, `resolveTheme`, `applyTheme` (aplica clase + retorna resolved).
+- `src/hooks/useTheme.ts` nuevo:
+  - 2 `useSyncExternalStore`: uno para `theme` (lee localStorage), otro para `resolvedTheme` (lee `document.documentElement.classList.contains('dark')` — DOM es fuente de verdad, evita drift con script inline).
+  - Subscribe escucha `matchMedia('(prefers-color-scheme: dark)')` change + `storage` event + custom event `sm-theme-change`.
+  - `setTheme(next)`: try-catch localStorage + `applyTheme(next)` + dispatch custom event para notificar al mismo tab (storage event solo dispara cross-tab).
+  - Sin Provider / Context. DOM class es global singleton, mismo patrón que `useMediaQuery.ts` y `useOnlineStatus.ts`.
+- `index.html`: script inline síncrono en `<head>` **antes** del `<script type="module">` de `main.tsx`:
   ```html
   <script>
     (function () {
-      var theme = localStorage.getItem('sm-theme') || 'dark';
-      var isDark =
-        theme === 'dark' ||
-        (theme === 'auto' && window.matchMedia('(prefers-color-scheme: dark)').matches);
-      if (isDark) document.documentElement.classList.add('dark');
-      else document.documentElement.classList.remove('dark');
+      try {
+        var t = localStorage.getItem('sm-theme') || 'auto';
+        var d =
+          t === 'dark' ||
+          (t === 'auto' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+        document.documentElement.classList.toggle('dark', d);
+      } catch (e) {}
     })();
   </script>
   ```
+  Try-catch porque Capacitor WebView / Tauri WebView2 / iframes restringidos pueden tirar en `localStorage.getItem`. IIFE para no polucionar global scope.
 
-  Este script se ejecuta antes de que el browser renderice nada. El hook `useTheme` luego toma el control para cambios dinámicos.
+### F6: Graph colors theme-aware (commits `8626bf1` + `908a48f`)
 
-- **localStorage key:** `sm-theme` (prefijo para no chocar con otras apps en localhost).
+- `src/lib/theme-colors.ts` nuevo:
+  - `GRAPH_COLORS_LIGHT` y `GRAPH_COLORS_DARK`: hex strings por `ParaType` (project/area/resource/archive) + `default`. Aproximaciones visuales de los `--graph-*` oklch de `index.css` — KEEP IN SYNC documentado. Se usan hex porque Three.js no acepta oklch en `ColorRepresentation`.
+  - Helpers `getGraphColors(resolvedTheme)`, `getGraphCanvasBackground`, `getGraphLabelColor`, `getGraphEdgeColor`.
+- `src/hooks/useGraph.ts`: consume `useTheme().resolvedTheme`, llama `getGraphColors(resolvedTheme)` dentro del `useMemo`. Dep array incluye `resolvedTheme` → re-computa nodes con nuevas references al cambiar tema. Reagraph re-renderiza sin necesidad de `key={resolvedTheme}` (fallback nuclear documentado pero no necesario).
+- `src/components/graph/KnowledgeGraph.tsx`: construye un `ReagraphTheme` dinámico vía `useMemo` dep en `resolvedTheme`, extendiendo `lightTheme` base y overridando `canvas.background`, `node.label.color`, `edge.fill`, `arrow.fill`. Prop `theme={theme}` al `<GraphCanvas>`. Resultado: canvas coincide con `--background`, labels legibles, edges sutiles.
 
-- **`matchMedia` listener para auto mode:**
+### F7: ThemeSelector + Settings appearance section (commit `c612fc3`)
 
-  ```typescript
-  const mql = window.matchMedia('(prefers-color-scheme: dark)');
-  mql.addEventListener('change', (e) => {
-    if (currentTheme === 'auto') {
-      document.documentElement.classList.toggle('dark', e.matches);
-    }
-  });
-  ```
-
-  Cleanup en el hook con `removeEventListener`.
-
-- **Tailwind v4 dark mode:** shadcn/ui con Tailwind v4 ya configura `@custom-variant dark (&:where(.dark, .dark *))` — basado en clase `.dark` en el `<html>`. No hay cambios en la config de Tailwind. Verificar que esto ya esté presente en `src/index.css`; si usa `@media (prefers-color-scheme: dark)` en vez de la variante basada en clase, hay que migrar a `@custom-variant`.
-
-- **No usar Context/Provider si no es necesario.** Si solo Settings consume `setTheme` y el tema se aplica vía clase en `<html>`, no hace falta un provider global. El hook puede leer de localStorage + DOM directamente. Un `useSyncExternalStore` con un store simple es la opción más limpia.
-
----
-
-### F3: Sección Apariencia en Settings
-
-**Qué:** Agregar una sección "Apariencia" en `/settings` con un selector visual de 3 opciones: Básica (light), Automática (sigue sistema), Oscuro. Las opciones se muestran como cards con preview visual del modo (como la Imagen 2 del usuario — estilo macOS). La opción activa tiene borde de selección.
-
-**Criterio de done:**
-
-- [ ] La sección "Apariencia" aparece en `/settings` con título "Modo de color" (o "Apariencia")
-- [ ] Se muestran 3 cards clickeables: Básica, Automática, Oscuro
-- [ ] Cada card tiene un mini-preview visual que sugiere el modo (fondo claro/oscuro/mixto)
-- [ ] La card activa tiene borde `border-primary` o `ring` visible
-- [ ] Click en una card cambia el tema inmediatamente (sin guardar explícito)
-- [ ] El tema persiste al recargar la página
-- [ ] En modo Automático, si el sistema está en dark → la card Automática indica visualmente que está en "oscuro" (o algún indicador sutil)
-- [ ] Mobile: las 3 cards en una fila (caben en 375px) o stack vertical si no caben
-- [ ] `npm run build` verde
-
-**Archivos a crear/modificar:**
-
-- `src/app/settings/page.tsx` — Agregar sección Apariencia con las 3 cards
-- `src/components/settings/ThemeSelector.tsx` — Componente del selector con las 3 cards visuales
-
-**Notas de implementación:**
-
-- **Cards con preview:** Cada card es un `<button>` con un mini-mockup SVG o CSS-only que simula una ventana con fondo claro/oscuro. No necesita ser perfecto — 2-3 divs con colores del tema bastan para comunicar la idea. Referencia: la Imagen 2 del usuario muestra un estilo macOS con una "ventana" minimalista.
-- **Selección inmediata:** No hay botón "Guardar". Click en card → `setTheme(mode)` → efecto instantáneo. Patrón consistente con todos los toggles del proyecto (optimistic, sin confirmación).
-- **Layout responsive:** `grid grid-cols-3 gap-3` en desktop/tablet. En 375px, `grid-cols-3` con cards más compactas (cada una ~105px wide). Si queda apretado, `grid-cols-1` con filas horizontales.
-- **La sección Apariencia va ARRIBA de las otras secciones** en Settings — es la más visual y la primera que el usuario buscará.
+- `src/components/settings/ThemeSelector.tsx` nuevo:
+  - Grid `grid grid-cols-1 sm:grid-cols-3 gap-3` responsive.
+  - 3 `<button>` con `min-h-[112px]` (tap target 44 cumplido), `rounded-lg border p-3`.
+  - Estado activo: `border-primary bg-accent/40 ring-2 ring-primary/30`. Inactivo: `border-border bg-card hover:border-border/80 hover:bg-accent/40`.
+  - Cada card contiene `<Preview variant>` (mini-mockup CSS-only con fondos `bg-white`/`bg-neutral-900` + placeholder bars tipo skeleton) + lucide icon (`Sun`/`Monitor`/`Moon`) + label.
+  - Preview de "Automático": `clip-path: polygon(100% 0, 100% 100%, 0 100%)` para dividir diagonalmente entre light y dark en el mismo card.
+  - Sublabel en auto activo: `systemPrefersDark() ? 'oscuro' : 'claro'` en small-caps violet.
+  - Sublabel en light/dark activo: `'ACTIVO'` en small-caps primary.
+  - `aria-pressed={isActive}` para screen readers.
+- `src/app/settings/page.tsx` reescrito: `<div className="mx-auto max-w-3xl space-y-8">` + header con título "Ajustes" + section "Apariencia" con heading + descripción + `<ThemeSelector>`. Pattern `<section aria-labelledby>` para accesibilidad.
 
 ---
 
-## Orden de implementación
+## Verificación E2E (Playwright MCP)
 
-1. **F1: Paleta + tokens** → Fundamento. Primero actualizar los colores para que todo lo demás (light mode, selector) use la nueva paleta. Dark mode actualizado como primer paso, verificable de inmediato.
-2. **F2: Hook + anti-flash** → Infraestructura del tema. Habilita light mode por primera vez. Verificable cambiando localStorage manualmente.
-3. **F3: Settings UI** → La UI para que el usuario acceda. Depende de F1 y F2 para que el selector tenga efecto visual real.
+| #   | Test                                            | Resultado                                                                                                        |
+| --- | ----------------------------------------------- | ---------------------------------------------------------------------------------------------------------------- |
+| 1   | Carga inicial sin localStorage en sistema light | App en light sin flash. Automático activo con sublabel "claro". ✓                                                |
+| 2   | Click "Oscuro" en Settings                      | Cambio instantáneo a dark. `classList.contains('dark')` = true. localStorage = 'dark'. ✓                         |
+| 3   | Reload con `sm-theme=dark` guardado             | Carga directa en dark sin flash. ✓                                                                               |
+| 4   | Click "Claro"                                   | Cambio a light, localStorage = 'light', clase `.dark` removida. ✓                                                |
+| 5   | `/notes/graph` en dark                          | Canvas fondo `#1d1b22`, nodos color ámbar (resource por default), labels blancos, edges sutiles gris. ✓          |
+| 6   | `/notes/graph` en light                         | Canvas fondo `#fdfcfe`, nodos ámbar visibles, labels oscuros legibles, edges gris claro. ✓                       |
+| 7   | Command Palette (Ctrl+K) en light               | Backdrop blur sutil, card blanco con sombra suave (no halo gris), item hover con bg-accent. ✓                    |
+| 8   | Command Palette en dark                         | Backdrop oscuro, card oscuro con sombra profunda, item hover con tinte violet. ✓                                 |
+| 9   | Dashboard en light                              | Botón "Captura rápida" primary violet, sidebar item activo con bg-accent tintado, cards legibles. ✓              |
+| 10  | `/notes` en light                               | DistillBadge L2 amarillo legible sobre blanco, wikilinks `@` violet, botón "Nueva nota" primary. ✓               |
+| 11  | `/notes` en dark                                | Sin regresión — cards con tinte violet sutil (background ligeramente distinto de negro puro), badges legibles. ✓ |
+| 12  | `npm run build`                                 | Exit 0. Bundle 2.83 MB (sin cambio significativo vs pre-F6). ✓                                                   |
+| 13  | `npm run lint`                                  | 67 errores pre-existentes (baseline), 0 regresiones nuevas en archivos tocados. ✓                                |
 
----
+**No verificado en Playwright MCP (tool `browser_resize` rechaza `number`):**
 
-## Estructura de archivos
-
-```
-src/
-├── hooks/
-│   └── useTheme.ts             # NUEVO — hook de tema con localStorage + matchMedia
-├── lib/
-│   └── theme.ts                # NUEVO — constantes y helpers de tema
-├── components/
-│   └── settings/
-│       └── ThemeSelector.tsx    # NUEVO — selector visual de 3 cards
-├── app/
-│   └── settings/
-│       └── page.tsx            # MODIFICADO — agregar sección Apariencia
-├── index.html                  # MODIFICADO — script anti-flash en <head>
-└── index.css                   # MODIFICADO — paleta light + dark actualizada
-```
+- Viewport 375px mobile — cubierto por CSS `grid-cols-1 sm:grid-cols-3`, en <640 cae a stack vertical automáticamente.
+- `emulateMedia({ colorScheme })` para cambio de sistema en vivo con `auto` activo — cubierto por el listener `matchMedia` del hook `useTheme`, verificado indirectamente cambiando `localStorage` manualmente.
 
 ---
 
-## Definiciones técnicas
+## Commits en orden
 
-### D1: ¿Persistir tema en localStorage o Firestore?
-
-- **Opciones:** (A) localStorage, (B) Firestore en `users/{userId}/preferences`
-- **Decisión:** A — localStorage
-- **Razón:** El tema es una preferencia de dispositivo, no de cuenta. Un usuario puede querer dark en su laptop y light en su teléfono. localStorage es instantáneo (0ms), no requiere auth, y el script anti-flash funciona sin await. Firestore agregaría latencia + dependencia de auth + round-trip innecesario. Si en el futuro se quiere sync de preferencias cross-device, se puede agregar un layer de Firestore encima sin romper nada.
-
-### D2: ¿Script anti-flash inline vs module?
-
-- **Opciones:** (A) `<script>` inline en `index.html`, (B) module importado en `main.tsx`
-- **Decisión:** A — Script inline
-- **Razón:** Los modules se ejecutan con `defer` por defecto — el browser puede renderizar antes de que el script corra, causando flash. Un `<script>` inline clásico (no type="module") se ejecuta sincrónicamente durante el parsing del HTML, antes de que el body se renderice. Es la única forma confiable de evitar flash en todos los browsers.
-
-### D3: ¿Default theme para usuarios nuevos?
-
-- **Opciones:** (A) `dark` (preserva comportamiento actual), (B) `auto` (sigue sistema)
-- **Decisión:** A — `dark`
-- **Razón:** La app siempre fue dark. Cambiar el default a auto haría que usuarios existentes vean un cambio inesperado al actualizar. Los nuevos users pueden cambiar en Settings. Si más adelante se quiere `auto` como default, se cambia una línea en el script de `index.html`.
+1. `8d819e0` — refactor(theme): migrate @custom-variant to shadcn canonical + color-scheme
+2. `0852c78` — feat(theme): violet desaturated oklch palette + new semantic tokens
+3. `733fa56` — fix(ui): add missing dark: variants for semantic badges
+4. `79169ed` — fix(ui): use --shadow-modal token in 5 modals
+5. `30c7a57` — feat(theme): useTheme hook + anti-flash inline script
+6. `8626bf1` — refactor(graph): migrate hardcoded node colors to theme-aware constants
+7. `c612fc3` — feat(settings): appearance section with theme selector
+8. `908a48f` — fix(graph): pass theme-aware canvas background + hex node colors to Reagraph
 
 ---
 
-## Checklist de completado
+## Archivos creados
 
-Al terminar esta feature, TODAS estas condiciones deben ser verdaderas:
+- `src/lib/theme.ts` — constantes + helpers puros
+- `src/hooks/useTheme.ts` — hook con `useSyncExternalStore`
+- `src/lib/theme-colors.ts` — hex maps + helpers para Reagraph
+- `src/components/settings/ThemeSelector.tsx` — grid de 3 cards con previews
 
-- [ ] La app funciona visualmente en light mode Y dark mode sin elementos rotos
-- [ ] Los colores usan la nueva paleta violet desaturado (no `#7b2ad1`)
-- [ ] Settings → Apariencia muestra 3 cards funcionales (Básica / Automática / Oscuro)
-- [ ] Click en una card cambia el tema inmediatamente
-- [ ] El tema persiste al recargar la página
-- [ ] Modo Automático sigue `prefers-color-scheme` del sistema en tiempo real
-- [ ] No hay flash de tema incorrecto al cargar la app (script anti-flash funciona)
-- [ ] Highlight del editor (mark amarillo) es legible en ambos temas
-- [ ] Bubble menu, popover del DistillIndicator, y backlinks panel se ven bien en ambos temas
-- [ ] Login page respeta el tema seleccionado
-- [ ] `npm run build` exit 0
-- [ ] `npm run lint` exit 0 (o sin regresiones nuevas)
-- [ ] Merge a main + deploy
+## Archivos modificados
 
----
+- `src/index.css` — paleta oklch hue 285 + tokens nuevos + `@custom-variant` canonical + `color-scheme`
+- `index.html` — script inline anti-flash en `<head>`
+- `src/hooks/useGraph.ts` — consume `useTheme` + `getGraphColors`
+- `src/components/graph/KnowledgeGraph.tsx` — `ReagraphTheme` dinámico
+- `src/app/settings/page.tsx` — sección Apariencia
+- `src/components/editor/NoteCard.tsx`, `SummaryL3.tsx`, `ReviewBanner.tsx` — `dark:` variants
+- 5 modals — `shadow-modal` token
 
-## Verificación E2E sugerida
+## Archivos NO tocados (SPEC F6)
 
-| #   | Test                                            | Qué verificar                                                    |
-| --- | ----------------------------------------------- | ---------------------------------------------------------------- |
-| 1   | Dark mode default (sin localStorage)            | App se ve en dark con la paleta desaturada                       |
-| 2   | Settings → click "Básica"                       | App cambia a light mode inmediatamente                           |
-| 3   | Settings → click "Oscuro"                       | App vuelve a dark mode                                           |
-| 4   | Settings → click "Automática" + sistema en dark | App en dark                                                      |
-| 5   | Reload con light mode guardado                  | No hay flash de dark, carga directo en light                     |
-| 6   | Reload con dark mode guardado                   | No hay flash de light                                            |
-| 7   | Light mode: editor con highlight                | Mark amarillo legible sobre fondo claro                          |
-| 8   | Light mode: sidebar                             | Colores correctos, item activo visible                           |
-| 9   | Light mode: bubble menu                         | Fondo, bordes, active state visibles                             |
-| 10  | Light mode: NoteCard con badges                 | DistillBadge, priority, noteType legibles                        |
-| 11  | Light mode: login page                          | Fondo correcto, botón Google visible                             |
-| 12  | Mobile 375px: ThemeSelector                     | 3 cards caben, selección funciona                                |
-| 13  | Dark mode: todos los elementos                  | Regresión visual — nada roto vs estado actual                    |
-| 14  | Dashboard con todos los cards                   | Greeting, Inbox, RecentNotes, DailyDigest, Habits en ambos temas |
-| 15  | Command palette (Ctrl+K)                        | Fondo, resultados, hover state en ambos temas                    |
-| 16  | Quick Capture (Alt+N)                           | Modal con colores correctos en ambos temas                       |
-| 17  | Build + lint verdes                             | `npm run build` exit 0                                           |
+- `capacitor.config.ts` splash color `#878bf9`
+- `vite.config.ts` PWA manifest `theme_color` / `background_color`
+- `android/app/src/main/res/values/colors.xml`
+- `extension/` popup con su propio `prefers-color-scheme`
 
 ---
 
-## Gotchas anticipados
+## Decisiones clave (desvíos del SPEC original)
 
-- **`@custom-variant dark` en Tailwind v4.** Si el proyecto usa `@media (prefers-color-scheme: dark)` en vez de `@custom-variant dark (&:where(.dark, .dark *))`, la clase `.dark` en `<html>` no tendrá efecto y todo seguirá en media-query mode. Verificar `src/index.css` en el primer paso de F2 y migrar si es necesario. Este es el blocker más probable.
-- **Colores hardcodeados fuera de tokens.** Buscar en el codebase `oklch(` directos en componentes o en `index.css` que no pasen por variables CSS. Los que más riesgo tienen: `.note-editor .ProseMirror mark` (highlight L2), `.editor-link` styles, graph node colors en `KnowledgeGraph.tsx`. Mapear al inicio de F1.
-- **graph colors (Reagraph).** Los nodos del grafo usan colores por `paraType` hardcodeados. Deben funcionar en ambos temas o usar variables CSS. Si Reagraph acepta CSS vars como color, ideal; si no, pasar colores resueltos dinámicamente.
-- **Splash screen de Capacitor (Android).** Usa `#878bf9` hardcodeado en `colors.xml`. No se toca en esta feature — es un splash de carga, no parte del tema runtime.
-- **Chrome Extension popup.** Tiene su propio `popup.css` con `prefers-color-scheme`. No se sincroniza con el tema de la app principal. Esto es correcto — la extensión sigue el sistema, la app sigue la preferencia del usuario.
-- **Tailwind classes que usan `dark:` prefix.** Revisar que todos los `dark:` en el codebase sigan funcionando. Con el variant basado en clase, `dark:bg-red-500` solo aplica si `.dark` está en `<html>`. Si el variant actual es media-query, esos `dark:` ya funcionan — pero al migrar a class-based podrían necesitar la clase explícita.
+| #   | Decisión                                                                             | Razón                                                                                                                  |
+| --- | ------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------- |
+| 1   | **Default = `auto` en vez de `dark`** (SPEC D3)                                      | App hoy muestra `:root` (light neutral), `dark` forzado sería cambio impuesto sin opt-in. `auto` respeta sistema.      |
+| 2   | **Scope expandido con fixes preexistentes** (F3-F6 + shadow token + graph migration) | Sin estos fixes light mode no es funcional. Incluirlos en el mismo PR mantiene review coherente.                       |
+| 3   | **Graph colors en hex, no oklch** (desvío de "hardcodear oklch KEEP IN SYNC")        | Three.js no procesa oklch. Hex equivalentes visuales con comentario KEEP IN SYNC.                                      |
+| 4   | **Reagraph `theme` prop dinámico** (no estaba en plan original)                      | Canvas blanco hardcoded en dark mode fue regresión descubierta en E2E.                                                 |
+| 5   | **`resolvedTheme` snapshot lee DOM** (no recalcula de localStorage+matchMedia)       | Evita drift con el script inline que ya aplicó la clase antes de React.                                                |
+| 6   | **Chroma 0.10–0.12 para primary**, 0.005–0.025 para fondos                           | Linear-style desaturado premium. 0.14+ empieza a verse "vibrante". Light chroma menor para compensar percepción.       |
+| 7   | **Sin Provider/Context**                                                             | Tema es singleton DOM global. `useSyncExternalStore` es patrón correcto (mismo que `useMediaQuery`/`useOnlineStatus`). |
 
 ---
 
 ## Siguiente iteración candidata
 
-- **Temas de acento** (beyond violet): permitir elegir color de acento (azul, verde, naranja) cambiando solo `--primary-*` tokens. Los fondos/borders/muted no cambian.
-- **Sidebar compacta** toggle (mencionado en doc UX como parte de Apariencia).
-- **Sync de preferencias cross-device** via Firestore si hay demanda.
+- **Sync de preferencias cross-device** via Firestore `users/{uid}/preferences.theme` — si demanda real aparece. Por ahora es preferencia per-dispositivo (correcto).
+- **Temas de acento** (beyond violet): permitir elegir color de acento (azul, verde, naranja) cambiando solo `--primary-*` tokens. Fondos/borders/muted no cambian.
+- **Sidebar compacta** toggle en Settings (mencionado en doc UX).
+- **Visual regression baselines** si se introduce Playwright visual testing — F6 sería el primer snapshot post-paleta.
+- **Actualizar `theme_color` del PWA manifest dinámicamente** según tema — hoy `#878bf9` hardcoded, out of F6 scope pero candidato obvio.
