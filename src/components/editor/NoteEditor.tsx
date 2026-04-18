@@ -36,7 +36,20 @@ export default function NoteEditor({
   const navigate = useNavigate();
   const editor = useEditor({
     extensions: [
-      StarterKit,
+      StarterKit.configure({
+        link: {
+          openOnClick: false,
+          autolink: true,
+          linkOnPaste: true,
+          defaultProtocol: 'https',
+          HTMLAttributes: {
+            target: '_blank',
+            rel: 'noopener noreferrer',
+            class: 'editor-link',
+          },
+        },
+        underline: false,
+      }),
       TaskList,
       TaskItem.configure({ nested: true }),
       Highlight,
