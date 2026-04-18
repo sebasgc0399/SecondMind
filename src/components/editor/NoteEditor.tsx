@@ -5,26 +5,41 @@ import StarterKit from '@tiptap/starter-kit';
 import Placeholder from '@tiptap/extension-placeholder';
 import TaskList from '@tiptap/extension-task-list';
 import TaskItem from '@tiptap/extension-task-item';
+import Highlight from '@tiptap/extension-highlight';
 import Wikilink from '@/components/editor/extensions/wikilink';
 import SlashCommand from '@/components/editor/extensions/slash-command';
 import WikilinkMenu from '@/components/editor/menus/WikilinkMenu';
 import SlashMenu from '@/components/editor/menus/SlashMenu';
+import SummaryL3 from '@/components/editor/SummaryL3';
 import useNoteSave, { type SaveStatus } from '@/hooks/useNoteSave';
 import type { JSONContent } from '@tiptap/core';
 
 interface NoteEditorProps {
   noteId: string;
   initialContent: JSONContent | null;
+  initialSummaryL3: string;
+  summaryIsOpen: boolean;
+  onSummaryToggle: () => void;
+  summaryTextareaRef: React.RefObject<HTMLTextAreaElement | null>;
   headerSlot?: React.ReactNode;
 }
 
-export default function NoteEditor({ noteId, initialContent, headerSlot }: NoteEditorProps) {
+export default function NoteEditor({
+  noteId,
+  initialContent,
+  initialSummaryL3,
+  summaryIsOpen,
+  onSummaryToggle,
+  summaryTextareaRef,
+  headerSlot,
+}: NoteEditorProps) {
   const navigate = useNavigate();
   const editor = useEditor({
     extensions: [
       StarterKit,
       TaskList,
       TaskItem.configure({ nested: true }),
+      Highlight,
       Placeholder.configure({ placeholder: 'Escribe una idea...' }),
       Wikilink,
       SlashCommand.configure({ noteId }),
@@ -32,7 +47,7 @@ export default function NoteEditor({ noteId, initialContent, headerSlot }: NoteE
     content: initialContent ?? undefined,
   });
 
-  const { status } = useNoteSave(noteId, editor);
+  const { status, summaryL3, setSummaryL3 } = useNoteSave(noteId, editor, initialSummaryL3);
 
   const handleClick = useCallback(
     (event: React.MouseEvent<HTMLDivElement>) => {
@@ -53,6 +68,13 @@ export default function NoteEditor({ noteId, initialContent, headerSlot }: NoteE
         {headerSlot}
         <SaveIndicator status={status} />
       </div>
+      <SummaryL3
+        value={summaryL3}
+        onChange={setSummaryL3}
+        textareaRef={summaryTextareaRef}
+        isOpen={summaryIsOpen}
+        onToggle={onSummaryToggle}
+      />
       <div className="note-editor px-4" onClick={handleClick}>
         <EditorContent editor={editor} />
       </div>

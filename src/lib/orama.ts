@@ -69,6 +69,7 @@ export const NOTES_SCHEMA = {
   linkCount: 'number',
   updatedAt: 'number',
   isArchived: 'boolean',
+  distillLevel: 'number',
 } as const;
 
 export interface NoteOramaDoc {
@@ -80,6 +81,7 @@ export interface NoteOramaDoc {
   linkCount: number;
   updatedAt: number;
   isArchived: boolean;
+  distillLevel: 0 | 1 | 2 | 3;
 }
 
 export function createNotesIndex(): AnyOrama {
@@ -90,6 +92,8 @@ export function createNotesIndex(): AnyOrama {
 // arrays como JSON strings, booleanos pueden venir como undefined si la row
 // fue creada parcialmente — normalizamos a defaults seguros.
 export function rowToOramaDoc(id: string, row: Row): NoteOramaDoc {
+  const rawLevel = Number(row.distillLevel) || 0;
+  const distillLevel = (rawLevel >= 0 && rawLevel <= 3 ? rawLevel : 0) as 0 | 1 | 2 | 3;
   return {
     id,
     title: ((row.title as string) || '').trim() || 'Sin título',
@@ -99,5 +103,6 @@ export function rowToOramaDoc(id: string, row: Row): NoteOramaDoc {
     linkCount: Number(row.linkCount) || 0,
     updatedAt: Number(row.updatedAt) || 0,
     isArchived: Boolean(row.isArchived),
+    distillLevel,
   };
 }

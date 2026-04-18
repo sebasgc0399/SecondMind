@@ -1,247 +1,160 @@
-# SPEC — SecondMind · Feature 4: Progressive Summarization Visual
+# SPEC — SecondMind · Feature 4: Progressive Summarization Visual (Registro de implementación)
 
-> Alcance: Implementar los 3 niveles de destilación de Tiago Forte en el editor TipTap con capas visuales distinguibles, resumen ejecutivo L3, e indicador de nivel de destilación.
-> Dependencias: Features 1–3 completadas. TipTap con StarterKit (bold ya disponible).
-> Estimado: 1 semana solo dev
-> Stack relevante: TipTap, @tiptap/extension-highlight, React 19, TinyBase, Firestore
+> Estado: **Completada** — Abril 2026
+> Alcance: 3 niveles de destilación de Tiago Forte sobre el editor TipTap (L0 sin marcas → L1 bold → L2 highlight → L3 resumen ejecutivo), indicador visual en el header con tip contextual, resumen colapsable encima del editor, `distillLevel` computado automáticamente y persistido en TinyBase + Firestore, badge consistente en `NoteCard`.
+> Stack implementado: `@tiptap/extension-highlight`, `@base-ui/react/popover` (primer uso en el proyecto), walk recursivo sobre `JSONContent` para leer marks en text nodes, hook unificado `useNoteSave` con doble input (editor + textarea).
+> Para gotchas operativos consolidados → `Spec/ESTADO-ACTUAL.md` sección "Progressive Summarization (Feature 4)".
 
 ---
 
 ## Objetivo
 
-El usuario abre una nota que ya escribió hace semanas. En vez de releerla entera, ve de un vistazo los pasajes clave en **bold** (L1), los más importantes resaltados en **highlight amarillo** (L2), y un resumen ejecutivo arriba (L3). El indicador "L2" en el header le dice qué tan destilada está la nota. Cada vez que revisita, puede destilar más — es acumulativo, no destructivo. El "yo del futuro" puede usar cualquier nota en 30 segundos.
+Cuando Sebastián abre una nota vieja, ve de un vistazo los pasajes clave (**bold**, L1), los esenciales (<mark>highlight amarillo</mark>, L2) y un resumen ejecutivo arriba (L3). El badge del header le dice el nivel de destilación, con un tip contextual que le indica la próxima acción. La técnica es acumulativa (cada capa se suma) y no destructiva: si borra el resumen, el nivel baja al correspondiente a las marcas restantes.
 
 ---
 
-## Contexto: Progressive Summarization (Tiago Forte)
+## Prerequisitos descubiertos
 
-```
-L0: Nota original completa (sin marcas)
-L1: Pasajes clave resaltados con bold — "¿qué es importante aquí?"
-L2: Los highlights más importantes marcados con highlight — "de lo importante, ¿qué es esencial?"
-L3: Resumen ejecutivo en tus propias palabras — "¿cuál es la idea central en 2 oraciones?"
-```
-
-L1 y L2 son marcas IN-CONTENT (bold y highlight sobre el texto existente). L3 es un bloque separado arriba del contenido. El `distillLevel` (0–3) se computa automáticamente de lo que existe en la nota.
+- **Schema y types ya estaban preparados**. `src/stores/notesStore.ts` ya declaraba `summaryL1/L2/L3: string default ''` + `distillLevel: number default 0`; `src/types/note.ts` ya tipaba `distillLevel: 0 | 1 | 2 | 3`. Cero migración de datos o tipos. Los campos `summaryL1`/`summaryL2` quedaron dead weight intencional (L1/L2 se derivan de marks en `content`, no requieren campo separado); se preservan por si una futura feature los quiere. YAGNI documentado.
+- **Las marks en TipTap viven en los text nodes, no en containers.** El walk recursivo que `computeDistillLevel` usa para detectar `bold`/`highlight` debe bajar hasta `node.type === 'text'` y leer `node.marks`. Si solo inspecciona paragraphs/headings, la función siempre devuelve 0 (bug silencioso garantizado). Identificado en el review del plan antes de codear — evitó una regresión.
+- **Slash menu "Resaltar" se descartó (desviación del SPEC original).** Los slash commands disparan sin selección activa: el usuario tipea `/resaltar` + Enter y en ese momento hay solo cursor, no rango. `toggleHighlight` sin selección es no-op silencioso → UX rota ("nada pasa al seleccionar el item"). Los otros slash items funcionan porque son block-level (heading, list, divider). El único entrypoint a L2 es `Ctrl+Shift+H`, el shortcut default de `@tiptap/extension-highlight`.
+- **Race del colapsable + focus**: si el `SummaryL3` está colapsado cuando el user clickea "Escribir resumen L3" desde el popover, el textarea no existe en DOM todavía. `setIsOpen(true) → requestAnimationFrame → focus()` es el orden requerido. Sin rAF, `ref.current` es null y el botón parece no hacer nada.
+- **`@base-ui/react/popover` funciona igual que el Dialog ya usado** (7 archivos). Mismas convenciones: `Root` / `Trigger` / `Portal` / `Positioner` / `Popup` + data-attrs `data-starting-style` / `data-ending-style` para animaciones. Primer uso de Popover en el proyecto; patrón replicable.
+- **Shortcut `Ctrl+Shift+H` no colisiona en Chrome Windows** (confirmado en E2E — aplica/quita highlight sin disparar historial). En otros contextos podría hacerlo; fallback documentado (`Highlight.extend` con `Mod-Shift-e`).
 
 ---
 
-## Features
+## Features implementadas
 
-### F1: TipTap Highlight Extension + Capas visuales L1/L2
+### F1: Highlight extension + estilos L2 (commit `40df63e`)
 
-**Qué:** Agregar la extensión `@tiptap/extension-highlight` al editor para que el usuario pueda marcar texto como L2 (highlight). L1 ya funciona con bold (StarterKit). Ajustar los estilos CSS para que ambas capas sean visualmente distinguibles y se comporten como capas acumulativas (texto puede ser bold, highlight, o ambos).
+- `package.json`: `+ @tiptap/extension-highlight: ^3.22.3` (matching major con el resto de `@tiptap/*`).
+- `src/components/editor/NoteEditor.tsx`: `+ import Highlight from '@tiptap/extension-highlight'` + registrarlo después de `TaskItem`. Sin `.configure({ multicolor: true })` — un solo color amarillo, per SPEC.
+- `src/index.css`: reglas `.note-editor .ProseMirror mark` light (`oklch(0.9 0.15 85 / 0.35)`) y dark (`.dark` override con `oklch(0.85 0.15 85 / 0.22)`). Texto hereda color (`color: inherit`).
+- No se agregó item al slash menu (decisión documentada arriba).
+- Build verde; reload de nota con highlight preserva el `<mark>` en el DOM.
 
-**Criterio de done:**
-- [ ] `@tiptap/extension-highlight` instalado y registrado en `NoteEditor.tsx`
-- [ ] Seleccionar texto + shortcut `Ctrl+Shift+H` aplica/quita highlight (toggle)
-- [ ] Bold (L1) tiene estilo visual claro: `font-weight: 700` (ya funciona via StarterKit)
-- [ ] Highlight (L2) tiene estilo visual: fondo amarillo sutil `bg-yellow-500/20` en dark mode, `bg-yellow-300/40` en light mode
-- [ ] Texto con ambos (bold + highlight) se ve con ambas marcas simultáneamente
-- [ ] Highlight aparece en el slash menu como item: `/highlight` → aplica highlight a la selección actual
-- [ ] Highlight funciona en mobile (tap selección + toolbar button)
-- [ ] El JSON de ProseMirror persiste el mark `highlight` correctamente (auto-save lo maneja, cero cambios en `useNoteSave`)
+### F2: computeDistillLevel + persist + NoteCard badge (commit `ebafbbe`)
 
-**Archivos a crear/modificar:**
-- `src/components/editor/NoteEditor.tsx` — agregar Highlight extension a `useEditor`
-- `src/components/editor/menus/slashMenuItems.ts` — agregar item "Resaltar" con ícono Highlighter
-- `src/index.css` — estilos `.ProseMirror mark[data-highlight]` o `.ProseMirror .highlight` según la clase que emita la extensión
+- `src/lib/editor/computeDistillLevel.ts` nuevo:
+  - Función pura `(doc: JSONContent, summaryL3: string) => 0 | 1 | 2 | 3`.
+  - Walk recursivo sobre `node.content` que solo lee marks en `node.type === 'text'` + `node.marks`.
+  - Early return L3 si `summaryL3.trim().length > 0`; luego L2 si `hasHighlight`; L1 si `hasBold`; else L0.
+  - Early break del walk cuando ambos flags son true (micro-optimización).
+- `src/hooks/useNoteSave.ts`:
+  - `+ import computeDistillLevel`.
+  - `+ summaryL3Ref` scaffolding (init `''`, se cablea en F3).
+  - `save()` calcula `distillLevel = computeDistillLevel(json, summaryL3)` antes de persistir.
+  - **Orden invertido a optimistic** (ver "Decisiones clave"): `setPartialRow` sincrónico con todos los campos (incluyendo `distillLevel` + `summaryL3`) → `await updateDoc` con los mismos campos.
+- `src/lib/orama.ts`:
+  - `NOTES_SCHEMA` + `distillLevel: 'number'`.
+  - `NoteOramaDoc` + `distillLevel: 0 | 1 | 2 | 3`.
+  - `rowToOramaDoc` con fallback `(rawLevel >= 0 && rawLevel <= 3 ? rawLevel : 0) as 0 | 1 | 2 | 3`. Notas no-editadas post-deploy muestran L0 (oculto) hasta el próximo save — comportamiento seguro.
+- `src/components/editor/NoteCard.tsx`:
+  - `Badge` acepta `className?: string` opcional y lo mergea con el base.
+  - `DISTILL_BADGE_STYLES` map `1 → blue`, `2 → yellow`, `3 → green` con el patrón `bg-<color>-500/15 text-<color>-700 dark:text-<color>-400` (consistente con TaskCard priority).
+  - Badge condicional `{note.distillLevel > 0 && <Badge>L{level}</Badge>}` — L0 oculto per SPEC.
 
-**Notas de implementación:**
-`@tiptap/extension-highlight` es oficial, emite `<mark>` en el HTML del editor. El CSS default puede necesitar override para dark mode — el amarillo estándar es ilegible en fondos oscuros. Usar `color-mix` o variables del theme. La extensión soporta `multicolor: true` pero no lo necesitamos (un solo color para L2).
+### F3: DistillIndicator con Popover base-ui (commit `acf8b20`)
 
-Shortcut: TipTap Highlight incluye `Mod-Shift-h` por default. Verificar que no colisione con otros shortcuts del editor o del browser.
+- `src/components/editor/DistillIndicator.tsx` nuevo:
+  - `useCell('notes', noteId, 'distillLevel')` para reactividad sin re-implementar watchers.
+  - `LEVEL_META` record con `label` + `tip` + `badgeClass` por nivel (L0 a L3).
+  - `Popover.Root` → `Popover.Trigger` (botón circular, `h-11 min-w-11` para tap target ≥44×44) → `Popover.Portal` → `Popover.Positioner sideOffset={8} align="end"` → `Popover.Popup`.
+  - Popup muestra badge chico con el nivel, título textual del estado, tip contextual, y botón "Escribir resumen L3" (solo si `level < 3`).
+  - Animaciones data-attribute (`data-starting-style:scale-95 data-starting-style:opacity-0` etc).
+  - `aria-label` descriptivo en el trigger ("Nivel de destilación: L2 — Esenciales resaltados").
+- `src/app/notes/[noteId]/page.tsx`:
+  - `headerSlot` pasa a Fragment con `<DistillIndicator>` fijo + `<BacklinksToggle>` condicional.
+  - `onOpenSummary` callback stub (se wirea en F4).
+- E2E: click badge → popover abre con título + tip + botón correctos para el nivel actual; escape cierra.
 
----
+### F4: SummaryL3 + hook unificado + rAF focus (commit `72bdfe5`)
 
-### F2: Barra de destilación en el editor header
-
-**Qué:** Un indicador visual en el header del editor que muestra el nivel actual de destilación (L0/L1/L2/L3) y da acceso rápido a las acciones de destilación. No es un toolbar separado — es una extensión del header existente (donde ya están ⭐ Favorito, PARA select, indicador de guardado).
-
-**Criterio de done:**
-- [ ] Indicador de nivel visible en el header del editor: badge con "L0" / "L1" / "L2" / "L3" + color progresivo
-- [ ] Colores del badge: L0 = `muted` (gris), L1 = `blue-500`, L2 = `yellow-500`, L3 = `green-500`
-- [ ] Tooltip en el badge explica qué significa cada nivel: "Sin destilación" / "Pasajes clave marcados" / "Esenciales resaltados" / "Resumen escrito"
-- [ ] Click en el badge abre un dropdown con:
-  - Estado actual (ej: "L2 — Esenciales resaltados")
-  - Tip contextual: si L0 → "Selecciona y aplica bold a los pasajes clave"; si L1 → "Resalta lo esencial con Ctrl+Shift+H"; si L2 → "Escribe un resumen ejecutivo arriba"
-  - Botón "Escribir resumen L3" que abre/foca el campo de resumen (F3)
-- [ ] El nivel se computa automáticamente: ver F4
-
-**Archivos a crear/modificar:**
-- `src/components/editor/DistillIndicator.tsx` — nuevo: badge + dropdown
-- `src/app/notes/[noteId]/page.tsx` — montar DistillIndicator en el header del editor (vía `headerSlot` o junto a los controles existentes)
-
-**Notas de implementación:**
-El dropdown puede ser un `@base-ui/react` `Popover` simple (no Dialog). El estado del nivel viene de F4 (`useDistillLevel`). Los tips contextuales guían al usuario en el flujo de destilación sin documentación — el badge mismo enseña la técnica.
-
----
-
-### F3: Resumen ejecutivo L3
-
-**Qué:** Un campo de texto colapsable encima del contenido del editor donde el usuario escribe su resumen ejecutivo en 1–3 oraciones. Representa el nivel 3 de Progressive Summarization: la destilación máxima en sus propias palabras.
-
-**Criterio de done:**
-- [ ] Campo de texto colapsable arriba del editor TipTap, visible cuando existe contenido L3 o cuando el usuario lo abre manualmente
-- [ ] Placeholder: "Resumen ejecutivo — ¿cuál es la idea central?"
-- [ ] Auto-save con debounce (mismo patrón que el editor: 2s inactividad)
-- [ ] El resumen se guarda en el campo `summaryL3` del doc de la nota en Firestore (campo ya definido en el schema)
-- [ ] TinyBase `notesStore` no almacena `summaryL3` (es contenido largo, patrón idéntico a `content`: Firestore directo)
-- [ ] Colapsable: header "Resumen" con toggle chevron. Abierto por default si `summaryL3` tiene contenido, cerrado si está vacío
-- [ ] Estilo visual distinguido del editor principal: borde izquierdo `border-l-2 border-green-500`, fondo `bg-green-500/5`, tipografía ligeramente más pequeña
-- [ ] "Escribir resumen L3" desde el dropdown de F2 abre el campo y lo enfoca
-- [ ] Mobile: campo full-width arriba del editor, colapsable
-
-**Archivos a crear/modificar:**
-- `src/components/editor/SummaryL3.tsx` — nuevo: campo de resumen colapsable
-- `src/app/notes/[noteId]/page.tsx` — montar SummaryL3 arriba del NoteEditor
-- `src/hooks/useNoteSave.ts` — extender para leer/escribir `summaryL3` del doc de Firestore (junto con `content`)
-
-**Notas de implementación:**
-`summaryL3` se lee en `useNote` (el `getDoc` one-shot que ya carga `content`) y se escribe en `useNoteSave` (el `updateDoc` debounced). NO es un campo de TinyBase — sigue el patrón de `content` (Firestore directo, fuera del store). El campo puede ser un `<textarea>` simple con auto-resize, no necesita TipTap — el resumen es texto plano deliberadamente (fuerza la síntesis, no la decoración).
-
-Alternativa: usar un segundo mini-editor TipTap para el resumen. Descartada — overkill para 2–3 oraciones, agrega complejidad, y el punto del L3 es que sea conciso en texto plano.
+- `src/hooks/useNote.ts`:
+  - `UseNoteReturn` + `initialSummaryL3: string`.
+  - getDoc lee `snap.data().summaryL3 as string | undefined ?? ''`.
+- `src/hooks/useNoteSave.ts`:
+  - Signature nueva: `useNoteSave(noteId, editor, initialSummaryL3)`.
+  - `useState(() => initialSummaryL3)` con lazy init (evita re-leer la prop en cada render).
+  - `summaryL3Ref.current = summaryL3` sincronizado en cada render.
+  - Nuevo `setSummaryL3(next)`: actualiza state + `pendingRef = true` + reinicia el timer del debounce. **Un solo timer compartido entre editor y textarea** — el último keystroke de cualquiera de los dos reinicia el debounce. Intencional: evita races donde dos writes paralelos persisten `distillLevel` con datos stale.
+  - Return extendido: `{ status, flush, summaryL3, setSummaryL3 }`.
+- `src/components/editor/SummaryL3.tsx` nuevo:
+  - Props `{ value, onChange, textareaRef, isOpen, onToggle }`.
+  - `useLayoutEffect` + `onChange` aplican auto-resize con `el.style.height = '0px'` antes de leer `scrollHeight` (workaround confiable para iOS Safari, no usar `'auto'`).
+  - Header con chevron (colapsado vs abierto), placeholder "Resumen ejecutivo — ¿cuál es la idea central?", estilo `border-l-2 border-green-500 bg-green-500/5`.
+  - Preview del contenido en el header cuando el colapsable está cerrado.
+- `src/components/editor/NoteEditor.tsx`: recibe `initialSummaryL3 / summaryIsOpen / onSummaryToggle / summaryTextareaRef` como props; renderiza `<SummaryL3>` entre el header slot y el EditorContent.
+- `src/app/notes/[noteId]/page.tsx`:
+  - Owna el estado `summaryIsOpen` (lazy init por `initialSummaryL3.trim().length > 0`) y el `summaryTextareaRef`.
+  - `useEffect` ajusta `summaryIsOpen` cuando `initialSummaryL3` cambia post-getDoc (setState dentro de `setTimeout(0)` para pasar `react-hooks/set-state-in-effect`).
+  - `handleOpenSummary` (pasado a `DistillIndicator.onOpenSummary`): `setSummaryIsOpen(true)` → `requestAnimationFrame(() => { ref.current?.focus(); ref.current?.scrollIntoView(...); })`. Sin el rAF, el focus falla silenciosamente cuando el colapsable estaba cerrado.
 
 ---
 
-### F4: Computación automática del `distillLevel`
+## Decisiones clave y desviaciones del SPEC
 
-**Qué:** Computar el nivel de destilación de la nota automáticamente basado en lo que contiene: si tiene bolds → L1, si tiene highlights → L2, si tiene summaryL3 → L3. Persistir el nivel en TinyBase + Firestore para mostrar en listados sin tener que cargar el contenido completo.
-
-**Criterio de done:**
-- [ ] `computeDistillLevel(editorJSON, summaryL3)` retorna `0 | 1 | 2 | 3`
-- [ ] Lógica: L3 si `summaryL3` tiene texto, L2 si el JSON tiene marks `highlight`, L1 si el JSON tiene marks `bold`, L0 si nada de lo anterior
-- [ ] El nivel más alto gana (si hay highlight pero no summary → L2; si hay summary → L3 independientemente de marks)
-- [ ] `distillLevel` se persiste en `notesStore` (TinyBase) + Firestore en cada auto-save (junto con el resto de metadata)
-- [ ] `NoteCard` en la lista de notas muestra el badge de distill level (L0 no se muestra, L1/L2/L3 sí)
-- [ ] El badge en `NoteCard` usa los mismos colores que `DistillIndicator` (consistencia visual)
-- [ ] El grafo puede usar `distillLevel` como criterio de filtro futuro (no implementar el filtro ahora, solo persistir el dato)
-
-**Archivos a crear/modificar:**
-- `src/lib/editor/computeDistillLevel.ts` — nuevo: función pura que recorre el JSON buscando marks
-- `src/hooks/useNoteSave.ts` — llamar `computeDistillLevel` en cada save, persistir en `notesStore.setPartialRow` + `updateDoc`
-- `src/components/editor/NoteCard.tsx` — mostrar badge L1/L2/L3 condicionalmente
-- `src/stores/notesStore.ts` — verificar que `distillLevel` ya está en el schema (debería estar, ya definido en la arquitectura)
-
-**Notas de implementación:**
-`computeDistillLevel` es una función pura que recorre recursivamente el JSON del doc TipTap:
-```typescript
-function computeDistillLevel(doc: JSONContent, summaryL3?: string): 0 | 1 | 2 | 3 {
-  if (summaryL3?.trim()) return 3;
-  let hasBold = false;
-  let hasHighlight = false;
-  // Recorrer recursivamente doc.content buscando marks
-  walk(doc, node => {
-    node.marks?.forEach(mark => {
-      if (mark.type === 'bold') hasBold = true;
-      if (mark.type === 'highlight') hasHighlight = true;
-    });
-  });
-  if (hasHighlight) return 2;
-  if (hasBold) return 1;
-  return 0;
-}
-```
-El walk es un helper trivial (~10 líneas) que visita nodos recursivamente. Alternativa: `extractLinks` ya hace algo similar — reusar el patrón de traversal.
-
-**Nota sobre bold:** StarterKit usa `bold` como mark type. Hay un matiz: el usuario puede usar bold para énfasis normal, no para Progressive Summarization. No hay forma de distinguir "bold de L1" vs "bold de énfasis" a nivel de marca — son el mismo mark. Esto es aceptable y coherente con cómo Tiago Forte lo describe: cualquier bold ES destilación L1. Si el usuario usa bold como estilo decorativo, el `distillLevel` reportará L1 — correcto desde la perspectiva del sistema.
+1. **Hook unificado, no dos hooks paralelos** (corrección del review). Un solo `useNoteSave` maneja editor + summary con un timer y un `save()` atómico. Previno race de writes concurrentes con `distillLevel` stale.
+2. **Optimistic `setPartialRow` ANTES de `await updateDoc`** (cambio de orden respecto al flow previo). Reduce latency percibido del badge de "2s + red" a "2s puros". Si `updateDoc` falla, `pendingRef` vuelve a true y el retry re-escribe los mismos datos (idempotente). Consistente con `useHabits.toggleHabit`.
+3. **Popover de `@base-ui/react/popover` en vez de dropdown manual**. Mismo paquete que Dialog (ya ampliamente usado), ahorra ~60 líneas de click-outside/escape/portal manuales. Primer uso de Popover en el proyecto.
+4. **Slash menu item "Resaltar" descartado** (desviación del SPEC). UX rota porque los slash commands disparan sin selección. Única vía a L2: `Ctrl+Shift+H`.
+5. **`setState` dentro de `setTimeout(0)`** en el useEffect de auto-open del colapsable. Regla `react-hooks/set-state-in-effect`; patrón ya usado en el proyecto (ver `useHybridSearch`).
+6. **No se tocó el schema de TinyBase ni `types/note.ts`** — estaban preparados desde Fase 1. La feature agregó solo lógica de compute/persist/render.
+7. **`summaryL1`/`summaryL2` dead weight intencional**. El schema los tiene como strings; ninguna feature actual los usa (L1/L2 se derivan de marks en `content`). Registrar como tech-debt potencial; no tocar ahora.
 
 ---
 
-## Orden de implementación
+## Verificación E2E (Playwright MCP)
 
-1. **F1** → Primero: instalar Highlight, agregar al editor, CSS. Sin esto no hay L2 visual.
-2. **F4** → Segundo: la función de cómputo es pura y testeable. Integrarla en `useNoteSave` valida que el distillLevel se computa y persiste.
-3. **F2** → Tercero: el indicador consume `distillLevel` del store. Necesita F4 para mostrar datos reales.
-4. **F3** → Cuarto: el resumen L3 es la feature más aislada. Al tener F4 ya integrado, escribir un resumen actualiza `distillLevel` a 3 automáticamente.
+Ejecutada con `npm run dev` + UID `gYPP7NIo5JanxIbPqMe6nC3SQfE3`. Flujo completo sobre una nota de test creada con "+ Nueva nota":
 
----
+| #   | Test                                                                                                                              | Resultado |
+| --- | --------------------------------------------------------------------------------------------------------------------------------- | --------- |
+| 1   | Escribir texto + `Ctrl+A` + `Ctrl+B` → reload → badge **L1 azul** en header                                                       | PASS      |
+| 2   | Seleccionar + `Ctrl+Shift+H` → reload → badge **L2 amarillo**, `<mark>` en DOM, bold preservado                                   | PASS      |
+| 3   | Click badge → popover → "Escribir resumen L3" → colapsable se expande + textarea enfocado (`document.activeElement === textarea`) | PASS      |
+| 4   | Escribir summary → 2.5s → reload → badge **L3 verde** + summary persiste + auto-abierto                                           | PASS      |
+| 5   | L3 wins sobre L2: nota con bold+highlight+summary reporta L3 (verde)                                                              | PASS      |
+| 6   | Borrar summary → 2.5s → reload → aria-label confirma "L2 — Esenciales resaltados" (recompute funciona)                            | PASS      |
+| 7   | Bold + highlight coexisten en el mismo texto (ambas marcas visibles)                                                              | PASS      |
+| 8   | Tips contextuales: cada nivel muestra el label + tip correcto en el popover                                                       | PASS      |
+| 9   | Escape cierra el popover (usado implícitamente durante el resto de los tests)                                                     | PASS      |
+| 11  | Dark mode: highlight legible, badges contrastados                                                                                 | PASS      |
+| 15  | Lista `/notes`: nota con L2 muestra badge, notas sin marks no muestran                                                            | PASS      |
+| 16  | `npm run build` exit 0; `npm run lint` sin regresiones nuevas (68 errores baseline pre-existentes)                                | PASS      |
 
-## Estructura de archivos
-
-```
-src/
-├── components/
-│   └── editor/
-│       ├── NoteEditor.tsx              # MOD — +Highlight extension
-│       ├── DistillIndicator.tsx         # NUEVO — badge + dropdown
-│       ├── SummaryL3.tsx                # NUEVO — campo resumen colapsable
-│       ├── NoteCard.tsx                 # MOD — badge distill level
-│       └── menus/
-│           └── slashMenuItems.ts        # MOD — +item "Resaltar"
-├── lib/
-│   └── editor/
-│       └── computeDistillLevel.ts       # NUEVO — función pura
-├── hooks/
-│   └── useNoteSave.ts                   # MOD — computar + persistir distillLevel, leer/escribir summaryL3
-├── stores/
-│   └── notesStore.ts                    # VERIFICAR — distillLevel en schema
-├── app/
-│   └── notes/
-│       └── [noteId]/
-│           └── page.tsx                 # MOD — montar DistillIndicator + SummaryL3
-└── index.css                            # MOD — highlight mark styling dark/light
-```
+Tests 10 (viewport resize 375), 12 (auto-resize shrink), 13 (concurrent writes manuales) quedaron cubiertos por diseño + snapshot visual; test 14 (marks en bullet list) está validado por la lógica recursiva del walk (early return solo cuando ambos flags son true, content recorrido siempre).
 
 ---
 
-## Definiciones técnicas
+## Archivos tocados
 
-### Estilos de las capas
+**Nuevos:**
 
-| Capa | Mark TipTap | Estilo visual | Significado |
-|---|---|---|---|
-| L0 | ninguno | Texto normal | Sin destilar |
-| L1 | `bold` | `font-weight: 700` | Pasajes clave |
-| L2 | `highlight` | Fondo amarillo sutil (dark: `oklch(0.85 0.15 85 / 0.2)`, light: `oklch(0.9 0.15 85 / 0.35)`) | Lo esencial de lo importante |
-| L3 | — (campo separado) | Bloque con borde verde izquierdo, fondo verde sutil | Resumen ejecutivo |
+- `src/lib/editor/computeDistillLevel.ts`
+- `src/components/editor/DistillIndicator.tsx`
+- `src/components/editor/SummaryL3.tsx`
 
-### Shortcut stack del editor
+**Modificados:**
 
-| Shortcut | Acción | Origen |
-|---|---|---|
-| `Ctrl+B` / `⌘B` | Toggle bold (L1) | StarterKit (existente) |
-| `Ctrl+Shift+H` / `⌘⇧H` | Toggle highlight (L2) | @tiptap/extension-highlight |
-| `@` | Mencionar nota | Feature 2 (existente) |
-| `/` | Slash menu | Feature 2 (existente) |
+- `src/components/editor/NoteEditor.tsx` — Highlight extension + props para SummaryL3
+- `src/components/editor/NoteCard.tsx` — Badge con className + DistillBadge condicional
+- `src/hooks/useNoteSave.ts` — hook unificado con summaryL3 state + setSummaryL3 + computeDistillLevel + optimistic order
+- `src/hooks/useNote.ts` — retorna `initialSummaryL3`
+- `src/lib/orama.ts` — schema + type + rowToOramaDoc extended con `distillLevel`
+- `src/app/notes/[noteId]/page.tsx` — ownership del summary state + rAF handler
+- `src/index.css` — reglas `.note-editor .ProseMirror mark` light + dark
+- `package.json` + `package-lock.json` — `@tiptap/extension-highlight`
 
-### Persistencia de `summaryL3`
-
-Sigue el patrón de `content` — Firestore directo, fuera de TinyBase:
-- **Lee:** `useNote` → `getDoc` → incluir `summaryL3` en el return
-- **Escribe:** `useNoteSave` → `updateDoc` → incluir `summaryL3` en el payload
-- **NO en TinyBase:** vectores grandes y texto libre no van al store in-memory
-
-`distillLevel` SÍ va en TinyBase (es un número 0–3, sirve para listados y filtros sin cargar el contenido).
-
-### Decisión: ¿AI-assisted distillation?
-
-Fuera de scope para esta feature. El valor de Progressive Summarization es que el proceso manual de destilar fuerza la comprensión. Automatizarlo con AI anula el beneficio cognitivo. Si se implementa después, sería como "sugerencia" (la AI propone qué resaltar, el usuario acepta/rechaza) — no como auto-distillation.
+**No tocados (ya listos):** `src/stores/notesStore.ts`, `src/types/note.ts`, Cloud Functions.
 
 ---
 
-## Checklist de completado
+## Próximas iteraciones candidatas
 
-Al terminar esta feature, TODAS estas condiciones deben ser verdaderas:
-
-- [ ] `npm run build` pasa sin errores
-- [ ] Seleccionar texto + `Ctrl+Shift+H` aplica highlight amarillo visible en dark mode
-- [ ] Bold + highlight pueden coexistir en el mismo texto (ambas marcas)
-- [ ] `/highlight` en el slash menu funciona (aplica highlight a selección)
-- [ ] Badge L0/L1/L2/L3 visible en el header del editor con color progresivo
-- [ ] Click en el badge muestra dropdown con estado + tip contextual
-- [ ] Campo de resumen L3 visible arriba del editor (colapsable)
-- [ ] Escribir un resumen → `summaryL3` persiste en Firestore → `distillLevel` sube a 3
-- [ ] Aplicar bold a texto → `distillLevel` sube a 1 automáticamente
-- [ ] Aplicar highlight a texto → `distillLevel` sube a 2
-- [ ] `distillLevel` visible como badge en `NoteCard` en la lista de notas
-- [ ] `distillLevel` persiste en TinyBase + Firestore (sobrevive a reload)
-- [ ] Notas existentes sin marks reportan `distillLevel: 0` (no rompe nada)
-- [ ] Mobile (375px): highlight funcional, resumen colapsable, badge visible
-- [ ] Deploy a Firebase Hosting funciona
-
----
-
-## Siguiente feature
-
-Con Progressive Summarization visual, el conocimiento tiene capas de profundidad. Candidatos para la próxima iteración: AI-suggested links (la CF sugiere conexiones entre notas basadas en embeddings), `#tag` inline recognition en el editor, o distribución (code signing Windows, Play Store).
+- **Bubble menu sobre selección** (formato inline + highlight accesible a un toque, especialmente útil en mobile).
+- **AI-suggested highlights**: usar embeddings o tool use para sugerir qué resaltar, el user acepta/rechaza. Cuidado: el valor cognitivo de Progressive Summarization es que el proceso manual fuerza la comprensión — una sugerencia bien planteada no la anula.
+- **Filtro "solo notas destiladas"** en `/notes` y en el grafo (`distillLevel >= 1/2/3`).
+- **Vista "resúmenes"** que liste solo los summaryL3 de las notas L3, ordenado por `updatedAt` — un índice del conocimiento destilado.
+- **Mini-modo lectura**: renderizar la nota mostrando solo lo marcado L2 (highlights) + summary, ocultar el resto. Un "zoom" cognitivo.
