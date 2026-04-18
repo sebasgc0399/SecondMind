@@ -31,7 +31,7 @@ export default function ReviewBanner({ noteId }: ReviewBannerProps) {
   if (justReviewed) {
     return (
       <div className="flex items-center gap-2 border-b border-border bg-green-500/10 px-4 py-2">
-        <Check className="h-4 w-4 text-green-600" />
+        <Check className="h-4 w-4 text-green-600 dark:text-green-400" />
         <span className="text-sm text-green-700 dark:text-green-400">
           Revisado. Proxima revision:{' '}
           {nextReviewDate ? formatRelativeDate(nextReviewDate) : 'pronto'}
@@ -43,7 +43,7 @@ export default function ReviewBanner({ noteId }: ReviewBannerProps) {
   if (isDue) {
     return (
       <div className="flex items-center gap-3 border-b border-border bg-amber-500/10 px-4 py-2">
-        <RotateCcw className="h-4 w-4 text-amber-600" />
+        <RotateCcw className="h-4 w-4 text-amber-600 dark:text-amber-400" />
         <span className="text-sm text-amber-700 dark:text-amber-400">
           Esta nota necesita revision
         </span>

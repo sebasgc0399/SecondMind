@@ -41,7 +41,7 @@ export default function NoteCard({ note, semanticScore }: NoteCardProps) {
           {note.title}
         </h2>
         {semanticScore !== undefined && (
-          <span className="inline-flex shrink-0 items-center gap-1 rounded-md bg-violet-500/10 px-1.5 py-0.5 text-xs font-medium text-violet-500">
+          <span className="inline-flex shrink-0 items-center gap-1 rounded-md bg-violet-500/10 px-1.5 py-0.5 text-xs font-medium text-violet-600 dark:text-violet-400">
             <Sparkles className="h-3 w-3" />
             {Math.round(semanticScore * 100)}%
           </span>

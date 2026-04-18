@@ -35,7 +35,7 @@ export default function SummaryL3({
 
   return (
     <div className="mx-auto w-full max-w-180 px-4 pt-3">
-      <div className="rounded-r-md border-l-2 border-green-500 bg-green-500/5">
+      <div className="rounded-r-md border-l-2 border-green-500 bg-green-500/5 dark:border-green-400">
         <button
           type="button"
           onClick={onToggle}
