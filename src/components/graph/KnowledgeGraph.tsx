@@ -1,8 +1,14 @@
-import { useRef, useCallback } from 'react';
+import { useMemo, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router';
-import { GraphCanvas, useSelection } from 'reagraph';
-import type { GraphCanvasRef } from 'reagraph';
+import { GraphCanvas, lightTheme, useSelection } from 'reagraph';
+import type { GraphCanvasRef, Theme as ReagraphTheme } from 'reagraph';
 import type { GraphNode, GraphEdge } from 'reagraph';
+import useTheme from '@/hooks/useTheme';
+import {
+  getGraphCanvasBackground,
+  getGraphEdgeColor,
+  getGraphLabelColor,
+} from '@/lib/theme-colors';
 
 interface KnowledgeGraphProps {
   nodes: GraphNode[];
@@ -13,6 +19,41 @@ interface KnowledgeGraphProps {
 export default function KnowledgeGraph({ nodes, edges, onNodeSelect }: KnowledgeGraphProps) {
   const graphRef = useRef<GraphCanvasRef | null>(null);
   const navigate = useNavigate();
+  const { resolvedTheme } = useTheme();
+
+  const theme: ReagraphTheme = useMemo(() => {
+    const canvasBg = getGraphCanvasBackground(resolvedTheme);
+    const labelColor = getGraphLabelColor(resolvedTheme);
+    const edgeColor = getGraphEdgeColor(resolvedTheme);
+    return {
+      ...lightTheme,
+      canvas: { background: canvasBg },
+      node: {
+        ...lightTheme.node,
+        label: {
+          ...lightTheme.node.label,
+          color: labelColor,
+          activeColor: labelColor,
+          stroke: canvasBg,
+        },
+      },
+      edge: {
+        ...lightTheme.edge,
+        fill: edgeColor,
+        activeFill: labelColor,
+        label: {
+          ...lightTheme.edge.label,
+          color: labelColor,
+          activeColor: labelColor,
+        },
+      },
+      arrow: {
+        ...lightTheme.arrow,
+        fill: edgeColor,
+        activeFill: labelColor,
+      },
+    };
+  }, [resolvedTheme]);
 
   const { selections, actives, onNodeClick, onCanvasClick, onNodePointerOver, onNodePointerOut } =
     useSelection({
@@ -56,6 +97,7 @@ export default function KnowledgeGraph({ nodes, edges, onNodeSelect }: Knowledge
       labelType="auto"
       sizingType="attribute"
       sizingAttribute="size"
+      theme={theme}
     />
   );
 }
