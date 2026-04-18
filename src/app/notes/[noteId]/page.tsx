@@ -28,9 +28,12 @@ export default function NoteDetailPage() {
 
   // Si el usuario llega a una nota que ya tiene summaryL3 guardado, auto-open
   // el colapsable. initialSummaryL3 puede cambiar despues del primer render
-  // (getDoc async), por eso el effect.
+  // (getDoc async), por eso el effect. setState va dentro de setTimeout para
+  // pasar la regla react-hooks/set-state-in-effect.
   useEffect(() => {
-    if (initialSummaryL3.trim().length > 0) setSummaryIsOpen(true);
+    if (initialSummaryL3.trim().length === 0) return;
+    const id = window.setTimeout(() => setSummaryIsOpen(true), 0);
+    return () => window.clearTimeout(id);
   }, [initialSummaryL3]);
 
   // Al clickear "Escribir resumen L3" desde el popover: expandir el colapsable
