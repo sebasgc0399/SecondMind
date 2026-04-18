@@ -1,16 +1,9 @@
 import { useMemo } from 'react';
 import { useTable } from 'tinybase/ui-react';
 import type { GraphNode, GraphEdge } from 'reagraph';
+import useTheme from '@/hooks/useTheme';
+import { getGraphColors } from '@/lib/theme-colors';
 import type { ParaType, NoteType } from '@/types/common';
-
-const PARA_COLORS: Record<ParaType, string> = {
-  project: '#3b82f6',
-  area: '#22c55e',
-  resource: '#f59e0b',
-  archive: '#9ca3af',
-};
-
-const DEFAULT_COLOR = '#6b7280';
 
 function truncate(str: string, max: number): string {
   if (str.length <= max) return str;
@@ -38,8 +31,10 @@ export interface GraphData {
 export default function useGraph(filters: GraphFilters = DEFAULT_FILTERS): GraphData {
   const notesTable = useTable('notes');
   const linksTable = useTable('links', 'links');
+  const { resolvedTheme } = useTheme();
 
   return useMemo(() => {
+    const colors = getGraphColors(resolvedTheme);
     const visibleNodeIds = new Set<string>();
     const nodes: GraphNode[] = [];
 
@@ -59,7 +54,7 @@ export default function useGraph(filters: GraphFilters = DEFAULT_FILTERS): Graph
       nodes.push({
         id: noteId,
         label: truncate(title, 25),
-        fill: PARA_COLORS[paraType] || DEFAULT_COLOR,
+        fill: colors[paraType] || colors.default,
         size: Math.max(5, Math.min(25, 5 + linkCount * 3)),
         data: {
           title,
@@ -85,5 +80,5 @@ export default function useGraph(filters: GraphFilters = DEFAULT_FILTERS): Graph
     }
 
     return { nodes, edges, isEmpty: nodes.length < 3 };
-  }, [notesTable, linksTable, filters]);
+  }, [notesTable, linksTable, filters, resolvedTheme]);
 }

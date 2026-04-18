@@ -41,7 +41,11 @@
       "Bash(firebase functions:log --only autoTagNote --lines 10)",
       "Bash(firebase functions:log --only autoTagNote --lines 5)",
       "Bash(firebase functions:log --only processInboxItem --lines 5)",
-      "mcp__playwright__browser_select_option"
+      "mcp__playwright__browser_select_option",
+      "Read(//d d:/Proyectos VS CODE/**)",
+      "Bash(grep -v \":0$\")",
+      "Bash(sort -t: -k2 -rn)",
+      "Bash(xargs grep *)"
     ],
     "additionalDirectories": ["C:\\Users\\sebas\\.claude"]
   },

@@ -7,6 +7,19 @@
     <meta name="theme-color" content="#878bf9" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <title>SecondMind</title>
+    <script>
+      (function () {
+        try {
+          var t = localStorage.getItem('sm-theme') || 'auto';
+          var d =
+            t === 'dark' ||
+            (t === 'auto' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+          document.documentElement.classList.toggle('dark', d);
+        } catch (e) {
+          // noop: en contextos privados o WebViews restringidas el default es light
+        }
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>
