@@ -252,6 +252,19 @@
   margin-right: 0.05rem;
 }
 
+.note-editor .ProseMirror a.editor-link {
+  color: var(--primary);
+  text-decoration: underline;
+  text-decoration-color: color-mix(in oklch, var(--primary) 40%, transparent);
+  text-underline-offset: 2px;
+  cursor: pointer;
+  transition: text-decoration-color 0.15s ease;
+}
+
+.note-editor .ProseMirror a.editor-link:hover {
+  text-decoration-color: color-mix(in oklch, var(--primary) 80%, transparent);
+}
+
 .note-editor .ProseMirror ul[data-type='taskList'] {
   list-style: none;
   padding-left: 0;
