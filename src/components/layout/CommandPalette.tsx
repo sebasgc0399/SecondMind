@@ -342,7 +342,7 @@ export default function CommandPalette() {
     <Dialog.Root open={isOpen} onOpenChange={handleOpenChange}>
       <Dialog.Portal>
         <Dialog.Backdrop className="fixed inset-0 z-40 bg-background-deep/80 backdrop-blur-sm transition-opacity duration-200 ease-[cubic-bezier(0.16,1,0.3,1)] data-ending-style:opacity-0 data-starting-style:opacity-0" />
-        <Dialog.Popup className="fixed top-[15vh] left-1/2 z-50 w-[90vw] max-w-lg -translate-x-1/2 scale-100 rounded-xl border border-border-strong bg-card p-3 opacity-100 shadow-[0_20px_40px_rgba(0,0,0,0.5)] outline-none transition-all duration-200 ease-[cubic-bezier(0.16,1,0.3,1)] data-ending-style:scale-95 data-ending-style:opacity-0 data-starting-style:scale-95 data-starting-style:opacity-0">
+        <Dialog.Popup className="fixed top-[15vh] left-1/2 z-50 w-[90vw] max-w-lg -translate-x-1/2 scale-100 rounded-xl border border-border-strong bg-card p-3 opacity-100 shadow-modal outline-none transition-all duration-200 ease-[cubic-bezier(0.16,1,0.3,1)] data-ending-style:scale-95 data-ending-style:opacity-0 data-starting-style:scale-95 data-starting-style:opacity-0">
           <Dialog.Title className="sr-only">Buscar</Dialog.Title>
           {isOpen && <CommandPaletteContent onClose={close} />}
         </Dialog.Popup>

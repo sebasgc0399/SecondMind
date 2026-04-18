@@ -73,6 +73,7 @@ extension/                       # Chrome Extension MV3: web clipper
 ### Reglas de organización
 
 **Componentes agrupados por feature, no por tipo.**
+
 ```
 ✅ components/editor/Editor.tsx
 ✅ components/editor/extensions/wikilink.ts
@@ -83,6 +84,7 @@ extension/                       # Chrome Extension MV3: web clipper
 ```
 
 **Un componente por archivo. El archivo se llama como el componente.**
+
 ```
 ✅ components/capture/QuickCapture.tsx → export default function QuickCapture()
 ❌ components/capture/index.tsx → export function QuickCapture()
@@ -96,43 +98,43 @@ extension/                       # Chrome Extension MV3: web clipper
 
 ### Archivos y carpetas
 
-| Tipo | Convención | Ejemplo |
-|---|---|---|
-| Componente React | PascalCase.tsx | `NoteCard.tsx`, `QuickCapture.tsx` |
-| Hook custom | use[Entidad][Acción].ts | `useNoteSearch.ts`, `useBacklinks.ts` |
-| Store TinyBase | [entidad]Store.ts | `notesStore.ts`, `linksStore.ts` |
-| Tipo/Interface | [entidad].ts | `note.ts`, `inbox.ts` |
-| Utilidad/helper | camelCase.ts | `extractLinks.ts`, `serialize.ts` |
-| Cloud Function | camelCase.ts | `processInboxItem.ts` |
-| Página/ruta | page.tsx (siempre) | `app/notes/page.tsx` |
+| Tipo             | Convención              | Ejemplo                               |
+| ---------------- | ----------------------- | ------------------------------------- |
+| Componente React | PascalCase.tsx          | `NoteCard.tsx`, `QuickCapture.tsx`    |
+| Hook custom      | use[Entidad][Acción].ts | `useNoteSearch.ts`, `useBacklinks.ts` |
+| Store TinyBase   | [entidad]Store.ts       | `notesStore.ts`, `linksStore.ts`      |
+| Tipo/Interface   | [entidad].ts            | `note.ts`, `inbox.ts`                 |
+| Utilidad/helper  | camelCase.ts            | `extractLinks.ts`, `serialize.ts`     |
+| Cloud Function   | camelCase.ts            | `processInboxItem.ts`                 |
+| Página/ruta      | page.tsx (siempre)      | `app/notes/page.tsx`                  |
 
 ### Variables y funciones
 
-| Tipo | Convención | Ejemplo |
-|---|---|---|
-| Componente | PascalCase | `function NoteCard()` |
-| Hook | use + PascalCase | `function useBacklinks(noteId: string)` |
-| Handler de evento | handle + Acción | `handleSave()`, `handleCapture()` |
-| Booleano | is/has/can/should | `isArchived`, `hasBacklinks`, `canEdit` |
-| Constante global | UPPER_SNAKE_CASE | `MAX_INBOX_ITEMS`, `DEBOUNCE_MS` |
-| Firestore collection | camelCase plural | `notes`, `inboxItems`, `noteLinks` |
+| Tipo                 | Convención        | Ejemplo                                 |
+| -------------------- | ----------------- | --------------------------------------- |
+| Componente           | PascalCase        | `function NoteCard()`                   |
+| Hook                 | use + PascalCase  | `function useBacklinks(noteId: string)` |
+| Handler de evento    | handle + Acción   | `handleSave()`, `handleCapture()`       |
+| Booleano             | is/has/can/should | `isArchived`, `hasBacklinks`, `canEdit` |
+| Constante global     | UPPER_SNAKE_CASE  | `MAX_INBOX_ITEMS`, `DEBOUNCE_MS`        |
+| Firestore collection | camelCase plural  | `notes`, `inboxItems`, `noteLinks`      |
 
 ### Entidades del dominio
 
 Las entidades del proyecto usan estos nombres consistentemente en todo el código:
 
-| Entidad | Singular | Plural | ID |
-|---|---|---|---|
-| Nota | `note` | `notes` | `noteId` |
-| Link entre notas | `noteLink` | `noteLinks` | `linkId` |
-| Tarea | `task` | `tasks` | `taskId` |
-| Proyecto | `project` | `projects` | `projectId` |
-| Objetivo | `objective` | `objectives` | `objectiveId` |
-| Área | `area` | `areas` | `areaId` |
-| Item de inbox | `inboxItem` | `inboxItems` | `itemId` |
-| Tag/Tema | `tag` | `tags` | `tagId` |
-| Hábito | `habit` | `habits` | `habitId` |
-| Embedding | `embedding` | `embeddings` | `noteId` (mismo que nota) |
+| Entidad          | Singular    | Plural       | ID                        |
+| ---------------- | ----------- | ------------ | ------------------------- |
+| Nota             | `note`      | `notes`      | `noteId`                  |
+| Link entre notas | `noteLink`  | `noteLinks`  | `linkId`                  |
+| Tarea            | `task`      | `tasks`      | `taskId`                  |
+| Proyecto         | `project`   | `projects`   | `projectId`               |
+| Objetivo         | `objective` | `objectives` | `objectiveId`             |
+| Área             | `area`      | `areas`      | `areaId`                  |
+| Item de inbox    | `inboxItem` | `inboxItems` | `itemId`                  |
+| Tag/Tema         | `tag`       | `tags`       | `tagId`                   |
+| Hábito           | `habit`     | `habits`     | `habitId`                 |
+| Embedding        | `embedding` | `embeddings` | `noteId` (mismo que nota) |
 
 **Nunca abreviar entidades.** `proj`, `obj`, `tsk` → prohibido.
 
@@ -144,11 +146,11 @@ Las entidades del proyecto usan estos nombres consistentemente en todo el códig
 
 ```tsx
 // ─── 1. Imports ─────────────────────────────────
-import { useState } from 'react';                    // React
-import { useCell } from 'tinybase/ui-react';         // Libs externas
-import { Button } from '@/components/ui/button';      // UI components
-import { useBacklinks } from '@/hooks/useBacklinks';  // Hooks custom
-import type { Note } from '@/types/note';             // Types
+import { useState } from 'react'; // React
+import { useCell } from 'tinybase/ui-react'; // Libs externas
+import { Button } from '@/components/ui/button'; // UI components
+import { useBacklinks } from '@/hooks/useBacklinks'; // Hooks custom
+import type { Note } from '@/types/note'; // Types
 
 // ─── 2. Types ───────────────────────────────────
 interface NoteCardProps {
@@ -167,9 +169,7 @@ export default function NoteCard({ noteId, onSelect }: NoteCardProps) {
       onClick={() => onSelect?.(noteId)}
     >
       <h3 className="font-medium">{title}</h3>
-      <span className="text-sm text-muted-foreground">
-        {linkCount} conexiones
-      </span>
+      <span className="text-sm text-muted-foreground">{linkCount} conexiones</span>
     </div>
   );
 }
@@ -204,8 +204,12 @@ function NoteEditor({ noteId }: NoteEditorProps) {
 // ❌ Lógica en componente
 function NoteEditor({ noteId }: NoteEditorProps) {
   const [note, setNote] = useState(null);
-  useEffect(() => { /* fetch */ }, [noteId]);
-  const save = async () => { /* 15 líneas de lógica */ };
+  useEffect(() => {
+    /* fetch */
+  }, [noteId]);
+  const save = async () => {
+    /* 15 líneas de lógica */
+  };
   // Mezclando lógica y renderizado
 }
 ```
@@ -218,13 +222,13 @@ function NoteEditor({ noteId }: NoteEditorProps) {
 
 ### Cuándo usar qué
 
-| Situación | Usar | Ejemplo |
-|---|---|---|
-| UI local (toggle, modal open) | `useState` | `const [isOpen, setIsOpen] = useState(false)` |
-| Datos persistidos (notas, tareas) | TinyBase store | `useCell('notes', noteId, 'title')` |
-| Datos derivados del store | TinyBase `useResultRow` | Notas filtradas por área |
-| Estado de formularios | `useState` local | Campos editables en Inbox Processor |
-| Búsqueda | Orama index + `useState` | Query del search input |
+| Situación                         | Usar                     | Ejemplo                                       |
+| --------------------------------- | ------------------------ | --------------------------------------------- |
+| UI local (toggle, modal open)     | `useState`               | `const [isOpen, setIsOpen] = useState(false)` |
+| Datos persistidos (notas, tareas) | TinyBase store           | `useCell('notes', noteId, 'title')`           |
+| Datos derivados del store         | TinyBase `useResultRow`  | Notas filtradas por área                      |
+| Estado de formularios             | `useState` local         | Campos editables en Inbox Processor           |
+| Búsqueda                          | Orama index + `useState` | Query del search input                        |
 
 ### Patrones de TinyBase
 
@@ -232,13 +236,13 @@ function NoteEditor({ noteId }: NoteEditorProps) {
 
 ```typescript
 // ✅ Stores separados
-const notesStore = createStore();    // notas + metadata
-const linksStore = createStore();    // links bidireccionales
-const tasksStore = createStore();    // tareas
-const inboxStore = createStore();    // inbox items
+const notesStore = createStore(); // notas + metadata
+const linksStore = createStore(); // links bidireccionales
+const tasksStore = createStore(); // tareas
+const inboxStore = createStore(); // inbox items
 
 // ❌ Un solo store
-const appStore = createStore();      // todo junto
+const appStore = createStore(); // todo junto
 ```
 
 **Acceder datos con hooks de TinyBase, nunca con getters directos en componentes.**
@@ -296,7 +300,7 @@ type NoteType = 'fleeting' | 'literature' | 'permanent';
 type Priority = 'low' | 'medium' | 'high' | 'urgent';
 
 // ❌ Type para shapes
-type Note = { id: string; title: string; };
+type Note = { id: string; title: string };
 ```
 
 **Nunca `any`. Usar `unknown` + type guard si el tipo es incierto.**
@@ -316,12 +320,12 @@ function parseAiResult(raw: any): AiResult {
 
 **Ubicación de tipos:**
 
-| Tipo | Ubicación |
-|---|---|
-| Props de componente | Mismo archivo del componente |
-| Entidad de dominio (Note, Task, etc.) | `types/[entidad].ts` |
-| Response de Cloud Function | `types/api.ts` |
-| Tipos compartidos (ParaType, Priority) | `types/common.ts` |
+| Tipo                                   | Ubicación                    |
+| -------------------------------------- | ---------------------------- |
+| Props de componente                    | Mismo archivo del componente |
+| Entidad de dominio (Note, Task, etc.)  | `types/[entidad].ts`         |
+| Response de Cloud Function             | `types/api.ts`               |
+| Tipos compartidos (ParaType, Priority) | `types/common.ts`            |
 
 ---
 
@@ -353,10 +357,10 @@ function parseAiResult(raw: any): AiResult {
 
 ```tsx
 // ✅ Variables semánticas
-className="text-foreground bg-background border-border text-muted-foreground"
+className = 'text-foreground bg-background border-border text-muted-foreground';
 
 // ❌ Colores directos
-className="text-gray-900 bg-white border-gray-200 text-gray-500"
+className = 'text-gray-900 bg-white border-gray-200 text-gray-500';
 ```
 
 **No crear clases custom con `@apply`.** Si se repite un patrón, extraer a componente.
@@ -377,13 +381,13 @@ function Card({ children, className }: CardProps) {
 
 ### Patrones por capa
 
-| Capa | Patrón | Ejemplo |
-|---|---|---|
-| Componente | Error boundary por sección | `<ErrorBoundary fallback={<SectionError />}>` |
-| Hook con datos | Return `{ data, error, isLoading }` | `const { notes, error } = useNotes()` |
-| TinyBase persister | Listener de error + toast | `persister.addStatusListener(...)` |
-| Cloud Function | Structured error + HTTP code | `{ error: { code: 'INBOX_PROCESS_FAILED', message: '...' } }` |
-| Operaciones Firestore | try-catch + retry 1x | Guardar nota, crear link |
+| Capa                  | Patrón                              | Ejemplo                                                       |
+| --------------------- | ----------------------------------- | ------------------------------------------------------------- |
+| Componente            | Error boundary por sección          | `<ErrorBoundary fallback={<SectionError />}>`                 |
+| Hook con datos        | Return `{ data, error, isLoading }` | `const { notes, error } = useNotes()`                         |
+| TinyBase persister    | Listener de error + toast           | `persister.addStatusListener(...)`                            |
+| Cloud Function        | Structured error + HTTP code        | `{ error: { code: 'INBOX_PROCESS_FAILED', message: '...' } }` |
+| Operaciones Firestore | try-catch + retry 1x                | Guardar nota, crear link                                      |
 
 ### Reglas
 
@@ -391,10 +395,15 @@ function Card({ children, className }: CardProps) {
 
 ```tsx
 // Toast para errores recuperables
-toast.error("No se pudo guardar. Reintentando...");
+toast.error('No se pudo guardar. Reintentando...');
 
 // Inline para errores que bloquean la vista
-if (error) return <div className="p-4 text-destructive">Error cargando notas. <button onClick={retry}>Reintentar</button></div>;
+if (error)
+  return (
+    <div className="p-4 text-destructive">
+      Error cargando notas. <button onClick={retry}>Reintentar</button>
+    </div>
+  );
 ```
 
 **Los datos nunca se pierden.** TinyBase guarda localmente primero. Si Firestore falla, el dato sigue en el store local y se sincroniza después.
@@ -571,7 +580,7 @@ import NoteCard from '../../../components/editor/NoteCard';
 import { useBacklinks } from '@/hooks/useBacklinks';
 
 // ❌ Barrel
-import { useBacklinks } from '@/hooks';  // via index.ts
+import { useBacklinks } from '@/hooks'; // via index.ts
 ```
 
 ---
@@ -617,7 +626,7 @@ export const onInboxItemCreated = onDocumentCreated(
       logger.error('Error procesando inbox', { userId, itemId, error });
       await event.data.ref.update({ aiProcessed: false });
     }
-  }
+  },
 );
 ```
 
@@ -634,9 +643,11 @@ export const onInboxItemCreated = onDocumentCreated(
   {
     document: 'users/{userId}/inbox/{itemId}',
     timeoutSeconds: 60,
-    retry: false,  // No reintentar — procesamiento no es idempotente
+    retry: false, // No reintentar — procesamiento no es idempotente
   },
-  async (event) => { /* ... */ }
+  async (event) => {
+    /* ... */
+  },
 );
 ```
 
@@ -731,13 +742,13 @@ extensions/
 
 ### Configuración base
 
-| Herramienta | Config |
-|---|---|
-| TypeScript | `strict: true`, `noUncheckedIndexedAccess: true` |
-| Vite | Path alias `@/` → `src/` |
-| ESLint | Flat config (`eslint.config.js`, NO `.eslintrc.cjs`) + `@typescript-eslint/recommended` + import order |
-| Prettier | Single quotes, trailing commas, 100 char width |
-| Tailwind | CSS-first: `@theme` en `src/index.css`. No existe `tailwind.config.ts` |
+| Herramienta | Config                                                                                                 |
+| ----------- | ------------------------------------------------------------------------------------------------------ |
+| TypeScript  | `strict: true`, `noUncheckedIndexedAccess: true`                                                       |
+| Vite        | Path alias `@/` → `src/`                                                                               |
+| ESLint      | Flat config (`eslint.config.js`, NO `.eslintrc.cjs`) + `@typescript-eslint/recommended` + import order |
+| Prettier    | Single quotes, trailing commas, 100 char width                                                         |
+| Tailwind    | CSS-first: `@theme` en `src/index.css`. No existe `tailwind.config.ts`                                 |
 
 ### Scripts en package.json
 
@@ -788,9 +799,9 @@ El hook `useAuth.ts` usa un `if/else if/else` con platform detection. Cada plata
 ```typescript
 // src/hooks/useAuth.ts — patrón de branching
 if (isCapacitor()) {
-  await signInWithCapacitor(auth);      // SocialLogin → idToken → signInWithCredential
+  await signInWithCapacitor(auth); // SocialLogin → idToken → signInWithCredential
 } else if (isTauri()) {
-  await signInWithTauri(auth);          // OAuth PKCE → HTTP listener → signInWithCredential
+  await signInWithTauri(auth); // OAuth PKCE → HTTP listener → signInWithCredential
 } else {
   await signInWithPopup(auth, provider); // Web standard
 }
@@ -798,12 +809,12 @@ if (isCapacitor()) {
 
 ### Write paths por plataforma
 
-| Plataforma | Write path | Razón |
-|---|---|---|
-| Web (Alt+N) | TinyBase → persister → Firestore | App completa cargada con store |
-| Capacitor (Share Intent) | TinyBase via QuickCaptureProvider | App completa cargada — reusar modal |
-| Tauri (`Ctrl+Shift+Space`) | `setDoc` directo a Firestore | Ventana efímera, no hidrata TinyBase |
-| Chrome Extension | `setDoc` via `firestore/lite` | Popup sin store |
+| Plataforma                 | Write path                        | Razón                                |
+| -------------------------- | --------------------------------- | ------------------------------------ |
+| Web (Alt+N)                | TinyBase → persister → Firestore  | App completa cargada con store       |
+| Capacitor (Share Intent)   | TinyBase via QuickCaptureProvider | App completa cargada — reusar modal  |
+| Tauri (`Ctrl+Shift+Space`) | `setDoc` directo a Firestore      | Ventana efímera, no hidrata TinyBase |
+| Chrome Extension           | `setDoc` via `firestore/lite`     | Popup sin store                      |
 
 ### Imports condicionales
 
