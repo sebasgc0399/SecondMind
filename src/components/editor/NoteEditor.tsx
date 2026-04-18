@@ -10,6 +10,7 @@ import Wikilink from '@/components/editor/extensions/wikilink';
 import SlashCommand from '@/components/editor/extensions/slash-command';
 import WikilinkMenu from '@/components/editor/menus/WikilinkMenu';
 import SlashMenu from '@/components/editor/menus/SlashMenu';
+import BubbleToolbar from '@/components/editor/menus/BubbleToolbar';
 import SummaryL3 from '@/components/editor/SummaryL3';
 import useNoteSave, { type SaveStatus } from '@/hooks/useNoteSave';
 import type { JSONContent } from '@tiptap/core';
@@ -93,6 +94,7 @@ export default function NoteEditor({
       </div>
       <WikilinkMenu />
       <SlashMenu />
+      <BubbleToolbar editor={editor} />
     </div>
   );
 }
