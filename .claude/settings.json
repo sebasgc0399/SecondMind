@@ -50,11 +50,10 @@
       "Bash(git commit -m ' *)",
       "Bash(git merge --no-ff refactor/docs-hierarchy -m ' *)",
       "Bash(git push *)",
-      "Bash(git merge *)"
+      "Bash(git merge *)",
+      "Edit(~/.claude/skills/archive-spec/**)"
     ],
-    "additionalDirectories": [
-      "C:\\Users\\sebas\\.claude"
-    ]
+    "additionalDirectories": ["C:\\Users\\sebas\\.claude"]
   },
   "hooks": {
     "PostToolUse": [
