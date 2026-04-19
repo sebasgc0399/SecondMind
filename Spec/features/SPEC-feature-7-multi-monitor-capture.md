@@ -1,8 +1,9 @@
 # SPEC — SecondMind · Feature 7: Capture Window Multi-Monitor (Registro de implementación)
 
-> Estado: **Completada con fix post-merge** — Abril 2026
+> Estado: **Completada con 2 rondas de fix post-merge** — Abril 2026
 > Commits F7 base: `1ec915f` (F1) · `a3f8328` (F2) · `2e36424` (F3 + F4 implícito) · `a2d04f1` (docs)
-> Fix post-merge: `1830414` — multi-monitor DPI + hidden-window setPosition (ver sección "Bugs descubiertos post-merge" abajo)
+> Fix round 1 (`1830414`): scaleFactor calc + double setPosition + setSize(Logical) post-show — NO resolvió los bugs reales.
+> Fix round 2 (`ba291b7`): shortcut movido a Rust + `onScaleChanged` listener — ataca las root causes verificadas.
 > Alcance: La ventana `/capture` (Tauri Desktop) aparece centrada en el monitor donde está el cursor, no siempre en el primario. Incluye drag manual desde el header.
 > Dependencias: Fase 5.1 (Tauri Desktop) completada
 > Stack implementado: Tauri v2 JS API (`@tauri-apps/api/window`: `cursorPosition`, `availableMonitors`, `PhysicalPosition`), Rust (`WebviewWindow::cursor_position`, `available_monitors`, `set_position`), capabilities JSON (`core:window:allow-set-position`, `allow-outer-size`, `allow-start-dragging`).
@@ -316,6 +317,44 @@ Al testear F7 con hardware multi-monitor real aparecieron 2 bugs que la verifica
 
 - "Verificable automáticamente" (cargo check + tsc + eslint) ≠ "funciona". Multi-monitor + cross-DPI son edge cases que solo se ven en hardware real. F7 debería haber tenido un paso de validación manual antes de merge.
 - Catch silencioso en código nuevo es una mala apuesta — siempre logguear errores en features exploratorias. Remover el logging es trivial cuando la feature está estable.
+
+---
+
+## Fix round 2 (commit `ba291b7`)
+
+El fix round 1 no resolvió los bugs reales. Tras investigar issues upstream ([tauri-apps/tauri#6843](https://github.com/tauri-apps/tauri/issues/6843), [#3610](https://github.com/tauri-apps/tauri/issues/3610)) y mirar el setup de la app con más cuidado, aparecieron las causas reales:
+
+### Bug A real — Hook JS registrándose en ambas ventanas
+
+`main.tsx` es entrypoint compartido por `main` y `capture`. `TauriIntegration` llamaba `useGlobalShortcutRegistration()` en ambos contextos. Cada ventana ejecutaba la secuencia `isRegistered → unregister → register`, ganando el callback la última que se montaba — normalmente `capture`. Operar `setPosition` sobre "la propia ventana en hidden state" desde su propio contexto JS tiene quirks conocidos en Windows que ningún double-call post-show arreglaba.
+
+**Fix:** Registro Rust-side con `tauri_plugin_global_shortcut::Builder::new().with_handler(...)` dentro de `setup()`. El handler llama `tray::show_capture(app)` (ya existente, usado por el tray menu). Un único registro, contexto `AppHandle` estable, cero duplicación de lógica con el tray.
+
+### Bug B real — Fix round 1 corregía en "próxima invocación", no durante el drag
+
+El síntoma del usuario fue: "la arrastro entre monitores, se autorescala grande, la vuelvo al original, y se queda dañada". Esto ocurre DURANTE el drag activo, no al próximo show. El `setSize(LogicalSize)` post-show del round 1 solo limpiaba el estado al volver a invocar la ventana — el estado corrupto se veía mientras seguía visible.
+
+**Fix:** `onScaleChanged` listener en `CapturePage` que llama `setSize(LogicalSize(480, 220))` al instante. Responde al mismo `WM_DPICHANGED` que dispara la corrupción del WebView2. Requiere capability `core:window:allow-set-size` en `capture.json`.
+
+### Cambios colaterales
+
+- `src/hooks/useGlobalShortcutRegistration.ts` eliminado (deadcode tras mover a Rust).
+- `TauriIntegration` en `main.tsx` solo llama `useCloseToTray` ahora (ese hook sí es legítimamente per-window).
+- `default.json`: removidas capabilities `global-shortcut:allow-register/unregister/is-registered` (ya no se usan desde JS; principio de mínimo privilegio).
+- `show_capture` ahora `pub(crate)` en `tray.rs` para ser llamada desde `lib.rs`.
+
+### Por qué esto funciona donde el round 1 falló
+
+- **Bug A:** La causa no era "setPosition no funciona en hidden windows" sino "el callback corre en el contexto equivocado". Rust-side lo arregla de raíz.
+- **Bug B:** La causa es que WebView2 no rescala (tauri#3610 abierto desde 2022). No hay forma de "arreglarlo" — hay que reaccionar cuando pasa. El `onScaleChanged` es la vía correcta.
+
+### Lección adicional
+
+**Hook JS en `main.tsx` se monta en TODAS las ventanas del bundle.** Cualquier side effect global (shortcut OS-level, init de singleton) duplica registro sin guard. Patrones seguros:
+
+1. Registrar Rust-side si la feature es OS-level.
+2. Guard `getCurrentWebviewWindow().label === 'main'` si tiene que quedarse en JS.
+3. Hook legítimamente per-window: `useCloseToTray` necesita su propio listener por ventana.
 
 ---
 
