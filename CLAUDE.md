@@ -83,26 +83,31 @@ Cada feature del proyecto sigue este ciclo. No improvisar: si algo no cuadra, aj
    - Tauri: `npm run tauri:build` (MSI + NSIS) — **opcional** si el cambio es 100% client-side sin tocar `src-tauri/`.
    - Android: `npx cap sync android && cd android && ./gradlew.bat assembleDebug` — **opcional** si no tocaste `android/`.
 7. **Merge `--no-ff` a main** con commit de merge descriptivo. Push a origin sin preguntar.
-8. **Cerrar la feature:** convertir el SPEC a registro de implementación siguiendo el patrón de `Spec/features/SPEC-feature-{1..N}-*.md`. Aplicar la **regla de escalación** (ver sección "Reglas de documentación" abajo): los gotchas nacen en el SPEC, suben a `ESTADO-ACTUAL.md` solo si aplican a >1 feature, y a `CLAUDE.md` solo si son universales (toda sesión futura). Auditar techos de ambos archivos antes de commitear docs.
+8. **Cerrar la feature:** convertir el SPEC a registro de implementación siguiendo el patrón de `Spec/features/SPEC-feature-{1..N}-*.md`. Aplicar la regla de escalación de gotchas (ver "Docs: jerarquía y reglas" abajo). Auditar techos antes de commitear docs.
 
-### Estrategia de lectura de docs
+### Docs: jerarquía y reglas
 
-- **Fuente primaria:** `Spec/ESTADO-ACTUAL.md`. Snapshot consolidado de arquitectura vigente, gotchas activos, patrones, deps clave. Reemplaza la necesidad de leer SPECs individuales.
-- **NO leer** SPECs de fases/features anteriores (`Spec/SPEC-fase-*.md`, `Spec/features/SPEC-feature-*.md`) salvo que necesites detalle puntual que `ESTADO-ACTUAL` no cubre. Ahorra mucho token.
-- `Docs/00–04-*.md` son principios teóricos y schemas — leer on-demand si la tarea lo requiere.
-- `CLAUDE.md` ya está auto-cargado.
+Cinco niveles de docs, cada uno con propósito único. **Fuente primaria para estado de features = `Spec/ESTADO-ACTUAL.md`** — siempre arrancar ahí, nunca duplicar su contenido en CLAUDE.md.
 
-### Reglas de documentación
+| Archivo                              | Contenido                                                                    | Cuándo leer                                       |
+| ------------------------------------ | ---------------------------------------------------------------------------- | ------------------------------------------------- |
+| `CLAUDE.md` (este)                   | Stack, comandos, convenciones, gotchas **universales** (~200 líneas orient.) | Auto-cargado                                      |
+| `Spec/ESTADO-ACTUAL.md`              | Features (1-2 líneas + pointer SPEC), gotchas por dominio, decisiones, deps  | **Fuente primaria** para estado actual. On-demand |
+| `Spec/features/SPEC-feature-*.md`    | Canon histórico por feature. Los gotchas nacen acá                           | Solo si ESTADO-ACTUAL no cubre el detalle         |
+| `Spec/SPEC-fase-*.md`                | Canon histórico por fase                                                     | Solo si ESTADO-ACTUAL no cubre el detalle         |
+| `Docs/SETUP-WINDOWS.md`              | Patches one-time de entorno (TS LSP, symlinks, Cargo)                        | Solo onboarding/troubleshooting setup             |
+| `design-system/secondmind/MASTER.md` | Tokens de diseño, paleta, tipografía, anti-patterns                          | Al implementar UI                                 |
 
-Tres archivos, tres propósitos, un flujo unidireccional. Existen para evitar que el contexto auto-cargado crezca indefinidamente.
+Docs teóricos en `Docs/00-04-*.md` — leer **solo el que aplique** a la tarea, nunca los 4 a la vez. **Antes de escribir código nuevo, siempre consultar `01` (schemas Firestore) y `03` (convenciones de código)**:
 
-- **`CLAUDE.md` — briefing de sesión** (~200 líneas orientativo). Contiene: stack, comandos, convenciones activas, gotchas **universales** (aplican a toda sesión futura, no a features específicas), punteros on-demand. **Nunca:** historial de features, gotchas de una sola feature, prosa por fase.
-- **`Spec/ESTADO-ACTUAL.md` — estado consolidado** (~300 líneas orientativo). Contiene: cada feature en 1-2 líneas + pointer a SPEC, gotchas por dominio (Tauri, Editor, Data, etc.), decisiones arquitectónicas vigentes. **Nunca:** narrativa de debugging, gotchas obsoletos, duplicación con SPEC.
-- **`Spec/features/SPEC-feature-*.md` — canon histórico**. Sin techo. Los gotchas nacen acá.
+| Archivo                                      | Contenido                                                                                 |
+| -------------------------------------------- | ----------------------------------------------------------------------------------------- |
+| `Docs/00-fundamentos-segundo-cerebro.md`     | CODE (Tiago Forte), Zettelkasten, captura→proceso→uso, principios de diseño               |
+| `Docs/01-arquitectura-hibrida-progresiva.md` | Schemas Firestore (notes/links/tasks/projects/inbox/embeddings), flujos clave, decisiones |
+| `Docs/02-flujos-ux-y-pantallas.md`           | 14 pantallas con wireframes, 5 flujos de usuario, shortcuts, breakpoints                  |
+| `Docs/03-convenciones-y-patrones.md`         | Naming, patrones TinyBase, TypeScript, Tailwind, errores, Git, Cloud Functions            |
 
-**Flujo unidireccional:** gotcha en SPEC → si aplica a **>1 feature**, sube a ESTADO-ACTUAL → si es **universal** (toda sesión, no depende de dominio), sube a CLAUDE.md. **Nunca se duplica** entre archivos. Si ya está en un nivel, no repetir en otro.
-
-**Techos orientativos, no estrictos.** El contenido manda: 160 líneas todas universales está OK; 140 líneas con 10 single-feature está mal. Medir por "¿aplica a toda sesión?" no por wc -l.
+**Escalación de gotchas al cerrar feature** (step 8 del SDD): nacen en SPEC → suben a ESTADO-ACTUAL si aplican a >1 feature → suben a CLAUDE.md si aplican a toda sesión sin importar dominio. **Nunca duplicar entre niveles** — al subir un gotcha, eliminarlo del nivel anterior. Techos (200 / 300 líneas) son orientativos: el criterio es "¿aplica a este nivel?", no `wc -l`.
 
 ### Handoff entre ventanas
 
@@ -126,19 +131,6 @@ src/
 ├── types/           # Interfaces TypeScript (1 archivo por entidad)
 └── functions/       # Cloud Functions v2 (deploy separado)
 ```
-
-## Documentación del proyecto
-
-Antes de implementar features, leer **on-demand** (con Read) los docs relevantes — NO están auto-importados al contexto:
-
-- `Docs/00-fundamentos-segundo-cerebro.md` — Principios teóricos: CODE (Tiago Forte), notas atómicas Zettelkasten, flujo captura→proceso→uso, 10 principios de diseño
-- `Docs/01-arquitectura-hibrida-progresiva.md` — Stack completo, modelo de datos Firestore (schemas de notes, links, tasks, projects, inbox, embeddings), flujos clave, fases de desarrollo, decisiones de diseño
-- `Docs/02-flujos-ux-y-pantallas.md` — 14 pantallas con wireframes, 5 flujos de usuario, componentes globales, shortcuts, breakpoints responsive
-- `Docs/03-convenciones-y-patrones.md` — Naming, estructura de componentes, patrones TinyBase, TypeScript, Tailwind, errores, Git, Cloud Functions, Firestore
-- `Spec/SPEC-fase-0.1-toolkit.md` — SPEC de toolkit de desarrollo (MCPs, plugins, hooks, VS Code)
-- `design-system/secondmind/MASTER.md` → Tokens de diseño, paleta, tipografía, component patterns, anti-patterns (consultar al implementar UI)
-
-IMPORTANT: Siempre consultar el doc de arquitectura (01) para schemas de datos y el doc de convenciones (03) para patrones de código antes de escribir código nuevo. Lee solo los que apliquen a la tarea — evita cargar los 4 si no los necesitas.
 
 ## Reglas críticas
 
