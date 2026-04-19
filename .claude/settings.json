@@ -51,9 +51,13 @@
       "Bash(git merge --no-ff refactor/docs-hierarchy -m ' *)",
       "Bash(git push *)",
       "Bash(git merge *)",
-      "Edit(~/.claude/skills/archive-spec/**)"
+      "Edit(~/.claude/skills/archive-spec/**)",
+      "Bash(git log *)",
+      "Read(//d/Proyectos VS CODE/**)"
     ],
-    "additionalDirectories": ["C:\\Users\\sebas\\.claude"]
+    "additionalDirectories": [
+      "C:\\Users\\sebas\\.claude"
+    ]
   },
   "hooks": {
     "PostToolUse": [
