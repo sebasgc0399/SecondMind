@@ -89,7 +89,7 @@ fn toggle_main(app: &AppHandle) {
     }
 }
 
-fn show_capture(app: &AppHandle) {
+pub(crate) fn show_capture(app: &AppHandle) {
     if let Some(window) = app.get_webview_window("capture") {
         // Pre-show: reposicionar al monitor del cursor. En hidden windows de Windows
         // el set_position puede no aplicar inmediatamente; hacemos un segundo
