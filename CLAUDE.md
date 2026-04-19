@@ -94,7 +94,7 @@ Cada feature del proyecto sigue este ciclo. No improvisar: si algo no cuadra, aj
    - Tauri: `npm run tauri:build` (MSI + NSIS) — **opcional** si el cambio es 100% client-side sin tocar `src-tauri/`.
    - Android: `npx cap sync android && cd android && ./gradlew.bat assembleDebug` — **opcional** si no tocaste `android/`.
 7. **Merge `--no-ff` a main** con commit de merge descriptivo. Push a origin sin preguntar.
-8. **Cerrar la feature:** convertir el SPEC a registro de implementación siguiendo el patrón de `Spec/features/SPEC-feature-{1..N}-*.md`. Actualizar `Spec/ESTADO-ACTUAL.md` con patrones, gotchas y decisiones nuevas. Actualizar `CLAUDE.md` si hay comandos o gotchas de alcance general.
+8. **Cerrar la feature:** convertir el SPEC a registro de implementación siguiendo el patrón de `Spec/features/SPEC-feature-{1..N}-*.md`. Aplicar la **regla de escalación** (ver sección "Reglas de documentación" abajo): los gotchas nacen en el SPEC, suben a `ESTADO-ACTUAL.md` solo si aplican a >1 feature, y a `CLAUDE.md` solo si son universales (toda sesión futura). Auditar techos de ambos archivos antes de commitear docs.
 
 ### Estrategia de lectura de docs
 
@@ -102,6 +102,18 @@ Cada feature del proyecto sigue este ciclo. No improvisar: si algo no cuadra, aj
 - **NO leer** SPECs de fases/features anteriores (`Spec/SPEC-fase-*.md`, `Spec/features/SPEC-feature-*.md`) salvo que necesites detalle puntual que `ESTADO-ACTUAL` no cubre. Ahorra mucho token.
 - `Docs/00–04-*.md` son principios teóricos y schemas — leer on-demand si la tarea lo requiere.
 - `CLAUDE.md` ya está auto-cargado.
+
+### Reglas de documentación
+
+Tres archivos, tres propósitos, un flujo unidireccional. Existen para evitar que el contexto auto-cargado crezca indefinidamente.
+
+- **`CLAUDE.md` — briefing de sesión** (~200 líneas orientativo). Contiene: stack, comandos, convenciones activas, gotchas **universales** (aplican a toda sesión futura, no a features específicas), punteros on-demand. **Nunca:** historial de features, gotchas de una sola feature, prosa por fase.
+- **`Spec/ESTADO-ACTUAL.md` — estado consolidado** (~300 líneas orientativo). Contiene: cada feature en 1-2 líneas + pointer a SPEC, gotchas por dominio (Tauri, Editor, Data, etc.), decisiones arquitectónicas vigentes. **Nunca:** narrativa de debugging, gotchas obsoletos, duplicación con SPEC.
+- **`Spec/features/SPEC-feature-*.md` — canon histórico**. Sin techo. Los gotchas nacen acá.
+
+**Flujo unidireccional:** gotcha en SPEC → si aplica a **>1 feature**, sube a ESTADO-ACTUAL → si es **universal** (toda sesión, no depende de dominio), sube a CLAUDE.md. **Nunca se duplica** entre archivos. Si ya está en un nivel, no repetir en otro.
+
+**Techos orientativos, no estrictos.** El contenido manda: 160 líneas todas universales está OK; 140 líneas con 10 single-feature está mal. Medir por "¿aplica a toda sesión?" no por wc -l.
 
 ### Handoff entre ventanas
 
