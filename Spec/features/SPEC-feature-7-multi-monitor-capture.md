@@ -1,9 +1,10 @@
 # SPEC — SecondMind · Feature 7: Capture Window Multi-Monitor (Registro de implementación)
 
-> Estado: **Completada con 2 rondas de fix post-merge** — Abril 2026
+> Estado: **Completada con 3 rondas de fix post-merge** — Abril 2026
 > Commits F7 base: `1ec915f` (F1) · `a3f8328` (F2) · `2e36424` (F3 + F4 implícito) · `a2d04f1` (docs)
 > Fix round 1 (`1830414`): scaleFactor calc + double setPosition + setSize(Logical) post-show — NO resolvió los bugs reales.
-> Fix round 2 (`ba291b7`): shortcut movido a Rust + `onScaleChanged` listener — ataca las root causes verificadas.
+> Fix round 2 (`ba291b7`): shortcut movido a Rust + `onScaleChanged` listener — Bug A resuelto, Bug B descubrió panic de tao.
+> Fix round 3 (`b856051`): drag de capture removido — **F4 revertido**, tao#3610 queda fuera de scope.
 > Alcance: La ventana `/capture` (Tauri Desktop) aparece centrada en el monitor donde está el cursor, no siempre en el primario. Incluye drag manual desde el header.
 > Dependencias: Fase 5.1 (Tauri Desktop) completada
 > Stack implementado: Tauri v2 JS API (`@tauri-apps/api/window`: `cursorPosition`, `availableMonitors`, `PhysicalPosition`), Rust (`WebviewWindow::cursor_position`, `available_monitors`, `set_position`), capabilities JSON (`core:window:allow-set-position`, `allow-outer-size`, `allow-start-dragging`).
@@ -355,6 +356,65 @@ El síntoma del usuario fue: "la arrastro entre monitores, se autorescala grande
 1. Registrar Rust-side si la feature es OS-level.
 2. Guard `getCurrentWebviewWindow().label === 'main'` si tiene que quedarse en JS.
 3. Hook legítimamente per-window: `useCloseToTray` necesita su propio listener por ventana.
+
+---
+
+## Fix round 3 (commit `b856051`) — F4 revertido
+
+Round 2 resolvió Bug A completamente. Bug B quedó parcialmente resuelto: la ventana ya no quedaba permanentemente rota tras cross-DPI drag porque el `onScaleChanged` listener reseteaba el tamaño. PERO aparecía un bug nuevo peor:
+
+```
+thread 'main' panicked at tao-0.34.8/src/platform_impl/windows/event_loop.rs:2035:15:
+attempt to subtract with overflow
+thread 'main' panicked at tao-0.34.8/src/platform_impl/windows/event_loop.rs:2042:13:
+attempt to add with overflow
+```
+
+### Root cause del panic
+
+El `onScaleChanged` listener creaba una **feedback loop** cuando la ventana straddleaba monitores:
+
+1. User drags window to straddle monitors A (100% DPI) + B (125% DPI).
+2. `WM_DPICHANGED` dispara porque tao decide que la ventana pasó a B.
+3. Listener llama `setSize(LogicalSize(480, 220))`.
+4. Nuevo tamaño físico: 480 × 1.25 = 600 px ancho (más grande que antes si veníamos de A).
+5. La ventana ahora straddlea distinto — más porcentaje de ella queda en A.
+6. `WM_DPICHANGED` dispara de nuevo porque tao decide que volvió a A.
+7. Listener llama `setSize` otra vez, ahora 480 × 1.0 = 480 px (más chico).
+8. Goto 4, repeat iterativamente → ventana se achica hasta casi desaparecer.
+9. Eventualmente tao hace `some_u32 - bigger_u32` en su manejo de `WM_NCCALCSIZE` o similar → **integer underflow → panic**.
+
+### Decisión: eliminar el drag de capture
+
+En vez de pelear con el bug de tao ([tauri-apps/tauri#3610](https://github.com/tauri-apps/tauri/issues/3610), abierto desde 2022 sin fix), **removemos la capacidad de arrastrar la ventana capture**. Razones:
+
+1. **Capture es efímera por diseño.** El modelo mental es invocar → escribir → cerrar. No "reposicionar".
+2. **Para mover a otro monitor, re-invocar el shortcut ya funciona** gracias al round 2 — el cursor-monitor detection se aplica cada invocación.
+3. **tao#3610 no tiene workaround sano** a nivel aplicación. Los bugs de feedback loop son inherentes a la combinación de `WM_DPICHANGED` + `setSize` + ventanas sin decorations en multi-DPI.
+4. **F4 del SPEC original era nice-to-have**, no core. Removerlo no quiebra el modelo mental.
+
+### Cambios del round 3
+
+- `data-tauri-drag-region` removido de ambas variantes del `CapturePage` (autenticado y "Abrí SecondMind").
+- `onScaleChanged` listener removido de `CapturePage` — sin él, no hay feedback loop.
+- Constantes `CAPTURE_LOGICAL_WIDTH/HEIGHT` removidas del lado JS (muertas tras remover el listener).
+- `core:window:allow-start-dragging` removido de `capture.json` (principio de mínimo privilegio).
+- `core:window:allow-set-size` SE MANTIENE porque `show_capture` en Rust lo usa para resetear tamaño canónico al show (esto NO dispara feedback loop porque ocurre al rest, no mid-drag).
+
+### Lógica Rust-side del `show_capture` se mantiene intacta
+
+Round 1 y 2 en `tray.rs::show_capture` siguen siendo correctos:
+
+- `set_position` pre-show (calculado con scaleFactor del target monitor)
+- `show()`
+- `set_size(LogicalSize(480, 220))` — reseteo canónico al show time
+- `set_position` post-show (definitivo en Windows para hidden-window setPosition)
+
+Este path NUNCA dispara el feedback loop porque se ejecuta con la ventana AT REST en un monitor específico. Solo el drag mid-straddle creaba el loop.
+
+### Lección final
+
+**No todos los bugs upstream tienen workaround viable.** Si encontrás un bug conocido con issue abierto sin fix por años, considerá si la feature que lo necesita es esencial. En este caso, drag-from-header era accidental (era una feature "gratis" del SPEC original), no esencial. Removerlo costó 0 UX real y ganó estabilidad completa.
 
 ---
 
