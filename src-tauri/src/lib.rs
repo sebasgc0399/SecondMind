@@ -18,7 +18,6 @@ pub fn run() {
                 .with_denylist(&["capture"])
                 .build(),
         )
-        .plugin(tauri_plugin_global_shortcut::Builder::new().build())
         .plugin(tauri_plugin_autostart::init(
             tauri_plugin_autostart::MacosLauncher::LaunchAgent,
             None,
@@ -34,6 +33,37 @@ pub fn run() {
                 )?;
             }
             tray::build(app.handle())?;
+
+            // Global shortcut registrado Rust-side (movido desde JS en fix post-F7).
+            // Motivo: el hook JS se montaba en ambas ventanas (main + capture) por
+            // compartir main.tsx, causando double-register race. El callback final
+            // quedaba registrado en el contexto de la ventana capture operando
+            // sobre sí misma en hidden state, lo que en Windows tiene quirks
+            // conocidos (issue tauri-apps/tauri#6843). Rust garantiza un único
+            // registro con contexto AppHandle estable.
+            #[cfg(desktop)]
+            {
+                use tauri_plugin_global_shortcut::{
+                    Code, GlobalShortcutExt, Modifiers, Shortcut, ShortcutState,
+                };
+
+                let capture_shortcut =
+                    Shortcut::new(Some(Modifiers::CONTROL | Modifiers::SHIFT), Code::Space);
+
+                app.handle().plugin(
+                    tauri_plugin_global_shortcut::Builder::new()
+                        .with_handler(move |app, shortcut, event| {
+                            if shortcut == &capture_shortcut
+                                && event.state() == ShortcutState::Pressed
+                            {
+                                tray::show_capture(app);
+                            }
+                        })
+                        .build(),
+                )?;
+                app.global_shortcut().register(capture_shortcut)?;
+            }
+
             Ok(())
         })
         .run(tauri::generate_context!())

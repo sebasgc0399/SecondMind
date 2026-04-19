@@ -4,7 +4,6 @@ import { RouterProvider } from 'react-router';
 import { Provider } from 'tinybase/ui-react';
 import router from '@/app/router';
 import useCloseToTray from '@/hooks/useCloseToTray';
-import useGlobalShortcutRegistration from '@/hooks/useGlobalShortcutRegistration';
 import { isCapacitor } from '@/lib/capacitor';
 import { initCapacitorAuth } from '@/lib/capacitorAuth';
 import { SplashScreen } from '@capacitor/splash-screen';
@@ -26,7 +25,6 @@ if (isCapacitor()) {
 
 function TauriIntegration({ children }: { children: ReactNode }) {
   useCloseToTray();
-  useGlobalShortcutRegistration();
   return <>{children}</>;
 }
 
