@@ -1,7 +1,7 @@
 use tauri::{
     menu::{CheckMenuItemBuilder, MenuBuilder, MenuItemBuilder, PredefinedMenuItem},
     tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent},
-    AppHandle, Manager,
+    AppHandle, Manager, PhysicalPosition, WebviewWindow,
 };
 use tauri_plugin_autostart::ManagerExt;
 
@@ -88,9 +88,36 @@ fn toggle_main(app: &AppHandle) {
 
 fn show_capture(app: &AppHandle) {
     if let Some(window) = app.get_webview_window("capture") {
+        let _ = center_on_cursor_monitor(&window);
         let _ = window.show();
         let _ = window.set_focus();
     }
+}
+
+fn center_on_cursor_monitor(window: &WebviewWindow) -> tauri::Result<()> {
+    let cursor = window.cursor_position()?;
+    let monitors = window.available_monitors()?;
+    let target = monitors
+        .iter()
+        .find(|m| {
+            let pos = m.position();
+            let size = m.size();
+            cursor.x >= pos.x as f64
+                && cursor.x < (pos.x + size.width as i32) as f64
+                && cursor.y >= pos.y as f64
+                && cursor.y < (pos.y + size.height as i32) as f64
+        })
+        .or_else(|| monitors.first());
+
+    if let Some(monitor) = target {
+        let win_size = window.outer_size()?;
+        let mpos = monitor.position();
+        let msize = monitor.size();
+        let cx = mpos.x + (msize.width as i32 - win_size.width as i32) / 2;
+        let cy = mpos.y + (msize.height as i32 - win_size.height as i32) / 2;
+        window.set_position(PhysicalPosition { x: cx, y: cy })?;
+    }
+    Ok(())
 }
 
 fn toggle_autostart(app: &AppHandle, item: &tauri::menu::CheckMenuItem<tauri::Wry>) {
