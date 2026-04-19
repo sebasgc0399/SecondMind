@@ -45,9 +45,16 @@
       "Read(//d d:/Proyectos VS CODE/**)",
       "Bash(grep -v \":0$\")",
       "Bash(sort -t: -k2 -rn)",
-      "Bash(xargs grep *)"
+      "Bash(xargs grep *)",
+      "Bash(git add *)",
+      "Bash(git commit -m ' *)",
+      "Bash(git merge --no-ff refactor/docs-hierarchy -m ' *)",
+      "Bash(git push *)",
+      "Bash(git merge *)"
     ],
-    "additionalDirectories": ["C:\\Users\\sebas\\.claude"]
+    "additionalDirectories": [
+      "C:\\Users\\sebas\\.claude"
+    ]
   },
   "hooks": {
     "PostToolUse": [
