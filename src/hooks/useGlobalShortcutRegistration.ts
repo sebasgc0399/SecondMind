@@ -3,6 +3,9 @@ import { isTauri } from '@/lib/tauri';
 
 const CAPTURE_SHORTCUT = 'Ctrl+Shift+Space';
 
+const CAPTURE_LOGICAL_WIDTH = 480;
+const CAPTURE_LOGICAL_HEIGHT = 220;
+
 export default function useGlobalShortcutRegistration(): void {
   useEffect(() => {
     if (!isTauri()) return;
@@ -22,13 +25,14 @@ export default function useGlobalShortcutRegistration(): void {
       await register(CAPTURE_SHORTCUT, async (event) => {
         if (event.state !== 'Pressed') return;
 
-        const { cursorPosition, availableMonitors, PhysicalPosition } =
+        const { cursorPosition, availableMonitors, PhysicalPosition, LogicalSize } =
           await import('@tauri-apps/api/window');
 
         const windows = await getAllWebviewWindows();
         const capture = windows.find((w) => w.label === 'capture');
         if (!capture) return;
 
+        let targetPosition: { x: number; y: number } | null = null;
         try {
           const cursor = await cursorPosition();
           const monitors = await availableMonitors();
@@ -42,16 +46,38 @@ export default function useGlobalShortcutRegistration(): void {
             ) ?? monitors[0];
 
           if (target) {
-            const winSize = await capture.outerSize();
-            const cx = Math.round(target.position.x + (target.size.width - winSize.width) / 2);
-            const cy = Math.round(target.position.y + (target.size.height - winSize.height) / 2);
-            await capture.setPosition(new PhysicalPosition(cx, cy));
+            // Dimensiones físicas calculadas con scaleFactor del monitor destino.
+            // No usar outerSize(): tras un drag cross-DPI puede quedar stale y meter
+            // al cálculo en un loop de escalado incorrecto (Bug B de F7).
+            const winWidthPhysical = Math.round(CAPTURE_LOGICAL_WIDTH * target.scaleFactor);
+            const winHeightPhysical = Math.round(CAPTURE_LOGICAL_HEIGHT * target.scaleFactor);
+            targetPosition = {
+              x: Math.round(target.position.x + (target.size.width - winWidthPhysical) / 2),
+              y: Math.round(target.position.y + (target.size.height - winHeightPhysical) / 2),
+            };
+            await capture.setPosition(new PhysicalPosition(targetPosition.x, targetPosition.y));
           }
-        } catch {
-          // Fallback silencioso: si el reposicionamiento falla, mostramos la ventana en su última posición
+        } catch (error) {
+          console.error('capture reposition pre-show failed', error);
         }
 
         await capture.show();
+
+        // Post-show: reset LogicalSize fuerza a WebView2 a reflow en el DPI del
+        // monitor actual (Bug B — sin esto, contenido queda renderizado al DPI
+        // del monitor anterior y aparecen scrollbars/clipping).
+        // Segundo setPosition: workaround Windows — hidden-window setPosition es
+        // inconsistente; llamarlo tras show() garantiza que la posición quede
+        // aplicada (Bug A).
+        try {
+          await capture.setSize(new LogicalSize(CAPTURE_LOGICAL_WIDTH, CAPTURE_LOGICAL_HEIGHT));
+          if (targetPosition) {
+            await capture.setPosition(new PhysicalPosition(targetPosition.x, targetPosition.y));
+          }
+        } catch (error) {
+          console.error('capture resize/reposition post-show failed', error);
+        }
+
         await capture.setFocus();
       });
     })();

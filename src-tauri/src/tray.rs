@@ -1,8 +1,11 @@
 use tauri::{
     menu::{CheckMenuItemBuilder, MenuBuilder, MenuItemBuilder, PredefinedMenuItem},
     tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent},
-    AppHandle, Manager, PhysicalPosition, WebviewWindow,
+    AppHandle, LogicalSize, Manager, PhysicalPosition, WebviewWindow,
 };
+
+const CAPTURE_LOGICAL_WIDTH: f64 = 480.0;
+const CAPTURE_LOGICAL_HEIGHT: f64 = 220.0;
 use tauri_plugin_autostart::ManagerExt;
 
 pub fn build(app: &AppHandle) -> tauri::Result<()> {
@@ -88,15 +91,28 @@ fn toggle_main(app: &AppHandle) {
 
 fn show_capture(app: &AppHandle) {
     if let Some(window) = app.get_webview_window("capture") {
-        let _ = center_on_cursor_monitor(&window);
+        // Pre-show: reposicionar al monitor del cursor. En hidden windows de Windows
+        // el set_position puede no aplicar inmediatamente; hacemos un segundo
+        // set_position post-show para garantizar que la posición quede (Bug A F7).
+        let target_position = compute_cursor_monitor_position(&window);
+        if let Some(pos) = target_position {
+            let _ = window.set_position(pos);
+        }
         let _ = window.show();
+        // Post-show: setSize(Logical) fuerza a WebView2 a reflow en el DPI del
+        // monitor actual (Bug B F7 — sin esto, contenido queda renderizado al
+        // DPI del monitor previo y aparecen scrollbars).
+        let _ = window.set_size(LogicalSize::new(CAPTURE_LOGICAL_WIDTH, CAPTURE_LOGICAL_HEIGHT));
+        if let Some(pos) = target_position {
+            let _ = window.set_position(pos);
+        }
         let _ = window.set_focus();
     }
 }
 
-fn center_on_cursor_monitor(window: &WebviewWindow) -> tauri::Result<()> {
-    let cursor = window.cursor_position()?;
-    let monitors = window.available_monitors()?;
+fn compute_cursor_monitor_position(window: &WebviewWindow) -> Option<PhysicalPosition<i32>> {
+    let cursor = window.cursor_position().ok()?;
+    let monitors = window.available_monitors().ok()?;
     let target = monitors
         .iter()
         .find(|m| {
@@ -107,17 +123,18 @@ fn center_on_cursor_monitor(window: &WebviewWindow) -> tauri::Result<()> {
                 && cursor.y >= pos.y as f64
                 && cursor.y < (pos.y + size.height as i32) as f64
         })
-        .or_else(|| monitors.first());
+        .or_else(|| monitors.first())?;
 
-    if let Some(monitor) = target {
-        let win_size = window.outer_size()?;
-        let mpos = monitor.position();
-        let msize = monitor.size();
-        let cx = mpos.x + (msize.width as i32 - win_size.width as i32) / 2;
-        let cy = mpos.y + (msize.height as i32 - win_size.height as i32) / 2;
-        window.set_position(PhysicalPosition { x: cx, y: cy })?;
-    }
-    Ok(())
+    // Dimensiones físicas calculadas desde scaleFactor del monitor destino.
+    // No usamos outer_size() porque tras un drag cross-DPI puede quedar stale.
+    let scale = target.scale_factor();
+    let win_w = (CAPTURE_LOGICAL_WIDTH * scale).round() as i32;
+    let win_h = (CAPTURE_LOGICAL_HEIGHT * scale).round() as i32;
+    let mpos = target.position();
+    let msize = target.size();
+    let cx = mpos.x + (msize.width as i32 - win_w) / 2;
+    let cy = mpos.y + (msize.height as i32 - win_h) / 2;
+    Some(PhysicalPosition { x: cx, y: cy })
 }
 
 fn toggle_autostart(app: &AppHandle, item: &tauri::menu::CheckMenuItem<tauri::Wry>) {

@@ -1,7 +1,8 @@
 # SPEC — SecondMind · Feature 7: Capture Window Multi-Monitor (Registro de implementación)
 
-> Estado: **Completada** — Abril 2026
-> Commits: `1ec915f` (F1) · `a3f8328` (F2) · `2e36424` (F3 + F4 implícito)
+> Estado: **Completada con fix post-merge** — Abril 2026
+> Commits F7 base: `1ec915f` (F1) · `a3f8328` (F2) · `2e36424` (F3 + F4 implícito) · `a2d04f1` (docs)
+> Fix post-merge: `1830414` — multi-monitor DPI + hidden-window setPosition (ver sección "Bugs descubiertos post-merge" abajo)
 > Alcance: La ventana `/capture` (Tauri Desktop) aparece centrada en el monitor donde está el cursor, no siempre en el primario. Incluye drag manual desde el header.
 > Dependencias: Fase 5.1 (Tauri Desktop) completada
 > Stack implementado: Tauri v2 JS API (`@tauri-apps/api/window`: `cursorPosition`, `availableMonitors`, `PhysicalPosition`), Rust (`WebviewWindow::cursor_position`, `available_monitors`, `set_position`), capabilities JSON (`core:window:allow-set-position`, `allow-outer-size`, `allow-start-dragging`).
@@ -283,6 +284,38 @@ Manuales (pendientes — requieren setup multi-monitor físico):
 - Refactorizar tray para delegar en IPC en vez de handler Rust directo
 - Build del MSI/NSIS (se verifica con `tauri:dev`)
 - Centrar main window en monitor del cursor (main usa `window_state`, su UX es "recordar posición")
+
+---
+
+## Bugs descubiertos post-merge (fix `1830414`)
+
+Al testear F7 con hardware multi-monitor real aparecieron 2 bugs que la verificación automatizable no cubría. Fix aplicado en la misma rama `fix/multi-monitor-capture-dpi` mergeada a `main`.
+
+### Bug A — Shortcut abría en última posición, ignorando cursor
+
+**Síntoma:** `Ctrl+Shift+Space` con cursor en monitor B seguía abriendo la ventana en el monitor donde se había dejado la vez anterior (no en B).
+
+**Root cause:** `setPosition()` sobre ventanas con `visible: false` en Windows entra a una queue que no se consume antes de `show()`. En macOS/Linux se aplica inmediatamente; en Windows queda pendiente y la ventana se muestra en su última posición visible.
+
+**Fix:** Llamar `setPosition()` **dos veces** — una pre-`show()` (inocua en macOS/Linux, queue en Windows) y otra post-`show()` (definitiva en todos los OS). El tradeoff es un flash de 1 frame en la posición vieja en Windows, imperceptible.
+
+### Bug B — Diseño roto tras cross-DPI drag
+
+**Síntoma:** Tras arrastrar la ventana entre monitores con DPI distinto (ej. 100% → 125%), aparecían scrollbars horizontales/verticales y el contenido del header/textarea quedaba clippeado.
+
+**Root cause:** Tauri/tao handlea `WM_DPICHANGED` para el chrome de la ventana (mantiene `LogicalSize` al cruzar monitores), pero WebView2 no recibe el hint para rescalar su contenido interno. El HTML/CSS queda renderizado al DPI previo mientras el chrome se redimensiona al nuevo DPI.
+
+**Fix:** `setSize(LogicalSize(480, 220))` explícito **post-`show()`** fuerza a WebView2 a reflow al DPI del monitor actual. Además, las dimensiones físicas para calcular el centrado ahora vienen de `target.scaleFactor * LOGICAL_DIM` en vez de `outerSize()` (que queda stale tras cross-DPI drag y podía meter el cálculo en un loop de escalado incorrecto).
+
+### Cambios colaterales del fix
+
+- `console.error` reemplaza los `catch { /* silent */ }` del callback JS. Los fallbacks silenciosos son aceptables para comportamiento (no dejar la ventana oculta), NO para diagnóstico. Rust sigue con `let _ =` porque los errores van a los logs del plugin automáticamente.
+- Constantes canónicas `CAPTURE_LOGICAL_WIDTH`/`CAPTURE_LOGICAL_HEIGHT` = 480/220 definidas en ambos archivos. Cualquier cambio futuro al tamaño del capture debe actualizar los tres lugares: constantes JS, constantes Rust, `tauri.conf.json`.
+
+### Lecciones
+
+- "Verificable automáticamente" (cargo check + tsc + eslint) ≠ "funciona". Multi-monitor + cross-DPI son edge cases que solo se ven en hardware real. F7 debería haber tenido un paso de validación manual antes de merge.
+- Catch silencioso en código nuevo es una mala apuesta — siempre logguear errores en features exploratorias. Remover el logging es trivial cuando la feature está estable.
 
 ---
 
