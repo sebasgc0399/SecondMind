@@ -3,10 +3,7 @@ import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { Check, Loader2 } from 'lucide-react';
 import useAuth from '@/hooks/useAuth';
 import { db } from '@/lib/firebase';
-import { hideCurrentWindow, isTauri, showMainWindow } from '@/lib/tauri';
-
-const CAPTURE_LOGICAL_WIDTH = 480;
-const CAPTURE_LOGICAL_HEIGHT = 220;
+import { hideCurrentWindow, showMainWindow } from '@/lib/tauri';
 
 type Status = 'editing' | 'saving' | 'saved';
 
@@ -21,37 +18,6 @@ export default function CapturePage() {
     const id = requestAnimationFrame(() => textareaRef.current?.focus());
     return () => cancelAnimationFrame(id);
   }, [status]);
-
-  // Bug B (fix post-F7): WebView2 no rescala su contenido cuando Windows
-  // dispara WM_DPICHANGED al arrastrar entre monitores con DPI distinto.
-  // Workaround: escuchar onScaleChanged y forzar setSize(LogicalSize) al
-  // instante — esto fuerza a WebView2 a reflow en el DPI del monitor actual,
-  // previniendo el estado "autorescaled grande que no se recupera" que reporta
-  // el issue tauri-apps/tauri#3610.
-  useEffect(() => {
-    if (!isTauri()) return;
-    let cleanup: (() => void) | null = null;
-    void (async () => {
-      try {
-        const { getCurrentWebviewWindow } = await import('@tauri-apps/api/webviewWindow');
-        const { LogicalSize } = await import('@tauri-apps/api/window');
-        const win = getCurrentWebviewWindow();
-        const unlisten = await win.onScaleChanged(async () => {
-          try {
-            await win.setSize(new LogicalSize(CAPTURE_LOGICAL_WIDTH, CAPTURE_LOGICAL_HEIGHT));
-          } catch (error) {
-            console.error('capture scale-change resize failed', error);
-          }
-        });
-        cleanup = unlisten;
-      } catch (error) {
-        console.error('capture onScaleChanged setup failed', error);
-      }
-    })();
-    return () => {
-      cleanup?.();
-    };
-  }, []);
 
   const closeWindow = useCallback(() => {
     void hideCurrentWindow();
@@ -111,7 +77,7 @@ export default function CapturePage() {
   if (!user) {
     return (
       <div className="flex h-screen w-screen flex-col bg-background text-foreground">
-        <div data-tauri-drag-region className="h-8 shrink-0 border-b border-border bg-card" />
+        <div className="h-8 shrink-0 border-b border-border bg-card" />
         <div className="flex flex-1 flex-col items-center justify-center gap-3 px-6 text-center">
           <p className="text-sm text-muted-foreground">Abrí SecondMind para iniciar sesión.</p>
           <button
@@ -131,10 +97,7 @@ export default function CapturePage() {
 
   return (
     <div className="flex h-screen w-screen flex-col bg-card text-foreground">
-      <div
-        data-tauri-drag-region
-        className="flex h-8 shrink-0 items-center border-b border-border-strong bg-card/60 px-3 text-xs text-muted-foreground"
-      >
+      <div className="flex h-8 shrink-0 items-center border-b border-border-strong bg-card/60 px-3 text-xs text-muted-foreground">
         Captura rápida
       </div>
       <div className="flex flex-1 flex-col p-4">
