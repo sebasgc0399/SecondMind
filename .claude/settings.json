@@ -55,9 +55,7 @@
       "Bash(git log *)",
       "Read(//d/Proyectos VS CODE/**)"
     ],
-    "additionalDirectories": [
-      "C:\\Users\\sebas\\.claude"
-    ]
+    "additionalDirectories": ["C:\\Users\\sebas\\.claude", "D:\\Proyectos VS CODE\\sdd-kit"]
   },
   "hooks": {
     "PostToolUse": [
