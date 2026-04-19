@@ -73,6 +73,40 @@ El plugin `typescript-lsp@claude-plugins-official` funciona en Windows SOLO con 
 
 Si Claude Code actualiza el marketplace, este patch puede perderse y hay que reaplicarlo.
 
+## Metodología de trabajo — SDD (Spec-Driven Development)
+
+Cada feature del proyecto sigue este ciclo. No improvisar: si algo no cuadra, ajustar el SPEC o consultar antes de saltarse pasos.
+
+1. **SPEC primero.** Sebastián escribe `Spec/features/SPEC-feature-N-<nombre>.md` con objetivo, F1–Fn sub-features (criterio de done + archivos a tocar), orden de implementación, checklist.
+2. **Plan mode** (`EnterPlanMode`). Pulir el SPEC antes de codear:
+   - Lanzar hasta 3 **Explore agents en paralelo** para mapear patrones existentes en el código relacionado.
+   - Si aplica UI/UX, recorrido con **Playwright MCP** en viewports real (375 / 768 / 1280) capturando métricas.
+   - Consultar **context7 MCP** si hay libs nuevas o migración de versión.
+   - Lanzar un **Plan agent** con el contexto reunido para validar decisiones y detectar gotchas.
+   - Escribir el plan refinado en `~/.claude/plans/<nombre>.md` con contexto, pre-requisitos, hallazgos del audit, desvíos sobre el SPEC, patrones a reusar (con paths), orden, archivos, decisiones clave, verificación E2E, criterio de done.
+   - `ExitPlanMode` una vez aprobado.
+3. **Una rama por feature:** `feat/<nombre-corto>`. `main` está bloqueada por hook PreToolUse (`exit 2` si intentás Edit/Write sobre main). Features chicas: consultar antes de arrancar.
+4. **Commits atómicos Conventional Commits en español**, uno por sub-feature (`feat`, `fix`, `refactor`, `docs`, `chore`). `Co-Authored-By: Claude Opus 4.7 (1M context) <noreply@anthropic.com>` al final.
+5. **E2E con Playwright MCP + Firebase MCP** si aplica web. Dev server en background con `npm run dev` (puerto 5173 → 5174 si ocupado; matar el previo si bloquea). UID de tests Firebase: `gYPP7NIo5JanxIbPqMe6nC3SQfE3` (proyecto `secondmindv1`). Cubrir golden path + edge cases + regresión. `TaskStop` al dev server al terminar.
+6. **Deploy pipeline** al cerrar feature (confirmar scope al final, no paso a paso):
+   - CFs si cambian: `npm run deploy:functions`.
+   - Hosting: `npm run build && npm run deploy`.
+   - Tauri: `npm run tauri:build` (MSI + NSIS) — **opcional** si el cambio es 100% client-side sin tocar `src-tauri/`.
+   - Android: `npx cap sync android && cd android && ./gradlew.bat assembleDebug` — **opcional** si no tocaste `android/`.
+7. **Merge `--no-ff` a main** con commit de merge descriptivo. Push a origin sin preguntar.
+8. **Cerrar la feature:** convertir el SPEC a registro de implementación siguiendo el patrón de `Spec/features/SPEC-feature-{1..N}-*.md`. Actualizar `Spec/ESTADO-ACTUAL.md` con patrones, gotchas y decisiones nuevas. Actualizar `CLAUDE.md` si hay comandos o gotchas de alcance general.
+
+### Estrategia de lectura de docs
+
+- **Fuente primaria:** `Spec/ESTADO-ACTUAL.md`. Snapshot consolidado de arquitectura vigente, gotchas activos, patrones, deps clave. Reemplaza la necesidad de leer SPECs individuales.
+- **NO leer** SPECs de fases/features anteriores (`Spec/SPEC-fase-*.md`, `Spec/features/SPEC-feature-*.md`) salvo que necesites detalle puntual que `ESTADO-ACTUAL` no cubre. Ahorra mucho token.
+- `Docs/00–04-*.md` son principios teóricos y schemas — leer on-demand si la tarea lo requiere.
+- `CLAUDE.md` ya está auto-cargado.
+
+### Handoff entre ventanas
+
+Cuando la conversación se alarga y conviene abrir una sesión limpia, usar `/context-handoff` (skill user-level global). Genera un snapshot del delta — estado del repo, qué se acaba de hacer, qué sigue, pointers a docs no auto-cargados — listo para pegar como primer mensaje de la nueva ventana.
+
 ## Estructura del proyecto
 
 ```
