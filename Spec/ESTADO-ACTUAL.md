@@ -1,6 +1,6 @@
 # Estado Actual — SecondMind (Snapshot consolidado)
 
-> Última actualización: Feature 7 Capture Multi-Monitor (Abril 2026) + refactor de docs hierarchy
+> Última actualización: Feature 8 Tauri Auto-Updater (Abril 2026)
 > Snapshot de arquitectura vigente, gotchas por dominio, patrones, deps clave.
 > Se actualiza al cerrar cada feature con la regla de escalación de CLAUDE.md:
 > gotchas nacen en SPEC → suben acá si aplican a >1 feature → suben a CLAUDE.md si son universales.
@@ -27,6 +27,7 @@
 - **Feature 5 — Bubble Menu + Link:** toolbar flotante al seleccionar texto con 6 botones inline (Bold/Italic/Strike/Code/Highlight/Link). Link ya venía en StarterKit v3, solo faltaba UI. Ver [`features/SPEC-feature-5-bubble-menu.md`](features/SPEC-feature-5-bubble-menu.md).
 - **Feature 6 — Theme System + Paleta Violet:** 3 modos (Claro/Automático/Oscuro) con paleta oklch violet desaturada hue 285°, script inline anti-flash, `useTheme` con `useSyncExternalStore`. Default `auto`. Ver [`features/SPEC-feature-6-theme-system.md`](features/SPEC-feature-6-theme-system.md).
 - **Feature 7 — Capture Multi-Monitor:** ventana `/capture` aparece centrada en el monitor del cursor. Lógica unificada Rust-side en `tray.rs::show_capture`, compartida por shortcut y tray menu. Drag-from-header revertido (bug tao#3610 en cross-DPI drag). 3 rondas de fix documentadas. Ver [`features/SPEC-feature-7-multi-monitor-capture.md`](features/SPEC-feature-7-multi-monitor-capture.md).
+- **Feature 8 — Tauri Auto-Updater:** auto-actualización in-app con tag-based CI en GitHub Actions. Hook `useAutoUpdate` con startup silent check + trigger manual desde tray y Settings. Firma ed25519 vía `tauri-plugin-updater` + `-process` + `-dialog`. 3 rondas de fix (createUpdaterArtifacts schema, tag prematuro, env vars CI). Ver [`features/SPEC-feature-8-tauri-auto-updater.md`](features/SPEC-feature-8-tauri-auto-updater.md).
 
 ---
 
@@ -167,6 +168,18 @@
 - **Primer `cargo build` tarda 5-10 min** (~400 crates). Incrementales luego 10-30s.
 - **Capture multi-monitor (Feature 7):** `tray.rs::show_capture` centra en monitor del cursor. Hit-test cursor-based con `?? monitors[0]` fallback. Dimensiones físicas con `scale_factor * LOGICAL_SIZE` (NO `outer_size()`). `set_position` llamado DOS veces (pre + post `show()`) por Windows hidden-window queue quirk. `set_size(LogicalSize(480, 220))` post-show para resetear tamaño canónico — seguro porque corre al rest.
 - **Drag de capture window fue revertido (F7 round 3).** Cross-DPI drag disparaba feedback loop de `onScaleChanged` + `setSize` que paniceaba tao con integer underflow (`event_loop.rs:2035/2042`). Bug upstream tauri#3610 abierto desde 2022 sin fix. Para mover a otro monitor, re-invocar shortcut.
+
+### Auto-Updater + Releases (Feature 8)
+
+- **tauri-action NO propaga env vars del step `env:` al subprocess `beforeBuildCommand` en Windows runners.** `VITE_FIREBASE_*` declaradas en `env:` quedaban `undefined` dentro de `npm run build` que dispara tauri-action, rompiendo Firebase/OAuth en los bundles de CI. Patrón canónico: generar `.env.production` explícito en un step previo — Vite lo lee directo desde disk, sin depender del forwarding entre procesos. Los `TAURI_SIGNING_*` siguen en `env:` porque los consume tauri-action directamente (ahí sí funciona). Ver `.github/workflows/release.yml` step "Generate .env.production for Vite". Aplicable a F9 Capacitor CI y cualquier futuro workflow.
+- **`createUpdaterArtifacts` en `tauri.conf.json` acepta `true`/`false`/`"v1Compatible"` solamente.** No existe `"v2Compatible"`. `true` produce artifacts v2 firmados por default. Schema verificado en `node_modules/@tauri-apps/cli/config.schema.json`.
+- **Tauri `plugin-updater` trata HTTP 404 como error**, no como "sin update disponible". Pre-primer-release el endpoint de `latest.json` devuelve 404 y el hook cae al catch — el error dialog solo aparece en check manual (startup silent traga el error). Comportamiento correcto en prod post-bootstrap.
+- **DevTools desactivadas en production builds de Tauri** salvo que se agregue feature `devtools` al crate `tauri` de `Cargo.toml` (`features = ["tray-icon", "devtools"]`). F12/Ctrl+Shift+I no funcionan en el MSI/NSIS instalado. Diagnóstico de bugs build-time requiere `tauri:build` local para comparar vs el bundle de CI.
+- **`gh release delete <tag> --cleanup-tag --yes`** elimina Release + tag remoto en un solo paso. tauri-action recrea git tags al crear Releases; si borrás solo el tag, el siguiente run puede recrearlo. Usar siempre `--cleanup-tag` cuando se está rehaciendo un release.
+- **`gh` CLI con PAT default no puede cancelar workflow runs** (403 "Resource not accessible"). Requiere scope `workflow` o `actions:write`. Fallback: dejar correr + limpiar Release post-facto.
+- **Update flow E2E requiere ≥2 releases secuenciales.** Baseline instalado (v0.1.1) + versión nueva publicada (v0.1.2) para validar `check() → dialog → download → install → relaunch`. No se puede testear con un solo release. F5 del SPEC F8 corrió 2 veces: bump 0.1.1 (baseline) + bump 0.1.2 (update target).
+- **Hook JS `useAutoUpdate` se monta en ambas ventanas main + capture.** Guard `label !== "main"` obligatorio al inicio — las capabilities `updater:default` / `process:*` solo están scopeadas a `"windows": ["main"]`, pero la llamada desde capture generaría errores de permiso visibles en consola. Doble guard (capability + JS label) es defensivo y correcto.
+- **Tray command → emit event → JS handler** es el patrón post-F7 que F8 reutilizó. `app.emit_to("main", "check-for-updates", ())` desde Rust + `listen("check-for-updates")` en el hook JS. Evita duplicar lógica updater en Rust y JS.
 
 ### Capacitor Mobile (Fase 5.2)
 
