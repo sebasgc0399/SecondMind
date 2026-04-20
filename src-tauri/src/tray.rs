@@ -1,7 +1,7 @@
 use tauri::{
     menu::{CheckMenuItemBuilder, MenuBuilder, MenuItemBuilder, PredefinedMenuItem},
     tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent},
-    AppHandle, LogicalSize, Manager, PhysicalPosition, WebviewWindow,
+    AppHandle, Emitter, LogicalSize, Manager, PhysicalPosition, WebviewWindow,
 };
 
 const CAPTURE_LOGICAL_WIDTH: f64 = 480.0;
@@ -20,6 +20,8 @@ pub fn build(app: &AppHandle) -> tauri::Result<()> {
     let autostart_item = CheckMenuItemBuilder::with_id("autostart", "Iniciar con Windows")
         .checked(autostart_enabled)
         .build(app)?;
+    let check_updates_item =
+        MenuItemBuilder::with_id("check_updates", "Buscar actualizaciones").build(app)?;
     let separator_2 = PredefinedMenuItem::separator(app)?;
     let quit_item = MenuItemBuilder::with_id("quit", "Salir").build(app)?;
 
@@ -29,6 +31,7 @@ pub fn build(app: &AppHandle) -> tauri::Result<()> {
             &capture_item,
             &separator_1,
             &autostart_item,
+            &check_updates_item,
             &separator_2,
             &quit_item,
         ])
@@ -47,6 +50,7 @@ pub fn build(app: &AppHandle) -> tauri::Result<()> {
             "open" => show_main(app),
             "capture" => show_capture(app),
             "autostart" => toggle_autostart(app, &autostart_item),
+            "check_updates" => emit_check_updates(app),
             "quit" => app.exit(0),
             _ => (),
         })
@@ -135,6 +139,14 @@ fn compute_cursor_monitor_position(window: &WebviewWindow) -> Option<PhysicalPos
     let cx = mpos.x + (msize.width as i32 - win_w) / 2;
     let cy = mpos.y + (msize.height as i32 - win_h) / 2;
     Some(PhysicalPosition { x: cx, y: cy })
+}
+
+fn emit_check_updates(app: &AppHandle) {
+    // El tray corre en contexto OS-level; delegamos el check al hook JS en
+    // la ventana main para reusar el diálogo nativo y la lógica del updater.
+    if let Err(err) = app.emit_to("main", "check-for-updates", ()) {
+        log::error!("failed to emit check-for-updates: {err}");
+    }
 }
 
 fn toggle_autostart(app: &AppHandle, item: &tauri::menu::CheckMenuItem<tauri::Wry>) {

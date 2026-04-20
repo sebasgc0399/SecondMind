@@ -1,6 +1,6 @@
 [package]
 name = "secondmind"
-version = "0.1.0"
+version = "0.1.1"
 description = "SecondMind desktop wrapper"
 authors = ["Sebastian"]
 license = ""
@@ -28,3 +28,6 @@ tauri-plugin-single-instance = "2.4.1"
 tauri-plugin-autostart = "2.5.1"
 tauri-plugin-window-state = "2.4.1"
 tauri-plugin-shell = "2.3.5"
+tauri-plugin-updater = "2"
+tauri-plugin-process = "2"
+tauri-plugin-dialog = "2"

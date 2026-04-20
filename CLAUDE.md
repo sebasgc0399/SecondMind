@@ -74,6 +74,7 @@ Cada feature del proyecto sigue este ciclo. No improvisar: si algo no cuadra, aj
    - Lanzar un **Plan agent** con el contexto reunido para validar decisiones y detectar gotchas.
    - Escribir el plan refinado en `~/.claude/plans/<nombre>.md` con contexto, pre-requisitos, hallazgos del audit, desvíos sobre el SPEC, patrones a reusar (con paths), orden, archivos, decisiones clave, verificación E2E, criterio de done.
    - `ExitPlanMode` una vez aprobado.
+   - **Para bugs:** investigar y articular el root cause antes de codear cualquier fix. Nunca parchear síntomas.
 3. **Una rama por feature:** `feat/<nombre-corto>`. `main` está bloqueada por hook PreToolUse (`exit 2` si intentás Edit/Write sobre main). Features chicas: consultar antes de arrancar.
 4. **Commits atómicos Conventional Commits en español**, uno por sub-feature (`feat`, `fix`, `refactor`, `docs`, `chore`). `Co-Authored-By: Claude Opus 4.7 (1M context) <noreply@anthropic.com>` al final.
 5. **E2E con Playwright MCP + Firebase MCP** si aplica web. Dev server en background con `npm run dev` (puerto 5173 → 5174 si ocupado; matar el previo si bloquea). UID de tests Firebase: `gYPP7NIo5JanxIbPqMe6nC3SQfE3` (proyecto `secondmindv1`). Cubrir golden path + edge cases + regresión. `TaskStop` al dev server al terminar.

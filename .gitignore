@@ -40,6 +40,10 @@ dist-ssr
 src-tauri/target/
 src-tauri/gen/
 
+# Tauri signing keys — NUNCA commitear. Viven en ~/.tauri/
+*.key
+*.key.pub
+
 # Capacitor Android — build artifacts, caches y secretos locales
 android/app/build/
 android/build/
