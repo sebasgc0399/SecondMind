@@ -53,7 +53,8 @@
       "Bash(git merge *)",
       "Edit(~/.claude/skills/archive-spec/**)",
       "Bash(git log *)",
-      "Read(//d/Proyectos VS CODE/**)"
+      "Read(//d/Proyectos VS CODE/**)",
+      "Bash(start \"\" \"C:\\\\Users\\\\sebas\\\\.claude\\\\usage-data\\\\report.html\")"
     ],
     "additionalDirectories": ["C:\\Users\\sebas\\.claude", "D:\\Proyectos VS CODE\\sdd-kit"]
   },
