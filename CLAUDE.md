@@ -227,6 +227,7 @@ Aplican a cualquier sesión sin importar la feature. Gotchas de dominio específ
 - **Vite `resolve.dedupe` obligatorio para Firebase Y React** (`firebase`, `@firebase/app`, `@firebase/component`, `@firebase/auth`, `@firebase/firestore`, `react`, `react-dom`). Sin esto, Vite optimizer picks up paquetes desde `extension/node_modules/` (Chrome Extension tiene su propio lockfile) y duplica registros → Firebase `Component auth has not been registered yet`, React `Invalid hook call`. **Reincidente tras CUALQUIER `npm install`** que mueva el lockfile raíz — síntomas aparecen al reiniciar el dev server, no en build producción.
 - **`grid` en Tailwind sin `grid-cols-1` explícito deja children crecer.** Un `<div class="grid gap-4 lg:grid-cols-2">` con hijos de content largo estira la implicit column auto hasta miles de px en mobile. Siempre empezar con `grid-cols-1`: `grid grid-cols-1 gap-4 lg:grid-cols-2`.
 - **`min-w-0 flex-1 truncate` obligatorio** en `<span>` dentro de `<a class="flex">` para que `truncate` funcione. Solo `truncate` sin `min-w-0` deja el child expandirse a content-size.
+- **`$USERPROFILE` no expande en cmd.exe** — usa `%USERPROFILE%` (cmd) o `$USERPROFILE` (git bash/PowerShell). Si una herramienta acepta un path literal como argumento (ej. `tauri signer generate -w "$USERPROFILE/..."`), la variable no expandida crea un dir literal `$USERPROFILE/` en el cwd. Ser consciente del shell target cuando se dan comandos con env vars en Windows.
 
 ## Estado de features
 

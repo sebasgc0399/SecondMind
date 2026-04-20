@@ -1,368 +1,65 @@
-# SPEC — SecondMind · Feature 8: Tauri Auto-Updater
+# SPEC — SecondMind · Feature 8: Tauri Auto-Updater (Registro de implementación)
 
-> Alcance: Auto-actualización in-app para la versión desktop (Windows/NSIS). CI con GitHub Actions dispara build al crear tag. Binarios y `latest.json` hosteados en GitHub Releases.
-> Dependencias: Fase 5.1 (Tauri Desktop) + Feature 7 completadas
-> Estimado: 1-2 sesiones de trabajo
-> Stack relevante: Tauri v2 (`tauri-plugin-updater`, `tauri-plugin-process`), GitHub Actions, `tauri-apps/tauri-action`
-
----
+> Estado: Completada abril 2026
+> Commits: `c59d457` SPEC, `d806518` plugins updater+process+dialog, `e25f583` hook + tray + settings UI, `7b4a19f` CI release workflow, `df9fd1c` fix env vars CI, `35b4064` bump 0.1.1, `135c449` bump 0.1.2, `e6ba441` merge feat, `ad523be` merge release-0.1.2
+> Gotchas operativos vigentes → `Spec/ESTADO-ACTUAL.md`
 
 ## Objetivo
 
-El usuario de la app desktop recibe una notificación al iniciar SecondMind cuando hay una versión nueva disponible. Puede aceptar la actualización, que se descarga e instala automáticamente, y la app se reinicia con la versión nueva. El developer (yo) solo necesita crear un tag (`git tag v0.2.0 && git push --tags`) para que el CI compile, firme, y publique la release completa.
+El usuario de la app desktop recibe una notificación al iniciar SecondMind cuando hay una versión nueva disponible. Puede aceptar la actualización, que se descarga e instala automáticamente, y la app se reinicia con la versión nueva. El developer (Sebastián) solo necesita crear un tag (`git tag vX.Y.Z && git push --tags`) para que el CI compile, firme, y publique la release completa.
 
----
+## Qué se implementó
 
-## Features
+- **F1 — signing keys:** Keypair ed25519 generado con `tauri signer generate`, private key almacenada en password manager + backup local. Pubkey embebida en `tauri.conf.json`; `TAURI_SIGNING_PRIVATE_KEY` y su passphrase configurados como GitHub Secrets. Archivos tocados: `src-tauri/tauri.conf.json`, `.gitignore` (agregado `*.key`, `*.key.pub` como safety net tras accidente con `$USERPROFILE` no expandido en cmd — ver Lecciones).
 
-### F1: Generar signing keypair + configurar GitHub secrets
+- **F2 — plugins + config updater:** `tauri-plugin-updater` + `tauri-plugin-process` + `tauri-plugin-dialog` en `[dependencies]` plano de `Cargo.toml` (sin target conditional — Cargo solo compila desktop). Plugins registrados en `lib.rs` pre-`.setup()`. Capabilities extendidas con `updater:default`, `process:allow-restart/exit`, `dialog:default` sobre el scope `"windows": ["main"]` ya existente. Config `plugins.updater` apuntando a `https://github.com/sebasgc0399/SecondMind/releases/latest/download/latest.json`, `windows.installMode: "passive"`, `bundle.createUpdaterArtifacts: true`. Archivos tocados: `src-tauri/Cargo.toml`, `package.json`, `src-tauri/src/lib.rs`, `src-tauri/capabilities/default.json`, `src-tauri/tauri.conf.json`.
 
-**Qué:** Generar el par de llaves de firma de Tauri y almacenar la clave privada como secret en el repo de GitHub. La clave pública va en `tauri.conf.json`.
+- **F3 — UI de actualización:** Hook `useAutoUpdate` con guard `isTauri()` + guard `label === "main"` + startup silent check con delay 5s + listener del evento `check-for-updates` para triggers manuales. Menu item "Buscar actualizaciones" en el tray emite el evento vía `app.emit_to("main", ...)` — evita duplicar lógica JS/Rust (patrón de F7). Sección "Información de la app" en Settings con `getVersion()` y botón que emite el mismo evento. Archivos creados: `src/hooks/useAutoUpdate.ts`, `src/components/settings/AppInfoSection.tsx`. Modificados: `src/main.tsx`, `src-tauri/src/tray.rs`, `src/app/settings/page.tsx`.
 
-**Criterio de done:**
+- **F4 — CI release workflow:** `.github/workflows/release.yml` tag-based (`on: push: tags: 'v*'`), `windows-latest`, `tauri-apps/tauri-action@v0` con `includeUpdaterJson: true`. swatinem/rust-cache para acelerar builds subsecuentes. Placeholder comentado `# release-capacitor` para F9. Firebase env vars vía `.env.production` generado en step previo (ver Rondas de fix). Archivo creado: `.github/workflows/release.yml`.
 
-- [ ] Keypair generado con `tauri signer generate`
-- [ ] `TAURI_SIGNING_PRIVATE_KEY` y `TAURI_SIGNING_PRIVATE_KEY_PASSWORD` configurados como secrets en el repo de GitHub
-- [ ] Clave pública agregada a `tauri.conf.json` bajo `plugins.updater.pubkey`
-- [ ] Clave privada almacenada en ubicación segura local (backup fuera de GitHub)
-
-**Archivos a modificar:**
-
-- `src-tauri/tauri.conf.json` — agregar sección `plugins.updater`
-
-**Notas de implementación:**
-
-- `tauri signer generate -w ~/.tauri/secondmind.key` genera `secondmind.key` (privada) y `secondmind.key.pub` (pública).
-- La clave privada NUNCA se commitea. Va como GitHub secret + backup local (ej. password manager).
-- Si se pierde la clave privada, los usuarios con la app instalada NO pueden recibir updates firmados con una clave nueva — habría que reinstalar.
-
----
-
-### F2: Instalar y configurar plugins updater + process
-
-**Qué:** Agregar `tauri-plugin-updater` y `tauri-plugin-process` al proyecto. Configurar el endpoint de updates apuntando a GitHub Releases. Registrar plugins en `lib.rs` y agregar capabilities.
-
-**Criterio de done:**
-
-- [ ] `tauri-plugin-updater` y `tauri-plugin-process` en `Cargo.toml` (target desktop only)
-- [ ] `@tauri-apps/plugin-updater` y `@tauri-apps/plugin-process` en `package.json`
-- [ ] Plugins registrados en `src-tauri/src/lib.rs` dentro de `setup()`
-- [ ] Capabilities agregadas a `src-tauri/capabilities/default.json`
-- [ ] `tauri.conf.json` tiene config completa del updater (endpoint, pubkey, installMode)
-- [ ] `cargo check` pasa sin warnings
-
-**Archivos a modificar:**
-
-- `src-tauri/Cargo.toml` — agregar deps con target desktop
-- `package.json` — agregar deps npm
-- `src-tauri/src/lib.rs` — registrar plugins
-- `src-tauri/capabilities/default.json` — agregar permissions updater + process
-- `src-tauri/tauri.conf.json` — config updater (endpoint, pubkey, installMode, createUpdaterArtifacts)
-
-**Config esperada en `tauri.conf.json`:**
-
-```json
-{
-  "plugins": {
-    "updater": {
-      "endpoints": ["https://github.com/USUARIO/secondmind/releases/latest/download/latest.json"],
-      "pubkey": "CONTENIDO_DE_secondmind.key.pub",
-      "windows": {
-        "installMode": "passive"
-      }
-    }
-  },
-  "bundle": {
-    "createUpdaterArtifacts": "v2Compatible"
-  }
-}
-```
-
-**Notas de implementación:**
-
-- `installMode: "passive"` instala sin interacción del usuario (muestra barra de progreso pero no pide clicks). Alternativas: `"basicUi"` (wizard), `"quiet"` (invisible).
-- `createUpdaterArtifacts: "v2Compatible"` genera los `.sig` junto a los instaladores.
-- Deps Rust con target condicional: `[target.'cfg(any(target_os = "macos", windows, target_os = "linux"))'.dependencies]` — no se cargan en Android/iOS.
-- Permissions necesarias: `updater:default`, `process:allow-restart`, `process:allow-exit`.
-
----
-
-### F3: UI de actualización in-app
-
-**Qué:** Hook que chequea updates al iniciar la app + item en el menú del tray para check manual. Si hay update, muestra diálogo nativo preguntando al usuario. Al aceptar: descarga, instala, reinicia.
-
-**Criterio de done:**
-
-- [ ] Al iniciar la app, se chequea silenciosamente si hay update (sin bloquear la UI)
-- [ ] Si hay update disponible, aparece diálogo nativo con versión nueva + release notes + botón "Actualizar" / "Después"
-- [ ] Al aceptar, la app descarga el update, lo instala (NSIS passive) y se reinicia
-- [ ] Al rechazar, la app sigue normal — no vuelve a preguntar hasta el próximo inicio
-- [ ] Item "Buscar actualizaciones" en el menú del tray permite check manual
-- [ ] Si no hay update en check manual, muestra diálogo "Estás en la última versión"
-- [ ] Versión actual visible en la página Settings (lectura de `tauri.conf.json` version)
-- [ ] Errores de red (sin internet, endpoint caído) se manejan silenciosamente en check automático, con notificación en check manual
-
-**Archivos a crear:**
-
-- `src/hooks/useAutoUpdate.ts` — hook con lógica de check + download + install
-
-**Archivos a modificar:**
-
-- `src-tauri/src/tray.rs` — agregar item "Buscar actualizaciones" al menú
-- `src-tauri/src/lib.rs` — agregar Tauri command `check_for_updates` para el tray
-- `src/app/settings/page.tsx` — mostrar versión actual
-- `src/main.tsx` — invocar `useAutoUpdate()` en `TauriIntegration`
-
-**Snippet de referencia (hook JS):**
-
-```ts
-import { check } from '@tauri-apps/plugin-updater';
-import { relaunch } from '@tauri-apps/plugin-process';
-import { ask, message } from '@tauri-apps/plugin-dialog';
-
-export function useAutoUpdate() {
-  useEffect(() => {
-    if (!isTauri()) return;
-    checkForUpdates(false); // silent on startup
-  }, []);
-}
-
-async function checkForUpdates(userInitiated: boolean) {
-  try {
-    const update = await check();
-    if (update?.available) {
-      const accepted = await ask(`Versión ${update.version} disponible.\n\n${update.body ?? ''}`, {
-        title: 'Actualización disponible',
-        okLabel: 'Actualizar',
-        cancelLabel: 'Después',
-      });
-      if (accepted) {
-        await update.downloadAndInstall();
-        await relaunch();
-      }
-    } else if (userInitiated) {
-      await message('Estás en la última versión.', {
-        title: 'Sin actualizaciones',
-        okLabel: 'OK',
-      });
-    }
-  } catch (err) {
-    console.error('Update check failed:', err);
-    if (userInitiated) {
-      await message('No se pudo verificar actualizaciones. Verificá tu conexión.', {
-        title: 'Error',
-        okLabel: 'OK',
-      });
-    }
-  }
-}
-```
-
-**Notas de implementación:**
-
-- `tauri-plugin-dialog` ya puede estar disponible. Si no, agregar dep (`cargo add tauri-plugin-dialog`, `npm add @tauri-apps/plugin-dialog`).
-- El check automático al startup debe tener un delay (~5s) para no competir con la hidratación de Firestore/TinyBase.
-- F7 lección: hooks en `main.tsx` se montan en TODAS las ventanas. Guard con `getCurrentWebviewWindow().label === 'main'` para que solo la main window chequee updates.
-- El item "Buscar actualizaciones" del tray dispara un Tauri command que ejecuta el check desde Rust (mismo patrón que el global shortcut post-F7: lógica OS-level en Rust).
-- `installMode: "passive"` en Windows cierra la app automáticamente para instalar — advertir al usuario en el diálogo.
-
----
-
-### F4: GitHub Actions workflow para release
-
-**Qué:** Workflow de CI que se dispara al crear un tag `v*`, compila la app Tauri en Windows, firma los artefactos, y crea un GitHub Release con los binarios + `latest.json`.
-
-**Criterio de done:**
-
-- [ ] `.github/workflows/release.yml` existe y es válido
-- [ ] Push de tag `v0.2.0` dispara el workflow automáticamente
-- [ ] El workflow compila exitosamente en runner `windows-latest`
-- [ ] GitHub Release creado con: `.exe` NSIS, `.exe.sig`, `latest.json`
-- [ ] `latest.json` tiene la estructura correcta (version, platforms, url, signature)
-- [ ] Las URLs en `latest.json` apuntan a los assets del mismo Release
-- [ ] El workflow está diseñado para que Feature 9 (Capacitor) agregue un job sin modificar el existente
-
-**Archivo a crear:**
-
-- `.github/workflows/release.yml`
-
-**Estructura del workflow:**
-
-```yaml
-name: Release
-
-on:
-  push:
-    tags:
-      - 'v*'
-
-jobs:
-  release-tauri:
-    runs-on: windows-latest
-    permissions:
-      contents: write
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Setup Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: 20
-
-      - name: Setup Rust
-        uses: dtolnay/rust-toolchain@stable
-
-      - name: Install frontend deps
-        run: npm ci
-
-      - name: Build & Release Tauri
-        uses: tauri-apps/tauri-action@v0
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
-          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
-        with:
-          tagName: ${{ github.ref_name }}
-          releaseName: 'SecondMind ${{ github.ref_name }}'
-          releaseBody: 'Release automática de SecondMind desktop.'
-          releaseDraft: false
-          prerelease: false
-          includeUpdaterJson: true
-
-  # Feature 9 agregará aquí:
-  # release-capacitor:
-  #   runs-on: ubuntu-latest
-  #   ...
-```
-
-**Notas de implementación:**
-
-- `tauri-apps/tauri-action` hace todo el heavy lifting: instala deps de Rust si faltan, compila, firma, crea Release, genera `latest.json`.
-- `includeUpdaterJson: true` genera el `latest.json` como asset del Release — el endpoint de `tauri.conf.json` lo consume directamente.
-- `GITHUB_TOKEN` lo provee GitHub Actions automáticamente (no hay que crear este secret).
-- `permissions: contents: write` es necesario para que el token pueda crear Releases.
-- El job se llama `release-tauri` (no `release`) para que F9 agregue `release-capacitor` al lado.
-- **Variables de entorno de Firebase** (VITE*FIREBASE*\*): si están definidas en `.env` local pero no en CI, el build falla. Agregar como GitHub secrets o como env vars en el workflow si son necesarias para el build del frontend.
-
----
-
-### F5: Estrategia de versionado
-
-**Qué:** Definir convención de versionado y proceso para bump de versión antes de crear un tag.
-
-**Criterio de done:**
-
-- [ ] `tauri.conf.json`, `Cargo.toml` y `package.json` sincronizados en la misma versión
-- [ ] Script o documentación del proceso de bump (`npm version patch/minor` o manual)
-- [ ] `Cargo.lock` actualizado tras bump de `Cargo.toml`
-- [ ] Commit de bump es el último antes del tag: `chore: bump version to 0.2.0`
-
-**Archivos a modificar:**
-
-- `src-tauri/tauri.conf.json` — `version`
-- `src-tauri/Cargo.toml` — `package.version`
-- `package.json` — `version`
-
-**Notas de implementación:**
-
-- Hoy `tauri.conf.json` y `Cargo.toml` están en `0.1.0`, `package.json` en `0.0.0` (D10 de Fase 5.1). Sincronizar los tres a `0.1.0` como baseline antes del primer release.
-- Semver: `patch` para bugfixes (0.1.1), `minor` para features (0.2.0), `major` reservado.
-- Proceso de release: `bump versión en 3 archivos → commit → tag → push --tags`. Puede automatizarse con un script si el proceso manual se vuelve tedioso.
-- El updater de Tauri compara la versión del `latest.json` contra la versión de `tauri.conf.json` compilada en la app. Si `latest.json` es mayor, ofrece update.
-
----
+- **F5 — versionado sync:** Los 3 sources of truth sincronizados (package.json: 0.0.0 → 0.1.0 → 0.1.1 → 0.1.2, Cargo.toml y tauri.conf.json: 0.1.0 → 0.1.1 → 0.1.2). Update flow validado E2E con la secuencia 0.1.1 instalada → 0.1.2 publicada.
 
 ## Decisiones clave
 
-| #   | Decisión                                                   | Razón                                                                                                                                                                                                                                                       |
-| --- | ---------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| D1  | GitHub Releases para binarios, no Firebase Hosting         | Repo es público → assets accesibles sin auth. `tauri-action` genera Release + `latest.json` automáticamente. Firebase agregaría complejidad (deploy credentials en CI, upload manual de binarios de ~40MB). Se mantiene toda la infra de updates en GitHub. |
-| D2  | Tag-based trigger, no push-to-main ni manual               | Un tag = una versión. Evita releases accidentales por merge. Permite agregar job de Capacitor (F9) al mismo trigger sin cambios.                                                                                                                            |
-| D3  | Check automático al startup con delay 5s                   | No bloquear la hidratación inicial. Check silencioso — solo muestra UI si hay update.                                                                                                                                                                       |
-| D4  | Diálogo nativo (`tauri-plugin-dialog`), no custom React UI | Más simple, funciona antes de que React monte, patrón estándar de Tauri.                                                                                                                                                                                    |
-| D5  | `installMode: "passive"`                                   | Muestra progreso sin wizard. Balance entre `quiet` (el usuario no ve nada) y `basicUi` (requiere clicks).                                                                                                                                                   |
-| D6  | Guard `label === 'main'` en el hook                        | F7 lección: hooks en `main.tsx` corren en todas las ventanas. Solo main debe chequear updates.                                                                                                                                                              |
-| D7  | Workflow diseñado para F9                                  | Job `release-tauri` con nombre específico + comentario placeholder para `release-capacitor`. Un solo workflow, un solo trigger.                                                                                                                             |
+| #   | Decisión                                                   | Razón                                                                                                                                                   |
+| --- | ---------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| D1  | GitHub Releases para binarios, no Firebase Hosting         | Repo público → assets sin auth. tauri-action genera Release + latest.json automáticamente. Firebase agregaría credenciales CI y upload manual de ~40MB. |
+| D2  | Tag-based trigger, no push-to-main ni manual               | Un tag = una versión. Evita releases accidentales por merge. Permite job Capacitor (F9) al mismo trigger.                                               |
+| D3  | Check automático al startup con delay 5s                   | No bloquear hidratación de TinyBase/Firestore. Check silencioso — solo muestra UI si hay update.                                                        |
+| D4  | Diálogo nativo (`tauri-plugin-dialog`), no custom React UI | Más simple, funciona antes de que React monte, patrón estándar Tauri.                                                                                   |
+| D5  | `installMode: "passive"`                                   | Muestra progreso sin wizard. Balance entre `quiet` (invisible) y `basicUi` (requiere clicks).                                                           |
+| D6  | Tray command → emit event → JS handler (no lógica en Rust) | Reusa el hook JS + dialog nativo. Evita duplicar lógica updater Rust/JS. Patrón post-F7.                                                                |
+| D7  | Workflow diseñado para F9                                  | Job `release-tauri` con nombre específico + placeholder comentado para `release-capacitor`. Un solo workflow, un solo trigger.                          |
 
----
+## Rondas de fix
 
-## Orden de implementación
+Tres bugs secuenciales se encontraron durante la implementación y validación. Cada uno resuelto root-cause primero (regla nueva del CLAUDE.md incorporada a mitad de la feature).
 
-1. **F1** (signing keys) → bloqueante para todo. Sin llaves no se puede firmar ni configurar el endpoint.
-2. **F5** (versionado) → sincronizar versiones antes de configurar el updater.
-3. **F2** (plugins + config) → necesita la pubkey de F1 y la versión de F5.
-4. **F3** (UI) → necesita los plugins de F2 instalados.
-5. **F4** (CI) → necesita los secrets de F1 y la config de F2. Se testea último porque requiere push de tag real.
+**Bug A — `createUpdaterArtifacts: "v2Compatible"` inválido.** El SPEC inicial proponía ese valor. El schema real de Tauri v2 (visible en `node_modules/@tauri-apps/cli/config.schema.json`) solo acepta `true`, `false`, o `"v1Compatible"` — no existe `"v2Compatible"`. `cargo check` falló con _"data did not match any variant of untagged enum Updater"_. Fix: `true` (produce artefactos v2 por default). Patcheado durante F2 antes del primer commit de plugins.
 
-**Commits atómicos:**
+**Bug B — Tag `v0.1.1` prematuro con sources en 0.1.0.** Tag pusheado antes del merge a main y antes del bump. CI generó Release `v0.1.1` con binarios `SecondMind_0.1.0_*.exe` + `latest.json` version `0.1.0`. La app instalada leía version 0.1.0 y consultaba un endpoint que decía 0.1.0 — nunca detectaría update de sí misma. Fix: `gh release delete v0.1.1 --cleanup-tag`, bump a 0.1.1 en los 3 archivos, retag. **Lección canónica del SDD F5: bump SIEMPRE antes del tag.**
 
-- C1: `chore(tauri): generate updater signing keys + configure pubkey`
-- C2: `chore: sync version to 0.1.0 across tauri.conf.json, Cargo.toml, package.json`
-- C3: `feat(tauri): add updater + process plugins with capabilities`
-- C4: `feat(tauri): auto-update check on startup + tray menu item`
-- C5: `ci: add GitHub Actions release workflow for Tauri desktop`
+**Bug C — OAuth roto en los bundles de CI.** La app instalada desde el MSI/NSIS de CI no abría la ventana de Google al click "Sign in with Google". Root cause aislado buildeando localmente con `tauri:build` (que lee `.env.local`) — el mismo código compilaba OAuth funcional local pero no en CI. Las env vars `VITE_FIREBASE_*` declaradas en el step `env:` de tauri-action **NO se propagan al subprocess** `beforeBuildCommand` (`npm run build`) en runners `windows-latest`. El bundle CI quedaba con Firebase config `undefined`. Fix (`df9fd1c`): generar `.env.production` explícito en un step previo — Vite lo lee directo desde disk, sin depender del forwarding de env vars. Los `TAURI_SIGNING_*` permanecen en `env:` porque tauri-action los consume directamente (ahí sí funciona).
 
----
+## Lecciones
 
-## Estructura de archivos
+- **`createUpdaterArtifacts` acepta `true`/`false`/`"v1Compatible"` solamente** — no existe `"v2Compatible"`. `true` produce artifacts v2 por default en Tauri v2.
 
-```
-.github/
-└── workflows/
-    └── release.yml                    ← F4: CI workflow tag-based
+- **Hooks en `main.tsx` se montan en TODAS las ventanas Tauri.** Main + capture comparten `main.tsx`. Guard con `getCurrentWebviewWindow().label !== 'main'` si la lógica es main-only. Lección de F7 confirmada y reaplicada en `useAutoUpdate`.
 
-src-tauri/
-├── tauri.conf.json                    ← F1+F2: updater config (endpoint, pubkey, installMode)
-├── Cargo.toml                         ← F2+F5: plugin deps + version sync
-├── capabilities/
-│   └── default.json                   ← F2: permissions updater + process + dialog
-└── src/
-    ├── lib.rs                         ← F2+F3: register plugins + update command
-    └── tray.rs                        ← F3: item "Buscar actualizaciones"
+- **Capabilities con `"windows": ["main"]` aíslan APIs de otras ventanas por diseño.** Los permisos updater/process/dialog no llegan a `capture`, que tampoco los necesita. Doble guard (capability + JS label check) es defensivo pero no redundante: JS evita llamadas que generarían errores de permiso en consola.
 
-src/
-├── hooks/
-│   └── useAutoUpdate.ts               ← F3: check + download + install + relaunch
-├── app/
-│   └── settings/
-│       └── page.tsx                   ← F3: mostrar versión actual
-└── main.tsx                           ← F3: invocar useAutoUpdate en TauriIntegration
-```
+- **tauri-action NO propaga env vars del step `env:` al subprocess `beforeBuildCommand` en Windows runners.** Patrón canónico: generar `.env.production` explícito en un step previo — Vite lo lee desde disk. Aplicable a cualquier CI Tauri + Vite + secrets de build. Caso específico del gotcha Windows-runner pipe inheritance.
 
----
+- **DevTools desactivadas en production builds de Tauri** salvo feature `devtools` explícita en el crate `tauri` de `Cargo.toml`. F12/Ctrl+Shift+I no funcionan en el MSI/NSIS instalado. Diagnóstico de bugs de build-time requiere `tauri:build` local para comparar.
 
-## Checklist de completado
+- **`$USERPROFILE` no expande en cmd.exe** (usa `%USERPROFILE%`). En git bash/PowerShell sí. Comandos con variables de entorno deben ser conscientes del shell target. Cuando una herramienta (ej. `tauri signer generate -w "$USERPROFILE/.tauri/..."`) acepta un path literal, un `$VAR` no expandido crea un dir literal en el cwd. `.gitignore` debe cubrir `*.key` y `*.key.pub` como safety net.
 
-Al terminar esta feature, TODAS estas condiciones deben ser verdaderas:
+- **Tauri plugin-updater trata HTTP 404 como error**, no como "sin update disponible". Pre-primer-release el endpoint de `latest.json` devuelve 404 y el hook cae al catch. Comportamiento correcto en prod post-bootstrap (solo afecta devs antes del primer release publicado).
 
-- [ ] Signing keypair generado y clave privada almacenada segura (local + GitHub secret)
-- [ ] `cargo check` y `tsc --noEmit` pasan sin errores
-- [ ] `npm run tauri:dev` inicia sin errores con los plugins nuevos
-- [ ] Versiones sincronizadas en los 3 archivos (tauri.conf.json, Cargo.toml, package.json)
-- [ ] Push de tag `v0.1.0` (o `v0.2.0` si ya se bumpeó) dispara el workflow de CI
-- [ ] GitHub Release creado automáticamente con `.exe`, `.exe.sig` y `latest.json`
-- [ ] App instalada con versión anterior detecta la nueva versión al iniciar
-- [ ] Diálogo de actualización aparece con versión + release notes
-- [ ] Al aceptar: descarga, instala (NSIS passive), reinicia con versión nueva
-- [ ] Al rechazar: app sigue normal, no vuelve a preguntar hasta próximo inicio
-- [ ] "Buscar actualizaciones" en tray funciona (con update y sin update)
-- [ ] Versión actual visible en Settings
-- [ ] Sin regresiones: tray, capture, autostart, window-state, single-instance
+- **Para testear update flow end-to-end hacen falta 2 releases secuenciales.** Baseline instalado + versión nueva publicada. No se puede validar con un solo release. F5 (`bump version`) debe correr 2 veces: una para el baseline, otra para el test real.
 
----
+- **tauri-action recrea git tags automáticamente al crear Releases.** Si borrás un tag remoto y el CI ya arrancó con ese tag, tauri-action lo recrea al final. Para borrar ambos en un solo paso: `gh release delete <tag> --cleanup-tag --yes`.
 
-## Out of scope
-
-- Code signing de Windows (certificado para eliminar SmartScreen warning — cuesta dinero, no es necesario para el updater)
-- Build para macOS o Linux (solo Windows por ahora)
-- Release notes automáticas desde commits (se escribe manualmente o se deja el default del workflow)
-- Capacitor auto-update (Feature 9)
-- Rollback a versión anterior
-- Canal de updates beta/nightly (se evalúa si hace falta — hoy solo `latest`)
-- Notificación push de update (el check es pull, al iniciar la app)
-
----
-
-## Siguiente feature
-
-**Feature 9: Capacitor Auto-Update (Android).** Agrega job `release-capacitor` al mismo `release.yml`, build APK con Gradle, distribución via Firebase App Distribution o Play Store. Mismo trigger tag-based.
+- **El `gh` CLI con PAT default no puede cancelar workflow runs** (403 "Resource not accessible"). Requiere scope `workflow` o `actions:write`. Fallback: dejar correr + limpiar Release post-facto con `gh release delete`.
