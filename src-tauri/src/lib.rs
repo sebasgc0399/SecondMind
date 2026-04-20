@@ -23,6 +23,9 @@ pub fn run() {
             None,
         ))
         .plugin(tauri_plugin_shell::init())
+        .plugin(tauri_plugin_updater::Builder::new().build())
+        .plugin(tauri_plugin_process::init())
+        .plugin(tauri_plugin_dialog::init())
         .invoke_handler(tauri::generate_handler![oauth::start_oauth_listener])
         .setup(|app| {
             if cfg!(debug_assertions) {
