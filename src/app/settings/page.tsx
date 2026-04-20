@@ -1,3 +1,4 @@
+import AppInfoSection from '@/components/settings/AppInfoSection';
 import ThemeSelector from '@/components/settings/ThemeSelector';
 
 export default function SettingsPage() {
@@ -19,6 +20,8 @@ export default function SettingsPage() {
         </div>
         <ThemeSelector />
       </section>
+
+      <AppInfoSection />
     </div>
   );
 }

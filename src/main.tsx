@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client';
 import { RouterProvider } from 'react-router';
 import { Provider } from 'tinybase/ui-react';
 import router from '@/app/router';
+import useAutoUpdate from '@/hooks/useAutoUpdate';
 import useCloseToTray from '@/hooks/useCloseToTray';
 import { isCapacitor } from '@/lib/capacitor';
 import { initCapacitorAuth } from '@/lib/capacitorAuth';
@@ -25,6 +26,7 @@ if (isCapacitor()) {
 
 function TauriIntegration({ children }: { children: ReactNode }) {
   useCloseToTray();
+  useAutoUpdate();
   return <>{children}</>;
 }
 
