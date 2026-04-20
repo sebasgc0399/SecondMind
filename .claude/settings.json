@@ -54,7 +54,11 @@
       "Edit(~/.claude/skills/archive-spec/**)",
       "Bash(git log *)",
       "Read(//d/Proyectos VS CODE/**)",
-      "Bash(start \"\" \"C:\\\\Users\\\\sebas\\\\.claude\\\\usage-data\\\\report.html\")"
+      "Bash(start \"\" \"C:\\\\Users\\\\sebas\\\\.claude\\\\usage-data\\\\report.html\")",
+      "Read(//d/Proyectos VS CODE/SecondMind/$USERPROFILE/.tauri//**)",
+      "Bash(npm add *)",
+      "Bash(npm list *)",
+      "Bash(cargo check *)"
     ],
     "additionalDirectories": ["C:\\Users\\sebas\\.claude", "D:\\Proyectos VS CODE\\sdd-kit"]
   },
