@@ -50,6 +50,23 @@ npm run cap:build    # Build web + sync + gradlew assembleDebug → APK en andro
 - `react-composition-patterns` — compound components, lift state, evitar boolean props
 - `react-best-practices` — rerender/memo/bundle optimization (reglas SSR-específicas no aplican a Vite)
 - `ui-ux-pro-max` — bases de datos buscables de 50+ estilos, 161 paletas, 57 combinaciones tipográficas, 161 tipos de producto, 99 guidelines UX, 25 tipos de gráfico. Se activa automáticamente en tareas UI/UX. Requiere Python 3 para los scripts internos (search.py usa BM25 + regex)
+- `subagent-orchestration` (user-level, global) — guía la decisión de cuándo delegar a subagentes y cómo. Ver "Delegación a subagentes" abajo para criterios de activación.
+
+### Delegación a subagentes
+
+La skill `subagent-orchestration` gobierna estas decisiones en detalle. Activar delegación cuando:
+
+- **Paso 2 SDD** (Plan mode): Explore paralelos + Plan agent antes de codear.
+- **Feature multi-archivo** que requiere mapear patrones existentes (>3 búsquedas).
+- **Auditorías** de branch/PR/release ready-to-ship.
+- **Root cause** de bugs en código no familiar o sin stack trace claro.
+- **Preguntas amplias** sobre cómo funciona un subsistema del repo.
+- **Investigaciones independientes** paralelizables — un solo mensaje con múltiples `Agent` calls.
+- **Codebase desconocido** aunque la tarea parezca pequeña (repo ajeno, onboarding).
+
+NO delegar para: edits puntuales con target conocido (incluso en archivos grandes si el scope está acotado), preguntas directas, fixes con stack trace claro a un archivo, comandos git/deploy únicos, tareas de 1-2 pasos.
+
+Principio rector: **la síntesis no se delega**. El subagente recolecta; la decisión y el entendimiento son tuyos.
 
 ### Automatización (hooks)
 
