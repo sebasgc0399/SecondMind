@@ -76,11 +76,15 @@ jobs:
         with:
           node-version: 22
 
+      # Capacitor 8 genera capacitor.build.gradle con sourceCompatibility=21
+      # y targetCompatibility=21. JDK 17 rompe con "invalid source release: 21"
+      # en el step compileReleaseJavaWithJavac. JDK 21 es el default del JBR
+      # de Android Studio 2024+ (por eso local anda).
       - name: Setup JDK
         uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
-          java-version: 17
+          java-version: 21
 
       - name: Install frontend deps
         run: npm ci --legacy-peer-deps
