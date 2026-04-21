@@ -74,9 +74,14 @@
       "Bash(/c/Users/sebas/AppData/Local/Android/Sdk/build-tools/37.0.0/apksigner.bat verify *)",
       "Bash(python -c \"import yaml; yaml.safe_load\\(open\\('.github/workflows/release.yml'\\)\\); print\\('YAML OK'\\)\")",
       "Bash(grep -A 1 \"name = \\\\\"secondmind\\\\\"$\" src-tauri/Cargo.lock)",
-      "Bash(gh run *)"
+      "Bash(gh run *)",
+      "Edit(~/.claude/skills/subagent-orchestration/**)",
+      "Bash(claude --version)"
     ],
-    "additionalDirectories": ["C:\\Users\\sebas\\.claude", "D:\\Proyectos VS CODE\\sdd-kit"]
+    "additionalDirectories": [
+      "C:\\Users\\sebas\\.claude",
+      "D:\\Proyectos VS CODE\\sdd-kit"
+    ]
   },
   "hooks": {
     "PostToolUse": [
