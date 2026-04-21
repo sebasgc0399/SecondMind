@@ -61,9 +61,100 @@ jobs:
           prerelease: false
           includeUpdaterJson: true
 
-  # Feature 9 agregará aquí:
-  # release-capacitor:
-  #   runs-on: ubuntu-latest
-  #   permissions: { contents: write }
-  #   steps:
-  #     - ... (build APK + firmar + adjuntar al mismo Release)
+  release-capacitor:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Setup JDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: 17
+
+      - name: Install frontend deps
+        run: npm ci --legacy-peer-deps
+
+      # Mismo patron que release-tauri: Vite lee .env.production al buildear.
+      # Gradle subprocess tampoco hereda env vars confiablemente — generar
+      # el archivo explicito evita repetir Bug C de Feature 8.
+      # VITE_GOOGLE_WEB_CLIENT_ID extra: lo usa @capgo/capacitor-social-login
+      # para el Sign-In nativo en Android (no aplica a Tauri).
+      - name: Generate .env.production for Vite
+        shell: bash
+        run: |
+          cat > .env.production <<EOF
+          VITE_FIREBASE_API_KEY=${{ secrets.VITE_FIREBASE_API_KEY }}
+          VITE_FIREBASE_AUTH_DOMAIN=${{ secrets.VITE_FIREBASE_AUTH_DOMAIN }}
+          VITE_FIREBASE_PROJECT_ID=${{ secrets.VITE_FIREBASE_PROJECT_ID }}
+          VITE_FIREBASE_STORAGE_BUCKET=${{ secrets.VITE_FIREBASE_STORAGE_BUCKET }}
+          VITE_FIREBASE_MESSAGING_SENDER_ID=${{ secrets.VITE_FIREBASE_MESSAGING_SENDER_ID }}
+          VITE_FIREBASE_APP_ID=${{ secrets.VITE_FIREBASE_APP_ID }}
+          VITE_FIREBASE_MEASUREMENT_ID=${{ secrets.VITE_FIREBASE_MEASUREMENT_ID }}
+          VITE_GOOGLE_WEB_CLIENT_ID=${{ secrets.VITE_GOOGLE_WEB_CLIENT_ID }}
+          EOF
+
+      - name: Build frontend
+        run: npm run build
+
+      - name: Sync Capacitor Android
+        run: npx cap sync android
+
+      # google-services.json no esta committed — se inyecta via secret para que
+      # el plugin com.google.gms.google-services se aplique y el APK tenga
+      # Firebase SDK nativo integrado (push notifications + Google Sign-In).
+      - name: Decode google-services.json
+        shell: bash
+        run: echo "${{ secrets.ANDROID_GOOGLE_SERVICES_JSON_BASE64 }}" | base64 -d > android/app/google-services.json
+
+      - name: Decode release keystore
+        shell: bash
+        run: echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 -d > android/app/release.keystore
+
+      # versionCode semver-encoded: 0.1.3 → 103, 1.2.5 → 10205. Legible a simple
+      # vista y monotonico mientras se bumpee antes de taggear (leccion F8 Bug B).
+      - name: Compute semver versionCode
+        shell: bash
+        run: |
+          VERSION_NAME="${GITHUB_REF_NAME#v}"
+          IFS='.' read -r MAJOR MINOR PATCH <<< "$VERSION_NAME"
+          VERSION_CODE=$((MAJOR * 10000 + MINOR * 100 + PATCH))
+          echo "VERSION_NAME=$VERSION_NAME" >> $GITHUB_ENV
+          echo "VERSION_CODE=$VERSION_CODE" >> $GITHUB_ENV
+          echo "Computed versionName=$VERSION_NAME versionCode=$VERSION_CODE"
+
+      - name: Generate release notes
+        shell: bash
+        run: |
+          cat > release-notes.txt <<EOF
+          SecondMind Android ${GITHUB_REF_NAME}
+
+          Release automatica. Para ver los cambios detallados, revisa el GitHub Release del desktop:
+          https://github.com/sebasgc0399/SecondMind/releases/tag/${GITHUB_REF_NAME}
+          EOF
+
+      - name: Build release APK
+        working-directory: android
+        run: ./gradlew assembleRelease -PversionName=$VERSION_NAME -PversionCode=$VERSION_CODE
+        env:
+          ANDROID_KEYSTORE_PATH: release.keystore
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+
+      - name: Upload to Firebase App Distribution
+        uses: wzieba/Firebase-Distribution-Github-Action@v1.7.1
+        with:
+          appId: ${{ secrets.FIREBASE_ANDROID_APP_ID }}
+          serviceCredentialsFileContent: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_KEY }}
+          groups: owner
+          file: android/app/build/outputs/apk/release/app-release.apk
+          releaseNotesFile: release-notes.txt
