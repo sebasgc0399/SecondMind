@@ -69,10 +69,12 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # Capacitor CLI >=8 requiere Node >=22. release-tauri se queda en 20
+      # porque tauri-action no lo corre (Tauri no usa Capacitor CLI).
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
 
       - name: Setup JDK
         uses: actions/setup-java@v4
