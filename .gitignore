@@ -56,3 +56,7 @@ android/app/debug/
 *.aab
 *.keystore
 !android/app/debug.keystore
+# Release signing y Firebase config: inyectados via secrets en CI, nunca commitear
+android/keystore.properties
+android/app/google-services.json
+android/app/release.keystore

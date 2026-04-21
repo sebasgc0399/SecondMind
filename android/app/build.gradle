@@ -1,5 +1,21 @@
 apply plugin: 'com.android.application'
 
+// versionName / versionCode se pasan desde CI como Gradle props derivadas del tag
+// (ver .github/workflows/release.yml job release-capacitor). Fallback estatico
+// para builds locales de debug cuando no se pasan props.
+def releaseVersionName = project.hasProperty('versionName') ? project.versionName : "1.0"
+def releaseVersionCode = project.hasProperty('versionCode') ? project.versionCode.toString().toInteger() : 1
+
+// Release signing: lee desde android/keystore.properties (local, gitignored)
+// o env vars (CI). Si no hay ninguno, signingConfig queda sin configurar y
+// buildTypes.release no podra firmarse — esto es intencional: release sin
+// credenciales debe fallar rapido, no producir APK sin firmar.
+def keystorePropertiesFile = rootProject.file("keystore.properties")
+def keystoreProperties = new Properties()
+if (keystorePropertiesFile.exists()) {
+    keystoreProperties.load(new FileInputStream(keystorePropertiesFile))
+}
+
 android {
     namespace = "com.secondmind.app"
     compileSdk = rootProject.ext.compileSdkVersion
@@ -7,8 +23,8 @@ android {
         applicationId "com.secondmind.app"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 1
-        versionName "1.0"
+        versionCode releaseVersionCode
+        versionName releaseVersionName
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
              // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.
@@ -16,8 +32,17 @@ android {
             ignoreAssetsPattern = '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'
         }
     }
+    signingConfigs {
+        release {
+            storeFile file(keystoreProperties['storeFile'] ?: System.getenv('ANDROID_KEYSTORE_PATH') ?: 'release.keystore')
+            storePassword keystoreProperties['storePassword'] ?: System.getenv('ANDROID_KEYSTORE_PASSWORD')
+            keyAlias keystoreProperties['keyAlias'] ?: System.getenv('ANDROID_KEY_ALIAS')
+            keyPassword keystoreProperties['keyPassword'] ?: System.getenv('ANDROID_KEY_PASSWORD')
+        }
+    }
     buildTypes {
         release {
+            signingConfig signingConfigs.release
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
         }
