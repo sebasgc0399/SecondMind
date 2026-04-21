@@ -143,6 +143,12 @@ jobs:
           https://github.com/sebasgc0399/SecondMind/releases/tag/${GITHUB_REF_NAME}
           EOF
 
+      # Tras git checkout en runners Linux, `gradlew` pierde el bit executable.
+      # En Windows local no importa (se invoca `gradlew.bat`), en ubuntu si.
+      - name: Make gradlew executable
+        working-directory: android
+        run: chmod +x gradlew
+
       - name: Build release APK
         working-directory: android
         run: ./gradlew assembleRelease -PversionName=$VERSION_NAME -PversionCode=$VERSION_CODE
