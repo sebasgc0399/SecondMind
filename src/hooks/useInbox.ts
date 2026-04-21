@@ -1,14 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router';
 import { useTable } from 'tinybase/ui-react';
-import { doc, setDoc } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
+import { inboxRepo } from '@/infra/repos/inboxRepo';
 import { parseIds } from '@/lib/tinybase';
-import { inboxStore } from '@/stores/inboxStore';
-import { notesStore } from '@/stores/notesStore';
-import useAuth from '@/hooks/useAuth';
-import useTasks from '@/hooks/useTasks';
-import useProjects from '@/hooks/useProjects';
 import type { AreaKey } from '@/types/area';
 import type { Priority } from '@/types/common';
 import type {
@@ -47,11 +41,8 @@ interface UseInboxReturn {
 }
 
 export default function useInbox(): UseInboxReturn {
-  const { user } = useAuth();
   const navigate = useNavigate();
   const table = useTable('inbox', 'inbox');
-  const { createTask } = useTasks();
-  const { createProject } = useProjects();
   const [isInitializing, setIsInitializing] = useState(true);
 
   useEffect(() => {
@@ -95,138 +86,33 @@ export default function useInbox(): UseInboxReturn {
 
   const convertToNote = useCallback(
     async (itemId: string, overrides?: ConvertOverrides, options?: ConvertOptions) => {
-      if (!user) return;
-      const row = inboxStore.getRow('inbox', itemId);
-      if (!row || Object.keys(row).length === 0) return;
-
-      const rawContent = (row.rawContent as string) || '';
-      const newNoteId = crypto.randomUUID();
-      const now = Date.now();
-      const firstLine = rawContent.split('\n', 1)[0]?.trim() ?? '';
-      const defaultTitle = firstLine.slice(0, 200) || 'Sin título';
-      const title = overrides?.title ?? defaultTitle;
-      const tagIds = overrides?.tags ? JSON.stringify(overrides.tags) : '[]';
-
-      const docJson = {
-        type: 'doc',
-        content: rawContent
-          .split('\n')
-          .map((line) =>
-            line.trim()
-              ? { type: 'paragraph', content: [{ type: 'text', text: line }] }
-              : { type: 'paragraph' },
-          ),
-      };
-
-      const defaults = {
-        title,
-        content: JSON.stringify(docJson),
-        contentPlain: rawContent,
-        paraType: 'resource',
-        noteType: 'fleeting',
-        source: 'inbox',
-        projectIds: '[]',
-        areaIds: '[]',
-        tagIds,
-        outgoingLinkIds: '[]',
-        incomingLinkIds: '[]',
-        linkCount: 0,
-        summaryL1: '',
-        summaryL2: '',
-        summaryL3: '',
-        distillLevel: 0,
-        aiTags: '[]',
-        aiSummary: '',
-        aiProcessed: !!(overrides?.tags && overrides.tags.length > 0),
-        createdAt: now,
-        updatedAt: now,
-        lastViewedAt: 0,
-        viewCount: 0,
-        isFavorite: false,
-        isArchived: false,
-      };
-
-      try {
-        await setDoc(doc(db, 'users', user.uid, 'notes', newNoteId), defaults);
-        notesStore.setRow('notes', newNoteId, defaults);
-        inboxStore.setPartialRow('inbox', itemId, {
-          status: 'processed',
-          processedAs: JSON.stringify({ type: 'note', resultId: newNoteId }),
-        });
-        if (!options?.skipNavigate) {
-          navigate(`/notes/${newNoteId}`);
-        }
-      } catch (error) {
-        console.error('[useInbox] convertToNote failed', error);
-      }
+      const result = await inboxRepo.convertToNote(itemId, overrides);
+      if (!result) return;
+      if (!options?.skipNavigate) navigate(`/notes/${result.resultId}`);
     },
-    [navigate, user],
+    [navigate],
   );
 
   const convertToTask = useCallback(
     async (itemId: string, overrides?: ConvertOverrides, options?: ConvertOptions) => {
-      if (!user) return;
-      const row = inboxStore.getRow('inbox', itemId);
-      if (!row || Object.keys(row).length === 0) return;
-
-      const rawContent = (row.rawContent as string) || '';
-      const defaultTitle = rawContent.slice(0, 200) || 'Sin título';
-      const finalTitle = (overrides?.title ?? (row.aiSuggestedTitle as string)) || defaultTitle;
-      const finalPriority = (overrides?.priority ??
-        ((row.aiPriority as string) || 'medium')) as Priority;
-      const finalArea = overrides?.area ?? ((row.aiSuggestedArea as string) || '');
-
-      const taskId = await createTask(finalTitle, {
-        priority: finalPriority,
-        areaId: finalArea,
-      });
-      if (!taskId) return;
-
-      inboxStore.setPartialRow('inbox', itemId, {
-        status: 'processed',
-        processedAs: JSON.stringify({ type: 'task', resultId: taskId }),
-      });
-      if (!options?.skipNavigate) {
-        navigate('/tasks');
-      }
+      const result = await inboxRepo.convertToTask(itemId, overrides);
+      if (!result) return;
+      if (!options?.skipNavigate) navigate('/tasks');
     },
-    [user, createTask, navigate],
+    [navigate],
   );
 
   const convertToProject = useCallback(
     async (itemId: string, overrides?: ConvertOverrides, options?: ConvertOptions) => {
-      if (!user) return;
-      const row = inboxStore.getRow('inbox', itemId);
-      if (!row || Object.keys(row).length === 0) return;
-
-      const rawContent = (row.rawContent as string) || '';
-      const defaultTitle = rawContent.slice(0, 200) || 'Sin título';
-      const finalTitle = (overrides?.title ?? (row.aiSuggestedTitle as string)) || defaultTitle;
-      const finalPriority = (overrides?.priority ??
-        ((row.aiPriority as string) || 'medium')) as Priority;
-      const rawArea = overrides?.area ?? ((row.aiSuggestedArea as string) || '');
-      const finalArea: AreaKey = (rawArea || 'conocimiento') as AreaKey;
-
-      const projectId = await createProject({
-        name: finalTitle,
-        areaId: finalArea,
-        priority: finalPriority,
-      });
-      if (!projectId) return;
-
-      inboxStore.setPartialRow('inbox', itemId, {
-        status: 'processed',
-        processedAs: JSON.stringify({ type: 'project', resultId: projectId }),
-      });
-      if (!options?.skipNavigate) {
-        navigate(`/projects/${projectId}`);
-      }
+      const result = await inboxRepo.convertToProject(itemId, overrides);
+      if (!result) return;
+      if (!options?.skipNavigate) navigate(`/projects/${result.resultId}`);
     },
-    [user, createProject, navigate],
+    [navigate],
   );
 
   const dismiss = useCallback((itemId: string) => {
-    inboxStore.setPartialRow('inbox', itemId, { status: 'dismissed' });
+    void inboxRepo.dismiss(itemId);
   }, []);
 
   return { items, isInitializing, convertToNote, convertToTask, convertToProject, dismiss };

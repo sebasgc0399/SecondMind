@@ -165,4 +165,71 @@ async function saveContent(id: string, payload: SaveContentPayload): Promise<voi
   });
 }
 
-export const notesRepo = { createNote, updateMeta, saveContent };
+/**
+ * Crea una nota desde un inbox item con contenido pre-populado.
+ *
+ * Particularidades de este flow (a diferencia de createNote regular):
+ * - Construye un docJson TipTap desde rawContent (paragraphs por línea).
+ * - Persiste `content` (JSON serializado) en Firestore via el factory; TinyBase
+ *   lo ignora porque no está en schema (consistente con el content-split).
+ * - Setea `aiProcessed: true` si hay tags del inbox — sin esto, `autoTagNote`
+ *   CF sobrescribiría los tags aceptados del usuario (gotcha de ESTADO-ACTUAL).
+ * - `tagIds` se pasa ya-serializado como string JSON (no array).
+ */
+async function createFromInbox(
+  rawContent: string,
+  overrides: { title: string; tagIds: string[] },
+): Promise<string | null> {
+  const now = Date.now();
+  const docJson = {
+    type: 'doc',
+    content: rawContent
+      .split('\n')
+      .map((line) =>
+        line.trim()
+          ? { type: 'paragraph', content: [{ type: 'text', text: line }] }
+          : { type: 'paragraph' },
+      ),
+  };
+
+  const row = {
+    title: overrides.title,
+    contentPlain: rawContent,
+    paraType: 'resource',
+    noteType: 'fleeting',
+    source: 'inbox',
+    projectIds: '[]',
+    areaIds: '[]',
+    tagIds: stringifyIds(overrides.tagIds),
+    outgoingLinkIds: '[]',
+    incomingLinkIds: '[]',
+    linkCount: 0,
+    summaryL1: '',
+    summaryL2: '',
+    summaryL3: '',
+    distillLevel: 0,
+    aiTags: '[]',
+    aiSummary: '',
+    aiProcessed: overrides.tagIds.length > 0,
+    createdAt: now,
+    updatedAt: now,
+    lastViewedAt: 0,
+    viewCount: 0,
+    isFavorite: false,
+    isArchived: false,
+    fsrsState: '',
+    fsrsDue: 0,
+    fsrsLastReview: 0,
+    // content va a Firestore via el factory; TinyBase lo ignora por schema.
+    content: JSON.stringify(docJson),
+  } as NoteRow & { content: string };
+
+  try {
+    return await repo.create(row);
+  } catch (error) {
+    console.error('[notesRepo] createFromInbox failed', error);
+    return null;
+  }
+}
+
+export const notesRepo = { createNote, createFromInbox, updateMeta, saveContent };
