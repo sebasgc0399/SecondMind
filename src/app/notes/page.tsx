@@ -1,10 +1,8 @@
 import { useCallback } from 'react';
 import { useNavigate } from 'react-router';
-import { doc, setDoc } from 'firebase/firestore';
 import { Link } from 'react-router';
 import { Plus, Search, Network, Sparkles } from 'lucide-react';
-import { db } from '@/lib/firebase';
-import { notesStore } from '@/stores/notesStore';
+import { notesRepo } from '@/infra/repos/notesRepo';
 import useAuth from '@/hooks/useAuth';
 import useHybridSearch, { type SemanticResult } from '@/hooks/useHybridSearch';
 import NoteCard from '@/components/editor/NoteCard';
@@ -17,38 +15,12 @@ export default function NotesListPage() {
 
   const handleCreate = useCallback(async () => {
     if (!user) return;
-    const newId = crypto.randomUUID();
-    const now = Date.now();
-    const defaults = {
-      title: '',
-      content: '',
-      contentPlain: '',
-      paraType: 'resource',
-      noteType: 'fleeting',
-      source: '',
-      projectIds: '[]',
-      areaIds: '[]',
-      tagIds: '[]',
-      outgoingLinkIds: '[]',
-      incomingLinkIds: '[]',
-      linkCount: 0,
-      summaryL1: '',
-      summaryL2: '',
-      summaryL3: '',
-      distillLevel: 0,
-      aiTags: '[]',
-      aiSummary: '',
-      aiProcessed: false,
-      createdAt: now,
-      updatedAt: now,
-      lastViewedAt: 0,
-      viewCount: 0,
-      isFavorite: false,
-      isArchived: false,
-    } as const;
-
-    await setDoc(doc(db, 'users', user.uid, 'notes', newId), defaults);
-    notesStore.setRow('notes', newId, defaults);
+    // repo.createNote hace setRow (sync) + await setDoc (async) en orden
+    // correcto. El await garantiza que Firestore terminó antes de navigate,
+    // preservando el gotcha "useNote.getDoc en página destino necesita doc
+    // presente en Firestore al momento de navegar".
+    const newId = await notesRepo.createNote();
+    if (!newId) return;
     navigate(`/notes/${newId}`);
   }, [navigate, user]);
 
