@@ -1,7 +1,6 @@
 import { createCustomPersister } from 'tinybase/persisters';
 import {
   collection,
-  deleteDoc,
   doc,
   getDocs,
   onSnapshot,
@@ -59,9 +58,18 @@ export function createFirestorePersister({
     },
 
     // setPersisted diff-based (F12): consume el param `changes` nativo de
-    // TinyBase v8 y emite setDoc/deleteDoc solo para las rows tocadas en la
-    // transacción. Reemplaza el patrón anterior que iteraba todas las rows
-    // de la tabla en cada save (write amplification O(N) → O(cambios)).
+    // TinyBase v8 y emite setDoc solo para las rows tocadas en la transacción.
+    // Reemplaza el patrón anterior que iteraba todas las rows de la tabla en
+    // cada save (write amplification O(N) → O(cambios)).
+    //
+    // LIMITACIÓN TinyBase v8: el param `changes` NO incluye los row IDs
+    // eliminados — `delRow` standalone deja `changes = [{}, {}, 1]` sin
+    // info del delete; `delTable` igual. Por eso F12 NO propaga deletes a
+    // Firestore. En producción esto es inocuo: todos los deletes pasan por
+    // repos (F10) que hacen `deleteDoc` directo. Si alguien llama
+    // `store.delRow` sin pasar por un repo, el doc queda huérfano en
+    // Firestore — patrón a evitar (no es invariante de F12, era cierto pre-F12
+    // también según el gotcha original de F11).
     async (getContent, changes) => {
       // Sin changes: típicamente primer tick post-startAutoLoad (sin cambios
       // pendientes, solo carga). Validado empíricamente en F12 step 1.
@@ -76,18 +84,11 @@ export function createFirestorePersister({
 
       const [changedTables] = changes;
       const tableChanges = changedTables[tableName];
-      if (tableChanges === undefined) return; // tabla intacta este tick
-
-      // tableChanges == null ⇒ store.delTable(). F11 garantiza destroy() antes
-      // de delTable en el cleanup de useStoreInit, así que en producción este
-      // path no debe ejecutarse. Defensa: warn + return. No intentamos enumerar
-      // IDs para borrar masivamente porque getContent() ya no los tiene tras
-      // delTable; un getDocs(col) extra solo serviría si delTable se llamara
-      // con persister vivo, escenario que F11 evita por diseño.
-      if (tableChanges == null) {
-        console.warn(
-          `[persister:${tableName}] tableChanges=${tableChanges} inesperado tras destroy()`,
-        );
+      // undefined ⇒ tabla intacta este tick. {} ⇒ TinyBase emite cuando hubo
+      // un delete pero no incluye qué row (limitación v8). null defensivo
+      // contra runtime divergence (TYPE permite solo undefined, JSDoc usa
+      // null como ejemplo). Ninguno requiere acción del persister.
+      if (tableChanges == null || Object.keys(tableChanges).length === 0) {
         return;
       }
 
@@ -98,24 +99,19 @@ export function createFirestorePersister({
       // Promise.allSettled (NO Promise.all): cada write completa independiente.
       // Con Promise.all, el primer reject hace que el await retorne sin esperar
       // a las demás promesas (que sí siguen en vuelo, sin observación). Un
-      // deleteDoc fallido no debe abortar un setDoc OK del mismo tick.
+      // setDoc fallido no debe abortar otros setDocs OK del mismo tick.
       const results = await Promise.allSettled(
-        Object.entries(tableChanges).map(([rowId, rowChanges]) => {
-          // rowChanges == null ⇒ row eliminada (delRow / setRow con undefined).
-          // El TYPE de Changes solo permite undefined pero el JSDoc usa null
-          // como ejemplo; doble-igual cubre ambos.
-          if (rowChanges == null) {
-            return deleteDoc(doc(col, rowId));
-          }
+        Object.entries(tableChanges).map(([rowId]) => {
           // merge: true preserva campos escritos fuera de TinyBase (ej. `content`
           // en notas, que se escribe directo con updateDoc desde useNoteSave).
           // Escribimos el row entero (no cells parciales) — bytes equivalentes
           // y menos código que reconstruir desde cell-changes.
           const fullRow = rowsContent[rowId];
           if (!fullRow) {
-            // Edge defensivo: change reporta row pero getContent no la tiene
-            // (race teórico) → tratar como delete.
-            return deleteDoc(doc(col, rowId));
+            // Defensivo: change reporta row pero getContent no la tiene.
+            // No emitimos deleteDoc (TinyBase no garantiza este shape post-delete);
+            // skip y dejar el doc en Firestore (consistente con la limitación arriba).
+            return Promise.resolve();
           }
           return setDoc(doc(col, rowId), fullRow, { merge: true });
         }),
