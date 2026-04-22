@@ -1,8 +1,9 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router';
 import { useTable } from 'tinybase/ui-react';
 import { inboxRepo } from '@/infra/repos/inboxRepo';
 import { parseIds } from '@/lib/tinybase';
+import { useStoreHydration } from '@/hooks/useStoreHydration';
 import type { AreaKey } from '@/types/area';
 import type { Priority } from '@/types/common';
 import type {
@@ -12,8 +13,6 @@ import type {
   InboxResultType,
   InboxSource,
 } from '@/types/inbox';
-
-const INIT_GRACE_MS = 200;
 
 interface ConvertOptions {
   skipNavigate?: boolean;
@@ -43,12 +42,7 @@ interface UseInboxReturn {
 export default function useInbox(): UseInboxReturn {
   const navigate = useNavigate();
   const table = useTable('inbox', 'inbox');
-  const [isInitializing, setIsInitializing] = useState(true);
-
-  useEffect(() => {
-    const timer = window.setTimeout(() => setIsInitializing(false), INIT_GRACE_MS);
-    return () => window.clearTimeout(timer);
-  }, []);
+  const { isHydrating } = useStoreHydration();
 
   const items = useMemo<InboxItem[]>(() => {
     const out: InboxItem[] = [];
@@ -115,7 +109,14 @@ export default function useInbox(): UseInboxReturn {
     void inboxRepo.dismiss(itemId);
   }, []);
 
-  return { items, isInitializing, convertToNote, convertToTask, convertToProject, dismiss };
+  return {
+    items,
+    isInitializing: isHydrating,
+    convertToNote,
+    convertToTask,
+    convertToProject,
+    dismiss,
+  };
 }
 
 export function usePendingInboxCount(): number {

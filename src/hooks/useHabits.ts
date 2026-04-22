@@ -1,9 +1,8 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import { useTable } from 'tinybase/ui-react';
 import { habitsRepo } from '@/infra/repos/habitsRepo';
+import { useStoreHydration } from '@/hooks/useStoreHydration';
 import { type HabitEntry, type HabitKey } from '@/types/habit';
-
-const INIT_GRACE_MS = 200;
 
 export function formatDateKey(date: Date): string {
   const y = date.getFullYear();
@@ -84,12 +83,7 @@ interface UseHabitsReturn {
 
 export default function useHabits(weekStart: Date): UseHabitsReturn {
   const table = useTable('habits', 'habits');
-  const [isInitializing, setIsInitializing] = useState(true);
-
-  useEffect(() => {
-    const timer = window.setTimeout(() => setIsInitializing(false), INIT_GRACE_MS);
-    return () => window.clearTimeout(timer);
-  }, []);
+  const { isHydrating } = useStoreHydration();
 
   const weekEntries = useMemo<HabitEntry[]>(() => {
     const out: HabitEntry[] = [];
@@ -106,5 +100,5 @@ export default function useHabits(weekStart: Date): UseHabitsReturn {
     return out;
   }, [table, weekStart]);
 
-  return { weekEntries, isInitializing, toggleHabit: habitsRepo.toggleHabit };
+  return { weekEntries, isInitializing: isHydrating, toggleHabit: habitsRepo.toggleHabit };
 }

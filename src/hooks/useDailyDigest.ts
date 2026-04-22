@@ -1,5 +1,6 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import { useTable } from 'tinybase/ui-react';
+import { useStoreHydration } from '@/hooks/useStoreHydration';
 
 export interface DigestItem {
   noteId: string;
@@ -11,7 +12,6 @@ export interface DigestItem {
 const MAX_REVIEW = 3;
 const MAX_TOTAL = 5;
 const MIN_HUB_LINKS = 3;
-const INIT_GRACE_MS = 200;
 
 function hashString(s: string): number {
   return [...s].reduce((h, c) => (h * 31 + c.charCodeAt(0)) | 0, 0);
@@ -28,12 +28,7 @@ export default function useDailyDigest(): {
   isInitializing: boolean;
 } {
   const table = useTable('notes');
-  const [isInitializing, setIsInitializing] = useState(true);
-
-  useEffect(() => {
-    const timer = window.setTimeout(() => setIsInitializing(false), INIT_GRACE_MS);
-    return () => window.clearTimeout(timer);
-  }, []);
+  const { isHydrating } = useStoreHydration();
 
   const items = useMemo(() => {
     const todayEnd = endOfDay();
@@ -87,5 +82,5 @@ export default function useDailyDigest(): {
     return result;
   }, [table]);
 
-  return { items, isInitializing };
+  return { items, isInitializing: isHydrating };
 }

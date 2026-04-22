@@ -1,11 +1,10 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import { useTable } from 'tinybase/ui-react';
 import { projectsRepo, type CreateProjectInput } from '@/infra/repos/projectsRepo';
 import { parseIds } from '@/lib/tinybase';
+import { useStoreHydration } from '@/hooks/useStoreHydration';
 import type { Project } from '@/types/project';
 import type { Priority, ProjectStatus } from '@/types/common';
-
-const INIT_GRACE_MS = 200;
 
 interface UseProjectsReturn {
   projects: Project[];
@@ -16,12 +15,7 @@ interface UseProjectsReturn {
 
 export default function useProjects(): UseProjectsReturn {
   const table = useTable('projects', 'projects');
-  const [isInitializing, setIsInitializing] = useState(true);
-
-  useEffect(() => {
-    const timer = window.setTimeout(() => setIsInitializing(false), INIT_GRACE_MS);
-    return () => window.clearTimeout(timer);
-  }, []);
+  const { isHydrating } = useStoreHydration();
 
   const projects = useMemo<Project[]>(() => {
     const out: Project[] = [];
@@ -47,7 +41,7 @@ export default function useProjects(): UseProjectsReturn {
 
   return {
     projects,
-    isInitializing,
+    isInitializing: isHydrating,
     createProject: projectsRepo.createProject,
     updateProject: projectsRepo.updateProject,
   };

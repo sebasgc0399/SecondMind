@@ -1,11 +1,10 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import { useTable } from 'tinybase/ui-react';
 import { objectivesRepo, type CreateObjectiveInput } from '@/infra/repos/objectivesRepo';
 import { parseIds } from '@/lib/tinybase';
+import { useStoreHydration } from '@/hooks/useStoreHydration';
 import type { Objective } from '@/types/objective';
 import type { ObjectiveStatus } from '@/types/common';
-
-const INIT_GRACE_MS = 200;
 
 interface UseObjectivesReturn {
   objectives: Objective[];
@@ -16,12 +15,7 @@ interface UseObjectivesReturn {
 
 export default function useObjectives(): UseObjectivesReturn {
   const table = useTable('objectives', 'objectives');
-  const [isInitializing, setIsInitializing] = useState(true);
-
-  useEffect(() => {
-    const timer = window.setTimeout(() => setIsInitializing(false), INIT_GRACE_MS);
-    return () => window.clearTimeout(timer);
-  }, []);
+  const { isHydrating } = useStoreHydration();
 
   const objectives = useMemo<Objective[]>(() => {
     const out: Objective[] = [];
@@ -44,7 +38,7 @@ export default function useObjectives(): UseObjectivesReturn {
 
   return {
     objectives,
-    isInitializing,
+    isInitializing: isHydrating,
     createObjective: objectivesRepo.createObjective,
     updateObjective: objectivesRepo.updateObjective,
   };

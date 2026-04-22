@@ -1,20 +1,15 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import { Link } from 'react-router';
 import { useTable } from 'tinybase/ui-react';
 import { rowToOramaDoc, type NoteOramaDoc } from '@/lib/orama';
 import { formatRelative } from '@/lib/formatDate';
+import { useStoreHydration } from '@/hooks/useStoreHydration';
 
 const RECENT_LIMIT = 5;
-const INIT_GRACE_MS = 200;
 
 export default function RecentNotesCard() {
   const table = useTable('notes');
-  const [isInitializing, setIsInitializing] = useState(true);
-
-  useEffect(() => {
-    const timer = window.setTimeout(() => setIsInitializing(false), INIT_GRACE_MS);
-    return () => window.clearTimeout(timer);
-  }, []);
+  const { isHydrating } = useStoreHydration();
 
   const recent = useMemo<NoteOramaDoc[]>(() => {
     return Object.entries(table)
@@ -38,7 +33,7 @@ export default function RecentNotesCard() {
         )}
       </header>
 
-      {isInitializing && recent.length === 0 ? (
+      {isHydrating && recent.length === 0 ? (
         <CardSkeleton rows={4} />
       ) : recent.length === 0 ? (
         <EmptyState />

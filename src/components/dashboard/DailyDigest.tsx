@@ -1,19 +1,10 @@
-import { useEffect, useState } from 'react';
 import { Link } from 'react-router';
 import { CalendarClock, Network } from 'lucide-react';
 import useDailyDigest from '@/hooks/useDailyDigest';
 import type { DigestItem } from '@/hooks/useDailyDigest';
 
-const INIT_GRACE_MS = 200;
-
 export default function DailyDigest() {
   const { items, isInitializing } = useDailyDigest();
-  const [showSkeleton, setShowSkeleton] = useState(true);
-
-  useEffect(() => {
-    const timer = window.setTimeout(() => setShowSkeleton(false), INIT_GRACE_MS);
-    return () => window.clearTimeout(timer);
-  }, []);
 
   return (
     <section className="rounded-lg border border-border bg-card p-5">
@@ -21,7 +12,7 @@ export default function DailyDigest() {
         <h2 className="text-base font-semibold text-foreground">Daily Digest</h2>
       </header>
 
-      {isInitializing && showSkeleton && items.length === 0 ? (
+      {isInitializing && items.length === 0 ? (
         <CardSkeleton />
       ) : items.length === 0 ? (
         <p className="text-sm text-muted-foreground">
