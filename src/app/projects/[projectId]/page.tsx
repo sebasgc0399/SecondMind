@@ -9,6 +9,7 @@ import { parseIds, stringifyIds } from '@/lib/tinybase';
 import useAuth from '@/hooks/useAuth';
 import useProjects from '@/hooks/useProjects';
 import useTasks from '@/hooks/useTasks';
+import { useStoreHydration } from '@/hooks/useStoreHydration';
 import TaskCard from '@/components/tasks/TaskCard';
 import TaskInlineCreate from '@/components/tasks/TaskInlineCreate';
 import ProjectNoteList, { type LinkedNote } from '@/components/projects/ProjectNoteList';
@@ -39,25 +40,19 @@ export default function ProjectDetailPage() {
   const notesTable = useTable('notes');
   const projectsTable = useTable('projects', 'projects');
   const [linkModalOpen, setLinkModalOpen] = useState(false);
-  // Grace period de 1500ms ANTES de decidir que el proyecto no existe.
-  // El isInitializing de useProjects (200ms) es para skeleton UI, no para
-  // la hidratación completa de Firestore que puede tardar más en entradas
-  // directas por URL (full reload).
-  const [redirectGraceExpired, setRedirectGraceExpired] = useState(false);
-
-  useEffect(() => {
-    const timer = window.setTimeout(() => setRedirectGraceExpired(true), 1500);
-    return () => window.clearTimeout(timer);
-  }, []);
+  // Signal real de hidratación de stores. Reemplaza el grace arbitrario de
+  // 1500ms (workaround del isInitializing de 200ms de useProjects que era
+  // pre-F11). Ahora el redirect espera a que startAutoLoad realmente termine.
+  const { isHydrating } = useStoreHydration();
 
   const project = useMemo(() => projects.find((p) => p.id === projectId), [projects, projectId]);
 
-  // Redirect solo cuando el grace expiró Y el proyecto sigue sin aparecer
+  // Redirect solo cuando los stores hidrataron Y el proyecto sigue sin aparecer
   useEffect(() => {
-    if (redirectGraceExpired && projectId && !project) {
+    if (!isHydrating && projectId && !project) {
       navigate('/projects', { replace: true });
     }
-  }, [redirectGraceExpired, project, projectId, navigate]);
+  }, [isHydrating, project, projectId, navigate]);
 
   // Tareas del proyecto
   const projectTasks = useMemo(
@@ -105,11 +100,11 @@ export default function ProjectDetailPage() {
   // ¿Hay notas en el sistema? Si no, deshabilitar botón vincular
   const hasAnyNotes = Object.keys(notesTable).length > 0;
 
-  // Mientras el grace no expiró y todavía no aparece, mostramos skeleton.
-  // Si el grace expiró y sigue sin aparecer, el useEffect de arriba ya disparó
-  // el redirect — devolvemos null mientras navega.
+  // Mientras los stores hidratan y todavía no aparece, mostramos skeleton.
+  // Si terminaron de hidratar y sigue sin aparecer, el useEffect de arriba
+  // ya disparó el redirect — devolvemos null mientras navega.
   if (!project || !projectId) {
-    if (!redirectGraceExpired) {
+    if (isHydrating) {
       return (
         <div className="mx-auto max-w-3xl">
           <ProjectDetailSkeleton />
