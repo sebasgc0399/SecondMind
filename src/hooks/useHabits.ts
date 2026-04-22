@@ -1,10 +1,7 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useTable } from 'tinybase/ui-react';
-import { doc, setDoc } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
-import { habitsStore } from '@/stores/habitsStore';
-import useAuth from '@/hooks/useAuth';
-import { HABITS, type HabitEntry, type HabitKey } from '@/types/habit';
+import { habitsRepo } from '@/infra/repos/habitsRepo';
+import { type HabitEntry, type HabitKey } from '@/types/habit';
 
 const INIT_GRACE_MS = 200;
 
@@ -25,7 +22,7 @@ export function addDays(date: Date, n: number): Date {
 export function getWeekStart(date: Date): Date {
   const d = new Date(date);
   d.setHours(0, 0, 0, 0);
-  const dayOfWeek = d.getDay(); // 0=Dom, 1=Lun, ..., 6=Sab
+  const dayOfWeek = d.getDay();
   const diff = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
   d.setDate(d.getDate() + diff);
   return d;
@@ -86,7 +83,6 @@ interface UseHabitsReturn {
 }
 
 export default function useHabits(weekStart: Date): UseHabitsReturn {
-  const { user } = useAuth();
   const table = useTable('habits', 'habits');
   const [isInitializing, setIsInitializing] = useState(true);
 
@@ -110,62 +106,5 @@ export default function useHabits(weekStart: Date): UseHabitsReturn {
     return out;
   }, [table, weekStart]);
 
-  const toggleHabit = useCallback(
-    async (dateKey: string, habitKey: HabitKey): Promise<void> => {
-      if (!user) return;
-      const now = Date.now();
-
-      // Leer estado actual del store (sync, in-memory).
-      const existingRow = habitsStore.getRow('habits', dateKey);
-      const hasExisting = Object.keys(existingRow).length > 0;
-      const currentValue = Boolean(existingRow[habitKey]);
-      const nextValue = !currentValue;
-
-      // Recontar los 14 booleans aplicando el flip.
-      const nextTrueCount = HABITS.filter((h) => {
-        if (h.key === habitKey) return nextValue;
-        return Boolean(existingRow[h.key]);
-      }).length;
-      const progress = Math.round((nextTrueCount / HABITS.length) * 100);
-
-      // Partial update: solo el field flipado + progress + updatedAt.
-      // Esto es commutative: dos toggles rápidos de hábitos distintos no se
-      // pisan, porque cada uno solo toca su propia celda + progress
-      // (progress puede pisarse pero se recalcula correctamente al próximo
-      // toggle porque leemos el row actualizado del store).
-      const partial: Record<string, string | number | boolean> = {
-        [habitKey]: nextValue,
-        progress,
-        updatedAt: now,
-      };
-
-      // Si es una row nueva, agregar createdAt y date (parseado del dateKey).
-      if (!hasExisting) {
-        const [yearStr, monthStr, dayStr] = dateKey.split('-');
-        const dateMs = new Date(Number(yearStr), Number(monthStr) - 1, Number(dayStr)).setHours(
-          12,
-          0,
-          0,
-          0,
-        );
-        partial.date = dateMs;
-        partial.createdAt = now;
-      }
-
-      // CRÍTICO: aplicar local FIRST (sync), Firestore DESPUÉS (async).
-      // Si se invierte, dos toggles rápidos (click 1 + click 2 antes de que
-      // resuelva el setDoc de click 1) hacen race y el segundo pisa el
-      // primero porque lee existingRow stale.
-      habitsStore.setPartialRow('habits', dateKey, partial);
-
-      try {
-        await setDoc(doc(db, 'users', user.uid, 'habits', dateKey), partial, { merge: true });
-      } catch (error) {
-        console.error('[useHabits] toggleHabit failed', error);
-      }
-    },
-    [user],
-  );
-
-  return { weekEntries, isInitializing, toggleHabit };
+  return { weekEntries, isInitializing, toggleHabit: habitsRepo.toggleHabit };
 }

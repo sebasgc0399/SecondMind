@@ -1,9 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { doc, updateDoc } from 'firebase/firestore';
 import type { Editor } from '@tiptap/react';
-import { db } from '@/lib/firebase';
-import { notesStore } from '@/stores/notesStore';
-import { stringifyIds } from '@/lib/tinybase';
+import { notesRepo } from '@/infra/repos/notesRepo';
 import { extractLinks } from '@/lib/editor/extractLinks';
 import { computeDistillLevel } from '@/lib/editor/computeDistillLevel';
 import { syncLinks } from '@/lib/editor/syncLinks';
@@ -70,27 +67,15 @@ export default function useNoteSave(
         newLinks: extracted,
       });
 
-      // Optimistic: TinyBase se actualiza sync antes del updateDoc. Si el
-      // write a Firestore falla, pendingRef vuelve a true y el retry re-escribe
-      // los mismos datos (idempotente). Reduce latency percibido del badge
-      // distillLevel de "2s + red" a "2s puros" (consistente con useHabits).
-      notesStore.setPartialRow('notes', currentNoteId, {
-        title,
-        contentPlain,
-        updatedAt,
-        linkCount,
-        outgoingLinkIds: stringifyIds(outgoingLinkIds),
-        summaryL3,
-        distillLevel,
-      });
-
-      await updateDoc(doc(db, 'users', currentUid, 'notes', currentNoteId), {
+      await notesRepo.saveContent(currentNoteId, {
         content: JSON.stringify(json),
         contentPlain,
         title,
         updatedAt,
         summaryL3,
         distillLevel,
+        linkCount,
+        outgoingLinkIds,
       });
 
       setStatus('saved');
