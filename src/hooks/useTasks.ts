@@ -1,11 +1,10 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import { useTable } from 'tinybase/ui-react';
 import { tasksRepo, type CreateTaskOptions } from '@/infra/repos/tasksRepo';
 import { parseIds } from '@/lib/tinybase';
+import { useStoreHydration } from '@/hooks/useStoreHydration';
 import type { Task } from '@/types/task';
 import type { Priority, TaskStatus } from '@/types/common';
-
-const INIT_GRACE_MS = 200;
 
 interface UseTasksReturn {
   tasks: Task[];
@@ -17,12 +16,7 @@ interface UseTasksReturn {
 
 export default function useTasks(): UseTasksReturn {
   const table = useTable('tasks', 'tasks');
-  const [isInitializing, setIsInitializing] = useState(true);
-
-  useEffect(() => {
-    const timer = window.setTimeout(() => setIsInitializing(false), INIT_GRACE_MS);
-    return () => window.clearTimeout(timer);
-  }, []);
+  const { isHydrating } = useStoreHydration();
 
   const tasks = useMemo<Task[]>(() => {
     const out: Task[] = [];
@@ -49,7 +43,7 @@ export default function useTasks(): UseTasksReturn {
 
   return {
     tasks,
-    isInitializing,
+    isInitializing: isHydrating,
     createTask: tasksRepo.createTask,
     updateTask: tasksRepo.updateTask,
     completeTask: tasksRepo.completeTask,

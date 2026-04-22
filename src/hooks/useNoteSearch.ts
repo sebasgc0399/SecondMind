@@ -8,6 +8,7 @@ import {
 } from '@orama/orama';
 import { notesStore } from '@/stores/notesStore';
 import { createNotesIndex, rowToOramaDoc, type NoteOramaDoc } from '@/lib/orama';
+import { useStoreHydration } from '@/hooks/useStoreHydration';
 
 interface UseNoteSearchReturn {
   query: string;
@@ -17,7 +18,6 @@ interface UseNoteSearchReturn {
 }
 
 const SEARCH_LIMIT = 50;
-const INIT_GRACE_MS = 200;
 
 // Hook que mantiene un índice Orama derivado del notesStore. Estrategia:
 // full rebuild en cada change del table. Para ~100 notas es <50ms — el
@@ -27,7 +27,7 @@ const INIT_GRACE_MS = 200;
 export default function useNoteSearch(): UseNoteSearchReturn {
   const [query, setQuery] = useState('');
   const [version, setVersion] = useState(0);
-  const [isInitializing, setIsInitializing] = useState(true);
+  const { isHydrating } = useStoreHydration();
   const dbRef = useRef<AnyOrama | null>(null);
 
   useEffect(() => {
@@ -43,11 +43,8 @@ export default function useNoteSearch(): UseNoteSearchReturn {
     rebuild();
     const listenerId = notesStore.addTableListener('notes', () => rebuild());
 
-    const initTimer = window.setTimeout(() => setIsInitializing(false), INIT_GRACE_MS);
-
     return () => {
       notesStore.delListener(listenerId);
-      window.clearTimeout(initTimer);
     };
   }, []);
 
@@ -79,5 +76,5 @@ export default function useNoteSearch(): UseNoteSearchReturn {
       .filter((doc) => !doc.isArchived);
   }, [query, version]);
 
-  return { query, setQuery, results, isInitializing };
+  return { query, setQuery, results, isInitializing: isHydrating };
 }
