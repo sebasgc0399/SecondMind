@@ -1,13 +1,12 @@
-import { StrictMode, type ReactNode } from 'react';
+import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { RouterProvider } from 'react-router';
 import { Provider } from 'tinybase/ui-react';
+import { SplashScreen } from '@capacitor/splash-screen';
 import router from '@/app/router';
-import useAutoUpdate from '@/hooks/useAutoUpdate';
-import useCloseToTray from '@/hooks/useCloseToTray';
+import TauriIntegration from '@/app/TauriIntegration';
 import { isCapacitor } from '@/lib/capacitor';
 import { initCapacitorAuth } from '@/lib/capacitorAuth';
-import { SplashScreen } from '@capacitor/splash-screen';
 import { notesStore } from '@/stores/notesStore';
 import { linksStore } from '@/stores/linksStore';
 import { inboxStore } from '@/stores/inboxStore';
@@ -22,12 +21,6 @@ if (isCapacitor()) {
     console.error('Failed to initialize Capacitor SocialLogin:', error);
   });
   void SplashScreen.hide().catch(() => {});
-}
-
-function TauriIntegration({ children }: { children: ReactNode }) {
-  useCloseToTray();
-  useAutoUpdate();
-  return <>{children}</>;
 }
 
 // notesStore es el store default del Provider (acceso sin storeId).
