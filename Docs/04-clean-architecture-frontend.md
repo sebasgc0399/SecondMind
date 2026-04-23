@@ -236,6 +236,24 @@ Patrón válido cuando: (1) la orquestación es intrínseca al caso de uso (inbo
 
 ---
 
+## Excepciones reconocidas
+
+No todo el frontend cabe en el molde "componente → repo → Firestore". En SecondMind hay tres excepciones documentadas que **respetan el espíritu de la regla sin seguir la letra**:
+
+**1. Auth global — [`useAuth`](../src/hooks/useAuth.ts):** importa `firebase/auth` directo y orquesta `signInWithPopup`, `signInWithTauri`, `signInWithCapacitor` según la plataforma. No es CRUD de una entidad de dominio — es un concern transversal (multi-plataforma web/desktop/mobile) que no encaja en el patrón de repos por entidad. Si mañana se agregan otros providers (Apple Sign-In, magic links), la lógica sigue acá, no en un repo.
+
+**2. Lectura one-shot MVP — [`useNote`](../src/hooks/useNote.ts):** hook de carga inicial de una nota individual que usa `getDoc` directo (no listener reactivo). No existe `notesRepo.getById()` porque TinyBase ya mantiene la colección reactiva; este hook solo se usa en el primer render de la página de nota para garantizar que `content` (que no vive en TinyBase) esté disponible antes de hidratar el editor. Candidato a migrar al repo si aparece un segundo caso de lectura imperativa.
+
+**3. Type imports externos en capa 2:** importar `type User` de `firebase/auth` en componentes (ej. [`NavigationDrawer.tsx`](../src/components/layout/NavigationDrawer.tsx), [`Sidebar.tsx`](../src/components/layout/Sidebar.tsx)) es aceptable. La regla estricta aplica a **capa 1 (`src/types/`)**, que debe quedar libre de tipos de librerías externas; en componentes es pragmático y no propaga el acoplamiento al dominio.
+
+**Candidatos pendientes de migrar al repo layer** (violaciones legítimas, deuda técnica conocida):
+
+- [`slashMenuItems.ts`](../src/components/editor/menus/slashMenuItems.ts) — `updateNoteType` hace `updateDoc` directo; debería moverse a un método `notesRepo.updateNoteType`.
+
+Estas excepciones son **excepciones reales, no etiqueta para cualquier violación nueva**. Antes de agregar una nueva, preguntá: "¿esto es genuinamente transversal/MVP como las tres de arriba, o estoy evitando escribir un repo?".
+
+---
+
 ## Cómo decidir dónde va algo
 
 Cuando estás por escribir código nuevo y no sabés en qué carpeta ponerlo, usá estas 4 preguntas **en orden**:
