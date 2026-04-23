@@ -109,7 +109,7 @@ Esto significa que podés **reemplazar una capa externa sin tocar las internas**
 
 ### Capa 3: Adaptadores
 
-**Qué es:** el **traductor** entre el mundo externo (HTTP, Firebase, APIs) y los componentes. Normaliza shapes, uniformiza errores, aplica patrones comunes (optimistic updates, retry, cache).
+**Qué es:** el **traductor** entre el mundo externo (HTTP, Firebase, APIs) y los componentes. En proyectos grandes aplica optimistic updates, retry, batching, cache, normalización de shapes y uniformización de errores. **En SecondMind el scope actual es más acotado:** el factory `createFirestoreRepo` implementa **solo optimistic update** (sync TinyBase antes de await Firestore). El "cache" es el propio store TinyBase vía el custom persister; retry y batching no están implementados. Si en el futuro se necesitan, viven acá.
 
 **Qué contiene:**
 
