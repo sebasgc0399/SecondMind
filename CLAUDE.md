@@ -21,8 +21,10 @@ Sistema de productividad y conocimiento personal construido desde código. Combi
 npm run dev          # Servidor de desarrollo (Vite)
 npm run build        # Build producción (tsc + vite build)
 npm run lint         # ESLint sobre src/
+npm test             # Vitest (unit tests — repos, tinybase, etc.)
 npm run preview      # Preview del build local
 npm run deploy       # Deploy a Firebase Hosting
+npm run deploy:rules      # Deploy solo Firestore security rules
 npm run deploy:functions  # Deploy solo Cloud Functions
 npm run logs:functions    # Logs de Cloud Functions
 npm run tauri:dev    # Abre la app nativa en modo dev (Vite + Tauri)
@@ -124,6 +126,7 @@ Docs teóricos en `Docs/00-04-*.md` — leer **solo el que aplique** a la tarea,
 | `Docs/01-arquitectura-hibrida-progresiva.md` | Schemas Firestore (notes/links/tasks/projects/inbox/embeddings), flujos clave, decisiones |
 | `Docs/02-flujos-ux-y-pantallas.md`           | 14 pantallas con wireframes, 5 flujos de usuario, shortcuts, breakpoints                  |
 | `Docs/03-convenciones-y-patrones.md`         | Naming, patrones TinyBase, TypeScript, Tailwind, errores, Git, Cloud Functions            |
+| `Docs/04-clean-architecture-frontend.md`     | Clean Architecture en 4 capas, factory repos F10, excepciones (auth, lectura MVP)         |
 
 **Escalación de gotchas al cerrar feature** (step 8 del SDD): nacen en SPEC → suben a ESTADO-ACTUAL si aplican a >1 feature → suben a CLAUDE.md si aplican a toda sesión sin importar dominio. **Nunca duplicar entre niveles** — al subir un gotcha, eliminarlo del nivel anterior. Techos (200 / 300 líneas) son orientativos: el criterio es "¿aplica a este nivel?", no `wc -l`.
 
@@ -142,9 +145,15 @@ src/
 │   ├── graph/       # Visualización del knowledge graph
 │   ├── capture/     # Quick Capture modal, Inbox Processor
 │   ├── dashboard/   # Cards del dashboard
+│   ├── tasks/       # Task cards, inline create
+│   ├── projects/    # Project cards, create modal, note link
+│   ├── objectives/  # Objective cards, create modal
+│   ├── habits/      # Habit grid, habit row
+│   ├── settings/    # Settings panels
 │   └── layout/      # Sidebar, CommandPalette, Breadcrumbs
 ├── stores/          # TinyBase stores (1 archivo por entidad)
 ├── hooks/           # Custom hooks (1 archivo por hook)
+├── infra/repos/     # Capa 3 (F10): factory createFirestoreRepo + repos por entidad
 ├── lib/             # Configs (firebase.ts, tinybase.ts, orama.ts) + utils
 ├── types/           # Interfaces TypeScript (1 archivo por entidad)
 └── functions/       # Cloud Functions v2 (deploy separado)
