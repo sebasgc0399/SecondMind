@@ -113,7 +113,7 @@ Esto significa que podés **reemplazar una capa externa sin tocar las internas**
 
 **Qué contiene:**
 
-- **Adapters:** funciones que transforman respuestas del backend al shape que los componentes esperan (ej: `snake_case` → `camelCase`, `null` → `undefined`, parseo de fechas)
+- **Adapters:** funciones que transforman respuestas del backend al shape interno. En proyectos con APIs REST heterogéneas normalizan `snake_case → camelCase`, `null → undefined`, parseo de fechas, etc. **En SecondMind no aplica esta normalización** porque Firestore devuelve shapes TS-friendly y el propio proyecto define el schema. El rol de "adaptador" lo cumplen los repos absorbiendo patrones de acceso (optimistic update, serialización de arrays — ver gotchas abajo).
 - **Interceptors:** lógica que envuelve todas las requests/responses (inyectar auth tokens, manejar 401 refrescando token, capturar 500s para logging global)
 - **Repositorios (repos):** abstracción de operaciones CRUD por entidad, encapsulando el patrón de acceso (optimistic update, batching, cache)
 
