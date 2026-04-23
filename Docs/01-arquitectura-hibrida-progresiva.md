@@ -518,9 +518,9 @@ Escribe [[ → autocompletado muestra notas existentes
 Selecciona nota → se crea un [[wikilink]]
     │
     ▼
-Al guardar (debounce 2s via useNoteSave):
-  1. updateDoc a Firestore (content + contentPlain + title + updatedAt)
-  2. notesStore.setPartialRow con metadata
+Al guardar (debounce 2s via useNoteSave → notesRepo.saveContent desde F10):
+  1. setPartialRow sync a TinyBase con metadata (sin content — el content vive solo en Firestore)
+  2. await updateDoc async a Firestore con content + metadata (merge: true)
   3. syncLinks() — client-side, NO Cloud Function:
      a. extractLinks() parsea el TipTap JSON
      b. Diff con links existentes en linksStore (filtrados por sourceId)
