@@ -639,15 +639,21 @@ TinyBase v8 **no tiene** `persister-firestore` nativo. Se usa `createCustomPersi
 // src/lib/tinybase.ts
 import { createCustomPersister } from 'tinybase/persisters';
 
-// Factory que crea un persister bidireccional Firestore ↔ TinyBase
+// Factory persister bidireccional Firestore ↔ TinyBase
 // - onSnapshot listener para Firestore → TinyBase (auto-load)
-// - setDoc con merge: true para TinyBase → Firestore (auto-save)
+// - setPersisted diff-based (F12): consume el param `changes` nativo
+//   de TinyBase v8 y emite setDoc(merge: true) solo para rows tocadas
+//   (write amplification O(cambios), no O(N))
+// - Promise.allSettled evita que un setDoc fallido aborte los paralelos
+// - onIgnoredError (6º arg) recibe rejects sin retry automático —
+//   eventual consistency: la próxima transacción sobre la row reemite
 // - merge: true es CRÍTICO — sin él, el persister borra campos
 //   escritos fuera del store (ej: content de notas, campos AI de CFs)
+// - Limitación TinyBase v8: `changes` NO incluye row IDs eliminados;
+//   los deletes se propagan via repos con deleteDoc directo, no aquí
 export function createFirestorePersister({ store, collectionPath, tableName }) {
-  return createCustomPersister(store, {
-    // ... implementación con onSnapshot + setDoc({ merge: true })
-  });
+  // createCustomPersister con 6 args: getPersisted, setPersisted (diff-based),
+  // addPersisterListener, delPersisterListener, onIgnoredError, ...
 }
 ```
 
