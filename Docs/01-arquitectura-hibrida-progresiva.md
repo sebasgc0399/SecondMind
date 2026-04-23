@@ -213,9 +213,11 @@ interface Task {
   // Relaciones
   projectId?: string; // Singular — una tarea pertenece a UN proyecto
   areaId?: string;
+  objectiveId?: string; // Singular — una tarea puede pertenecer a UN objetivo
   noteIds: string[]; // Notas vinculadas
 
   description?: string;
+  isArchived: boolean;
 
   createdAt: Timestamp;
   updatedAt: Timestamp;
