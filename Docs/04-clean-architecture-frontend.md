@@ -142,6 +142,10 @@ Esto significa que podés **reemplazar una capa externa sin tocar las internas**
 
 **Tip clave:** esta es la capa más incomprendida. Mucha gente salta de componentes a servicios directamente, y pierde el beneficio entero de la arquitectura. Si tu componente importa `firebase/firestore` o `axios` directamente, **te falta un adaptador**.
 
+**Gotcha: campos que viven solo en Firestore.** [`notesRepo.saveContent()`](../src/infra/repos/notesRepo.ts) es un caso donde el factory base no alcanza: el campo `content` (TipTap JSON) vive **solo en Firestore**, nunca en TinyBase (no duplicar serialización + evitar engordar el store). `saveContent` hace dos pasos explícitos: `setPartialRow` sync a TinyBase con todos los campos EXCEPTO `content`, y luego `await updateDoc` a Firestore con todos los campos INCLUYENDO `content`. El custom persister eventualmente convergería los campos del primer paso, pero el `updateDoc` explícito garantiza atomicidad y awaitability del write del editor. **Patrón general: si un campo rompe el schema TinyBase, el repo lo maneja con un método dedicado, no con el `update` del factory.**
+
+**Gotcha: serialización de arrays.** TinyBase solo guarda `string | number | boolean`. Los arrays de IDs (`outgoingLinkIds`, `tagIds`, `projectIds`, etc.) se persisten como JSON strings usando los helpers `stringifyIds`/`parseIds` de [`src/lib/tinybase.ts`](../src/lib/tinybase.ts). **`stringifyIds` NO es idempotente** — pasar una string ya serializada produce escaped nesting. Convención: los repos serializan al escribir; los hooks deserializan con `useMemo(() => parseIds(row.xxxIds), [row.xxxIds])` al leer.
+
 ---
 
 ### Capa 4: Servicios externos
