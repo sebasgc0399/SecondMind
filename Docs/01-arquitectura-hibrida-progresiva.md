@@ -70,6 +70,7 @@ Construir lo mínimo que genere valor diario, iterar basándose en uso real. Cad
 - **Títulos de links resueltos in-memory** — `useBacklinks` hace join con `useTable('notes')` en vez de cachear títulos en el doc de link. Cero stale titles, reactivo a cambios
 - **Content de notas fuera de TinyBase** — el campo `content` (TipTap JSON) se lee/escribe directo de Firestore solo cuando se abre el editor. TinyBase solo maneja metadata. El persister usa `merge: true` para no sobrescribir `content` al sincronizar
 - **AI fields flat en TinyBase** — TinyBase no soporta objetos anidados. Los campos de AI (`aiSuggestedTitle`, `aiSuggestedType`, etc.) se almacenan como strings flat en el store y se agrupan en objetos solo en el hook de mapping
+- **Timestamps como `number` (UNIX ms)** — aunque Firestore serializa `Timestamp` nativo al leer/escribir, los types del proyecto (`src/types/*.ts`) usan `number` por consistencia con TinyBase, que solo acepta primitivos (`string | number | boolean`). Los schemas en este documento usan `number` para reflejar la representación TS, no el wire format Firestore
 
 ### Colecciones principales
 
@@ -131,9 +132,9 @@ interface Note {
   fsrsLastReview?: number; // Timestamp de última revisión
 
   // Metadata
-  createdAt: Timestamp;
-  updatedAt: Timestamp;
-  lastViewedAt?: Timestamp; // Para resurfacing (FSRS)
+  createdAt: number;
+  updatedAt: number;
+  lastViewedAt?: number; // Para resurfacing (FSRS)
   viewCount: number; // Engagement tracking
   isFavorite: boolean;
   isArchived: boolean;
@@ -153,7 +154,7 @@ interface NoteLink {
   linkType: 'explicit' | 'ai-suggested'; // ¿Lo creó el usuario o la AI?
 
   // Metadata
-  createdAt: Timestamp;
+  createdAt: number;
   strength?: number; // AI: similitud semántica (0-1)
   accepted: boolean; // Para links AI-suggested: ¿el usuario aceptó?
 }
@@ -192,7 +193,7 @@ interface InboxItem {
     resultId: string; // ID de la nota/tarea/proyecto creado
   };
 
-  createdAt: Timestamp;
+  createdAt: number;
 }
 ```
 
@@ -208,7 +209,7 @@ interface Task {
   name: string;
   status: 'inbox' | 'in-progress' | 'waiting' | 'delegated' | 'completed';
   priority: 'low' | 'medium' | 'high' | 'urgent';
-  dueDate?: Timestamp; // Cuándo hacerla
+  dueDate?: number; // Cuándo hacerla
 
   // Relaciones
   projectId?: string; // Singular — una tarea pertenece a UN proyecto
@@ -219,9 +220,9 @@ interface Task {
   description?: string;
   isArchived: boolean;
 
-  createdAt: Timestamp;
-  updatedAt: Timestamp;
-  completedAt?: Timestamp;
+  createdAt: number;
+  updatedAt: number;
+  completedAt?: number;
 }
 ```
 
@@ -243,12 +244,12 @@ interface Project {
   noteIds: string[];
 
   // Fechas
-  startDate?: Timestamp;
-  deadline?: Timestamp;
+  startDate?: number;
+  deadline?: number;
 
   isArchived: boolean;
-  createdAt: Timestamp;
-  updatedAt: Timestamp;
+  createdAt: number;
+  updatedAt: number;
 }
 ```
 
@@ -261,14 +262,14 @@ interface Objective {
   id: string;
   name: string;
   status: 'not-started' | 'in-progress' | 'completed';
-  deadline?: Timestamp;
+  deadline?: number;
 
   areaId?: string;
   projectIds: string[];
   taskIds: string[];
 
-  createdAt: Timestamp;
-  updatedAt: Timestamp;
+  createdAt: number;
+  updatedAt: number;
 }
 ```
 
@@ -283,7 +284,7 @@ interface NoteEmbedding {
   vector: number[]; // 1536 dimensiones (text-embedding-3-small)
   model: string; // "text-embedding-3-small"
   contentHash: string; // Hash del contenido — regenerar si cambia
-  createdAt: Timestamp;
+  createdAt: number;
 }
 ```
 
