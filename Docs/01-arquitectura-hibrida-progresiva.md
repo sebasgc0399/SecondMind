@@ -681,7 +681,7 @@ TinyBase solo guarda metadata. El `content` completo (TipTap JSON) se lee/escrib
 - **`setPartialRow` > `setRow`:** `setRow` es full replace y causa race conditions en toggles rápidos. `setPartialRow` es commutative entre campos distintos
 - **Local-first para toggles frecuentes:** `setPartialRow` local (sync) **antes** del `setDoc` Firestore (async)
 - **Grace period:** 200ms para UI (skeleton flash), 1500ms para redirects/snapshots (hidratación Firestore en full-reload)
-- **Creación de entidades — orden estricto:** `await setDoc(Firestore)` → `store.setRow(TinyBase)` → `navigate()`
+- **Creación de entidades — optimistic update via repo factory (F10):** `store.setRow(TinyBase)` sync → `await setDoc(Firestore)` async → `navigate()`. El factory `createFirestoreRepo` (en `src/infra/repos/baseRepo.ts`) encapsula este orden; no llamar `setDoc` directo desde hooks — usar el repo correspondiente (`tasksRepo`, `notesRepo`, etc.)
 
 ---
 
