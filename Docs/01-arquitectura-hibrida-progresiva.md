@@ -985,72 +985,21 @@ El sistema funciona si:
 
 ## 13. Gotchas técnicos
 
-Conocimiento acumulado de las Fases 0–4. Toda sesión de desarrollo debe respetar estos patterns:
+Este doc es arquitectónico/teórico. Los gotchas operativos viven centralizados según la jerarquía del proyecto:
 
-**Fases 0–2:**
+- **Universales** (aplican a cualquier sesión sin importar dominio) → [`CLAUDE.md`](../CLAUDE.md) sección "Gotchas universales".
+- **Por dominio** (aplican a >1 feature del mismo dominio) → [`Spec/ESTADO-ACTUAL.md`](../Spec/ESTADO-ACTUAL.md) sección "Arquitectura y gotchas por dominio".
+- **Por feature** (historia + decisiones específicas) → [`Spec/features/`](../Spec/features/) y [`Spec/SPEC-fase-*.md`](../Spec/).
 
-1. **`merge: true` en persister** — Sin merge, el persister borra campos escritos fuera del schema de TinyBase (ej: `content`, campos AI de CFs). Precondición para toda feature que escriba a Firestore fuera del schema
-2. **`setPartialRow` > `setRow` para updates** — `setRow` es full replace y causa race conditions en toggles rápidos. `setPartialRow` es commutative entre campos distintos
-3. **Local-first para toggles** — `setPartialRow` sync → `setDoc` async. Invertir causa reads stale en clicks rápidos a campos distintos
-4. **Grace 200ms para UI, 1500ms para redirects** — `isInitializing` del hook (200ms) no es suficiente para decidir "el recurso no existe → redirect" en full-reload por URL
-5. **Creación de entidades — optimistic update via repo factory (post-F10)** — `store.setRow` sync → `await setDoc(Firestore)` async → `navigate`. El factory `createFirestoreRepo` encapsula el orden; awaitability del `setDoc` evita race con `getDoc` en la siguiente página. Writes directos a Firestore desde hooks son anti-patrón desde F10
-6. **Items de inbox nunca se borran** — Se marcan `processed`/`dismissed`, nunca `deleteDoc`
-7. **Base-UI ≠ Radix** — Usa `data-open`/`data-closed` + `data-starting-style`/`data-ending-style`, NO `data-state="open"`
-8. **`React.FormEvent` deprecated en React 19** — Usar inline arrow en `onSubmit` para que TypeScript infiera el tipo
-9. **Tailwind v4 CSS-first** — Config en `@theme` dentro de `src/index.css`. NO existe `tailwind.config.ts`
-10. **ESLint flat config** — `eslint.config.js`, NO `.eslintrc.cjs`
-11. **Relaciones 1:N** — El lado singular (`project.objectiveId`) es fuente de verdad para render, no el plural (`objective.projectIds`)
-12. **`Intl.DateTimeFormat('es', { weekday: 'narrow' })`** devuelve "X" para miércoles, no "M". Usar Intl directo, no hardcodear
-13. **Self-links filtrados** — `targetId !== sourceId` en `syncLinks` para evitar polucionar el grafo
-14. **Auto-save es el único punto que escribe `content`** — `useNoteSave` es el único lugar que toca el campo `content` en Firestore
+Ejemplos prácticos de dónde buscar:
 
-**Fase 3 + 3.1:**
+| Dónde vive         | Qué tipo de gotcha                                                                                                                                                               |
+| ------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `CLAUDE.md`        | Tailwind v4, ESLint flat config, optimistic updates via repo factory, Vite `resolve.dedupe`, patrones universales de Base-UI, loading states                                     |
+| `ESTADO-ACTUAL.md` | `merge: true` persister, embeddings no en TinyBase, CFs con guards `contentHash`/`aiProcessed`, patrones Tauri/Capacitor/Chrome Extension, router order, empty state con filtros |
+| SPECs por feature  | Trade-offs originales de F10 repos, F11 store isolation, F12 persister diff-based, OAuth Desktop flow F5.1, etc.                                                                 |
 
-15. **`isInitializing` (200ms) no alcanza para snapshots de datos en full reload** — Los persisters tardan más en hidratar. Para snapshots (ej: batch del InboxProcessor), observar `items.length > 0` como signal real o usar grace de 1500ms
-16. **`onDocumentCreated` no cubre notas creadas vacías desde el editor** — Las notas desde `/notes` arrancan con `contentPlain: ''`. `autoTagNote` usa `onDocumentWritten` con guard `aiProcessed`
-17. **Notas del inbox processor necesitan `aiProcessed: true` al crear** si vienen con tags aceptados del AI. Sin esto, `autoTagNote` sobrescribiría los tags que el usuario aceptó. `convertToNote` setea `aiProcessed: !!(overrides?.tags?.length > 0)`
-18. **Orama v3 `search()` es sync at runtime** aunque el tipo diga `Results | Promise<Results>`. Se castea a `Results<AnyDocument>` y se usa en `useMemo`
-19. **Firebase Functions v6 → v7 breaking change** — La v6 fallaba con timeout en el discovery protocol de la CLI. Usar `firebase-functions ^7.2.5`+
-20. **`/lib/` en `.gitignore` de functions** necesita anchor (`/lib/`) para no ignorar `src/lib/` (sources) además de `lib/` (compiled)
-
-**Fase 4:**
-
-21. **Ruta `notes/graph` ANTES de `notes/:noteId` en router.tsx** — Si va después, React Router captura "graph" como noteId dinámico y muestra "nota no encontrada". Orden crítico en flat routes con segmentos estáticos vs dinámicos
-22. **Empty state con filtros activos: no hacer early return** — Si filtros reducen resultados a 0, el empty state debe seguir mostrando los controles de filtro con opción de reseteo. Aplica a cualquier vista con filtros + empty state
-23. **`Math.random()` no es seedable en JavaScript** — Para orden determinístico (ej: hubs del Daily Digest que no cambien al recargar), usar hash numérico de `string + dateKey`: `[...s].reduce((h, c) => (h * 31 + c.charCodeAt(0)) | 0, 0)`
-24. **Embeddings NO van en TinyBase** — Vectores de 1536 floats (~6KB c/u) son demasiado grandes para el store in-memory. Cargar on-demand desde Firestore con cache en `useRef`. Para <500 notas (~3MB total), fetch all es viable
-25. **FSRS opt-in requiere botón explícito** — Sin "Activar revisión periódica", la feature es invisible (notas nuevas no tienen `fsrsDue` y el ReviewBanner nunca aparece). El tercer estado del banner resuelve el discovery
-26. **Guard de embeddings CF es `contentHash`, no `aiProcessed`** — A diferencia de `autoTagNote` (que guarda `aiProcessed: true` para nunca reprocesar), `generateEmbedding` debe regenerar cuando el contenido cambia. Comparar SHA-256 de `contentPlain` con el hash guardado en `embeddings/{noteId}`
-27. **Reagraph agrega ~1.3MB al bundle** — Three.js/WebGL. Code-splitting pendiente para fase futura. Compatible con React 19 sin issues (smoke test previo a implementación)
-
-**Fase 5.0 (PWA + Chrome Extension):**
-
-28. **Reagraph + PWA Workbox:** requiere `maximumFileSizeToCacheInBytes: 4_000_000` en config de Workbox para cachear el bundle de Reagraph (~1.3MB). Sin esto, el SW no lo pre-cachea y el grafo no funciona offline
-29. **Chrome Extension auth:** usar `chrome.identity.getAuthToken` → `GoogleAuthProvider.credential(null, token)` → `signInWithCredential`. No `signInWithPopup` (no funciona en service workers)
-30. **CRXJS:** usa named export `{ crx }` en la config de Vite. Import default rompe el build
-31. **Extension `firestore/lite`:** writes directos sin TinyBase. El popup no tiene store — cada write es `setDoc` directo
-
-**Fase 5.1 (Tauri Desktop):**
-
-32. **`signInWithPopup` no funciona en Tauri:** WebView2 abre `window.open` en browser del sistema (otro proceso), `postMessage` no llega de vuelta. OAuth Desktop flow con PKCE + HTTP listener local es la solución
-33. **`tauri://localhost` no es autorizable en Firebase:** el redirect de OAuth va a `http://localhost:{port}` (el listener local), no al WebView
-34. **Close-to-tray hook en capture window:** `useCloseToTray` se monta en ambas WebViews (main + capture). Sin él, cerrar la capture mata el proceso
-35. **`window_state` denylist capture:** el plugin debe excluir `["capture"]` para que la ventana capture siempre se centre, no recuerde posición
-36. **Tauri menu items inmutables post-build:** `CheckMenuItem` de autostart lee `is_enabled()` al construir. Toggle alterna `enable()/disable()` + `set_checked(!enabled)`. No se puede reconstruir el menú
-
-**Fase 5.2 (Capacitor Android):**
-
-37. **`npx cap run android` falla en Windows:** `gradlew` sin `.bat`. Workaround: `./gradlew.bat assembleDebug` + `adb install -r` + `adb shell am start` manual
-38. **`@capgo/capacitor-social-login` response es union type:** `GoogleLoginResponseOnline | GoogleLoginResponseOffline`. `idToken` solo existe en `Online`. Type narrowing con `'idToken' in res.result`
-39. **Chrome Android envía títulos con HTML entities** (`&#34;` en vez de `"`) en el share intent. Decodeo trivial pero no implementado en MVP
-40. **Launcher cache Android:** no invalida ícono tras reinstalar APK. `adb uninstall` + `adb install` es la forma confiable de refrescar
-41. **Primer build Gradle:** descarga ~400 deps + distribución Gradle 8.14.3 (~3min). Incrementales después son 5-10s
-42. **`@capacitor/assets generate` distorsiona logos:** adaptive icon processing separa fg/bg con insets 16.7%. Solución: VectorDrawable manual desde SVG
-43. **Splash `--splashBackgroundColor` ignorado:** `@capacitor/assets` genera PNGs con gris default. Solución: drawable XML con `@color`
-44. **Auth branching order:** `isCapacitor()` ANTES de `isTauri()` ANTES de web. Mutuamente excluyentes por plataforma
-45. **`ShareIntentMount` dentro del Layout guard:** no necesita manejo de pending pre-auth — el guard de auth del Layout garantiza que el user ya está autenticado cuando el listener se monta
-
-**Gotchas post-F5.2 (F1-F12):** los descubiertos durante features iterativas viven en [`Spec/ESTADO-ACTUAL.md`](../Spec/ESTADO-ACTUAL.md) sección "Arquitectura y gotchas por dominio" (ej. la limitación de TinyBase v8 que omite row IDs deletados del param `changes` en F12) y en los SPECs de cada feature. Los que aplican a cualquier sesión sin importar dominio escalaron a [`CLAUDE.md`](../CLAUDE.md) sección "Gotchas universales" (ej. repos centralizando writes desde F10). No se duplican aquí por la regla "nunca duplicar entre niveles" de CLAUDE.md.
+Regla operativa: "nunca duplicar entre niveles". Si un gotcha aparece en más de un nivel, eliminarlo del más específico al escalar.
 
 ---
 
