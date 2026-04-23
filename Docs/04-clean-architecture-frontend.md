@@ -216,6 +216,24 @@ Ejemplo: "el usuario marca una tarea como completada".
 
 **La magia:** cada capa solo sabe de la siguiente. El componente NO sabe qué pasa en Firebase. El repo NO sabe qué UI disparó el update. Si mañana reemplazás Firebase por Supabase, solo tocás capas 3 y 4.
 
+### Flujo avanzado: operaciones que cruzan entidades
+
+Cuando un caso de uso atraviesa múltiples entidades, los repos pueden **orquestarse entre sí** sin subir la lógica a la capa 2. Ejemplo real: "el usuario convierte un inbox item en nota".
+
+```
+COMPONENTE  → useInbox().convertToNote(itemId, overrides)
+              ↓
+ADAPTADOR   → inboxRepo.convertToNote(itemId, overrides)
+                 ↓ internamente:
+                 a) notesRepo.createFromInbox(content, { title, tagIds })
+                      → retorna noteId
+                 b) inboxRepo.markProcessed(itemId, { type: 'note', resultId: noteId })
+```
+
+Patrón válido cuando: (1) la orquestación es intrínseca al caso de uso (inbox→nota es inseparable, ambos pasos deben correr juntos o ninguno), (2) hay un repo "dueño" del flujo que coordina (`inboxRepo` en este caso).
+
+**Anti-patrón:** subir esta orquestación al hook. Contamina capa 2 con lógica que no depende de UI — la secuencia "crear nota + marcar procesado" es pura capa 3.
+
 ---
 
 ## Cómo decidir dónde va algo
