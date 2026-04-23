@@ -595,45 +595,69 @@ import { useBacklinks } from '@/hooks'; // via index.ts
 ### Naming
 
 ```typescript
-// Función: verbo + entidad
-processInboxItem.ts
-generateEmbedding.ts
-autoTagNote.ts
-
-// Export: on + Trigger + Entidad
-export const onInboxItemCreated = onDocumentCreated(...)
-export const onNoteWritten = onDocumentWritten(...)
+// Archivo y export: verbo + entidad (mismo nombre para trazabilidad)
+processInboxItem.ts  → export const processInboxItem = onDocumentCreated(...)
+autoTagNote.ts       → export const autoTagNote = onDocumentWritten(...)
+generateEmbedding.ts → export const generateEmbedding = onDocumentWritten(...)
+embedQuery.ts        → export const embedQuery = onCall(...)
 ```
+
+Las 4 CFs desplegadas hoy en `us-central1`, re-exportadas desde `src/functions/src/index.ts`.
 
 ### Patrón de Cloud Function
 
 ```typescript
-// functions/src/inbox/processInboxItem.ts
+// src/functions/src/inbox/processInboxItem.ts (forma real)
+import Anthropic from '@anthropic-ai/sdk';
 import { onDocumentCreated } from 'firebase-functions/v2/firestore';
-import { logger } from 'firebase-functions/logger';
+import { defineSecret } from 'firebase-functions/params';
+import { logger } from 'firebase-functions';
+import { INBOX_CLASSIFICATION_SCHEMA, InboxClassification } from '../lib/schemas';
 
-export const onInboxItemCreated = onDocumentCreated(
-  'users/{userId}/inbox/{itemId}',
+const anthropicApiKey = defineSecret('ANTHROPIC_API_KEY');
+
+export const processInboxItem = onDocumentCreated(
+  {
+    document: 'users/{userId}/inbox/{itemId}',
+    secrets: [anthropicApiKey],
+    timeoutSeconds: 60,
+    retry: false,
+    region: 'us-central1',
+  },
   async (event) => {
     const { userId, itemId } = event.params;
-    const data = event.data?.data();
+    // ... guards de snapshot vacío + rawContent vacío ...
 
-    if (!data) {
-      logger.warn('Inbox item vacío', { userId, itemId });
-      return;
-    }
+    const client = new Anthropic({ apiKey: anthropicApiKey.value() });
+    const response = await client.messages.create({
+      model: 'claude-haiku-4-5-20251001',
+      tools: [{ name: 'classify_inbox', input_schema: INBOX_CLASSIFICATION_SCHEMA }],
+      tool_choice: { type: 'tool', name: 'classify_inbox' },
+      // ...
+    });
 
-    try {
-      const aiResult = await processWithClaude(data.rawContent);
-      await event.data.ref.update({ aiProcessed: true, aiResult });
-      logger.info('Inbox procesado', { userId, itemId });
-    } catch (error) {
-      logger.error('Error procesando inbox', { userId, itemId, error });
-      await event.data.ref.update({ aiProcessed: false });
-    }
+    // Campos flat en Firestore — TinyBase los mapea a aiResult en useInbox
+    const result = toolBlock.input as InboxClassification;
+    await event.data.ref.update({
+      aiSuggestedTitle: result.suggestedTitle,
+      aiSuggestedType: result.suggestedType,
+      aiSuggestedTags: JSON.stringify(result.suggestedTags),
+      aiSuggestedArea: result.suggestedArea,
+      aiSummary: result.summary,
+      aiPriority: result.priority,
+      aiProcessed: true,
+    });
   },
 );
 ```
+
+### Secret management y tool use (F3.1)
+
+**Secrets via `defineSecret`.** `ANTHROPIC_API_KEY`, `OPENAI_API_KEY` se declaran con `defineSecret(...)` a nivel de módulo y se pasan en `secrets: [...]` del trigger. El valor se accede con `secret.value()` DENTRO del handler, nunca en top-level (se evalúa en build y rompe el deploy).
+
+**Schema enforcement con tool use.** Las CFs que consumen LLM (`processInboxItem`, `autoTagNote`) usan `tools: [{...}]` + `tool_choice: { type: 'tool', name: 'X' }` para forzar JSON válido vía el schema declarado en [`src/functions/src/lib/schemas.ts`](../src/functions/src/lib/schemas.ts). Elimina `stripJsonFence`, fallbacks null, y valores fuera de enum — el modelo devuelve un objeto que cumple `input_schema` o falla.
+
+**Campos flat en Firestore.** Los AI results se guardan como campos flat al doc (`aiSuggestedTitle`, `aiSuggestedType`, etc.) porque TinyBase no soporta objetos anidados. El hook `useInbox` los re-agrupa en `aiResult` al mappear. Decisión arquitectónica documentada en [`Docs/01-arquitectura-hibrida-progresiva.md`](01-arquitectura-hibrida-progresiva.md) sección 3.
 
 ### Reglas
 
