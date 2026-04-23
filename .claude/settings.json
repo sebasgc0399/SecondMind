@@ -96,7 +96,10 @@
       "mcp__firebase__firestore_list_collections",
       "Bash(taskkill //F //PID 19736)",
       "Read(//c/Program Files/Android/Android Studio/jbr/bin//**)",
-      "Bash(\"/c/Program Files/Android/Android Studio/jbr/bin/java.exe\" -version)"
+      "Bash(\"/c/Program Files/Android/Android Studio/jbr/bin/java.exe\" -version)",
+      "Bash(awk '{print $NF}')",
+      "Read(//d/Proyectos/ VS/ CODE/SecondMind/**)",
+      "Read(//d/Proyectos/ VS/ CODE/SecondMind/Spec/**)"
     ],
     "additionalDirectories": ["C:\\Users\\sebas\\.claude", "D:\\Proyectos VS CODE\\sdd-kit"]
   },
