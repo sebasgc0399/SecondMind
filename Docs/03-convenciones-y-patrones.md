@@ -255,8 +255,8 @@ const title = useCell('notes', noteId, 'title');
 const title = notesStore.getCell('notes', noteId, 'title');
 ```
 
-**Content de notas (TipTap JSON) fuera de TinyBase en MVP.**
-TinyBase guarda metadata (título, flags, counters). El `content` completo se lee/escribe directo de Firestore al abrir/cerrar el editor. Esto mantiene el store ligero.
+**Content de notas (TipTap JSON) fuera de TinyBase — decisión arquitectónica permanente.**
+TinyBase guarda metadata (título, flags, counters). El `content` completo se lee/escribe directo de Firestore al abrir/cerrar el editor via [`notesRepo.saveContent`](../src/infra/repos/notesRepo.ts). Esto mantiene el store ligero y respeta el constraint de TinyBase (solo primitivos). No es temporal: es el patrón vigente post-F10.
 
 ```typescript
 // Store de TinyBase: solo metadata
@@ -408,20 +408,7 @@ if (error)
 
 **Los datos nunca se pierden.** TinyBase guarda localmente primero. Si Firestore falla, el dato sigue en el store local y se sincroniza después.
 
-**Nunca `console.log` en producción.** Usar un helper:
-
-```typescript
-// lib/logger.ts
-export const logger = {
-  error: (msg: string, ctx?: unknown) => {
-    if (import.meta.env.DEV) console.error(msg, ctx);
-    // En prod: enviar a servicio de logging si aplica
-  },
-  warn: (msg: string) => {
-    if (import.meta.env.DEV) console.warn(msg);
-  },
-};
-```
+**Nunca `console.log` en producción.** Las Cloud Functions usan el logger nativo de `firebase-functions` (ya estructurado con contexto). Para client-side logging raramente es necesario: los errores operativos se muestran como toast o inline (ver tabla arriba) y los errores de desarrollo aparecen en DevTools. Si un día hace falta logging estructurado en cliente, crear `src/lib/logger.ts` con un helper que gate por `import.meta.env.DEV`.
 
 ---
 
@@ -451,16 +438,21 @@ if (isLoading) return <NoteCardSkeleton />;
 if (isLoading) return <Spinner />;
 ```
 
-**Optimistic updates para acciones inmediatas.** Toggle de checkbox, favorito, archivar — actualizan TinyBase primero, Firestore se sincroniza después.
+**Optimistic updates via repo factory (post-F10).** Toggle de checkbox, favorito, archivar — el repo encapsula el patrón `setPartialRow` (sync TinyBase) → `await setDoc` (async Firestore). Los componentes NO hacen `setCell` directo desde F10.
 
 ```tsx
-// ✅ Optimistic: UI se actualiza instant
-function handleToggleFavorite(noteId: string) {
-  const current = notesStore.getCell('notes', noteId, 'isFavorite');
-  notesStore.setCell('notes', noteId, 'isFavorite', !current);
-  // TinyBase persister sincroniza a Firestore automáticamente
+// ✅ Via repo — UI instant + awaitability
+async function handleToggleFavorite(noteId: string) {
+  const current = notesStore.getCell('notes', noteId, 'isFavorite') as boolean;
+  await notesRepo.updateMeta(noteId, { isFavorite: !current });
+  // El factory sincroniza TinyBase sync + Firestore async con merge:true
 }
+
+// ❌ Pre-F10 — setCell directo desde componente (anti-patrón)
+// notesStore.setCell('notes', noteId, 'isFavorite', !current);
 ```
+
+Ver [`src/infra/repos/baseRepo.ts`](../src/infra/repos/baseRepo.ts) para el factory `createFirestoreRepo`. Las excepciones documentadas (`useAuth`, lectura MVP one-shot `useNote`) viven en [`Docs/04-clean-architecture-frontend.md`](04-clean-architecture-frontend.md#excepciones-reconocidas).
 
 **Debounce en auto-save del editor: 2 segundos.**
 
@@ -590,45 +582,69 @@ import { useBacklinks } from '@/hooks'; // via index.ts
 ### Naming
 
 ```typescript
-// Función: verbo + entidad
-processInboxItem.ts
-generateEmbedding.ts
-autoTagNote.ts
-
-// Export: on + Trigger + Entidad
-export const onInboxItemCreated = onDocumentCreated(...)
-export const onNoteWritten = onDocumentWritten(...)
+// Archivo y export: verbo + entidad (mismo nombre para trazabilidad)
+processInboxItem.ts  → export const processInboxItem = onDocumentCreated(...)
+autoTagNote.ts       → export const autoTagNote = onDocumentWritten(...)
+generateEmbedding.ts → export const generateEmbedding = onDocumentWritten(...)
+embedQuery.ts        → export const embedQuery = onCall(...)
 ```
+
+Las 4 CFs desplegadas hoy en `us-central1`, re-exportadas desde `src/functions/src/index.ts`.
 
 ### Patrón de Cloud Function
 
 ```typescript
-// functions/src/inbox/processInboxItem.ts
+// src/functions/src/inbox/processInboxItem.ts (forma real)
+import Anthropic from '@anthropic-ai/sdk';
 import { onDocumentCreated } from 'firebase-functions/v2/firestore';
-import { logger } from 'firebase-functions/logger';
+import { defineSecret } from 'firebase-functions/params';
+import { logger } from 'firebase-functions';
+import { INBOX_CLASSIFICATION_SCHEMA, InboxClassification } from '../lib/schemas';
 
-export const onInboxItemCreated = onDocumentCreated(
-  'users/{userId}/inbox/{itemId}',
+const anthropicApiKey = defineSecret('ANTHROPIC_API_KEY');
+
+export const processInboxItem = onDocumentCreated(
+  {
+    document: 'users/{userId}/inbox/{itemId}',
+    secrets: [anthropicApiKey],
+    timeoutSeconds: 60,
+    retry: false,
+    region: 'us-central1',
+  },
   async (event) => {
     const { userId, itemId } = event.params;
-    const data = event.data?.data();
+    // ... guards de snapshot vacío + rawContent vacío ...
 
-    if (!data) {
-      logger.warn('Inbox item vacío', { userId, itemId });
-      return;
-    }
+    const client = new Anthropic({ apiKey: anthropicApiKey.value() });
+    const response = await client.messages.create({
+      model: 'claude-haiku-4-5-20251001',
+      tools: [{ name: 'classify_inbox', input_schema: INBOX_CLASSIFICATION_SCHEMA }],
+      tool_choice: { type: 'tool', name: 'classify_inbox' },
+      // ...
+    });
 
-    try {
-      const aiResult = await processWithClaude(data.rawContent);
-      await event.data.ref.update({ aiProcessed: true, aiResult });
-      logger.info('Inbox procesado', { userId, itemId });
-    } catch (error) {
-      logger.error('Error procesando inbox', { userId, itemId, error });
-      await event.data.ref.update({ aiProcessed: false });
-    }
+    // Campos flat en Firestore — TinyBase los mapea a aiResult en useInbox
+    const result = toolBlock.input as InboxClassification;
+    await event.data.ref.update({
+      aiSuggestedTitle: result.suggestedTitle,
+      aiSuggestedType: result.suggestedType,
+      aiSuggestedTags: JSON.stringify(result.suggestedTags),
+      aiSuggestedArea: result.suggestedArea,
+      aiSummary: result.summary,
+      aiPriority: result.priority,
+      aiProcessed: true,
+    });
   },
 );
 ```
+
+### Secret management y tool use (F3.1)
+
+**Secrets via `defineSecret`.** `ANTHROPIC_API_KEY`, `OPENAI_API_KEY` se declaran con `defineSecret(...)` a nivel de módulo y se pasan en `secrets: [...]` del trigger. El valor se accede con `secret.value()` DENTRO del handler, nunca en top-level (se evalúa en build y rompe el deploy).
+
+**Schema enforcement con tool use.** Las CFs que consumen LLM (`processInboxItem`, `autoTagNote`) usan `tools: [{...}]` + `tool_choice: { type: 'tool', name: 'X' }` para forzar JSON válido vía el schema declarado en [`src/functions/src/lib/schemas.ts`](../src/functions/src/lib/schemas.ts). Elimina `stripJsonFence`, fallbacks null, y valores fuera de enum — el modelo devuelve un objeto que cumple `input_schema` o falla.
+
+**Campos flat en Firestore.** Los AI results se guardan como campos flat al doc (`aiSuggestedTitle`, `aiSuggestedType`, etc.) porque TinyBase no soporta objetos anidados. El hook `useInbox` los re-agrupa en `aiResult` al mappear. Decisión arquitectónica documentada en [`Docs/01-arquitectura-hibrida-progresiva.md`](01-arquitectura-hibrida-progresiva.md) sección 3.
 
 ### Reglas
 
@@ -639,11 +655,13 @@ export const onInboxItemCreated = onDocumentCreated(
 **Timeout y retry configurados explícitamente.** No dejar defaults.
 
 ```typescript
-export const onInboxItemCreated = onDocumentCreated(
+export const processInboxItem = onDocumentCreated(
   {
     document: 'users/{userId}/inbox/{itemId}',
+    secrets: [anthropicApiKey],
     timeoutSeconds: 60,
     retry: false, // No reintentar — procesamiento no es idempotente
+    region: 'us-central1',
   },
   async (event) => {
     /* ... */
@@ -690,15 +708,14 @@ service cloud.firestore {
 
 **IDs generados con `crypto.randomUUID()` por defecto.** Excepciones con IDs determinísticos: `links/{sourceId__targetId}` (dedup trivial), `habits/{YYYY-MM-DD}` (día = ID), `embeddings/{noteId}` (mismo ID que la nota).
 
-**Timestamps con `serverTimestamp()` para `createdAt` y `updatedAt`.**
+**Timestamps como `number` (UNIX ms) con `Date.now()`.** Los types del proyecto usan `number` por consistencia con TinyBase (que solo acepta primitivos). Firestore guarda el número directamente sin conversión a `Timestamp` nativo.
 
 ```typescript
-import { serverTimestamp } from 'firebase/firestore';
-
+const now = Date.now();
 const newNote = {
   title: 'Mi nota',
-  createdAt: serverTimestamp(),
-  updatedAt: serverTimestamp(),
+  createdAt: now,
+  updatedAt: now,
 };
 ```
 
@@ -712,10 +729,13 @@ const newNote = {
 
 ```
 extensions/
-├── wikilink.ts        # [[wikilinks]] — Node type
-├── slash-command.ts   # / commands — Suggestion plugin
-└── tag.ts             # #tag inline — Mark type
+├── wikilink.ts                 # [[wikilinks]] — Node type con attrs { noteId, noteTitle }
+├── wikilink-suggestion.ts      # Suggestion plugin de wikilinks (autocompletado [[ + portal)
+├── slash-command.ts            # / commands — comandos para insertar bloques
+└── slash-command-suggestion.ts # Suggestion plugin del menú slash
 ```
+
+> `tag.ts` estaba planeado pero no se implementó; los tags hoy se manejan como metadata de nota (no como Mark inline).
 
 ### Reglas
 
