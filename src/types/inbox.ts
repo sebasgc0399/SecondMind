@@ -1,11 +1,17 @@
 import type { AreaKey } from '@/types/area';
 import type { Priority } from '@/types/common';
 
-export type InboxSource = 'quick-capture' | 'web-clip' | 'voice' | 'share-intent' | 'email';
+export type InboxSource =
+  | 'quick-capture'
+  | 'web-clip'
+  | 'desktop-capture'
+  | 'voice'
+  | 'share-intent'
+  | 'email';
 
 export type InboxStatus = 'pending' | 'processed' | 'dismissed';
 
-export type InboxResultType = 'task' | 'note' | 'project' | 'reference' | 'trash';
+export type InboxResultType = 'task' | 'note' | 'project' | 'trash';
 
 export interface InboxAiResult {
   suggestedTitle: string;

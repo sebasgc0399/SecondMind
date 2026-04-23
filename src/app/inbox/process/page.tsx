@@ -72,7 +72,6 @@ export default function InboxProcessorPage() {
           kind = 'project';
           break;
         case 'trash':
-        case 'reference':
         default:
           dismiss(item.id);
           kind = 'trash';
