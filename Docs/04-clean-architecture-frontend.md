@@ -109,11 +109,11 @@ Esto significa que podés **reemplazar una capa externa sin tocar las internas**
 
 ### Capa 3: Adaptadores
 
-**Qué es:** el **traductor** entre el mundo externo (HTTP, Firebase, APIs) y los componentes. Normaliza shapes, uniformiza errores, aplica patrones comunes (optimistic updates, retry, cache).
+**Qué es:** el **traductor** entre el mundo externo (HTTP, Firebase, APIs) y los componentes. En proyectos grandes aplica optimistic updates, retry, batching, cache, normalización de shapes y uniformización de errores. **En SecondMind el scope actual es más acotado:** el factory `createFirestoreRepo` implementa **solo optimistic update** (sync TinyBase antes de await Firestore). El "cache" es el propio store TinyBase vía el custom persister; retry y batching no están implementados. Si en el futuro se necesitan, viven acá.
 
 **Qué contiene:**
 
-- **Adapters:** funciones que transforman respuestas del backend al shape que los componentes esperan (ej: `snake_case` → `camelCase`, `null` → `undefined`, parseo de fechas)
+- **Adapters:** funciones que transforman respuestas del backend al shape interno. En proyectos con APIs REST heterogéneas normalizan `snake_case → camelCase`, `null → undefined`, parseo de fechas, etc. **En SecondMind no aplica esta normalización** porque Firestore devuelve shapes TS-friendly y el propio proyecto define el schema. El rol de "adaptador" lo cumplen los repos absorbiendo patrones de acceso (optimistic update, serialización de arrays — ver gotchas abajo).
 - **Interceptors:** lógica que envuelve todas las requests/responses (inyectar auth tokens, manejar 401 refrescando token, capturar 500s para logging global)
 - **Repositorios (repos):** abstracción de operaciones CRUD por entidad, encapsulando el patrón de acceso (optimistic update, batching, cache)
 
@@ -141,6 +141,10 @@ Esto significa que podés **reemplazar una capa externa sin tocar las internas**
 **Señal de que la capa funciona bien:** cuando el backend cambia y los componentes **no se enteran**, es porque el adaptador hizo su trabajo.
 
 **Tip clave:** esta es la capa más incomprendida. Mucha gente salta de componentes a servicios directamente, y pierde el beneficio entero de la arquitectura. Si tu componente importa `firebase/firestore` o `axios` directamente, **te falta un adaptador**.
+
+**Gotcha: campos que viven solo en Firestore.** [`notesRepo.saveContent()`](../src/infra/repos/notesRepo.ts) es un caso donde el factory base no alcanza: el campo `content` (TipTap JSON) vive **solo en Firestore**, nunca en TinyBase (no duplicar serialización + evitar engordar el store). `saveContent` hace dos pasos explícitos: `setPartialRow` sync a TinyBase con todos los campos EXCEPTO `content`, y luego `await updateDoc` a Firestore con todos los campos INCLUYENDO `content`. El custom persister eventualmente convergería los campos del primer paso, pero el `updateDoc` explícito garantiza atomicidad y awaitability del write del editor. **Patrón general: si un campo rompe el schema TinyBase, el repo lo maneja con un método dedicado, no con el `update` del factory.**
+
+**Gotcha: serialización de arrays.** TinyBase solo guarda `string | number | boolean`. Los arrays de IDs (`outgoingLinkIds`, `tagIds`, `projectIds`, etc.) se persisten como JSON strings usando los helpers `stringifyIds`/`parseIds` de [`src/lib/tinybase.ts`](../src/lib/tinybase.ts). **`stringifyIds` NO es idempotente** — pasar una string ya serializada produce escaped nesting. Convención: los repos serializan al escribir; los hooks deserializan con `useMemo(() => parseIds(row.xxxIds), [row.xxxIds])` al leer.
 
 ---
 
@@ -186,20 +190,22 @@ Ejemplo: "el usuario marca una tarea como completada".
 ```
 ┌──────────────────────────────────────────────────────────────┐
 │ 1. COMPONENTE (TaskCard.tsx)                                 │
-│    onClick → llama a toggleTask(taskId) del hook useTasks    │
+│    onClick → llama a completeTask(taskId) del hook useTasks  │
 └────────────────────┬─────────────────────────────────────────┘
                      ▼
 ┌──────────────────────────────────────────────────────────────┐
 │ 2. COMPONENTE / HOOK (useTasks.ts)                           │
-│    toggleTask(id) → calcula el nuevo status → llama          │
-│    tasksRepo.update(id, { status: 'done' })                  │
+│    completeTask(id) → delega a tasksRepo.completeTask(id)    │
 └────────────────────┬─────────────────────────────────────────┘
                      ▼
 ┌──────────────────────────────────────────────────────────────┐
 │ 3. ADAPTADOR (tasksRepo, construido con createFirestoreRepo) │
-│    update(id, partial) →                                     │
-│      a) store.setPartialRow (sync, optimistic)               │
-│      b) await setDoc(...) (async, persistencia)              │
+│    completeTask(id) →                                        │
+│      a) lee row actual desde tasksStore                      │
+│      b) computeNextTaskStatus(status)  (fn pura)             │
+│      c) repo.update(id, partial):                            │
+│         - store.setPartialRow (sync, optimistic)             │
+│         - await setDoc(...) (async, persistencia)            │
 └────────────────────┬─────────────────────────────────────────┘
                      ▼
 ┌──────────────────────────────────────────────────────────────┐
@@ -209,6 +215,42 @@ Ejemplo: "el usuario marca una tarea como completada".
 ```
 
 **La magia:** cada capa solo sabe de la siguiente. El componente NO sabe qué pasa en Firebase. El repo NO sabe qué UI disparó el update. Si mañana reemplazás Firebase por Supabase, solo tocás capas 3 y 4.
+
+### Flujo avanzado: operaciones que cruzan entidades
+
+Cuando un caso de uso atraviesa múltiples entidades, los repos pueden **orquestarse entre sí** sin subir la lógica a la capa 2. Ejemplo real: "el usuario convierte un inbox item en nota".
+
+```
+COMPONENTE  → useInbox().convertToNote(itemId, overrides)
+              ↓
+ADAPTADOR   → inboxRepo.convertToNote(itemId, overrides)
+                 ↓ internamente:
+                 a) notesRepo.createFromInbox(content, { title, tagIds })
+                      → retorna noteId
+                 b) inboxRepo.markProcessed(itemId, { type: 'note', resultId: noteId })
+```
+
+Patrón válido cuando: (1) la orquestación es intrínseca al caso de uso (inbox→nota es inseparable, ambos pasos deben correr juntos o ninguno), (2) hay un repo "dueño" del flujo que coordina (`inboxRepo` en este caso).
+
+**Anti-patrón:** subir esta orquestación al hook. Contamina capa 2 con lógica que no depende de UI — la secuencia "crear nota + marcar procesado" es pura capa 3.
+
+---
+
+## Excepciones reconocidas
+
+No todo el frontend cabe en el molde "componente → repo → Firestore". En SecondMind hay tres excepciones documentadas que **respetan el espíritu de la regla sin seguir la letra**:
+
+**1. Auth global — [`useAuth`](../src/hooks/useAuth.ts):** importa `firebase/auth` directo y orquesta `signInWithPopup`, `signInWithTauri`, `signInWithCapacitor` según la plataforma. No es CRUD de una entidad de dominio — es un concern transversal (multi-plataforma web/desktop/mobile) que no encaja en el patrón de repos por entidad. Si mañana se agregan otros providers (Apple Sign-In, magic links), la lógica sigue acá, no en un repo.
+
+**2. Lectura one-shot MVP — [`useNote`](../src/hooks/useNote.ts):** hook de carga inicial de una nota individual que usa `getDoc` directo (no listener reactivo). No existe `notesRepo.getById()` porque TinyBase ya mantiene la colección reactiva; este hook solo se usa en el primer render de la página de nota para garantizar que `content` (que no vive en TinyBase) esté disponible antes de hidratar el editor. Candidato a migrar al repo si aparece un segundo caso de lectura imperativa.
+
+**3. Type imports externos en capa 2:** importar `type User` de `firebase/auth` en componentes (ej. [`NavigationDrawer.tsx`](../src/components/layout/NavigationDrawer.tsx), [`Sidebar.tsx`](../src/components/layout/Sidebar.tsx)) es aceptable. La regla estricta aplica a **capa 1 (`src/types/`)**, que debe quedar libre de tipos de librerías externas; en componentes es pragmático y no propaga el acoplamiento al dominio.
+
+**Candidatos pendientes de migrar al repo layer** (violaciones legítimas, deuda técnica conocida):
+
+- [`slashMenuItems.ts`](../src/components/editor/menus/slashMenuItems.ts) — `updateNoteType` hace `updateDoc` directo; debería moverse a un método `notesRepo.updateNoteType`.
+
+Estas excepciones son **excepciones reales, no etiqueta para cualquier violación nueva**. Antes de agregar una nueva, preguntá: "¿esto es genuinamente transversal/MVP como las tres de arriba, o estoy evitando escribir un repo?".
 
 ---
 
@@ -312,23 +354,25 @@ src/
 
 Referencia concreta para ver cómo se traduce la teoría:
 
-| Capa | Clean Arch nombre  | SecondMind ubicación          | Ejemplos                                    |
-| ---- | ------------------ | ----------------------------- | ------------------------------------------- |
-| 1    | Models             | `src/types/`                  | `note.ts`, `task.ts`, `habit.ts`            |
-| 1    | State              | `src/stores/`                 | `notesStore.ts`, `tasksStore.ts` (TinyBase) |
-| 2    | Use cases (UI)     | `src/components/`             | `TaskCard.tsx`, `NoteEditor.tsx`            |
-| 2    | Use cases (lógica) | `src/hooks/`                  | `useTasks.ts`, `useHybridSearch.ts`         |
-| 2    | Routing            | `src/app/`                    | `layout.tsx`, `notes/page.tsx`              |
-| 3    | Adapters/Repos     | `src/infra/repos/`            | `baseRepo.ts` (factory), `tasksRepo.ts`     |
-| 3    | Interceptors       | _(implícito en Firebase SDK)_ | Auth tokens automáticos                     |
-| 4    | Services           | `src/lib/`                    | `firebase.ts`, `orama.ts`, `embeddings.ts`  |
+| Capa | Clean Arch nombre  | SecondMind ubicación          | Ejemplos                                                                 |
+| ---- | ------------------ | ----------------------------- | ------------------------------------------------------------------------ |
+| 1    | Models             | `src/types/`                  | `note.ts`, `task.ts`, `habit.ts`                                         |
+| 1    | State              | `src/stores/`                 | `notesStore.ts`, `tasksStore.ts` (TinyBase)                              |
+| 2    | Use cases (UI)     | `src/components/`             | `TaskCard.tsx`, `NoteEditor.tsx`                                         |
+| 2    | Use cases (lógica) | `src/hooks/`                  | `useTasks.ts`, `useHybridSearch.ts`                                      |
+| 2    | Routing            | `src/app/`                    | `layout.tsx`, `notes/page.tsx`                                           |
+| 3    | Adapters/Repos     | `src/infra/repos/`            | `baseRepo.ts` (factory), `tasksRepo.ts`                                  |
+| 3    | Interceptors       | _(implícito en Firebase SDK)_ | Auth tokens automáticos                                                  |
+| 4    | Services           | `src/lib/`                    | `firebase.ts`, `orama.ts`, `embeddings.ts`                               |
+| 4    | State bridge       | `src/lib/tinybase.ts`         | Custom persister TinyBase ↔ Firestore; helpers `stringifyIds`/`parseIds` |
 
 **Detalles únicos de SecondMind:**
 
 - **No hay carpeta `adapters/` para normalizar shapes** porque Firestore devuelve shapes que el propio proyecto define (no hay backend heterogéneo). El repo layer cumple el rol de adaptador absorbiendo el patrón optimistic update.
 - **No hay carpeta `interceptors/`** porque el Firebase SDK maneja auth tokens automáticamente.
 - **`src/lib/` mezcla servicios externos y utilities** (`formatDate.ts`, `utils.ts`). En proyectos más grandes conviene separar `lib/services/` y `lib/utils/`.
-- **Cloud Functions viven en `src/functions/`** — son un deploy separado, con sus propias 4 capas internas.
+- **TinyBase es un servicio externo de Capa 4** con su propio wrapper en [`src/lib/tinybase.ts`](../src/lib/tinybase.ts). TinyBase v8 removió el `persister-firestore` nativo, por lo que el proyecto implementa un `createCustomPersister` que hace bridging bidireccional con Firestore (diff-based desde F12). Exporta helpers `stringifyIds`/`parseIds` que los repos y hooks usan para serializar arrays de IDs — TinyBase solo guarda primitivos (`string | number | boolean`), así que los arrays se guardan como JSON strings.
+- **Cloud Functions viven en `src/functions/`** — son un deploy separado. Cada CF es lineal (trigger Firestore → SDK call a Claude/OpenAI → `admin.firestore()` write → error handling). Clean Arch de 4 capas no aplica: intentar replicarla sería sobre-ingeniería para código event-driven corto. Regla operativa: si una CF crece >200 líneas, extraer helpers a `src/functions/src/lib/`, pero sin replicar el layering del frontend.
 
 ---
 
