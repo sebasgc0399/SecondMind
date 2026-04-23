@@ -655,11 +655,13 @@ export const processInboxItem = onDocumentCreated(
 **Timeout y retry configurados explícitamente.** No dejar defaults.
 
 ```typescript
-export const onInboxItemCreated = onDocumentCreated(
+export const processInboxItem = onDocumentCreated(
   {
     document: 'users/{userId}/inbox/{itemId}',
+    secrets: [anthropicApiKey],
     timeoutSeconds: 60,
     retry: false, // No reintentar — procesamiento no es idempotente
+    region: 'us-central1',
   },
   async (event) => {
     /* ... */
