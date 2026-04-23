@@ -143,9 +143,15 @@ src/
 │   ├── graph/       # Visualización del knowledge graph
 │   ├── capture/     # Quick Capture modal, Inbox Processor
 │   ├── dashboard/   # Cards del dashboard
+│   ├── tasks/       # Task cards, inline create
+│   ├── projects/    # Project cards, create modal, note link
+│   ├── objectives/  # Objective cards, create modal
+│   ├── habits/      # Habit grid, habit row
+│   ├── settings/    # Settings panels
 │   └── layout/      # Sidebar, CommandPalette, Breadcrumbs
 ├── stores/          # TinyBase stores (1 archivo por entidad)
 ├── hooks/           # Custom hooks (1 archivo por hook)
+├── infra/repos/     # Capa 3 (F10): factory createFirestoreRepo + repos por entidad
 ├── lib/             # Configs (firebase.ts, tinybase.ts, orama.ts) + utils
 ├── types/           # Interfaces TypeScript (1 archivo por entidad)
 └── functions/       # Cloud Functions v2 (deploy separado)
