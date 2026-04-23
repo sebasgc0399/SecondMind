@@ -451,16 +451,21 @@ if (isLoading) return <NoteCardSkeleton />;
 if (isLoading) return <Spinner />;
 ```
 
-**Optimistic updates para acciones inmediatas.** Toggle de checkbox, favorito, archivar — actualizan TinyBase primero, Firestore se sincroniza después.
+**Optimistic updates via repo factory (post-F10).** Toggle de checkbox, favorito, archivar — el repo encapsula el patrón `setPartialRow` (sync TinyBase) → `await setDoc` (async Firestore). Los componentes NO hacen `setCell` directo desde F10.
 
 ```tsx
-// ✅ Optimistic: UI se actualiza instant
-function handleToggleFavorite(noteId: string) {
-  const current = notesStore.getCell('notes', noteId, 'isFavorite');
-  notesStore.setCell('notes', noteId, 'isFavorite', !current);
-  // TinyBase persister sincroniza a Firestore automáticamente
+// ✅ Via repo — UI instant + awaitability
+async function handleToggleFavorite(noteId: string) {
+  const current = notesStore.getCell('notes', noteId, 'isFavorite') as boolean;
+  await notesRepo.updateMeta(noteId, { isFavorite: !current });
+  // El factory sincroniza TinyBase sync + Firestore async con merge:true
 }
+
+// ❌ Pre-F10 — setCell directo desde componente (anti-patrón)
+// notesStore.setCell('notes', noteId, 'isFavorite', !current);
 ```
+
+Ver [`src/infra/repos/baseRepo.ts`](../src/infra/repos/baseRepo.ts) para el factory `createFirestoreRepo`. Las excepciones documentadas (`useAuth`, lectura MVP one-shot `useNote`) viven en [`Docs/04-clean-architecture-frontend.md`](04-clean-architecture-frontend.md#excepciones-reconocidas).
 
 **Debounce en auto-save del editor: 2 segundos.**
 
