@@ -177,7 +177,7 @@ interface InboxItem {
   // Schema enforcement via tool use — valores garantizados por enum/required (Fase 3.1)
   aiResult?: {
     suggestedTitle: string;
-    suggestedType: 'task' | 'note' | 'project' | 'reference' | 'trash';
+    suggestedType: 'task' | 'note' | 'project' | 'trash'; // enum enforced por schemas.ts
     suggestedTags: string[];
     suggestedArea: AreaKey; // Key del map AREAS — enum enforced, nunca null
     summary: string;
@@ -197,6 +197,8 @@ interface InboxItem {
 ```
 
 > **Items nunca se borran físicamente** — se marcan `processed` o `dismissed`. Preserva historial para undo o auditoría futura.
+
+> **Sobre `source`:** `'quick-capture'` (modal Alt+N), `'web-clip'` (Chrome Extension), `'share-intent'` (Capacitor Android) y `'desktop-capture'` (ventana Tauri) tienen setter runtime. `'voice'` y `'email'` están declarados como aspiracionales — no hay entry point implementado al momento, se consumen cuando la feature exista.
 
 ### Esquema: `tasks/{taskId}`
 
