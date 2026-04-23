@@ -21,8 +21,10 @@ Sistema de productividad y conocimiento personal construido desde código. Combi
 npm run dev          # Servidor de desarrollo (Vite)
 npm run build        # Build producción (tsc + vite build)
 npm run lint         # ESLint sobre src/
+npm test             # Vitest (unit tests — repos, tinybase, etc.)
 npm run preview      # Preview del build local
 npm run deploy       # Deploy a Firebase Hosting
+npm run deploy:rules      # Deploy solo Firestore security rules
 npm run deploy:functions  # Deploy solo Cloud Functions
 npm run logs:functions    # Logs de Cloud Functions
 npm run tauri:dev    # Abre la app nativa en modo dev (Vite + Tauri)
