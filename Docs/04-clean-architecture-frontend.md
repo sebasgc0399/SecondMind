@@ -314,22 +314,24 @@ src/
 
 Referencia concreta para ver cómo se traduce la teoría:
 
-| Capa | Clean Arch nombre  | SecondMind ubicación          | Ejemplos                                    |
-| ---- | ------------------ | ----------------------------- | ------------------------------------------- |
-| 1    | Models             | `src/types/`                  | `note.ts`, `task.ts`, `habit.ts`            |
-| 1    | State              | `src/stores/`                 | `notesStore.ts`, `tasksStore.ts` (TinyBase) |
-| 2    | Use cases (UI)     | `src/components/`             | `TaskCard.tsx`, `NoteEditor.tsx`            |
-| 2    | Use cases (lógica) | `src/hooks/`                  | `useTasks.ts`, `useHybridSearch.ts`         |
-| 2    | Routing            | `src/app/`                    | `layout.tsx`, `notes/page.tsx`              |
-| 3    | Adapters/Repos     | `src/infra/repos/`            | `baseRepo.ts` (factory), `tasksRepo.ts`     |
-| 3    | Interceptors       | _(implícito en Firebase SDK)_ | Auth tokens automáticos                     |
-| 4    | Services           | `src/lib/`                    | `firebase.ts`, `orama.ts`, `embeddings.ts`  |
+| Capa | Clean Arch nombre  | SecondMind ubicación          | Ejemplos                                                                 |
+| ---- | ------------------ | ----------------------------- | ------------------------------------------------------------------------ |
+| 1    | Models             | `src/types/`                  | `note.ts`, `task.ts`, `habit.ts`                                         |
+| 1    | State              | `src/stores/`                 | `notesStore.ts`, `tasksStore.ts` (TinyBase)                              |
+| 2    | Use cases (UI)     | `src/components/`             | `TaskCard.tsx`, `NoteEditor.tsx`                                         |
+| 2    | Use cases (lógica) | `src/hooks/`                  | `useTasks.ts`, `useHybridSearch.ts`                                      |
+| 2    | Routing            | `src/app/`                    | `layout.tsx`, `notes/page.tsx`                                           |
+| 3    | Adapters/Repos     | `src/infra/repos/`            | `baseRepo.ts` (factory), `tasksRepo.ts`                                  |
+| 3    | Interceptors       | _(implícito en Firebase SDK)_ | Auth tokens automáticos                                                  |
+| 4    | Services           | `src/lib/`                    | `firebase.ts`, `orama.ts`, `embeddings.ts`                               |
+| 4    | State bridge       | `src/lib/tinybase.ts`         | Custom persister TinyBase ↔ Firestore; helpers `stringifyIds`/`parseIds` |
 
 **Detalles únicos de SecondMind:**
 
 - **No hay carpeta `adapters/` para normalizar shapes** porque Firestore devuelve shapes que el propio proyecto define (no hay backend heterogéneo). El repo layer cumple el rol de adaptador absorbiendo el patrón optimistic update.
 - **No hay carpeta `interceptors/`** porque el Firebase SDK maneja auth tokens automáticamente.
 - **`src/lib/` mezcla servicios externos y utilities** (`formatDate.ts`, `utils.ts`). En proyectos más grandes conviene separar `lib/services/` y `lib/utils/`.
+- **TinyBase es un servicio externo de Capa 4** con su propio wrapper en [`src/lib/tinybase.ts`](../src/lib/tinybase.ts). TinyBase v8 removió el `persister-firestore` nativo, por lo que el proyecto implementa un `createCustomPersister` que hace bridging bidireccional con Firestore (diff-based desde F12). Exporta helpers `stringifyIds`/`parseIds` que los repos y hooks usan para serializar arrays de IDs — TinyBase solo guarda primitivos (`string | number | boolean`), así que los arrays se guardan como JSON strings.
 - **Cloud Functions viven en `src/functions/`** — son un deploy separado. Cada CF es lineal (trigger Firestore → SDK call a Claude/OpenAI → `admin.firestore()` write → error handling). Clean Arch de 4 capas no aplica: intentar replicarla sería sobre-ingeniería para código event-driven corto. Regla operativa: si una CF crece >200 líneas, extraer helpers a `src/functions/src/lib/`, pero sin replicar el layering del frontend.
 
 ---
