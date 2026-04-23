@@ -328,7 +328,7 @@ Referencia concreta para ver cómo se traduce la teoría:
 - **No hay carpeta `adapters/` para normalizar shapes** porque Firestore devuelve shapes que el propio proyecto define (no hay backend heterogéneo). El repo layer cumple el rol de adaptador absorbiendo el patrón optimistic update.
 - **No hay carpeta `interceptors/`** porque el Firebase SDK maneja auth tokens automáticamente.
 - **`src/lib/` mezcla servicios externos y utilities** (`formatDate.ts`, `utils.ts`). En proyectos más grandes conviene separar `lib/services/` y `lib/utils/`.
-- **Cloud Functions viven en `src/functions/`** — son un deploy separado, con sus propias 4 capas internas.
+- **Cloud Functions viven en `src/functions/`** — son un deploy separado. Cada CF es lineal (trigger Firestore → SDK call a Claude/OpenAI → `admin.firestore()` write → error handling). Clean Arch de 4 capas no aplica: intentar replicarla sería sobre-ingeniería para código event-driven corto. Regla operativa: si una CF crece >200 líneas, extraer helpers a `src/functions/src/lib/`, pero sin replicar el layering del frontend.
 
 ---
 
