@@ -33,7 +33,6 @@ export default function InboxPage() {
           void convertToProject(itemId, overrides);
           break;
         case 'trash':
-        case 'reference':
         default:
           dismiss(itemId);
       }

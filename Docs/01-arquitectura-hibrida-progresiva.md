@@ -70,6 +70,7 @@ Construir lo mínimo que genere valor diario, iterar basándose en uso real. Cad
 - **Títulos de links resueltos in-memory** — `useBacklinks` hace join con `useTable('notes')` en vez de cachear títulos en el doc de link. Cero stale titles, reactivo a cambios
 - **Content de notas fuera de TinyBase** — el campo `content` (TipTap JSON) se lee/escribe directo de Firestore solo cuando se abre el editor. TinyBase solo maneja metadata. El persister usa `merge: true` para no sobrescribir `content` al sincronizar
 - **AI fields flat en TinyBase** — TinyBase no soporta objetos anidados. Los campos de AI (`aiSuggestedTitle`, `aiSuggestedType`, etc.) se almacenan como strings flat en el store y se agrupan en objetos solo en el hook de mapping
+- **Timestamps como `number` (UNIX ms)** — aunque Firestore serializa `Timestamp` nativo al leer/escribir, los types del proyecto (`src/types/*.ts`) usan `number` por consistencia con TinyBase, que solo acepta primitivos (`string | number | boolean`). Los schemas en este documento usan `number` para reflejar la representación TS, no el wire format Firestore
 
 ### Colecciones principales
 
@@ -131,9 +132,9 @@ interface Note {
   fsrsLastReview?: number; // Timestamp de última revisión
 
   // Metadata
-  createdAt: Timestamp;
-  updatedAt: Timestamp;
-  lastViewedAt?: Timestamp; // Para resurfacing (FSRS)
+  createdAt: number;
+  updatedAt: number;
+  lastViewedAt?: number; // Para resurfacing (FSRS)
   viewCount: number; // Engagement tracking
   isFavorite: boolean;
   isArchived: boolean;
@@ -153,7 +154,7 @@ interface NoteLink {
   linkType: 'explicit' | 'ai-suggested'; // ¿Lo creó el usuario o la AI?
 
   // Metadata
-  createdAt: Timestamp;
+  createdAt: number;
   strength?: number; // AI: similitud semántica (0-1)
   accepted: boolean; // Para links AI-suggested: ¿el usuario aceptó?
 }
@@ -177,7 +178,7 @@ interface InboxItem {
   // Schema enforcement via tool use — valores garantizados por enum/required (Fase 3.1)
   aiResult?: {
     suggestedTitle: string;
-    suggestedType: 'task' | 'note' | 'project' | 'reference' | 'trash';
+    suggestedType: 'task' | 'note' | 'project' | 'trash'; // enum enforced por schemas.ts
     suggestedTags: string[];
     suggestedArea: AreaKey; // Key del map AREAS — enum enforced, nunca null
     summary: string;
@@ -192,11 +193,13 @@ interface InboxItem {
     resultId: string; // ID de la nota/tarea/proyecto creado
   };
 
-  createdAt: Timestamp;
+  createdAt: number;
 }
 ```
 
 > **Items nunca se borran físicamente** — se marcan `processed` o `dismissed`. Preserva historial para undo o auditoría futura.
+
+> **Sobre `source`:** `'quick-capture'` (modal Alt+N), `'web-clip'` (Chrome Extension), `'share-intent'` (Capacitor Android) y `'desktop-capture'` (ventana Tauri) tienen setter runtime. `'voice'` y `'email'` están declarados como aspiracionales — no hay entry point implementado al momento, se consumen cuando la feature exista.
 
 ### Esquema: `tasks/{taskId}`
 
@@ -206,18 +209,20 @@ interface Task {
   name: string;
   status: 'inbox' | 'in-progress' | 'waiting' | 'delegated' | 'completed';
   priority: 'low' | 'medium' | 'high' | 'urgent';
-  dueDate?: Timestamp; // Cuándo hacerla
+  dueDate?: number; // Cuándo hacerla
 
   // Relaciones
   projectId?: string; // Singular — una tarea pertenece a UN proyecto
   areaId?: string;
+  objectiveId?: string; // Singular — una tarea puede pertenecer a UN objetivo
   noteIds: string[]; // Notas vinculadas
 
   description?: string;
+  isArchived: boolean;
 
-  createdAt: Timestamp;
-  updatedAt: Timestamp;
-  completedAt?: Timestamp;
+  createdAt: number;
+  updatedAt: number;
+  completedAt?: number;
 }
 ```
 
@@ -239,12 +244,12 @@ interface Project {
   noteIds: string[];
 
   // Fechas
-  startDate?: Timestamp;
-  deadline?: Timestamp;
+  startDate?: number;
+  deadline?: number;
 
   isArchived: boolean;
-  createdAt: Timestamp;
-  updatedAt: Timestamp;
+  createdAt: number;
+  updatedAt: number;
 }
 ```
 
@@ -257,14 +262,14 @@ interface Objective {
   id: string;
   name: string;
   status: 'not-started' | 'in-progress' | 'completed';
-  deadline?: Timestamp;
+  deadline?: number;
 
   areaId?: string;
   projectIds: string[];
   taskIds: string[];
 
-  createdAt: Timestamp;
-  updatedAt: Timestamp;
+  createdAt: number;
+  updatedAt: number;
 }
 ```
 
@@ -279,7 +284,7 @@ interface NoteEmbedding {
   vector: number[]; // 1536 dimensiones (text-embedding-3-small)
   model: string; // "text-embedding-3-small"
   contentHash: string; // Hash del contenido — regenerar si cambia
-  createdAt: Timestamp;
+  createdAt: number;
 }
 ```
 
@@ -370,18 +375,32 @@ src/
 │   ├── objectivesStore.ts
 │   └── habitsStore.ts
 │
+├── infra/                       # Capa 3: adaptadores entre componentes y backend (F10+)
+│   └── repos/                   # Factory createFirestoreRepo + repos por entidad
+│       ├── baseRepo.ts          # Factory genérico con optimistic update
+│       ├── baseRepo.test.ts     # Tests del factory (Vitest)
+│       ├── tasksRepo.ts
+│       ├── notesRepo.ts         # + saveContent (content-split: content solo en Firestore)
+│       ├── projectsRepo.ts
+│       ├── objectivesRepo.ts
+│       ├── habitsRepo.ts
+│       └── inboxRepo.ts         # + orquestación convertToNote/Task/Project
+│
 ├── hooks/
 │   ├── useAuth.ts
-│   ├── useStoreInit.ts          # Inicializa persisters + grace period
+│   ├── useAutoUpdate.ts         # Tauri/Capacitor updater (Fase 5.1/5.2+)
+│   ├── useStoreInit.ts          # Inicializa persisters + delTable pre/post (F11)
+│   ├── useStoreHydration.ts     # Context + Provider, retorna { isHydrating } (F11)
 │   ├── useNote.ts               # Carga content desde Firestore (getDoc one-shot)
-│   ├── useNoteSave.ts           # Autosave debounced + syncLinks
+│   ├── useNoteSave.ts           # Autosave debounced → notesRepo.saveContent (F10)
 │   ├── useNoteSearch.ts         # Orama FTS para notas
+│   ├── useHybridSearch.ts       # Búsqueda híbrida Orama BM25 + embeddings cosine (F3)
 │   ├── useBacklinks.ts          # Join in-memory links + notes para títulos frescos
-│   ├── useInbox.ts              # CRUD inbox + convertToNote/Task/Project + usePendingInboxCount
-│   ├── useTasks.ts
-│   ├── useProjects.ts
-│   ├── useObjectives.ts
-│   ├── useHabits.ts             # Toggle + helpers de fecha
+│   ├── useInbox.ts              # CRUD via inboxRepo + convertToNote/Task/Project + usePendingInboxCount
+│   ├── useTasks.ts              # Delega persistencia a tasksRepo (F10)
+│   ├── useProjects.ts           # Delega persistencia a projectsRepo (F10)
+│   ├── useObjectives.ts         # Delega persistencia a objectivesRepo (F10)
+│   ├── useHabits.ts             # Delega persistencia a habitsRepo (F10) + helpers de fecha
 │   ├── useQuickCapture.ts       # Context + Provider para Alt+N
 │   ├── useCommandPalette.ts     # Context + Provider para Ctrl+K (Fase 3)
 │   ├── useGlobalSearch.ts       # Orama index unificado multi-store (Fase 3)
@@ -389,8 +408,11 @@ src/
 │   ├── useSimilarNotes.ts       # Cosine similarity embeddings (Fase 4)
 │   ├── useResurfacing.ts        # FSRS state + reviewNote() (Fase 4)
 │   ├── useDailyDigest.ts        # Digest client-side: review + hubs (Fase 4)
+│   ├── useTheme.ts              # Dark mode / paleta (F6)
+│   ├── useMediaQuery.ts         # Responsive helpers (F1)
+│   ├── useOnlineStatus.ts       # Detecta conectividad (PWA/offline)
+│   ├── useInstallPrompt.ts      # PWA install prompt
 │   ├── useCloseToTray.ts        # Close-to-tray handler (Fase 5.1)
-│   ├── useGlobalShortcutRegistration.ts  # Ctrl+Shift+Space capture window (Fase 5.1)
 │   └── useShareIntent.ts        # Share Intent listener → Quick Capture (Fase 5.2)
 │
 ├── lib/
@@ -429,8 +451,10 @@ src/
     │   │   └── autoTagNote.ts        # onDocumentWritten → Claude Haiku tool use (Fase 3 + 3.1)
     │   ├── lib/
     │   │   └── schemas.ts            # JSON Schemas compartidos para tool use (Fase 3.1)
-    │   └── embeddings/
-    │       └── generateEmbedding.ts  # onDocumentWritten → OpenAI text-embedding-3-small (Fase 4)
+    │   ├── embeddings/
+    │   │   └── generateEmbedding.ts  # onDocumentWritten → OpenAI text-embedding-3-small (Fase 4)
+    │   └── search/
+    │       └── embedQuery.ts         # CF callable: embed de query para búsqueda híbrida (F3)
     ├── package.json             # CommonJS, Node 20, firebase-functions ^7.2.5
     └── tsconfig.json
 
@@ -518,9 +542,9 @@ Escribe [[ → autocompletado muestra notas existentes
 Selecciona nota → se crea un [[wikilink]]
     │
     ▼
-Al guardar (debounce 2s via useNoteSave):
-  1. updateDoc a Firestore (content + contentPlain + title + updatedAt)
-  2. notesStore.setPartialRow con metadata
+Al guardar (debounce 2s via useNoteSave → notesRepo.saveContent desde F10):
+  1. setPartialRow sync a TinyBase con metadata (sin content — el content vive solo en Firestore)
+  2. await updateDoc async a Firestore con content + metadata (merge: true)
   3. syncLinks() — client-side, NO Cloud Function:
      a. extractLinks() parsea el TipTap JSON
      b. Diff con links existentes en linksStore (filtrados por sourceId)
@@ -639,15 +663,21 @@ TinyBase v8 **no tiene** `persister-firestore` nativo. Se usa `createCustomPersi
 // src/lib/tinybase.ts
 import { createCustomPersister } from 'tinybase/persisters';
 
-// Factory que crea un persister bidireccional Firestore ↔ TinyBase
+// Factory persister bidireccional Firestore ↔ TinyBase
 // - onSnapshot listener para Firestore → TinyBase (auto-load)
-// - setDoc con merge: true para TinyBase → Firestore (auto-save)
+// - setPersisted diff-based (F12): consume el param `changes` nativo
+//   de TinyBase v8 y emite setDoc(merge: true) solo para rows tocadas
+//   (write amplification O(cambios), no O(N))
+// - Promise.allSettled evita que un setDoc fallido aborte los paralelos
+// - onIgnoredError (6º arg) recibe rejects sin retry automático —
+//   eventual consistency: la próxima transacción sobre la row reemite
 // - merge: true es CRÍTICO — sin él, el persister borra campos
 //   escritos fuera del store (ej: content de notas, campos AI de CFs)
+// - Limitación TinyBase v8: `changes` NO incluye row IDs eliminados;
+//   los deletes se propagan via repos con deleteDoc directo, no aquí
 export function createFirestorePersister({ store, collectionPath, tableName }) {
-  return createCustomPersister(store, {
-    // ... implementación con onSnapshot + setDoc({ merge: true })
-  });
+  // createCustomPersister con 6 args: getPersisted, setPersisted (diff-based),
+  // addPersisterListener, delPersisterListener, onIgnoredError, ...
 }
 ```
 
@@ -681,7 +711,7 @@ TinyBase solo guarda metadata. El `content` completo (TipTap JSON) se lee/escrib
 - **`setPartialRow` > `setRow`:** `setRow` es full replace y causa race conditions en toggles rápidos. `setPartialRow` es commutative entre campos distintos
 - **Local-first para toggles frecuentes:** `setPartialRow` local (sync) **antes** del `setDoc` Firestore (async)
 - **Grace period:** 200ms para UI (skeleton flash), 1500ms para redirects/snapshots (hidratación Firestore en full-reload)
-- **Creación de entidades — orden estricto:** `await setDoc(Firestore)` → `store.setRow(TinyBase)` → `navigate()`
+- **Creación de entidades — optimistic update via repo factory (F10):** `store.setRow(TinyBase)` sync → `await setDoc(Firestore)` async → `navigate()`. El factory `createFirestoreRepo` (en `src/infra/repos/baseRepo.ts`) encapsula este orden; no llamar `setDoc` directo desde hooks — usar el repo correspondiente (`tasksRepo`, `notesRepo`, etc.)
 
 ---
 
@@ -819,6 +849,12 @@ Full rebuild del índice en cada `addTableListener`. ~50ms para ~300 docs. El in
 - [x] Tauri v2 desktop wrapper (system tray, `Ctrl+Shift+Space` global, autostart, OAuth Desktop flow PKCE)
 - [x] Capacitor 8 Android (Google Sign-In nativo, Share Intent desde cualquier app)
 
+### Iteraciones post-F5.2
+
+Post-F5.2 el proyecto siguió iterando con features de pulido (UX, editor, theme) y refactors arquitectónicos (repos layer, store isolation, persister diff-based). Para no duplicar inventario, la lista vive en [`Spec/ESTADO-ACTUAL.md`](../Spec/ESTADO-ACTUAL.md) con pointers a cada `Spec/features/SPEC-feature-N-*.md`.
+
+Snapshot no exhaustivo: responsive UX (F1), editor polish con `@` menciones y slash commands (F2), búsqueda híbrida Orama + embeddings (F3), progressive summarization L0-L3 (F4), bubble menu (F5), theme system con paleta oklch (F6), capture multi-monitor Tauri (F7), Tauri auto-updater (F8), Capacitor auto-update Android (F9), **capa de repos en `src/infra/repos/` (F10)**, **store isolation + gating correcto (F11)**, **persister diff-based con `changes` nativo de TinyBase v8 (F12)**.
+
 ---
 
 ## 10. Decisiones de diseño clave
@@ -915,6 +951,8 @@ El generador procesa PNGs para adaptive icon format (insets de 16.7%) y distorsi
 
 Cambiar la firma de `save()` requería actualizar todos los callers (QuickCapture.tsx pasa `trimmed` directo). `useRef` stashea meta desde `open()`, `save()` lo consume y resetea. API estable, lógica concentrada.
 
+> **Decisiones post-F5.2:** Las decisiones arquitectónicas introducidas por features iterativas (factory repo centralizado, orden `destroy() → delTable()` en cleanup, `changes` nativo de TinyBase v8 para persister diff-based, eventual consistency con `onIgnoredError` y `Promise.allSettled`) viven en los SPECs correspondientes: [`SPEC-feature-10-repos-layer.md`](../Spec/features/SPEC-feature-10-repos-layer.md), [`SPEC-feature-11-store-isolation-gating.md`](../Spec/features/SPEC-feature-11-store-isolation-gating.md), [`SPEC-feature-12-persister-diff-based.md`](../Spec/features/SPEC-feature-12-persister-diff-based.md). Mantener el canon histórico junto al código que las originó evita duplicar contenido aquí.
+
 ---
 
 ## 11. Métricas de éxito
@@ -955,7 +993,7 @@ Conocimiento acumulado de las Fases 0–4. Toda sesión de desarrollo debe respe
 2. **`setPartialRow` > `setRow` para updates** — `setRow` es full replace y causa race conditions en toggles rápidos. `setPartialRow` es commutative entre campos distintos
 3. **Local-first para toggles** — `setPartialRow` sync → `setDoc` async. Invertir causa reads stale en clicks rápidos a campos distintos
 4. **Grace 200ms para UI, 1500ms para redirects** — `isInitializing` del hook (200ms) no es suficiente para decidir "el recurso no existe → redirect" en full-reload por URL
-5. **Creación de entidades — orden estricto** — `await setDoc(Firestore)` → `store.setRow` → `navigate`. Evita race con `getDoc` en la siguiente página
+5. **Creación de entidades — optimistic update via repo factory (post-F10)** — `store.setRow` sync → `await setDoc(Firestore)` async → `navigate`. El factory `createFirestoreRepo` encapsula el orden; awaitability del `setDoc` evita race con `getDoc` en la siguiente página. Writes directos a Firestore desde hooks son anti-patrón desde F10
 6. **Items de inbox nunca se borran** — Se marcan `processed`/`dismissed`, nunca `deleteDoc`
 7. **Base-UI ≠ Radix** — Usa `data-open`/`data-closed` + `data-starting-style`/`data-ending-style`, NO `data-state="open"`
 8. **`React.FormEvent` deprecated en React 19** — Usar inline arrow en `onSubmit` para que TypeScript infiera el tipo
@@ -1012,6 +1050,8 @@ Conocimiento acumulado de las Fases 0–4. Toda sesión de desarrollo debe respe
 44. **Auth branching order:** `isCapacitor()` ANTES de `isTauri()` ANTES de web. Mutuamente excluyentes por plataforma
 45. **`ShareIntentMount` dentro del Layout guard:** no necesita manejo de pending pre-auth — el guard de auth del Layout garantiza que el user ya está autenticado cuando el listener se monta
 
+**Gotchas post-F5.2 (F1-F12):** los descubiertos durante features iterativas viven en [`Spec/ESTADO-ACTUAL.md`](../Spec/ESTADO-ACTUAL.md) sección "Arquitectura y gotchas por dominio" (ej. la limitación de TinyBase v8 que omite row IDs deletados del param `changes` en F12) y en los SPECs de cada feature. Los que aplican a cualquier sesión sin importar dominio escalaron a [`CLAUDE.md`](../CLAUDE.md) sección "Gotchas universales" (ej. repos centralizando writes desde F10). No se duplican aquí por la regla "nunca duplicar entre niveles" de CLAUDE.md.
+
 ---
 
-> **Estado actual**: SecondMind tiene presencia en todas las plataformas: web (PWA), desktop Windows (Tauri), Chrome Extension, y Android (Capacitor). La siguiente iteración puede ser polish UX (templates, slash commands, búsqueda semántica híbrida), distribución (code signing Windows, Play Store), o features nuevas.
+> **Estado actual**: SecondMind está desplegado en web (PWA), desktop Windows (Tauri), Chrome Extension, y Android (Capacitor). Post-F5.2 el proyecto continuó con features de pulido (UX responsive, editor polish, theme system, auto-updaters) y refactors arquitectónicos (capa de repos en `src/infra/repos/`, store isolation, persister diff-based). Para el estado vivo actualizado y features en curso, ver [`Spec/ESTADO-ACTUAL.md`](../Spec/ESTADO-ACTUAL.md).

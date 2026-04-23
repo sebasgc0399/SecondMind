@@ -14,7 +14,6 @@ const TYPE_LABELS: Record<InboxResultType, string> = {
   note: '📝 Nota',
   task: '✅ Tarea',
   project: '🚀 Proyecto',
-  reference: '🔖 Referencia',
   trash: '🗑️ Descartar',
 };
 
