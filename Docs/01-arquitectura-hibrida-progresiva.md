@@ -699,19 +699,16 @@ function NoteCard({ noteId }: { noteId: string }) {
 }
 ```
 
-### Contenido largo — estrategia implementada
+### Constraints de TinyBase que impactan el diseño
 
-TinyBase solo guarda metadata. El `content` completo (TipTap JSON) se lee/escribe directo de Firestore solo cuando se abre el editor via `useNote` (getDoc one-shot) y `useNoteSave` (updateDoc debounced).
+TinyBase solo almacena primitivos (`string | number | boolean`). Dos consecuencias de diseño que cualquier nueva entidad debe respetar:
+
+- **Content largo → directo a Firestore, fuera del store.** El campo `content` (TipTap JSON) se lee/escribe directo de Firestore via `useNote` (getDoc one-shot) y `useNoteSave` (updateDoc debounced). No vive en TinyBase por tamaño + compatibilidad del schema de primitivos.
+- **Arrays de IDs → JSON strings.** `projectIds`, `tagIds`, `outgoingLinkIds` y similares se serializan con `stringifyIds([...ids, newId])` al escribir y se deserializan con `parseIds(row.projectIds)` al leer. Helpers en [`src/lib/tinybase.ts`](../src/lib/tinybase.ts). `stringifyIds` NO es idempotente — nunca pasar una string ya serializada.
 
 > **`useNoteSave` es el único punto que escribe `content`** a Firestore. Nuevas features que manipulen notas no deben tocar `content` por fuera de este flujo.
 
-### Patterns clave descubiertos
-
-- **Arrays como JSON strings:** `parseIds(row.projectIds)` / `stringifyIds([...ids, newId])` — TinyBase no soporta arrays nativos
-- **`setPartialRow` > `setRow`:** `setRow` es full replace y causa race conditions en toggles rápidos. `setPartialRow` es commutative entre campos distintos
-- **Local-first para toggles frecuentes:** `setPartialRow` local (sync) **antes** del `setDoc` Firestore (async)
-- **Grace period:** 200ms para UI (skeleton flash), 1500ms para redirects/snapshots (hidratación Firestore en full-reload)
-- **Creación de entidades — optimistic update via repo factory (F10):** `store.setRow(TinyBase)` sync → `await setDoc(Firestore)` async → `navigate()`. El factory `createFirestoreRepo` (en `src/infra/repos/baseRepo.ts`) encapsula este orden; no llamar `setDoc` directo desde hooks — usar el repo correspondiente (`tasksRepo`, `notesRepo`, etc.)
+Patrones operativos (optimistic updates, orden `setRow` sync → `setDoc` async, creación de entidades via repo factory, hidratación con `useStoreHydration`) viven centralizados en [`CLAUDE.md`](../CLAUDE.md) "Gotchas universales" + [`Spec/ESTADO-ACTUAL.md`](../Spec/ESTADO-ACTUAL.md). Ver pointer de sección 13 para el mapa completo.
 
 ---
 
