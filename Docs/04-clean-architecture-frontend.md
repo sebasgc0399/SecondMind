@@ -186,20 +186,22 @@ Ejemplo: "el usuario marca una tarea como completada".
 ```
 ┌──────────────────────────────────────────────────────────────┐
 │ 1. COMPONENTE (TaskCard.tsx)                                 │
-│    onClick → llama a toggleTask(taskId) del hook useTasks    │
+│    onClick → llama a completeTask(taskId) del hook useTasks  │
 └────────────────────┬─────────────────────────────────────────┘
                      ▼
 ┌──────────────────────────────────────────────────────────────┐
 │ 2. COMPONENTE / HOOK (useTasks.ts)                           │
-│    toggleTask(id) → calcula el nuevo status → llama          │
-│    tasksRepo.update(id, { status: 'done' })                  │
+│    completeTask(id) → delega a tasksRepo.completeTask(id)    │
 └────────────────────┬─────────────────────────────────────────┘
                      ▼
 ┌──────────────────────────────────────────────────────────────┐
 │ 3. ADAPTADOR (tasksRepo, construido con createFirestoreRepo) │
-│    update(id, partial) →                                     │
-│      a) store.setPartialRow (sync, optimistic)               │
-│      b) await setDoc(...) (async, persistencia)              │
+│    completeTask(id) →                                        │
+│      a) lee row actual desde tasksStore                      │
+│      b) computeNextTaskStatus(status)  (fn pura)             │
+│      c) repo.update(id, partial):                            │
+│         - store.setPartialRow (sync, optimistic)             │
+│         - await setDoc(...) (async, persistencia)            │
 └────────────────────┬─────────────────────────────────────────┘
                      ▼
 ┌──────────────────────────────────────────────────────────────┐
