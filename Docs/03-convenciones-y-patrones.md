@@ -690,15 +690,14 @@ service cloud.firestore {
 
 **IDs generados con `crypto.randomUUID()` por defecto.** Excepciones con IDs determinísticos: `links/{sourceId__targetId}` (dedup trivial), `habits/{YYYY-MM-DD}` (día = ID), `embeddings/{noteId}` (mismo ID que la nota).
 
-**Timestamps con `serverTimestamp()` para `createdAt` y `updatedAt`.**
+**Timestamps como `number` (UNIX ms) con `Date.now()`.** Los types del proyecto usan `number` por consistencia con TinyBase (que solo acepta primitivos). Firestore guarda el número directamente sin conversión a `Timestamp` nativo.
 
 ```typescript
-import { serverTimestamp } from 'firebase/firestore';
-
+const now = Date.now();
 const newNote = {
   title: 'Mi nota',
-  createdAt: serverTimestamp(),
-  updatedAt: serverTimestamp(),
+  createdAt: now,
+  updatedAt: now,
 };
 ```
 
