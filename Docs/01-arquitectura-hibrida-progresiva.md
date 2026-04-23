@@ -849,6 +849,12 @@ Full rebuild del índice en cada `addTableListener`. ~50ms para ~300 docs. El in
 - [x] Tauri v2 desktop wrapper (system tray, `Ctrl+Shift+Space` global, autostart, OAuth Desktop flow PKCE)
 - [x] Capacitor 8 Android (Google Sign-In nativo, Share Intent desde cualquier app)
 
+### Iteraciones post-F5.2
+
+Post-F5.2 el proyecto siguió iterando con features de pulido (UX, editor, theme) y refactors arquitectónicos (repos layer, store isolation, persister diff-based). Para no duplicar inventario, la lista vive en [`Spec/ESTADO-ACTUAL.md`](../Spec/ESTADO-ACTUAL.md) con pointers a cada `Spec/features/SPEC-feature-N-*.md`.
+
+Snapshot no exhaustivo: responsive UX (F1), editor polish con `@` menciones y slash commands (F2), búsqueda híbrida Orama + embeddings (F3), progressive summarization L0-L3 (F4), bubble menu (F5), theme system con paleta oklch (F6), capture multi-monitor Tauri (F7), Tauri auto-updater (F8), Capacitor auto-update Android (F9), **capa de repos en `src/infra/repos/` (F10)**, **store isolation + gating correcto (F11)**, **persister diff-based con `changes` nativo de TinyBase v8 (F12)**.
+
 ---
 
 ## 10. Decisiones de diseño clave
@@ -944,6 +950,8 @@ El generador procesa PNGs para adaptive icon format (insets de 16.7%) y distorsi
 ### D23: ¿Por qué `pendingMetaRef` en QuickCaptureProvider en vez de extender `save(content, source, sourceUrl)`?
 
 Cambiar la firma de `save()` requería actualizar todos los callers (QuickCapture.tsx pasa `trimmed` directo). `useRef` stashea meta desde `open()`, `save()` lo consume y resetea. API estable, lógica concentrada.
+
+> **Decisiones post-F5.2:** Las decisiones arquitectónicas introducidas por features iterativas (factory repo centralizado, orden `destroy() → delTable()` en cleanup, `changes` nativo de TinyBase v8 para persister diff-based, eventual consistency con `onIgnoredError` y `Promise.allSettled`) viven en los SPECs correspondientes: [`SPEC-feature-10-repos-layer.md`](../Spec/features/SPEC-feature-10-repos-layer.md), [`SPEC-feature-11-store-isolation-gating.md`](../Spec/features/SPEC-feature-11-store-isolation-gating.md), [`SPEC-feature-12-persister-diff-based.md`](../Spec/features/SPEC-feature-12-persister-diff-based.md). Mantener el canon histórico junto al código que las originó evita duplicar contenido aquí.
 
 ---
 
@@ -1042,6 +1050,8 @@ Conocimiento acumulado de las Fases 0–4. Toda sesión de desarrollo debe respe
 44. **Auth branching order:** `isCapacitor()` ANTES de `isTauri()` ANTES de web. Mutuamente excluyentes por plataforma
 45. **`ShareIntentMount` dentro del Layout guard:** no necesita manejo de pending pre-auth — el guard de auth del Layout garantiza que el user ya está autenticado cuando el listener se monta
 
+**Gotchas post-F5.2 (F1-F12):** los descubiertos durante features iterativas viven en [`Spec/ESTADO-ACTUAL.md`](../Spec/ESTADO-ACTUAL.md) sección "Arquitectura y gotchas por dominio" (ej. la limitación de TinyBase v8 que omite row IDs deletados del param `changes` en F12) y en los SPECs de cada feature. Los que aplican a cualquier sesión sin importar dominio escalaron a [`CLAUDE.md`](../CLAUDE.md) sección "Gotchas universales" (ej. repos centralizando writes desde F10). No se duplican aquí por la regla "nunca duplicar entre niveles" de CLAUDE.md.
+
 ---
 
-> **Estado actual**: SecondMind tiene presencia en todas las plataformas: web (PWA), desktop Windows (Tauri), Chrome Extension, y Android (Capacitor). La siguiente iteración puede ser polish UX (templates, slash commands, búsqueda semántica híbrida), distribución (code signing Windows, Play Store), o features nuevas.
+> **Estado actual**: SecondMind está desplegado en web (PWA), desktop Windows (Tauri), Chrome Extension, y Android (Capacitor). Post-F5.2 el proyecto continuó con features de pulido (UX responsive, editor polish, theme system, auto-updaters) y refactors arquitectónicos (capa de repos en `src/infra/repos/`, store isolation, persister diff-based). Para el estado vivo actualizado y features en curso, ver [`Spec/ESTADO-ACTUAL.md`](../Spec/ESTADO-ACTUAL.md).
