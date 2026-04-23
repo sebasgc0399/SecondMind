@@ -124,6 +124,7 @@ Docs teóricos en `Docs/00-04-*.md` — leer **solo el que aplique** a la tarea,
 | `Docs/01-arquitectura-hibrida-progresiva.md` | Schemas Firestore (notes/links/tasks/projects/inbox/embeddings), flujos clave, decisiones |
 | `Docs/02-flujos-ux-y-pantallas.md`           | 14 pantallas con wireframes, 5 flujos de usuario, shortcuts, breakpoints                  |
 | `Docs/03-convenciones-y-patrones.md`         | Naming, patrones TinyBase, TypeScript, Tailwind, errores, Git, Cloud Functions            |
+| `Docs/04-clean-architecture-frontend.md`     | Clean Architecture en 4 capas, factory repos F10, excepciones (auth, lectura MVP)         |
 
 **Escalación de gotchas al cerrar feature** (step 8 del SDD): nacen en SPEC → suben a ESTADO-ACTUAL si aplican a >1 feature → suben a CLAUDE.md si aplican a toda sesión sin importar dominio. **Nunca duplicar entre niveles** — al subir un gotcha, eliminarlo del nivel anterior. Techos (200 / 300 líneas) son orientativos: el criterio es "¿aplica a este nivel?", no `wc -l`.
 
