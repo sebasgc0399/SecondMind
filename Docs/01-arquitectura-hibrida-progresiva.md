@@ -955,7 +955,7 @@ Conocimiento acumulado de las Fases 0–4. Toda sesión de desarrollo debe respe
 2. **`setPartialRow` > `setRow` para updates** — `setRow` es full replace y causa race conditions en toggles rápidos. `setPartialRow` es commutative entre campos distintos
 3. **Local-first para toggles** — `setPartialRow` sync → `setDoc` async. Invertir causa reads stale en clicks rápidos a campos distintos
 4. **Grace 200ms para UI, 1500ms para redirects** — `isInitializing` del hook (200ms) no es suficiente para decidir "el recurso no existe → redirect" en full-reload por URL
-5. **Creación de entidades — orden estricto** — `await setDoc(Firestore)` → `store.setRow` → `navigate`. Evita race con `getDoc` en la siguiente página
+5. **Creación de entidades — optimistic update via repo factory (post-F10)** — `store.setRow` sync → `await setDoc(Firestore)` async → `navigate`. El factory `createFirestoreRepo` encapsula el orden; awaitability del `setDoc` evita race con `getDoc` en la siguiente página. Writes directos a Firestore desde hooks son anti-patrón desde F10
 6. **Items de inbox nunca se borran** — Se marcan `processed`/`dismissed`, nunca `deleteDoc`
 7. **Base-UI ≠ Radix** — Usa `data-open`/`data-closed` + `data-starting-style`/`data-ending-style`, NO `data-state="open"`
 8. **`React.FormEvent` deprecated en React 19** — Usar inline arrow en `onSubmit` para que TypeScript infiera el tipo
