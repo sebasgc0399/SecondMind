@@ -255,8 +255,8 @@ const title = useCell('notes', noteId, 'title');
 const title = notesStore.getCell('notes', noteId, 'title');
 ```
 
-**Content de notas (TipTap JSON) fuera de TinyBase en MVP.**
-TinyBase guarda metadata (título, flags, counters). El `content` completo se lee/escribe directo de Firestore al abrir/cerrar el editor. Esto mantiene el store ligero.
+**Content de notas (TipTap JSON) fuera de TinyBase — decisión arquitectónica permanente.**
+TinyBase guarda metadata (título, flags, counters). El `content` completo se lee/escribe directo de Firestore al abrir/cerrar el editor via [`notesRepo.saveContent`](../src/infra/repos/notesRepo.ts). Esto mantiene el store ligero y respeta el constraint de TinyBase (solo primitivos). No es temporal: es el patrón vigente post-F10.
 
 ```typescript
 // Store de TinyBase: solo metadata
@@ -408,20 +408,7 @@ if (error)
 
 **Los datos nunca se pierden.** TinyBase guarda localmente primero. Si Firestore falla, el dato sigue en el store local y se sincroniza después.
 
-**Nunca `console.log` en producción.** Usar un helper:
-
-```typescript
-// lib/logger.ts
-export const logger = {
-  error: (msg: string, ctx?: unknown) => {
-    if (import.meta.env.DEV) console.error(msg, ctx);
-    // En prod: enviar a servicio de logging si aplica
-  },
-  warn: (msg: string) => {
-    if (import.meta.env.DEV) console.warn(msg);
-  },
-};
-```
+**Nunca `console.log` en producción.** Las Cloud Functions usan el logger nativo de `firebase-functions` (ya estructurado con contexto). Para client-side logging raramente es necesario: los errores operativos se muestran como toast o inline (ver tabla arriba) y los errores de desarrollo aparecen en DevTools. Si un día hace falta logging estructurado en cliente, crear `src/lib/logger.ts` con un helper que gate por `import.meta.env.DEV`.
 
 ---
 
@@ -740,10 +727,13 @@ const newNote = {
 
 ```
 extensions/
-├── wikilink.ts        # [[wikilinks]] — Node type
-├── slash-command.ts   # / commands — Suggestion plugin
-└── tag.ts             # #tag inline — Mark type
+├── wikilink.ts                 # [[wikilinks]] — Node type con attrs { noteId, noteTitle }
+├── wikilink-suggestion.ts      # Suggestion plugin de wikilinks (autocompletado [[ + portal)
+├── slash-command.ts            # / commands — comandos para insertar bloques
+└── slash-command-suggestion.ts # Suggestion plugin del menú slash
 ```
+
+> `tag.ts` estaba planeado pero no se implementó; los tags hoy se manejan como metadata de nota (no como Mark inline).
 
 ### Reglas
 
