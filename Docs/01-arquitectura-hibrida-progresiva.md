@@ -370,18 +370,32 @@ src/
 │   ├── objectivesStore.ts
 │   └── habitsStore.ts
 │
+├── infra/                       # Capa 3: adaptadores entre componentes y backend (F10+)
+│   └── repos/                   # Factory createFirestoreRepo + repos por entidad
+│       ├── baseRepo.ts          # Factory genérico con optimistic update
+│       ├── baseRepo.test.ts     # Tests del factory (Vitest)
+│       ├── tasksRepo.ts
+│       ├── notesRepo.ts         # + saveContent (content-split: content solo en Firestore)
+│       ├── projectsRepo.ts
+│       ├── objectivesRepo.ts
+│       ├── habitsRepo.ts
+│       └── inboxRepo.ts         # + orquestación convertToNote/Task/Project
+│
 ├── hooks/
 │   ├── useAuth.ts
-│   ├── useStoreInit.ts          # Inicializa persisters + grace period
+│   ├── useAutoUpdate.ts         # Tauri/Capacitor updater (Fase 5.1/5.2+)
+│   ├── useStoreInit.ts          # Inicializa persisters + delTable pre/post (F11)
+│   ├── useStoreHydration.ts     # Context + Provider, retorna { isHydrating } (F11)
 │   ├── useNote.ts               # Carga content desde Firestore (getDoc one-shot)
-│   ├── useNoteSave.ts           # Autosave debounced + syncLinks
+│   ├── useNoteSave.ts           # Autosave debounced → notesRepo.saveContent (F10)
 │   ├── useNoteSearch.ts         # Orama FTS para notas
+│   ├── useHybridSearch.ts       # Búsqueda híbrida Orama BM25 + embeddings cosine (F3)
 │   ├── useBacklinks.ts          # Join in-memory links + notes para títulos frescos
-│   ├── useInbox.ts              # CRUD inbox + convertToNote/Task/Project + usePendingInboxCount
-│   ├── useTasks.ts
-│   ├── useProjects.ts
-│   ├── useObjectives.ts
-│   ├── useHabits.ts             # Toggle + helpers de fecha
+│   ├── useInbox.ts              # CRUD via inboxRepo + convertToNote/Task/Project + usePendingInboxCount
+│   ├── useTasks.ts              # Delega persistencia a tasksRepo (F10)
+│   ├── useProjects.ts           # Delega persistencia a projectsRepo (F10)
+│   ├── useObjectives.ts         # Delega persistencia a objectivesRepo (F10)
+│   ├── useHabits.ts             # Delega persistencia a habitsRepo (F10) + helpers de fecha
 │   ├── useQuickCapture.ts       # Context + Provider para Alt+N
 │   ├── useCommandPalette.ts     # Context + Provider para Ctrl+K (Fase 3)
 │   ├── useGlobalSearch.ts       # Orama index unificado multi-store (Fase 3)
@@ -389,8 +403,11 @@ src/
 │   ├── useSimilarNotes.ts       # Cosine similarity embeddings (Fase 4)
 │   ├── useResurfacing.ts        # FSRS state + reviewNote() (Fase 4)
 │   ├── useDailyDigest.ts        # Digest client-side: review + hubs (Fase 4)
+│   ├── useTheme.ts              # Dark mode / paleta (F6)
+│   ├── useMediaQuery.ts         # Responsive helpers (F1)
+│   ├── useOnlineStatus.ts       # Detecta conectividad (PWA/offline)
+│   ├── useInstallPrompt.ts      # PWA install prompt
 │   ├── useCloseToTray.ts        # Close-to-tray handler (Fase 5.1)
-│   ├── useGlobalShortcutRegistration.ts  # Ctrl+Shift+Space capture window (Fase 5.1)
 │   └── useShareIntent.ts        # Share Intent listener → Quick Capture (Fase 5.2)
 │
 ├── lib/
@@ -429,8 +446,10 @@ src/
     │   │   └── autoTagNote.ts        # onDocumentWritten → Claude Haiku tool use (Fase 3 + 3.1)
     │   ├── lib/
     │   │   └── schemas.ts            # JSON Schemas compartidos para tool use (Fase 3.1)
-    │   └── embeddings/
-    │       └── generateEmbedding.ts  # onDocumentWritten → OpenAI text-embedding-3-small (Fase 4)
+    │   ├── embeddings/
+    │   │   └── generateEmbedding.ts  # onDocumentWritten → OpenAI text-embedding-3-small (Fase 4)
+    │   └── search/
+    │       └── embedQuery.ts         # CF callable: embed de query para búsqueda híbrida (F3)
     ├── package.json             # CommonJS, Node 20, firebase-functions ^7.2.5
     └── tsconfig.json
 
