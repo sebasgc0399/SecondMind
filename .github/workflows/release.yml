@@ -58,7 +58,7 @@ jobs:
           releaseName: 'SecondMind ${{ github.ref_name }}'
           releaseBody: 'Release automática de SecondMind desktop. Ver commits para detalle de cambios.'
           releaseDraft: false
-          prerelease: false
+          prerelease: ${{ contains(github.ref_name, '-rc') || contains(github.ref_name, '-beta') }}
           includeUpdaterJson: true
 
   release-capacitor:
