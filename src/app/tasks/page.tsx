@@ -106,7 +106,7 @@ export default function TasksPage() {
         <TaskInlineCreate onCreate={(name) => void createTask(name)} />
       </div>
 
-      <nav className="mb-6 flex gap-1 overflow-x-auto border-b border-border">
+      <nav className="mb-6 flex gap-1 overflow-x-auto overflow-y-hidden border-b border-border">
         {TABS.map((tab) => {
           const isActive = tab.key === activeTab;
           return (
