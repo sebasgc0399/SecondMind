@@ -1,136 +1,33 @@
-# SPEC — Feature 13: GitHub Actions Node 24 migration
+# SPEC — Feature 13: GitHub Actions Node 24 migration (Registro de implementación)
 
-> Alcance: Migrar actions del workflow de release a versiones Node 24 ready antes del switch forzado 2026-06-02.
-> Dependencias: Ninguna
-> Estimado: 1 sesión (~1h, incluida validación RC)
-> Stack relevante: GitHub Actions workflow YAML
+> Estado: Completada Abril 2026
+> Commits: `d118e93` SPEC prescriptivo inicial, `aaf7fed` F1+F2 bumps checkout/setup-node/setup-java a @v5 + pin tauri-action@v0.6.2, `6e2dac2` F3 prerelease guard dinámico para tags -rc/-beta, `0c0188d` merge a main.
+> Gotchas operativos vigentes → `Spec/ESTADO-ACTUAL.md` sección "Auto-Updater + Releases (Features 8-9)"
 
 ## Objetivo
 
-GitHub fuerza Node 24 como default en Actions runners el 2026-06-02; Node 20 se remueve el 2026-09-16. El workflow `.github/workflows/release.yml` usa 3 actions deprecadas (`checkout@v4`, `setup-node@v4`, `setup-java@v4`) que rompen post-switch si no se migran. Esta feature actualiza los 4 actions gestionables (incluye pin hygiene de `tauri-action@v0 → v0.6.2`) y agrega un prerelease guard para tags `-rc`/`-beta`, permitiendo validar cambios futuros del pipeline sin distribuir a usuarios reales.
+GitHub fuerza Node 24 como default en Actions runners el 2026-06-02; Node 20 se remueve el 2026-09-16. El workflow `.github/workflows/release.yml` usaba 3 actions deprecadas (`checkout@v4`, `setup-node@v4`, `setup-java@v4`) que romperían post-switch. F13 migró los 4 actions gestionables (incluye pin hygiene de `tauri-action@v0 → v0.6.2`) y agregó un prerelease guard para tags `-rc`/`-beta`, habilitando el patrón RC-tag para validar cambios futuros del pipeline sin distribuir a usuarios reales.
 
-## Features
+## Qué se implementó
 
-### F1: Bump de los 3 actions deprecated
+- **F1 — Bump de los 3 actions deprecated:** `actions/checkout@v4 → @v5` (ambos jobs, `release-tauri` línea 15 + `release-capacitor` línea 70), `actions/setup-node@v4 → @v5` (ambos jobs), `actions/setup-java@v4 → @v5` (solo `release-capacitor`). Runtime Node declarado con `with: node-version:` (20 para Tauri, 22 para Capacitor) sin cambio — el warning de GitHub era sobre el Node que corre LA ACTION, no el que la action provee al job. Validación en F4 confirmó cero warnings Node 20 en el run. Archivo tocado: [.github/workflows/release.yml](../../.github/workflows/release.yml).
+- **F2 — Pin `tauri-action@v0 → @v0.6.2`:** cambio de moving pointer a tag inmutable. v0 no estaba en el warning porque v0.6.0+ ya corre en Node 24 desde nov 2024, pero v0 resolveable a cualquier minor futuro que introdujera breakage. `Firebase-Distribution-Github-Action@v1.7.1` ya seguía este patrón — F13 extendió la regla a tauri-action. Archivo tocado: [.github/workflows/release.yml](../../.github/workflows/release.yml).
+- **F3 — Prerelease guard dinámico:** `prerelease: false` hardcoded → `prerelease: ${{ contains(github.ref_name, '-rc') || contains(github.ref_name, '-beta') }}` en el step `Build & Release Tauri`. Los tags con sufijo `-rc` o `-beta` ahora se publican como pre-release. El endpoint del updater (`/releases/latest/...`) resuelve al último NON-prerelease por default de GitHub — RCs quedan publicados pero invisibles para la app instalada. Guard solo en release-tauri: `release-capacitor` sube al grupo `owner` de App Distribution sin diferenciar pre-releases (único tester actual). Archivo tocado: [.github/workflows/release.yml](../../.github/workflows/release.yml).
+- **F4 — Validación E2E con `v0.1.8-rc1`:** tag pusheado desde la feature branch (no desde main, para validar antes del merge). Workflow run `24866334955` corrió ambos jobs en 8m43s con `success`. `gh release view v0.1.8-rc1 --json isPrerelease` → `true`. `gh release list` mostró v0.1.8-rc1 como "Pre-release" y v0.1.7 persistió como "Latest". Assets del RC publicados correctamente (`latest.json`, MSI, NSIS con signatures — con nombres `SecondMind_0.1.7_*` porque `tauri.conf.json` sigue en 0.1.7; el tag es operacional, no referenciado por el bundle). Cero warnings Node 20 en el run. Cleanup: `gh release delete v0.1.8-rc1 --cleanup-tag --yes` borró Release + tag remoto atómicamente.
 
-**Qué:** Actualizar las 3 actions afectadas por el warning de Node 20 a versiones que corran en Node 24 nativo.
+## Decisiones clave
 
-**Criterio de done:**
+| #   | Decisión                                                                        | Razón                                                                                                                                                                                                                                                                                                                                         |
+| --- | ------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| D1  | Bump a `@v5`, no `@v6`.                                                         | `@v5` es el bump mínimo que satisface el constraint Node 24. `@v6` de checkout/setup-node introduce cambios no relacionados (`setup-node@v6` limita caching a npm only; `checkout@v6` ajustes menores) sin beneficio concreto. Regla: bump mínimo que cumple el constraint, evita absorber cambios laterales.                                 |
+| D2  | Prerelease guard solo en `release-tauri`, no en `release-capacitor`.            | El único tester actual en Firebase App Distribution es el owner. Separar pre-releases en un path distinto de App Distribution es scope creep sin problema real. Si el base de testers crece, es decisión de ese momento.                                                                                                                      |
+| D3  | Validación vía RC tag, no `workflow_dispatch`.                                  | `workflow_dispatch` no cubre el path completo — el step `Build & Release Tauri` de `tauri-action` requiere un tag real para crear el GitHub Release, y el APK versionCode deriva del tag (`VERSION_CODE=$((MAJOR*10000 + MINOR*100 + PATCH))`). RC tag + cleanup valida 100% del pipeline al costo de 2 comandos extra (`gh release delete`). |
+| D4  | Pinear `tauri-action@v0` a version inmutable aunque no estuviera en el warning. | Oportunidad hygiene gratuita (1 línea). Moving pointer `@v0` podía resolverse a cualquier minor futuro que introdujera breakage silenciosa. Costo: cero. Beneficio: elimina una categoría de fallos "el workflow rompió solo" en rebuilds futuros del mismo commit.                                                                           |
 
-- [ ] `actions/checkout@v4` → `@v5` (ambos jobs: release-tauri línea 15, release-capacitor línea 70)
-- [ ] `actions/setup-node@v4` → `@v5` (ambos jobs: línea 18, línea 75)
-- [ ] `actions/setup-java@v4` → `@v5` (solo release-capacitor, línea 84)
-- [ ] Próximo workflow run no dispara warning de Node 20 deprecation
+## Lecciones
 
-**Archivos a modificar:**
-
-- `.github/workflows/release.yml` — 5 líneas (`uses:`)
-
-**Notas de implementación:**
-
-- No cambiar `with: node-version:` (release-tauri: 20, release-capacitor: 22). Eso es el runtime Node que la action PROVEE al job, distinto del Node en que la action corre. El warning es sobre esto último.
-- `setup-node@v5` agregó auto-caching con `packageManager` field en package.json; SecondMind no define ese field, comportamiento de caching no cambia.
-- Bump mínimo intencional (`@v5`, no `@v6`). `setup-node@v6` limita caching a npm only — sin impacto práctico pero evita absorber cambios no relacionados al Node 24 constraint.
-
-### F2: Pin tauri-action@v0 a @v0.6.2
-
-**Qué:** Cambiar `tauri-apps/tauri-action@v0` (moving pointer) a `@v0.6.2` (inmutable).
-
-**Criterio de done:**
-
-- [ ] `uses: tauri-apps/tauri-action@v0.6.2` en release-tauri (línea 51)
-- [ ] Run del workflow (F4) completa release-tauri con MSI + NSIS + latest.json sin regresiones
-
-**Archivos a modificar:**
-
-- `.github/workflows/release.yml` — 1 línea
-
-**Notas de implementación:**
-
-- `tauri-action` no apareció en el warning de GitHub porque `@v0` → v0.6.0+ ya usa Node 24 nativo desde nov 2024. Bump no es correctivo, es hygiene.
-- Pinear a tag inmutable evita regresiones silenciosas en un minor futuro de tauri-action. `Firebase-Distribution-Github-Action@v1.7.1` ya sigue este patrón.
-
-### F3: Prerelease guard para tags -rc/-beta
-
-**Qué:** Reemplazar el hardcoded `prerelease: false` del step Build & Release Tauri por un cómputo dinámico que marque como pre-release los tags con sufijo `-rc` o `-beta`.
-
-**Criterio de done:**
-
-- [ ] Step `Build & Release Tauri` usa `prerelease: ${{ contains(github.ref_name, '-rc') || contains(github.ref_name, '-beta') }}` (reemplaza línea `prerelease: false`)
-- [ ] Validado en F4: tag `v0.1.8-rc1` crea GitHub Release marcado "Pre-release" en la UI
-- [ ] `/releases/latest/download/latest.json` sigue devolviendo v0.1.7 durante el test RC (updater no recoge el pre-release)
-- [ ] Tags normales (`vX.Y.Z` sin sufijo) siguen disparando auto-updater (prerelease computado a false)
-
-**Archivos a modificar:**
-
-- `.github/workflows/release.yml` — 1 línea
-
-**Notas de implementación:**
-
-- Guard solo en `release-tauri`. El job `release-capacitor` sube a App Distribution grupo `owner` — el único tester actual es el owner, no vale separar pre-releases allí.
-- El endpoint de Tauri updater (`/releases/latest/...`) es resuelto por GitHub al último release NON-prerelease, comportamiento default. No requiere config adicional.
-
-### F4: Validación E2E con RC tag
-
-**Qué:** Correr el workflow completo con `v0.1.8-rc1` desde la feature branch para validar que F1+F2+F3 funcionan antes de mergear a main.
-
-**Criterio de done:**
-
-- [ ] F1+F2+F3 pusheados a `feat/actions-node24-migration` (no mergeados a main aún)
-- [ ] `git tag v0.1.8-rc1 && git push origin v0.1.8-rc1` desde la feature branch
-- [ ] Workflow run termina con ambos jobs `success` en `gh run view`
-- [ ] GitHub Release `v0.1.8-rc1` visible en la UI con badge "Pre-release"
-- [ ] `gh release view --json isLatest` del latest → sigue siendo v0.1.7
-- [ ] APK en Firebase App Distribution notificado al grupo `owner`
-- [ ] MSI + NSIS + latest.json presentes en el Release v0.1.8-rc1 (no hace falta instalar)
-- [ ] Sin annotations de Node 20 deprecation en el run
-- [ ] Cleanup: `gh release delete v0.1.8-rc1 --cleanup-tag --yes` (borra Release + tag remoto atómicamente)
-
-**Archivos a modificar:**
-
-- Ninguno (solo comandos git + gh)
-
-**Notas de implementación:**
-
-- Taggear desde la feature branch, no desde main: el workflow corre contra el commit con los bumps sin requerir merge previo. Si F4 descubre breakage, se corrige en la misma branch antes del merge.
-- `v0.1.8-rc1` no es "la versión 0.1.8 real" — los 5 archivos de versión del proyecto siguen en 0.1.7 durante F4. El tag es operacional, no referenciado por el código del bundle.
-
-## Orden de implementación
-
-1. **F1 + F2** (mismo commit) — cambios mecánicos en 5 líneas. Mensaje: `feat(ci): bump actions a versiones Node 24 ready`.
-2. **F3** (commit separado) — cambio de comportamiento (prerelease dynamic), merece un commit independiente para mantener historia atómica. Mensaje: `feat(ci): prerelease guard para tags -rc/-beta`.
-3. **F4** — validación E2E. Depende de F1+F2+F3 pusheados. No commitea código; es ejecución + verificación + cleanup.
-4. **Merge** `--no-ff` a main post-F4 success.
-
-## Decisiones técnicas
-
-### D1: Bump a @v5, no @v6
-
-- **Opciones:** `setup-node@v5` vs `@v6`, `checkout@v5` vs `@v6`.
-- **Decisión:** `@v5`.
-- **Razón:** `@v5` es el bump mínimo que satisface Node 24. `@v6` introduce cambios adicionales (caching restringido a npm en setup-node@v6, cambios menores en checkout@v6) sin beneficio concreto. Regla: bump mínimo que cumple el constraint, evita absorber cambios no relacionados.
-
-### D2: Prerelease guard solo en release-tauri
-
-- **Opciones:** Separar pre-releases en un path distinto de App Distribution vs mismo grupo `owner`.
-- **Decisión:** Mismo grupo.
-- **Razón:** Único tester actual = owner. Diferenciar es scope creep sin problema real. Si el base de testers crece, es decisión de ese momento.
-
-### D3: Validación vía RC tag, no workflow_dispatch
-
-- **Opciones:** `workflow_dispatch` (manual sin tag) vs RC tag + cleanup.
-- **Decisión:** RC tag.
-- **Razón:** `workflow_dispatch` no cubre el path completo — crear GitHub Release requiere tag real, APK versionCode deriva del tag. RC tag + cleanup valida 100% del pipeline al costo de 2 comandos extra (`gh release delete`).
-
-## Checklist de completado
-
-- [ ] `.github/workflows/release.yml` con 4 bumps + prerelease guard
-- [ ] Run de `v0.1.8-rc1` termina ambos jobs `success`, sin warnings Node 20
-- [ ] Latest non-prerelease público sigue siendo v0.1.7 durante F4
-- [ ] Release y tag `v0.1.8-rc1` eliminados post-validación
-- [ ] Merge a main con mensaje descriptivo
-- [ ] `Spec/ESTADO-ACTUAL.md` sección "Auto-Updater + Releases" actualizada con gotcha del prerelease guard (patrón RC-tag para validar workflow changes sin afectar users)
-
-## Siguiente fase
-
-Ninguna dedicada. Próxima feature del backlog en `Spec/ESTADO-ACTUAL.md` sección "Candidatos próximos".
+- **Prerelease guard con `contains(github.ref_name, '-rc' | '-beta')` desbloquea testing full-pipeline sin impactar usuarios.** El endpoint default de GitHub `/releases/latest/...` resuelve al último NON-prerelease automáticamente — no requiere config en el endpoint ni branching en el updater. Una línea YAML habilita RC testing para cualquier workflow que publique a GitHub Releases. Generalizable a cualquier pipeline que use `tauri-action`, `softprops/action-gh-release`, o `ncipollo/release-action` con flag `prerelease`.
+- **Taggear una RC desde la feature branch (no desde main) valida antes del merge.** El tag apunta al commit HEAD de la branch, el workflow clona ese commit específico, y el merge a main es solo administrativo post-validación. Si el run descubre breakage, se corrige en la misma branch sin merge rollback. Pattern aplicable a cualquier workflow gatillado por push de tag donde la validación debe preceder al merge.
+- **Bump mínimo (`@v5` vs `@v6`) desacopla el fix del feature creep.** Cuando el cambio es correctivo (satisfy un constraint externo como Node 24), bumpear al mínimo que cumple el constraint — no absorber cambios laterales del major siguiente. Cada version bump trae un contrato implícito de "revisé qué cambió y acepté todo"; tomarlo solo cuando hay razón concreta. Regla generalizable para cualquier update de dependencia: `@patch` > `@minor` > `@major` en esa prioridad salvo evidencia específica a favor.
+- **Moving pointers (`@v0`, `@latest`, `@main`) son deuda técnica aunque no estén rotos.** Un rebuild del mismo commit puede producir resultados distintos porque el pointer resuelve a un version diferente. Pinear a version inmutable tiene cero costo operativo (una línea) y elimina una clase entera de "el workflow rompió solo". Aplicable a cualquier action third-party; `actions/*` oficiales de GitHub son la única excepción razonable (major pin aceptable porque GitHub mantiene SLA de compatibilidad).
+- **Research previo con agent Explore + WebFetch a changelogs de cada action ahorró iteraciones ciegas.** El scope original ("bumpear @v4 → ?") era incierto. 5 min de agent devolvieron una tabla clara con versiones latest, compatibilidad Node 24, y breaking changes notables por action. Sin el research, el SPEC probablemente habría saltado directo a `@v5` (correcto por suerte) sin el dato de que `@v6` existía con tradeoffs. Pattern para cualquier feature que depende de versiones de dependencias externas: un agent de research antes del SPEC evita rework.
