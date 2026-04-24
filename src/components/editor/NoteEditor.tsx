@@ -59,6 +59,9 @@ export default function NoteEditor({
       SlashCommand.configure({ noteId }),
     ],
     content: initialContent ?? undefined,
+    editorProps: {
+      transformPastedHTML: (html) => html.replace(/\s(style|class)=["'][^"']*["']/gi, ''),
+    },
   });
 
   const { status, summaryL3, setSummaryL3 } = useNoteSave(noteId, editor, initialSummaryL3);
