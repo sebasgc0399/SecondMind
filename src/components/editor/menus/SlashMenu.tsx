@@ -1,5 +1,13 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
+import {
+  autoUpdate,
+  computePosition,
+  flip,
+  offset,
+  shift,
+  type VirtualElement,
+} from '@floating-ui/dom';
 import { setSlashMenuListener } from '@/components/editor/extensions/slash-command-suggestion';
 import {
   CATEGORY_ORDER,
@@ -12,7 +20,7 @@ interface MenuState {
   isOpen: boolean;
   items: SlashMenuItem[];
   query: string;
-  rect: DOMRect | null;
+  referenceRect: (() => DOMRect) | null;
   selectedIndex: number;
   command: ((item: SlashMenuItem) => void) | null;
 }
@@ -21,7 +29,7 @@ const INITIAL_STATE: MenuState = {
   isOpen: false,
   items: [],
   query: '',
-  rect: null,
+  referenceRect: null,
   selectedIndex: 0,
   command: null,
 };
@@ -29,6 +37,8 @@ const INITIAL_STATE: MenuState = {
 export default function SlashMenu() {
   const [state, setState] = useState<MenuState>(INITIAL_STATE);
   const stateRef = useRef<MenuState>(INITIAL_STATE);
+  const menuRef = useRef<HTMLDivElement | null>(null);
+  const [position, setPosition] = useState<{ top: number; left: number } | null>(null);
 
   useEffect(() => {
     stateRef.current = state;
@@ -36,12 +46,11 @@ export default function SlashMenu() {
 
   useEffect(() => {
     function syncFromProps(props: SuggestionProps<SlashMenuItem>): MenuState {
-      const rect = props.clientRect?.() ?? null;
       return {
         isOpen: true,
         items: props.items,
         query: props.query,
-        rect,
+        referenceRect: props.clientRect ? () => props.clientRect!() ?? new DOMRect() : null,
         selectedIndex: 0,
         command: (item) => props.command(item),
       };
@@ -89,11 +98,38 @@ export default function SlashMenu() {
         }
         return false;
       },
-      onExit: () => setState(INITIAL_STATE),
+      onExit: () => {
+        setState(INITIAL_STATE);
+        setPosition(null);
+      },
     });
 
     return () => setSlashMenuListener(null);
   }, []);
+
+  useLayoutEffect(() => {
+    if (!state.isOpen || !state.referenceRect || !menuRef.current) {
+      return;
+    }
+
+    const referenceRect = state.referenceRect;
+    const menuEl = menuRef.current;
+    const virtualRef: VirtualElement = {
+      getBoundingClientRect: () => referenceRect(),
+    };
+
+    const update = () => {
+      computePosition(virtualRef, menuEl, {
+        placement: 'bottom-start',
+        middleware: [offset(6), flip(), shift({ padding: 8 })],
+      }).then(({ x, y }) => {
+        setPosition({ top: y, left: x });
+      });
+    };
+
+    const cleanup = autoUpdate(virtualRef, menuEl, update);
+    return cleanup;
+  }, [state.isOpen, state.referenceRect]);
 
   const groupedItems = useMemo(() => {
     const map = new Map<SlashMenuCategory, { item: SlashMenuItem; index: number }[]>();
@@ -108,17 +144,19 @@ export default function SlashMenu() {
     }));
   }, [state.items]);
 
-  if (!state.isOpen || !state.rect) return null;
+  if (!state.isOpen || !state.referenceRect) return null;
 
   const style: React.CSSProperties = {
     position: 'fixed',
-    top: state.rect.bottom + 6,
-    left: state.rect.left,
+    top: position?.top ?? 0,
+    left: position?.left ?? 0,
     zIndex: 60,
+    visibility: position === null ? 'hidden' : 'visible',
   };
 
   return createPortal(
     <div
+      ref={menuRef}
       role="listbox"
       style={style}
       className="min-w-72 max-w-[min(20rem,calc(100vw-1rem))] overflow-hidden rounded-lg border border-border bg-popover text-popover-foreground shadow-xl"
