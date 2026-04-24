@@ -103,12 +103,19 @@
       "Bash(git tag *)",
       "Edit(/.claude/skills/release-ecosystem/**)",
       "Bash(echo \"exit=$?\")",
-      "Bash(git fetch *)"
+      "Bash(git fetch *)",
+      "mcp__playwright__browser_resize",
+      "mcp__playwright__browser_take_screenshot",
+      "mcp__playwright__browser_wait_for",
+      "Read(//d/d/Proyectos VS CODE/SecondMind/**)",
+      "Bash(grep -n -A1 '^name = \"secondmind\"$' src-tauri/Cargo.lock)",
+      "Bash(git pull *)"
     ],
     "additionalDirectories": [
       "C:\\Users\\sebas\\.claude",
       "D:\\Proyectos VS CODE\\sdd-kit",
-      "D:\\Proyectos VS CODE\\SecondMind\\.claude\\skills"
+      "D:\\Proyectos VS CODE\\SecondMind\\.claude\\skills",
+      "D:\\Proyectos VS CODE\\SecondMind"
     ]
   },
   "hooks": {
