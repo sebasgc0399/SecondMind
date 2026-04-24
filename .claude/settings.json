@@ -99,9 +99,17 @@
       "Bash(\"/c/Program Files/Android/Android Studio/jbr/bin/java.exe\" -version)",
       "Bash(awk '{print $NF}')",
       "Read(//d/Proyectos/ VS/ CODE/SecondMind/**)",
-      "Read(//d/Proyectos/ VS/ CODE/SecondMind/Spec/**)"
+      "Read(//d/Proyectos/ VS/ CODE/SecondMind/Spec/**)",
+      "Bash(git tag *)",
+      "Edit(/.claude/skills/release-ecosystem/**)",
+      "Bash(echo \"exit=$?\")",
+      "Bash(git fetch *)"
     ],
-    "additionalDirectories": ["C:\\Users\\sebas\\.claude", "D:\\Proyectos VS CODE\\sdd-kit"]
+    "additionalDirectories": [
+      "C:\\Users\\sebas\\.claude",
+      "D:\\Proyectos VS CODE\\sdd-kit",
+      "D:\\Proyectos VS CODE\\SecondMind\\.claude\\skills"
+    ]
   },
   "hooks": {
     "PostToolUse": [
