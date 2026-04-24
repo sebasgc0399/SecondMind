@@ -107,7 +107,7 @@ Cada feature del proyecto sigue este ciclo. No improvisar: si algo no cuadra, aj
 
 ### Docs: jerarquía y reglas
 
-Cinco niveles de docs, cada uno con propósito único. **Fuente primaria para estado de features = `Spec/ESTADO-ACTUAL.md`** — siempre arrancar ahí, nunca duplicar su contenido en CLAUDE.md.
+Siete niveles de docs, cada uno con propósito único. **Fuente primaria para estado de features = `Spec/ESTADO-ACTUAL.md`** — siempre arrancar ahí, nunca duplicar su contenido en CLAUDE.md.
 
 | Archivo                              | Contenido                                                                    | Cuándo leer                                       |
 | ------------------------------------ | ---------------------------------------------------------------------------- | ------------------------------------------------- |
@@ -115,6 +115,7 @@ Cinco niveles de docs, cada uno con propósito único. **Fuente primaria para es
 | `Spec/ESTADO-ACTUAL.md`              | Features (1-2 líneas + pointer SPEC), gotchas por dominio, decisiones, deps  | **Fuente primaria** para estado actual. On-demand |
 | `Spec/features/SPEC-feature-*.md`    | Canon histórico por feature. Los gotchas nacen acá                           | Solo si ESTADO-ACTUAL no cubre el detalle         |
 | `Spec/SPEC-fase-*.md`                | Canon histórico por fase                                                     | Solo si ESTADO-ACTUAL no cubre el detalle         |
+| `Spec/drafts/DRAFT-*.md`             | Discovery/brief pre-SPEC temporal. Se elimina al convertirse en SPEC formal  | Solo al convertir un DRAFT a SPEC. No es canon    |
 | `Docs/SETUP-WINDOWS.md`              | Patches one-time de entorno (TS LSP, symlinks, Cargo)                        | Solo onboarding/troubleshooting setup             |
 | `design-system/secondmind/MASTER.md` | Tokens de diseño, paleta, tipografía, anti-patterns                          | Al implementar UI                                 |
 
