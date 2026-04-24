@@ -23,7 +23,7 @@ Los principios de diseño, la teoría detrás (CODE de Tiago Forte, Zettelkasten
 
 ## Estado actual
 
-Las fases y su progreso se llevan en [CLAUDE.md](CLAUDE.md) y cada una tiene su SPEC en [`Spec/`](Spec/).
+La fuente primaria de estado y arquitectura vigente es [`Spec/ESTADO-ACTUAL.md`](Spec/ESTADO-ACTUAL.md). Cada fase tiene su SPEC en [`Spec/`](Spec/); cada feature post-MVP en [`Spec/features/`](Spec/features/).
 
 - **Fase 0 — Setup** ✅ Proyecto compilando, auth con Google, sync TinyBase ↔ Firestore, deploy a Firebase Hosting
 - **Fase 0.1 — Toolkit** ✅ MCPs (Firebase, Context7, Playwright, Brave Search), skills de frontend/UX, hooks de formato automático (Prettier + ESLint en PostToolUse), protección de la rama main
@@ -85,15 +85,36 @@ Las fases y su progreso se llevan en [CLAUDE.md](CLAUDE.md) y cada una tiene su 
   - **F4 · Branding:** ícono adaptive v26+ con VectorDrawable nativo extraído del `public/favicon.svg` (21 paths + translate group para normalizar viewBox), fondo `#171617` matching el logo PWA. Splash screen drawable XML con color sólido `#878bf9` (el `@capacitor/assets generate` ignora `--splashBackgroundColor` y usa gris default). Edge-to-edge via `env(safe-area-inset-*)` en `body`
   - **F5 · APK debug:** `./gradlew.bat assembleDebug` genera `app-debug.apk` (10.6MB) instalable en device físico via `adb install`. SHA-1 del debug keystore registrado en Google Cloud Console para el Android OAuth Client
 
+- **Features 1-15 (marzo-abril 2026)** ✅ Mejoras post-MVP sobre mobile, editor, búsqueda, infra y polish. 15 features completadas:
+  - **F1 — Responsive & Mobile UX:** shell con BottomNav + FAB + breakpoints mobile/tablet/desktop
+  - **F2 — Editor Polish:** `@` para menciones, slash commands `/` (12 items en 5 categorías), templates Zettelkasten
+  - **F3 — Búsqueda Híbrida:** keyword (Orama BM25) + semántica (embeddings cosine), CF callable `embedQuery`
+  - **F4 — Progressive Summarization:** 3 niveles de destilación L0/L1/L2/L3 de Tiago Forte sobre TipTap
+  - **F5 — Bubble Menu:** toolbar flotante con 6 acciones inline al seleccionar texto
+  - **F6 — Theme System:** claro / automático / oscuro, paleta violet oklch hue 285°, script inline anti-flash
+  - **F7 — Capture Multi-Monitor:** ventana `/capture` centrada en el monitor del cursor (lógica Rust-side en `tray.rs`)
+  - **F8 — Tauri Auto-Updater:** auto-update in-app con tag-based CI, firma ed25519, silent startup check
+  - **F9 — Capacitor Auto-Update (Android):** mismo flujo tag-based para APK vía Firebase App Distribution
+  - **F10 — Capa de Repos (`src/infra/repos/`):** factory genérico, 6 repos, hooks −412 LoC, primeros tests Vitest
+  - **F11 — Store Isolation + Gating:** `useStoreHydration` signal real, `delTable` pre-init, cierra cross-user leak
+  - **F12 — Persister Diff-Based:** consume `changes` nativo de TinyBase v8, O(N) → O(cambios) en write amplification
+  - **F13 — GitHub Actions Node 24:** migración `actions/*@v5` + `tauri-action@v0.6.2`, prerelease guard RC/beta
+  - **F14 — Editor UX Polish:** paste sanitization, slash menu con `@floating-ui/dom` flip dinámico, `padding-bottom: 50vh`
+  - **F15 — UI Polish Post-Dogfooding:** scrollbar fantasma, `AuthLoadingSkeleton`, imperativo neutro + tildes
+
+  Detalle técnico, decisiones y gotchas: [`Spec/ESTADO-ACTUAL.md`](Spec/ESTADO-ACTUAL.md) y [`Spec/features/SPEC-feature-*.md`](Spec/features/).
+
 **Ya se puede usar a diario:** capturar ideas desde cualquier app con `Ctrl+Shift+Space` (desktop) o `Alt+N` (web/in-app), web clip desde Chrome via extensión, share intent desde cualquier app Android al Quick Capture, procesar inbox con sugerencias AI, buscar globalmente con `Ctrl+K`, escribir notas con wikilinks + backlinks + auto-tags + resumen AI, explorar el grafo de conocimiento, ver notas similares por embeddings, agendar revisiones con FSRS, organizar tareas/proyectos/objetivos/hábitos, y todo offline gracias a TinyBase + PWA.
 
 ## Setup local
 
 Requisitos:
 
-- Node.js 22 o superior
-- Un proyecto Firebase propio con Auth (Google sign-in) y Firestore habilitados
+- Node.js 22 o superior (Capacitor Android lo requiere; Tauri funciona con 20)
+- Un proyecto Firebase propio con Auth (Google sign-in), Firestore y Storage habilitados
+- OAuth Clients configurados en Google Cloud Console: Web (Vite), Android (SHA-1 del keystore para Capacitor) y Desktop (para el flow custom de Tauri)
 - Opcional para el wrapper desktop: Rust 1.70+ (`rustup`) y MSVC Build Tools con workload "Desktop development with C++" en Windows
+- **Windows developers:** ver [`Docs/SETUP-WINDOWS.md`](Docs/SETUP-WINDOWS.md) para patches one-time de entorno (TS LSP, symlinks `ui-ux-pro-max`, Firebase MCP, Capacitor Android, Cargo)
 
 Pasos:
 
@@ -119,31 +140,44 @@ npm run dev
 ## Comandos
 
 ```bash
-npm run dev           # Servidor de desarrollo (Vite)
-npm run build         # Build de producción (tsc + vite build)
-npm run lint          # ESLint sobre src/
-npm run preview       # Preview del build local
-npm run deploy        # Build + deploy a Firebase Hosting
-npm run deploy:rules  # Deploy de Firestore security rules
+npm run dev               # Servidor de desarrollo (Vite)
+npm run build             # Build de producción (tsc + vite build)
+npm run lint              # ESLint
+npm test                  # Vitest (unit tests — repos, persister, etc.)
+npm run preview           # Preview del build local
+npm run deploy            # Build + deploy a Firebase Hosting
+npm run deploy:rules      # Deploy de Firestore security rules
 npm run deploy:functions  # Deploy de Cloud Functions
 npm run logs:functions    # Logs de Cloud Functions
-npm run tauri:dev     # Abre la app desktop nativa en modo dev (requiere Rust)
-npm run tauri:build   # Genera MSI + NSIS en src-tauri/target/release/bundle/
+npm run tauri:dev         # Abre la app desktop nativa en modo dev (requiere Rust)
+npm run tauri:build       # Genera MSI + NSIS en src-tauri/target/release/bundle/
+npm run cap:sync          # Build web + sync al proyecto android/
+npm run cap:run           # cap run android (requiere Android Studio/adb en PATH)
+npm run cap:build         # Build web + sync + gradlew assembleDebug → APK debug
 ```
 
 ## Distribución
 
 - **Web / PWA:** https://secondmind.web.app — instalable desde Chrome/Edge
 - **Chrome Extension:** código en [`extension/`](extension/) (build separado vía CRXJS)
-- **Desktop Windows:** instaladores generados con `npm run tauri:build` en `src-tauri/target/release/bundle/{msi,nsis}/`
+- **Desktop Windows:** instaladores en `src-tauri/target/release/bundle/{msi,nsis}/` vía `npm run tauri:build`. Auto-update tag-based (F8)
+- **Android:** APK debug en `android/app/build/outputs/apk/debug/` vía `npm run cap:build`. Release firmado se distribuye por Firebase App Distribution con el mismo flujo tag-based (F9)
 
 ## Documentación
 
-Toda la documentación técnica y de diseño vive en [`Docs/`](Docs/):
+Documentación técnica y de diseño:
 
-- [`00-fundamentos-segundo-cerebro.md`](Docs/00-fundamentos-segundo-cerebro.md) — principios teóricos (CODE, Zettelkasten, 10 principios de diseño)
-- [`01-arquitectura-hibrida-progresiva.md`](Docs/01-arquitectura-hibrida-progresiva.md) — stack completo, modelo de datos Firestore, flujos clave, fases, decisiones de diseño
-- [`02-flujos-ux-y-pantallas.md`](Docs/02-flujos-ux-y-pantallas.md) — 14 pantallas con wireframes, 5 flujos de usuario, shortcuts, responsive
-- [`03-convenciones-y-patrones.md`](Docs/03-convenciones-y-patrones.md) — naming, componentes React, TinyBase, TypeScript, Tailwind, errores, Git
+- [`Docs/00-fundamentos-segundo-cerebro.md`](Docs/00-fundamentos-segundo-cerebro.md) — principios teóricos (CODE de Tiago Forte, Zettelkasten, 10 principios de diseño)
+- [`Docs/01-arquitectura-hibrida-progresiva.md`](Docs/01-arquitectura-hibrida-progresiva.md) — stack completo, modelo de datos Firestore, flujos clave, fases, decisiones
+- [`Docs/02-flujos-ux-y-pantallas.md`](Docs/02-flujos-ux-y-pantallas.md) — 14 pantallas con wireframes, 5 flujos de usuario, shortcuts, responsive
+- [`Docs/03-convenciones-y-patrones.md`](Docs/03-convenciones-y-patrones.md) — naming, componentes React, TinyBase, TypeScript, Tailwind, errores, Git
+- [`Docs/04-clean-architecture-frontend.md`](Docs/04-clean-architecture-frontend.md) — Clean Architecture en 4 capas, factory repos F10, excepciones documentadas
+- [`Docs/SETUP-WINDOWS.md`](Docs/SETUP-WINDOWS.md) — patches one-time de entorno Windows
+- [`design-system/secondmind/MASTER.md`](design-system/secondmind/MASTER.md) — tokens de diseño (paleta, tipografía, anti-patterns)
 
-Las SPECs por fase están en [`Spec/`](Spec/).
+Las SPECs viven en [`Spec/`](Spec/):
+
+- [`Spec/ESTADO-ACTUAL.md`](Spec/ESTADO-ACTUAL.md) — snapshot consolidado (fuente primaria de estado y arquitectura vigente)
+- [`Spec/SPEC-fase-*.md`](Spec/) — canon histórico por fase (0 a 5.2)
+- [`Spec/features/SPEC-feature-*.md`](Spec/features/) — canon histórico por feature (1 a 15)
+- [`Spec/drafts/DRAFT-*.md`](Spec/drafts/) — discovery pre-SPEC temporal (se eliminan al convertirse en SPEC formal)
