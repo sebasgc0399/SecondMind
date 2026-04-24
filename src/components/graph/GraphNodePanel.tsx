@@ -78,7 +78,7 @@ export default function GraphNodePanel({
       </div>
 
       <p className="mb-3 text-xs text-muted-foreground">
-        {linkCount} {linkCount === 1 ? 'conexion' : 'conexiones'}
+        {linkCount} {linkCount === 1 ? 'conexión' : 'conexiones'}
       </p>
 
       <Link

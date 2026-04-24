@@ -51,7 +51,7 @@ export default function HabitsPage() {
   return (
     <div className="mx-auto max-w-3xl">
       <header className="mb-6 flex flex-wrap items-center justify-between gap-4">
-        <h1 className="text-2xl font-bold tracking-tight">Hábitos</h1>
+        <h1 className="hidden text-2xl font-bold tracking-tight md:block">Hábitos</h1>
         <div className="flex items-center gap-2">
           <button
             type="button"

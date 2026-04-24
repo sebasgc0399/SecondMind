@@ -60,7 +60,7 @@ export default function ProjectsPage() {
 
   return (
     <div className="mx-auto max-w-3xl">
-      <header className="mb-6 flex items-center justify-between gap-4">
+      <header className="mb-6 hidden items-center justify-between gap-4 md:flex">
         <h1 className="text-2xl font-bold tracking-tight">Proyectos</h1>
         <button
           type="button"
@@ -78,7 +78,7 @@ export default function ProjectsPage() {
         <div className="rounded-lg border border-dashed border-border p-10 text-center">
           <p className="text-base font-medium text-foreground">Sin proyectos aún</p>
           <p className="mt-2 text-sm text-muted-foreground">
-            Creá tu primer proyecto para empezar a agrupar tareas y notas.
+            Crea tu primer proyecto para empezar a agrupar tareas y notas.
           </p>
           <button
             type="button"

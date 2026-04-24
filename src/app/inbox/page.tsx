@@ -43,7 +43,7 @@ export default function InboxPage() {
   return (
     <div className="mx-auto max-w-3xl">
       <header className="mb-6 flex flex-wrap items-end justify-between gap-3">
-        <div className="flex items-end gap-3">
+        <div className="hidden items-end gap-3 md:flex">
           <h1 className="text-2xl font-bold tracking-tight">Inbox</h1>
           {items.length > 0 && (
             <span className="text-sm text-muted-foreground">
@@ -62,7 +62,7 @@ export default function InboxPage() {
         ) : (
           <span
             aria-disabled="true"
-            title={items.length > 0 && !isOnline ? 'Requiere conexion a internet' : undefined}
+            title={items.length > 0 && !isOnline ? 'Requiere conexión a internet' : undefined}
             className="inline-flex cursor-not-allowed items-center gap-1.5 rounded-md bg-primary/30 px-3 py-1.5 text-sm font-medium text-primary-foreground/60"
           >
             <Play className="h-3.5 w-3.5" />

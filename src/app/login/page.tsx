@@ -16,7 +16,11 @@ export default function LoginPage() {
   if (isLoading || user) {
     return (
       <div className="flex h-screen items-center justify-center bg-background">
-        <p className="text-muted-foreground">Cargando...</p>
+        <div className="flex flex-col items-center gap-4">
+          <div className="h-8 w-40 animate-pulse rounded bg-muted" />
+          <div className="h-4 w-56 animate-pulse rounded bg-muted" />
+          <div className="mt-2 h-11 w-48 animate-pulse rounded-md bg-muted" />
+        </div>
       </div>
     );
   }

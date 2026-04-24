@@ -98,7 +98,7 @@ export default function TasksPage() {
 
   return (
     <div className="mx-auto max-w-3xl">
-      <header className="mb-6">
+      <header className="mb-6 hidden md:block">
         <h1 className="text-2xl font-bold tracking-tight">Tareas</h1>
       </header>
 
@@ -106,7 +106,7 @@ export default function TasksPage() {
         <TaskInlineCreate onCreate={(name) => void createTask(name)} />
       </div>
 
-      <nav className="mb-6 flex gap-1 overflow-x-auto border-b border-border">
+      <nav className="mb-6 flex gap-1 overflow-x-auto overflow-y-hidden border-b border-border">
         {TABS.map((tab) => {
           const isActive = tab.key === activeTab;
           return (
@@ -176,7 +176,7 @@ function EmptyState({ tab }: { tab: TabKey }) {
   const copy: Record<TabKey, { title: string; hint: string }> = {
     today: {
       title: 'Nada para hoy 🎉',
-      hint: 'Creá una tarea arriba o revisá el tab “Pronto”.',
+      hint: 'Crea una tarea arriba o revisa el tab “Pronto”.',
     },
     soon: {
       title: 'Sin tareas próximas',

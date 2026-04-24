@@ -259,7 +259,7 @@ export default function ProjectDetailPage() {
           <div className="rounded-lg border border-dashed border-border p-6 text-center">
             <p className="text-sm text-muted-foreground">Sin tareas aún</p>
             <p className="mt-1 text-xs text-muted-foreground">
-              Creá una tarea arriba para empezar.
+              Crea una tarea arriba para empezar.
             </p>
           </div>
         ) : (

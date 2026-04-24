@@ -112,7 +112,7 @@ export default function CapturePage() {
               value={rawContent}
               onChange={(event) => setRawContent(event.target.value)}
               onKeyDown={handleKeyDown}
-              placeholder="Escribí una idea..."
+              placeholder="Escribe una idea..."
               rows={4}
               disabled={status === 'saving'}
               className="flex-1 resize-none border-none bg-transparent text-sm leading-relaxed text-foreground outline-none placeholder:text-muted-foreground"

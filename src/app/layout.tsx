@@ -14,6 +14,7 @@ import Sidebar from '@/components/layout/Sidebar';
 import useAuth from '@/hooks/useAuth';
 import { useBreakpoint } from '@/hooks/useMediaQuery';
 import useShareIntent from '@/hooks/useShareIntent';
+import AuthLoadingSkeleton from '@/components/layout/AuthLoadingSkeleton';
 import useStoreInit from '@/hooks/useStoreInit';
 import StoreHydrationProvider from '@/hooks/StoreHydrationProvider';
 
@@ -30,11 +31,7 @@ export default function Layout() {
   const { isHydrating } = useStoreInit(user?.uid ?? null);
 
   if (isLoading) {
-    return (
-      <div className="flex h-screen items-center justify-center bg-background">
-        <p className="text-muted-foreground">Cargando...</p>
-      </div>
-    );
+    return <AuthLoadingSkeleton />;
   }
 
   if (!user) {

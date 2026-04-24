@@ -102,7 +102,7 @@ export default function ObjectivesPage() {
 
   return (
     <div className="mx-auto max-w-3xl">
-      <header className="mb-6 flex items-center justify-between gap-4">
+      <header className="mb-6 hidden items-center justify-between gap-4 md:flex">
         <h1 className="text-2xl font-bold tracking-tight">Objetivos</h1>
         <button
           type="button"
@@ -120,7 +120,7 @@ export default function ObjectivesPage() {
         <div className="rounded-lg border border-dashed border-border p-10 text-center">
           <p className="text-base font-medium text-foreground">Sin objetivos aún</p>
           <p className="mt-2 text-sm text-muted-foreground">
-            Creá tu primer objetivo para empezar a medir progreso.
+            Crea tu primer objetivo para empezar a medir progreso.
           </p>
           <button
             type="button"
