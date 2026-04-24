@@ -164,6 +164,7 @@
   color: var(--foreground);
   outline: none;
   min-height: 60vh;
+  padding-bottom: 50vh;
 }
 
 .note-editor .ProseMirror > * + * {
