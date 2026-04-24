@@ -1,83 +1,36 @@
-# SPEC — Feature 14: Editor UX polish (paste hygiene + slash menu viewport + breathing room)
+# SPEC — Feature 14: Editor UX polish (Registro de implementación)
 
-> Estado: En progreso
-> Rama: `feat/editor-ux-polish`
-> Plan aprobado: `~/.claude/plans/el-an-lisis-de-claude-distributed-brook.md`
+> Estado: Completada Abril 2026
+> Commits: `22b0b1f` SPEC prescriptivo, `73c7496` F14.3 breathing room CSS, `f840887` F14.2 flip @floating-ui + autoUpdate, `71e9b16` F14.1 paste sanitization, `953b692` fix lint react-hooks/set-state-in-effect, `09b9529` merge a main.
+> Gotchas operativos vigentes → `Spec/ESTADO-ACTUAL.md` sección "Editor (TipTap)".
 
 ## Objetivo
 
-Dogfooding del editor TipTap expuso tres issues UX en una misma sesión de escritura extensa con paste desde un IDE: (1) texto pegado con `font-size` gigante heredado del clipboard HTML, (2) slash menu invisible cuando el cursor está cerca del borde inferior del viewport, (3) sin aire para escribir al final de una nota larga — el cursor queda pegado al borde inferior. F14 resuelve los tres con cambios client-side acotados al editor, sin introducir dependencias nuevas ni ampliar el schema de ProseMirror.
+Dogfooding expuso tres issues UX en el editor TipTap, todos visibles en una misma sesión de escritura extensa con paste desde un IDE: (1) texto pegado heredaba `font-size` gigante del clipboard HTML, (2) el slash menu se renderizaba fuera del viewport cuando el cursor estaba cerca del borde inferior, (3) no había aire debajo del cursor al escribir al final de una nota larga. F14 resolvió los tres con cambios 100% client-side en `src/`, sin tocar `src-tauri/` ni `android/` ni introducir dependencias nuevas. Deploy solo-hosting — el auto-updater desktop y el APK recogen la nueva web al abrir.
 
-## Sub-features
+## Qué se implementó
 
-### F14.1 — Paste sanitization (strip total de `style` / `class` inline)
+- **F14.1 — Paste sanitization vía `transformPastedHTML`.** [src/components/editor/NoteEditor.tsx:62-64](../../src/components/editor/NoteEditor.tsx#L62-L64) agrega `editorProps.transformPastedHTML` al `useEditor()` que stripea atributos `style` y `class` con regex defensivo (cubre comillas simples y dobles: `/\s(style|class)=["'][^"']*["']/gi`). El schema de ProseMirror descarta marks no registrados al reconstruir el documento — strip total alinea con la filosofía Zettelkasten (notas atómicas uniformes). `linkOnPaste` sigue activo porque opera sobre el texto transformado post-strip. Validado E2E con Playwright: HTML `<p style="font-size: 32px; color: red; line-height: 2.5; font-family: Consolas"><span style="font-size: 24px">…</span></p><p class="some-injected-class" style="background: yellow">…</p>` resulta en `<p>…</p><p>…</p>` sin `style` ni `class` en el DOM.
+- **F14.2 — Slash menu con flip dinámico via `@floating-ui/dom`.** [src/components/editor/menus/SlashMenu.tsx](../../src/components/editor/menus/SlashMenu.tsx) reemplaza el posicionamiento manual (`position: fixed; top: rect.bottom + 6`) por `computePosition` + middlewares `offset(6) / flip() / shift({ padding: 8 })`, envuelto en `autoUpdate(virtualRef, menuEl, update)` para re-cálculo automático en scroll/resize. `MenuState` guarda la **función `clientRect`** de TipTap, no un snapshot — el `virtualRef.getBoundingClientRect()` la invoca en cada call, devolviendo coords actuales del cursor incluso post-scroll. Render con `visibility: hidden` hasta el primer `computePosition()` resuelva (evita flash de posición `(0,0)`). Reusó `@floating-ui/dom@1.7.6` ya instalado — mismo patrón `flip/shift` que BubbleToolbar via `@tiptap/react/menus`. E2E validado: cursor a 85% viewport + `/` → menú arriba (menuTop 440, menuBottom 762, cursor 792); cursor al tope → menú abajo (default); mobile 375x667 → menú 288px cabe sin desborde.
+- **F14.3 — `padding-bottom: 50vh` en `.note-editor .ProseMirror`.** [src/index.css:167](../../src/index.css#L167). Una línea CSS. Spacer invisible que permite que el scroll del `<main>` corra aunque el contenido real termine antes — al escribir al final siempre hay ~50vh de aire debajo del cursor. Beneficio colateral: reduce la frecuencia con la que F14.2 dispara el flip. Validado E2E: `paddingBottom computed = 450.5px` = 50vh exacto del viewport 901px.
+- **Fix colateral:** commit `953b692` removió un `setPosition(null)` sincrónico al inicio del `useLayoutEffect` en `SlashMenu` que `react-hooks/set-state-in-effect` (ESLint React 19) flaggeó como cascading render. El reset ya vivía en `onExit` del listener; redundante en el effect.
 
-- **Qué:** agregar `editorProps.transformPastedHTML` al `useEditor()` que stripea atributos `style` y `class` del HTML pegado vía regex defensivo (cubre comillas simples y dobles).
-- **Por qué:** el stack NO tiene extensiones `TextStyle`/`FontSize`/`Color`. Sin sanitización, el HTML del clipboard (`<span style="font-size: 24px; line-height: 1.5; font-family: Consolas">`) se persiste como atributo inline del nodo y gana specificity contra el CSS del editor. Strip total alinea con la filosofía Zettelkasten (notas atómicas uniformes) y deja que el schema de ProseMirror haga el resto — marks no registrados se descartan automáticamente al reconstruir el documento.
-- **Criterio de done:** pegar código desde VS Code resulta en texto plano con `font-size: 1rem`, sin colores inline. `linkOnPaste` sigue activo (pegar URL plano se convierte en link). JSON persistido en Firestore sin `style="..."` ni `class="..."`.
-- **Archivo:** [src/components/editor/NoteEditor.tsx](../../src/components/editor/NoteEditor.tsx).
-- **Snippet:**
-  ```ts
-  editorProps: {
-    transformPastedHTML: (html) => html.replace(/\s(style|class)=["'][^"']*["']/gi, ''),
-  },
-  ```
+## Decisiones clave
 
-### F14.2 — Slash menu con flip dinámico vía @floating-ui
+| #   | Decisión                                                                             | Razón                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
+| --- | ------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| D1  | Paste strip TOTAL (opción A), no whitelist conservador.                              | Stack sin `TextStyle`/`FontSize`/`Color` — no hay marks que legitimen estilos inline. Whitelist de `color`/`background-color` dejaría estilos huérfanos sin UI de control. Strip total alinea con Zettelkasten (uniformidad de notas atómicas).                                                                                                                                                                                                           |
+| D2  | Regex `/\s(style\|class)=["'][^"']*["']/gi` en vez de DOMParser.                     | Rápido, predecible, sin overhead del DOM parsing. Alternancia de comillas (`"` y `'`) es paranoia sana — clipboard HTML de IDEs usa `"` pero Google Docs y vistas web pueden usar `'`. Beneficio/costo: una regex de 48 chars vs ~20 líneas de DOMParser + tree walk.                                                                                                                                                                                     |
+| D3  | `@floating-ui/dom` directo con virtual element, no `@tiptap/react/menus BubbleMenu`. | `BubbleMenu` asume selection-based trigger. El slash menu es trigger-based (carácter `/`) con `SuggestionProps.clientRect` como anchor — no hay selection range. Virtual element + `computePosition` es el API primitivo correcto. Reusó la dep ya instalada (BubbleToolbar la usa indirecto via `@tiptap/react/menus`) sin agregar `tippy.js`.                                                                                                           |
+| D4  | `autoUpdate` sobre IIFE async manual dentro de `useLayoutEffect`.                    | `computePosition` es async; un `useLayoutEffect` con IIFE cubre el cálculo inicial pero no re-computa en scroll/resize. `autoUpdate` instala `ResizeObserver` + `IntersectionObserver` + scroll ancestors listeners con un único handle de cleanup. Menos código custom, más robusto — importante si se mantiene el menu abierto mientras se scrollea la página.                                                                                          |
+| D5  | `padding-bottom: 50vh` (CSS only) antes de cualquier typewriter-mode JS.             | Resuelve el 80% del problema con 1 línea y cero riesgo. Typewriter active (JS listener sobre `selectionUpdate` que centra cursor) es preferencia subjetiva — algunos users lo odian (sensación de "flotar"). Si dogfooding lo demanda, se implementa como toggle en settings. YAGNI hasta que el user lo pida.                                                                                                                                            |
+| D6  | Deploy solo-hosting, no `release-ecosystem`.                                         | F14 es 100% client-side en `src/`. Sin cambios en `src-tauri/` ni `android/` no hay razón de rehacer installers ni APK — el auto-updater desktop y la PWA/WebView mobile recogen la web nueva al abrir. Bump de versión queda para cuando haya cambios cross-stack. Ahorro: ~20 min de CI + signing + distribución por feature pequeña.                                                                                                                   |
+| D7  | Guardar función `clientRect` de TipTap en `MenuState`, no un snapshot `DOMRect`.     | El snapshot queda congelado en el moment del `onStart`/`onUpdate`. Si el user scrollea con el menu abierto, el cursor se mueve pero el snapshot no — el menu queda fijo en el viewport mientras el cursor se va. Función invocada desde `virtualRef.getBoundingClientRect()` devuelve coords actuales → `autoUpdate` re-posiciona correctamente en cada scroll event. Cambio sutil pero esencial para que el flip se mantenga correcto durante el scroll. |
 
-- **Qué:** refactorizar el posicionamiento manual de `SlashMenu` (`position: fixed; top: rect.bottom + 6`) a `@floating-ui/dom` con `computePosition` + middlewares `offset(6)`, `flip()`, `shift({ padding: 8 })`, envuelto en `autoUpdate` para re-cálculo automático en scroll/resize.
-- **Por qué:** bug puro de visibilidad — cuando el cursor está a <250px del borde inferior, el menú se pinta fuera del viewport. `@floating-ui/dom@1.7.6` ya está instalado ([package.json:32](../../package.json#L32)) y BubbleToolbar ya usa el mismo patrón `flip: true, shift: { padding: 8 }` via `@tiptap/react/menus`. Reusar la dependencia existente, no introducir tippy ni cálculo manual.
-- **Criterio de done:** cursor cerca del borde inferior + `/` → menú aparece **arriba** del cursor. Cursor cerca del tope → menú aparece abajo (behavior default). Viewport angosto (375px) → menú no desborda horizontalmente. Scroll con menú abierto → re-posiciona automáticamente vía `autoUpdate`.
-- **Archivo:** [src/components/editor/menus/SlashMenu.tsx](../../src/components/editor/menus/SlashMenu.tsx).
-- **Nota de implementación:** `autoUpdate(virtualRef, menuEl, update)` maneja ciclo de vida (scroll, resize, IntersectionObserver) con un único handle de cleanup en el `useLayoutEffect` cleanup. Estado local `{ top, left }` inicializado a `null` + render con `visibility: hidden` hasta el primer `update()` para evitar flash de posición incorrecta.
+## Lecciones
 
-### F14.3 — Breathing room al final del editor
-
-- **Qué:** agregar `padding-bottom: 50vh` al selector `.note-editor .ProseMirror` existente.
-- **Por qué:** `.ProseMirror` tiene `min-height: 60vh` pero no `padding-bottom` — la última línea queda pegada al borde inferior del viewport al escribir. El padding funciona como spacer invisible que permite que el scroll del `<main>` corra aunque el contenido real termine antes. Efecto: al escribir al final siempre hay ~50vh de aire debajo del cursor. Beneficio secundario: reduce la frecuencia con la que F14.2 necesita disparar el flip (más espacio abajo → menú cabe abajo más seguido).
-- **Criterio de done:** al final de una nota larga, al presionar Enter queda ≥50vh de aire debajo del cursor. Notas cortas no rompen layout ni agregan scroll horizontal.
-- **Archivo:** [src/index.css](../../src/index.css) (selector existente en líneas 159-167).
-
-## Orden de implementación
-
-1. **F14.3** (CSS only, cero riesgo — baseline).
-2. **F14.2** (fix de bug vía refactor del posicionamiento).
-3. **F14.1** (cambio de behavior — validado último con editor en forma definitiva).
-
-Un commit atómico por sub-feature en `feat/editor-ux-polish`.
-
-## Fuera de scope
-
-- **Control de font-size a nivel nota** (zoom, tamaño de lectura en settings). Scope creep — contradice uniformidad Zettelkasten. Descartado explícitamente.
-- **Whitelist conservador de estilos inline** (preservar color/background). Innecesario dado que no hay marks que los gobiernen — habría estilos "huérfanos" sin UI de control.
-- **Typewriter active scrolling** (listener sobre `selectionUpdate` que centra el cursor). Candidato futuro si dogfooding lo demanda; requiere toggle en settings para no ser intrusivo.
-- **Paste de imágenes con data URLs.** Tema ortogonal, no reportado.
-
-## Verificación E2E
-
-Dev server en background: `npm run dev`. UID de tests Firebase: `gYPP7NIo5JanxIbPqMe6nC3SQfE3`.
-
-- **F14.1:** pegar código desde VS Code en una nota → texto con font-size base + sin colores. Reload → JSON persistido sin `style="..."`. Regresión: URL pegado se convierte en link.
-- **F14.2:** nota larga (≥3 pantallas) + cursor cerca del borde inferior + `/` → menú aparece arriba. Cursor cerca del tope → menú abajo. Scroll con menú abierto → re-posiciona.
-- **F14.3:** nota larga + Enter al final → ≥50vh de aire debajo del cursor. Notas cortas sin regresión.
-- **Cross-issue:** pegar código en nota larga + abrir slash menu cerca del borde inferior → todo limpio.
-
-## Deploy
-
-F14 es 100% client-side en `src/`. Pipeline mínimo:
-
-- `npm run build && npm run deploy` (hosting).
-- Tauri/Android **opcionales** — sin cambios en `src-tauri/` ni `android/`, el auto-updater sirve la web actualizada y el APK puede omitirse.
-
-## Checklist
-
-- [ ] Rama `feat/editor-ux-polish` creada.
-- [ ] F14.3 implementada + commit.
-- [ ] F14.2 implementada + commit.
-- [ ] F14.1 implementada + commit.
-- [ ] `npm run build` pasa.
-- [ ] `npm run lint` pasa.
-- [ ] E2E manual de los 3 escenarios.
-- [ ] Merge `--no-ff` a main + push origin.
-- [ ] Deploy hosting.
-- [ ] Step 8 SDD: archivar SPEC como registro de implementación + escalar gotchas (candidato claro: "TipTap sin `transformPastedHTML` preserva `style` inline que gana por specificity" → ESTADO-ACTUAL sección editor).
+- **TipTap sin sanitización de paste confía en el schema de ProseMirror para filtrar attrs desconocidos — pero `style` se preserva como atributo HTML del nodo, no como mark.** Los marks no registrados (`fontSize`, `color`) efectivamente se descartan al reconstruir el documento ProseMirror, pero un `<p style="font-size: 32px">` entra como atributo del paragraph y gana por CSS specificity. La lección generalizable: **el schema filtra nodos/marks, no atributos HTML arbitrarios**. Cualquier editor basado en ProseMirror que permita paste necesita sanitizar HTML a nivel string antes de que el schema lo procese. `transformPastedHTML` es el hook correcto — corre antes que `clipboardTextParser` o `clipboardParser`, gratis con cualquier StarterKit.
+- **`@floating-ui/dom` con virtual elements es el patrón primitivo para menús anchored en cursor position.** El virtual element solo requiere `getBoundingClientRect: () => DOMRect` — perfecto para `SuggestionProps.clientRect` de TipTap, que ya devuelve coords del cursor. `autoUpdate` maneja scroll ancestors, resize, IntersectionObserver sin código adicional. Alternativas (`tippy.js`, cálculo manual) son un superset innecesario — `@floating-ui/dom` ya viene con `@tiptap/react/menus`, no hay costo de bundle nuevo. Patrón reaplicable a cualquier overlay del editor cuyo anchor no es un DOM node (hover cards de wikilinks, tooltips de AI suggestions, etc.).
+- **"Breathing room" vertical se resuelve con CSS, no con JS.** El instinto inicial fue montar typewriter-mode (listener `selectionUpdate` + `scrollIntoView({ block: 'center' })`), pero `padding-bottom: 50vh` en el container cubre el 80% del problema con cero riesgo. Principio generalizable: **antes de montar un listener que corre en cada keystroke/selection change, verificar si un padding/margin/spacer estático alcanza**. El listener tiene costo de performance (cada setState del editor → scroll recompute) y tradeoff de UX (some users hate typewriter mode). El padding no.
+- **Testing E2E con Playwright MCP valida el flip behavior sin simular drag/scroll manual.** Los 3 escenarios (cursor al 85% viewport, cursor al tope, mobile 375px) se resolvieron con ~5 `evaluate()` calls que posicionaban el cursor programáticamente y medían `menu.getBoundingClientRect()` vs `cursor.getBoundingClientRect()`. El paste se validó inyectando `ClipboardEvent` con `DataTransfer.setData('text/html', ...)` directo al editor. No fue necesario emular keyboard real ni coordenadas píxel-exactas. Patrón reaplicable: para cualquier feature con posicionamiento dinámico, Playwright `evaluate` + mediciones de rects es más rápido y determinístico que screenshots + OCR.
+- **El lint de React 19 (`react-hooks/set-state-in-effect`) captura anti-patterns que TypeScript no detecta.** El `setPosition(null)` al inicio del effect era válido pre-React 19, funcionalmente correcto, pero causa cascading renders. El linter lo detectó en el pre-commit hook (PostToolUse en `.claude/settings.json`). Lección: **no ignorar warnings/errors del linter incluso si el código "funciona"** — React 19 endurece las reglas de purity y side-effect management, y el costo de arreglar al momento es mínimo vs debuggear un re-render loop después.
