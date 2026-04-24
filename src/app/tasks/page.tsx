@@ -98,7 +98,7 @@ export default function TasksPage() {
 
   return (
     <div className="mx-auto max-w-3xl">
-      <header className="mb-6">
+      <header className="mb-6 hidden md:block">
         <h1 className="text-2xl font-bold tracking-tight">Tareas</h1>
       </header>
 

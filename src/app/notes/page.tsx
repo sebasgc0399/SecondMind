@@ -32,7 +32,7 @@ export default function NotesListPage() {
   return (
     <div className="mx-auto max-w-3xl">
       <header className="mb-6 flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-2xl font-bold tracking-tight">Notas</h1>
+        <h1 className="hidden text-2xl font-bold tracking-tight md:block">Notas</h1>
         <div className="flex items-center gap-2">
           <Link
             to="/notes/graph"

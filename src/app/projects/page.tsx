@@ -60,7 +60,7 @@ export default function ProjectsPage() {
 
   return (
     <div className="mx-auto max-w-3xl">
-      <header className="mb-6 flex items-center justify-between gap-4">
+      <header className="mb-6 hidden items-center justify-between gap-4 md:flex">
         <h1 className="text-2xl font-bold tracking-tight">Proyectos</h1>
         <button
           type="button"
