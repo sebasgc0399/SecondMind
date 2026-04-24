@@ -25,7 +25,7 @@ export default function InboxCard() {
             </Link>
           ) : (
             <span
-              title="Requiere conexion a internet"
+              title="Requiere conexión a internet"
               className="cursor-not-allowed text-xs text-muted-foreground/50"
             >
               Procesar →

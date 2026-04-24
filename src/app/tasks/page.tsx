@@ -176,7 +176,7 @@ function EmptyState({ tab }: { tab: TabKey }) {
   const copy: Record<TabKey, { title: string; hint: string }> = {
     today: {
       title: 'Nada para hoy 🎉',
-      hint: 'Creá una tarea arriba o revisá el tab “Pronto”.',
+      hint: 'Crea una tarea arriba o revisa el tab “Pronto”.',
     },
     soon: {
       title: 'Sin tareas próximas',

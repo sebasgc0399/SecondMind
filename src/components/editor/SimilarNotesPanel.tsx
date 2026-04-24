@@ -22,7 +22,7 @@ export default function SimilarNotesPanel({ noteId }: SimilarNotesPanelProps) {
       </h2>
 
       {!isOnline && (
-        <p className="text-xs text-muted-foreground">Disponible cuando vuelva la conexion.</p>
+        <p className="text-xs text-muted-foreground">Disponible cuando vuelva la conexión.</p>
       )}
 
       {isOnline && isLoading && <SimilarNotesSkeleton />}
@@ -32,7 +32,7 @@ export default function SimilarNotesPanel({ noteId }: SimilarNotesPanelProps) {
       )}
 
       {isOnline && !isLoading && !noEmbedding && notes.length === 0 && (
-        <p className="text-xs text-muted-foreground">Sin notas similares aun.</p>
+        <p className="text-xs text-muted-foreground">Sin notas similares aún.</p>
       )}
 
       {isOnline && !isLoading && notes.length > 0 && (

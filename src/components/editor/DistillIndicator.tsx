@@ -22,7 +22,7 @@ const LEVEL_META: Record<Level, { label: string; tip: string; badgeClass: string
   },
   2: {
     label: 'Esenciales resaltados',
-    tip: 'Escribí un resumen ejecutivo en tus palabras para subir a L3.',
+    tip: 'Escribe un resumen ejecutivo en tus palabras para subir a L3.',
     badgeClass: 'bg-yellow-500/15 text-yellow-700 dark:text-yellow-400',
   },
   3: {

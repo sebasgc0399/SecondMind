@@ -70,7 +70,7 @@ async function runCheck(userInitiated: boolean): Promise<void> {
     if (userInitiated) {
       const { message } = await import('@tauri-apps/plugin-dialog');
       await message(
-        'No se pudo verificar actualizaciones. Revisá tu conexión e intentá de nuevo.',
+        'No se pudo verificar actualizaciones. Revisa tu conexión e intenta de nuevo.',
         {
           title: 'Error',
           kind: 'error',

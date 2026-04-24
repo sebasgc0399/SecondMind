@@ -39,7 +39,7 @@ export default function GraphPage() {
         <h1 className="text-base font-semibold text-foreground md:text-lg">Grafo</h1>
         <span className="text-xs text-muted-foreground md:text-sm">
           {nodes.length} {nodes.length === 1 ? 'nota' : 'notas'} &middot; {edges.length}{' '}
-          {edges.length === 1 ? 'conexion' : 'conexiones'}
+          {edges.length === 1 ? 'conexión' : 'conexiones'}
         </span>
         <button
           type="button"
@@ -57,8 +57,8 @@ export default function GraphPage() {
         <div className="flex flex-1 flex-col items-center justify-center gap-2 text-center">
           <p className="text-muted-foreground">
             {hasActiveFilters
-              ? 'Ningun nodo coincide con los filtros.'
-              : 'El grafo cobra vida con mas notas y conexiones.'}
+              ? 'Ningún nodo coincide con los filtros.'
+              : 'El grafo cobra vida con más notas y conexiones.'}
           </p>
           {hasActiveFilters ? (
             <button

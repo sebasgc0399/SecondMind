@@ -120,7 +120,7 @@ export default function ObjectivesPage() {
         <div className="rounded-lg border border-dashed border-border p-10 text-center">
           <p className="text-base font-medium text-foreground">Sin objetivos aún</p>
           <p className="mt-2 text-sm text-muted-foreground">
-            Creá tu primer objetivo para empezar a medir progreso.
+            Crea tu primer objetivo para empezar a medir progreso.
           </p>
           <button
             type="button"
