@@ -109,7 +109,6 @@ export default function SlashMenu() {
 
   useLayoutEffect(() => {
     if (!state.isOpen || !state.referenceRect || !menuRef.current) {
-      setPosition(null);
       return;
     }
 
