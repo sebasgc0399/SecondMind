@@ -36,7 +36,9 @@ export default function GraphPage() {
           <ArrowLeft className="h-4 w-4" />
           Notas
         </Link>
-        <h1 className="text-base font-semibold text-foreground md:text-lg">Grafo</h1>
+        <h1 className="hidden text-base font-semibold text-foreground md:inline md:text-lg">
+          Grafo
+        </h1>
         <span className="text-xs text-muted-foreground md:text-sm">
           {nodes.length} {nodes.length === 1 ? 'nota' : 'notas'} &middot; {edges.length}{' '}
           {edges.length === 1 ? 'conexión' : 'conexiones'}
