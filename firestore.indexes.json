@@ -1,10 +1,4 @@
 {
-  "indexes": [
-    {
-      "collectionGroup": "notes",
-      "queryScope": "COLLECTION_GROUP",
-      "fields": [{ "fieldPath": "deletedAt", "order": "ASCENDING" }]
-    }
-  ],
+  "indexes": [],
   "fieldOverrides": []
 }
