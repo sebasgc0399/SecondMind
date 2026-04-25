@@ -23,12 +23,12 @@ const LEVEL_META: Record<Level, { label: string; tip: string; badgeClass: string
   },
   2: {
     label: 'Esenciales resaltados',
-    tip: 'Escribe un resumen ejecutivo en tus palabras para subir a L3.',
+    tip: 'Escribe un resumen ejecutivo en tus palabras para subir a L3 — la nota queda lista para tu yo del futuro, sin tener que releer todo.',
     badgeClass: 'bg-yellow-500/15 text-yellow-700 dark:text-yellow-400',
   },
   3: {
     label: 'Resumen escrito',
-    tip: 'Destilación completa. La nota está lista para el vos del futuro.',
+    tip: 'Destilación completa. La nota está lista para tu yo del futuro.',
     badgeClass: 'bg-green-500/15 text-green-700 dark:text-green-400',
   },
 };

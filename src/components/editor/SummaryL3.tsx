@@ -61,7 +61,7 @@ export default function SummaryL3({
               ref={textareaRef}
               value={value}
               onChange={handleChange}
-              placeholder="Resumen ejecutivo — ¿cuál es la idea central?"
+              placeholder="¿Qué le explicarías a tu yo del futuro sobre esto? 1-2 frases."
               rows={2}
               className="w-full resize-none border-none bg-transparent text-sm leading-relaxed text-foreground outline-none placeholder:text-muted-foreground"
             />
