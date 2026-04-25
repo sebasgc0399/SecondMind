@@ -32,6 +32,10 @@ interface NoteRow extends RepoRow {
   viewCount: number;
   isFavorite: boolean;
   isArchived: boolean;
+  // Sentinel `0` = no eliminada. `> 0` = timestamp ms del soft delete.
+  // TinyBase Cell types no soportan null, por eso 0; el dominio
+  // (`Note.deletedAt: number | null`) sí expone null.
+  deletedAt: number;
   fsrsState: string;
   fsrsDue: number;
   fsrsLastReview: number;
@@ -85,6 +89,7 @@ async function createNote(overrides?: NoteCreateOverrides): Promise<string | nul
     viewCount: 0,
     isFavorite: false,
     isArchived: false,
+    deletedAt: 0,
     fsrsState: '',
     fsrsDue: 0,
     fsrsLastReview: 0,
@@ -217,6 +222,7 @@ async function createFromInbox(
     viewCount: 0,
     isFavorite: false,
     isArchived: false,
+    deletedAt: 0,
     fsrsState: '',
     fsrsDue: 0,
     fsrsLastReview: 0,
@@ -232,4 +238,40 @@ async function createFromInbox(
   }
 }
 
-export const notesRepo = { createNote, createFromInbox, updateMeta, saveContent };
+/**
+ * Togglea isFavorite. Lee el row local (TinyBase) para conocer el estado
+ * actual y flippearlo. Si la row no existe (caso edge: la lista renderizó
+ * algo todavía no hidratado), trata como `false` y la marca favorita.
+ */
+async function toggleFavorite(id: string): Promise<void> {
+  const row = notesStore.getRow('notes', id);
+  const current = (row.isFavorite as boolean | undefined) ?? false;
+  await repo.update(id, { isFavorite: !current, updatedAt: Date.now() });
+}
+
+/**
+ * Soft delete: marca la nota como eliminada con timestamp. La nota queda
+ * en TinyBase y Firestore — los hooks de lectura (useHybridSearch,
+ * useNoteSearch, RecentNotesCard) filtran `deletedAt > 0`.
+ */
+async function softDelete(id: string): Promise<void> {
+  await repo.update(id, { deletedAt: Date.now(), updatedAt: Date.now() });
+}
+
+/**
+ * Restore: limpia `deletedAt` para que la nota vuelva a aparecer en lecturas.
+ * Exportado pero no usado en UI esta fase — habilita F19 (papelera).
+ */
+async function restore(id: string): Promise<void> {
+  await repo.update(id, { deletedAt: 0, updatedAt: Date.now() });
+}
+
+export const notesRepo = {
+  createNote,
+  createFromInbox,
+  updateMeta,
+  saveContent,
+  toggleFavorite,
+  softDelete,
+  restore,
+};
