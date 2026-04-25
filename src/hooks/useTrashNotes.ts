@@ -13,7 +13,10 @@ interface UseTrashNotesOpts {
 
 interface UseTrashNotesReturn {
   notes: TrashNote[];
+  /** Total de notas en papelera (pre-filtro). Usar para badge y purge. */
   count: number;
+  /** IDs de todas las notas en papelera (pre-filtro). Usar para purgeAll. */
+  allIds: string[];
   isLoading: boolean;
 }
 
@@ -29,10 +32,13 @@ export default function useTrashNotes(opts?: UseTrashNotesOpts): UseTrashNotesRe
     const purgeDays = preferences.trashAutoPurgeDays;
     const filter = opts?.filter?.trim().toLowerCase() ?? '';
 
+    const allIds: string[] = [];
     const collected: TrashNote[] = [];
     for (const [noteId, row] of Object.entries(table)) {
       const deletedAt = typeof row.deletedAt === 'number' ? row.deletedAt : 0;
       if (deletedAt <= 0) continue;
+
+      allIds.push(noteId);
 
       const title = (typeof row.title === 'string' && row.title) || 'Sin título';
       const contentPlain = typeof row.contentPlain === 'string' ? row.contentPlain : '';
@@ -70,8 +76,8 @@ export default function useTrashNotes(opts?: UseTrashNotesOpts): UseTrashNotesRe
     }
 
     collected.sort((a, b) => b.deletedAt - a.deletedAt);
-    return collected;
+    return { notes: collected, count: allIds.length, allIds };
   }, [table, preferences.trashAutoPurgeDays, opts?.filter]);
 
-  return { notes: result, count: result.length, isLoading: isHydrating };
+  return { ...result, isLoading: isHydrating };
 }

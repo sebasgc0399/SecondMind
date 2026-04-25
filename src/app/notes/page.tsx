@@ -42,9 +42,17 @@ export default function NotesListPage() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const [filter, setFilter] = useState<Filter>('all');
+  const [trashQuery, setTrashQuery] = useState('');
   const { query, setQuery, keywordResults, semanticResults, isInitializing, isLoadingSemantic } =
     useHybridSearch();
-  const { notes: trashNotes, count: trashCount, isLoading: isTrashLoading } = useTrashNotes();
+  const {
+    notes: trashNotes,
+    count: trashCount,
+    allIds: trashAllIds,
+    isLoading: isTrashLoading,
+  } = useTrashNotes({
+    filter: trashQuery,
+  });
   const { preferences } = usePreferences();
   const [isPurgeOpen, setIsPurgeOpen] = useState(false);
 
@@ -54,10 +62,10 @@ export default function NotesListPage() {
     // correcto. El await garantiza que Firestore terminó antes de navigate,
     // preservando el gotcha "useNote.getDoc en página destino necesita doc
     // presente en Firestore al momento de navegar".
-    const newId = await notesRepo.createNote();
+    const newId = await notesRepo.createNote({ noteType: preferences.defaultNoteType });
     if (!newId) return;
     navigate(`/notes/${newId}`);
-  }, [navigate, user]);
+  }, [navigate, user, preferences.defaultNoteType]);
 
   const hasQuery = query.trim().length > 0;
   const isTrashView = filter === 'trash';
@@ -92,6 +100,8 @@ export default function NotesListPage() {
     keywordResults.length > 0;
   const showTrashSkeleton = isTrashView && isTrashLoading && trashCount === 0;
   const showTrashEmpty = isTrashView && !isTrashLoading && trashCount === 0;
+  const showTrashFilterEmpty =
+    isTrashView && !isTrashLoading && trashCount > 0 && trashNotes.length === 0;
 
   const purgeDays = preferences.trashAutoPurgeDays;
   const trashCaption =
@@ -101,7 +111,7 @@ export default function NotesListPage() {
 
   function handleConfirmPurge() {
     if (trashCount === 0) return;
-    void notesRepo.purgeAll(trashNotes.map((n) => n.id));
+    void notesRepo.purgeAll(trashAllIds);
   }
 
   return (
@@ -137,7 +147,11 @@ export default function NotesListPage() {
             <button
               key={tab.key}
               type="button"
-              onClick={() => setFilter(tab.key)}
+              onClick={() => {
+                setFilter(tab.key);
+                setQuery('');
+                setTrashQuery('');
+              }}
               className={`-mb-px inline-flex shrink-0 items-center gap-1.5 border-b-2 px-4 py-3 text-sm font-medium transition-colors md:py-2 ${
                 isActive
                   ? 'border-primary text-foreground'
@@ -155,20 +169,20 @@ export default function NotesListPage() {
         })}
       </nav>
 
-      {!isTrashView && (
-        <div className="mb-4">
-          <div className="relative">
-            <Search className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-            <input
-              type="text"
-              value={query}
-              onChange={(event) => setQuery(event.target.value)}
-              placeholder="Buscar notas..."
-              className="w-full rounded-md border border-border bg-card py-2 pr-3 pl-9 text-sm text-foreground outline-none placeholder:text-muted-foreground focus:border-border/80"
-            />
-          </div>
+      <div className="mb-4">
+        <div className="relative">
+          <Search className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <input
+            type="text"
+            value={isTrashView ? trashQuery : query}
+            onChange={(event) =>
+              isTrashView ? setTrashQuery(event.target.value) : setQuery(event.target.value)
+            }
+            placeholder={isTrashView ? 'Buscar en papelera...' : 'Buscar notas...'}
+            className="w-full rounded-md border border-border bg-card py-2 pr-3 pl-9 text-sm text-foreground outline-none placeholder:text-muted-foreground focus:border-border/80"
+          />
         </div>
-      )}
+      </div>
 
       {isTrashView && (
         <div className="mb-4 flex flex-wrap items-center justify-between gap-2 rounded-md border border-border bg-card px-3 py-2 text-xs text-muted-foreground">
@@ -199,6 +213,7 @@ export default function NotesListPage() {
       {showAllNotesEmpty && <EmptyNotesState onCreate={handleCreate} />}
       {showFavoritesEmpty && <EmptyFavoritesState onClear={() => setFilter('all')} />}
       {showTrashEmpty && <EmptyTrashState onClear={() => setFilter('all')} />}
+      {showTrashFilterEmpty && <EmptyTrashFilterState onClear={() => setTrashQuery('')} />}
 
       {!isTrashView && displayedKeywordResults.length > 0 && (
         <ul className="flex flex-col gap-3">
@@ -369,6 +384,22 @@ function EmptyTrashState({ onClear }: { onClear: () => void }) {
         className="mt-4 inline-flex items-center gap-1.5 rounded-md border border-border bg-card px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
       >
         Volver a todas las notas
+      </button>
+    </div>
+  );
+}
+
+function EmptyTrashFilterState({ onClear }: { onClear: () => void }) {
+  return (
+    <div className="rounded-lg border border-dashed border-border p-10 text-center">
+      <Search className="mx-auto mb-3 h-8 w-8 text-muted-foreground" />
+      <p className="text-sm text-muted-foreground">No se encontraron notas en la papelera.</p>
+      <button
+        type="button"
+        onClick={onClear}
+        className="mt-4 inline-flex items-center gap-1.5 rounded-md border border-border bg-card px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+      >
+        Limpiar búsqueda
       </button>
     </div>
   );
