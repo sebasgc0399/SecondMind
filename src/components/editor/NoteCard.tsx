@@ -1,6 +1,6 @@
 import { useState, type MouseEvent } from 'react';
 import { Link } from 'react-router';
-import { Link2, Sparkles, Star, Trash2 } from 'lucide-react';
+import { Link2, Sparkles, Star, Trash2, Undo2 } from 'lucide-react';
 import type { NoteOramaDoc } from '@/lib/orama';
 import { formatRelative } from '@/lib/formatDate';
 import { notesRepo } from '@/infra/repos/notesRepo';
@@ -9,6 +9,11 @@ import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 interface NoteCardProps {
   note: NoteOramaDoc;
   semanticScore?: number;
+  mode?: 'normal' | 'trash';
+  // Solo se renderiza en mode === 'trash'. null = "Nunca" (auto-purga
+  // desactivada). 0 = "Pendiente" (cron diario aún no corrió pero el plazo
+  // ya se cumplió).
+  daysUntilPurge?: number | null;
 }
 
 const NOTE_TYPE_LABELS: Record<string, string> = {
@@ -38,10 +43,25 @@ const DISTILL_BADGE_STYLES: Record<1 | 2 | 3, string> = {
 const HOVER_REVEAL =
   'md:opacity-0 md:group-hover:opacity-100 md:focus-visible:opacity-100 motion-safe:transition-opacity';
 
-export default function NoteCard({ note, semanticScore }: NoteCardProps) {
+function purgeBadgeLabel(daysUntilPurge: number | null | undefined): string | null {
+  if (daysUntilPurge === undefined || daysUntilPurge === null) return null;
+  if (daysUntilPurge === 0) return 'Pendiente';
+  if (daysUntilPurge === 1) return '1 día';
+  return `${daysUntilPurge} días`;
+}
+
+export default function NoteCard({
+  note,
+  semanticScore,
+  mode = 'normal',
+  daysUntilPurge,
+}: NoteCardProps) {
   const snippet = note.contentPlain.trim().slice(0, 200);
   const showSnippet = snippet.length > 0;
-  const [isDeleteOpen, setIsDeleteOpen] = useState(false);
+  const [isSoftDeleteOpen, setIsSoftDeleteOpen] = useState(false);
+  const [isHardDeleteOpen, setIsHardDeleteOpen] = useState(false);
+  const isTrashMode = mode === 'trash';
+  const purgeBadge = isTrashMode ? purgeBadgeLabel(daysUntilPurge) : null;
 
   function stop(event: MouseEvent) {
     event.preventDefault();
@@ -53,13 +73,27 @@ export default function NoteCard({ note, semanticScore }: NoteCardProps) {
     void notesRepo.toggleFavorite(note.id);
   }
 
-  function handleOpenDelete(event: MouseEvent) {
+  function handleOpenSoftDelete(event: MouseEvent) {
     stop(event);
-    setIsDeleteOpen(true);
+    setIsSoftDeleteOpen(true);
   }
 
-  function handleConfirmDelete() {
+  function handleConfirmSoftDelete() {
     void notesRepo.softDelete(note.id);
+  }
+
+  function handleRestore(event: MouseEvent) {
+    stop(event);
+    void notesRepo.restore(note.id);
+  }
+
+  function handleOpenHardDelete(event: MouseEvent) {
+    stop(event);
+    setIsHardDeleteOpen(true);
+  }
+
+  function handleConfirmHardDelete() {
+    void notesRepo.hardDelete(note.id);
   }
 
   return (
@@ -79,31 +113,54 @@ export default function NoteCard({ note, semanticScore }: NoteCardProps) {
                 {Math.round(semanticScore * 100)}%
               </span>
             )}
-            <button
-              type="button"
-              onClick={handleToggleFavorite}
-              aria-label={note.isFavorite ? 'Quitar de favoritas' : 'Marcar como favorita'}
-              aria-pressed={note.isFavorite}
-              className={
-                note.isFavorite
-                  ? 'inline-flex h-7 w-7 items-center justify-center rounded-md text-amber-400 transition-colors hover:bg-amber-500/10'
-                  : `inline-flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-foreground ${HOVER_REVEAL}`
-              }
-            >
-              <Star
-                className="h-4 w-4"
-                fill={note.isFavorite ? 'currentColor' : 'none'}
-                strokeWidth={note.isFavorite ? 1.5 : 2}
-              />
-            </button>
-            <button
-              type="button"
-              onClick={handleOpenDelete}
-              aria-label="Eliminar nota"
-              className={`inline-flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive ${HOVER_REVEAL}`}
-            >
-              <Trash2 className="h-4 w-4" />
-            </button>
+            {isTrashMode ? (
+              <>
+                <button
+                  type="button"
+                  onClick={handleRestore}
+                  aria-label="Restaurar nota"
+                  className="inline-flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+                >
+                  <Undo2 className="h-4 w-4" />
+                </button>
+                <button
+                  type="button"
+                  onClick={handleOpenHardDelete}
+                  aria-label="Eliminar para siempre"
+                  className="inline-flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </button>
+              </>
+            ) : (
+              <>
+                <button
+                  type="button"
+                  onClick={handleToggleFavorite}
+                  aria-label={note.isFavorite ? 'Quitar de favoritas' : 'Marcar como favorita'}
+                  aria-pressed={note.isFavorite}
+                  className={
+                    note.isFavorite
+                      ? 'inline-flex h-7 w-7 items-center justify-center rounded-md text-amber-400 transition-colors hover:bg-amber-500/10'
+                      : `inline-flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-foreground ${HOVER_REVEAL}`
+                  }
+                >
+                  <Star
+                    className="h-4 w-4"
+                    fill={note.isFavorite ? 'currentColor' : 'none'}
+                    strokeWidth={note.isFavorite ? 1.5 : 2}
+                  />
+                </button>
+                <button
+                  type="button"
+                  onClick={handleOpenSoftDelete}
+                  aria-label="Eliminar nota"
+                  className={`inline-flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive ${HOVER_REVEAL}`}
+                >
+                  <Trash2 className="h-4 w-4" />
+                </button>
+              </>
+            )}
           </div>
         </div>
         {showSnippet && (
@@ -117,6 +174,7 @@ export default function NoteCard({ note, semanticScore }: NoteCardProps) {
           )}
           <Badge>{NOTE_TYPE_LABELS[note.noteType] ?? note.noteType}</Badge>
           <Badge>{PARA_TYPE_LABELS[note.paraType] ?? note.paraType}</Badge>
+          {purgeBadge && <Badge className="bg-destructive/10 text-destructive">{purgeBadge}</Badge>}
           {note.linkCount > 0 && (
             <span className="inline-flex items-center gap-1">
               <Link2 className="h-3 w-3" />
@@ -126,15 +184,28 @@ export default function NoteCard({ note, semanticScore }: NoteCardProps) {
           <span className="ml-auto">{formatRelative(note.updatedAt)}</span>
         </div>
       </Link>
-      <ConfirmDialog
-        open={isDeleteOpen}
-        onOpenChange={setIsDeleteOpen}
-        title="¿Eliminar esta nota?"
-        description="La nota se ocultará de tu lista. Por ahora solo se puede recuperar manualmente desde Firestore — la papelera con restaurar llegará pronto."
-        confirmLabel="Eliminar"
-        variant="destructive"
-        onConfirm={handleConfirmDelete}
-      />
+      {!isTrashMode && (
+        <ConfirmDialog
+          open={isSoftDeleteOpen}
+          onOpenChange={setIsSoftDeleteOpen}
+          title="¿Mover esta nota a la papelera?"
+          description="Puedes restaurarla desde Notas → Papelera o eliminarla definitivamente desde ahí."
+          confirmLabel="Mover a papelera"
+          variant="destructive"
+          onConfirm={handleConfirmSoftDelete}
+        />
+      )}
+      {isTrashMode && (
+        <ConfirmDialog
+          open={isHardDeleteOpen}
+          onOpenChange={setIsHardDeleteOpen}
+          title="¿Eliminar esta nota para siempre?"
+          description="Esta acción no se puede deshacer. La nota, sus embeddings y los links que la mencionan se eliminan para siempre."
+          confirmLabel="Eliminar para siempre"
+          variant="destructive"
+          onConfirm={handleConfirmHardDelete}
+        />
+      )}
     </>
   );
 }
