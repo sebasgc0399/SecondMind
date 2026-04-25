@@ -1,7 +1,22 @@
+import { useEffect } from 'react';
+import { useLocation } from 'react-router';
 import AppInfoSection from '@/components/settings/AppInfoSection';
 import ThemeSelector from '@/components/settings/ThemeSelector';
+import TrashAutoPurgeSelector from '@/components/settings/TrashAutoPurgeSelector';
 
 export default function SettingsPage() {
+  const location = useLocation();
+
+  useEffect(() => {
+    if (location.hash !== '#trash') return;
+    // requestAnimationFrame: el DOM puede no estar pintado al primer tick
+    // tras navegar. location.key (no .hash) como dep para re-disparar en
+    // navegaciones repetidas al mismo hash.
+    requestAnimationFrame(() => {
+      document.getElementById('trash')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+  }, [location.key, location.hash]);
+
   return (
     <div className="mx-auto max-w-3xl space-y-8">
       <header className="hidden md:block">
@@ -19,6 +34,19 @@ export default function SettingsPage() {
           </p>
         </div>
         <ThemeSelector />
+      </section>
+
+      <section id="trash" aria-labelledby="trash-heading" className="scroll-mt-14">
+        <div className="mb-3">
+          <h2 id="trash-heading" className="text-sm font-semibold text-foreground">
+            Papelera de notas
+          </h2>
+          <p className="mt-0.5 text-xs text-muted-foreground">
+            Tiempo en la papelera antes de eliminar definitivamente. La limpieza ocurre una vez al
+            día.
+          </p>
+        </div>
+        <TrashAutoPurgeSelector />
       </section>
 
       <AppInfoSection />

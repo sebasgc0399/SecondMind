@@ -109,12 +109,88 @@ describe('notesRepo', () => {
     });
   });
 
+  describe('hardDelete', () => {
+    it('borra row sync ANTES de await deleteDoc (patrón canónico sync→async)', async () => {
+      notesStore.setRow('notes', 'n7', { title: 'gone', deletedAt: 99999 });
+      let resolveDelete: () => void = () => {};
+      deleteDocMock.mockImplementation(() => new Promise<void>((r) => (resolveDelete = r)));
+
+      const promise = notesRepo.hardDelete('n7');
+
+      // delRow ya corrió: la row no existe en el store
+      expect(notesStore.getRow('notes', 'n7')).toEqual({});
+      // deleteDoc fue llamado al path correcto
+      expect(deleteDocMock).toHaveBeenCalledOnce();
+      expect(docMock).toHaveBeenCalledWith({}, 'users/test-uid/notes/n7');
+
+      resolveDelete();
+      await promise;
+    });
+  });
+
+  describe('purgeAll', () => {
+    it('array vacío es no-op (no toca Firestore)', async () => {
+      await notesRepo.purgeAll([]);
+      expect(deleteDocMock).not.toHaveBeenCalled();
+    });
+
+    it('borra N notas en paralelo dentro del chunk', async () => {
+      notesStore.setRow('notes', 'a', { title: 'a' });
+      notesStore.setRow('notes', 'b', { title: 'b' });
+      notesStore.setRow('notes', 'c', { title: 'c' });
+      deleteDocMock.mockResolvedValue(undefined);
+
+      await notesRepo.purgeAll(['a', 'b', 'c']);
+
+      expect(deleteDocMock).toHaveBeenCalledTimes(3);
+      expect(notesStore.getRow('notes', 'a')).toEqual({});
+      expect(notesStore.getRow('notes', 'b')).toEqual({});
+      expect(notesStore.getRow('notes', 'c')).toEqual({});
+    });
+
+    it('Promise.allSettled: un fallo no aborta los otros', async () => {
+      notesStore.setRow('notes', 'ok1', { title: 'ok1' });
+      notesStore.setRow('notes', 'fail', { title: 'fail' });
+      notesStore.setRow('notes', 'ok2', { title: 'ok2' });
+      // Mock: el segundo deleteDoc rechaza, los otros resuelven
+      deleteDocMock.mockImplementation((ref: { __path: string }) =>
+        ref.__path.endsWith('/fail') ? Promise.reject(new Error('boom')) : Promise.resolve(),
+      );
+      const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+      await notesRepo.purgeAll(['ok1', 'fail', 'ok2']);
+
+      expect(deleteDocMock).toHaveBeenCalledTimes(3);
+      expect(errorSpy).toHaveBeenCalledOnce();
+      errorSpy.mockRestore();
+    });
+
+    it('chunkea en lotes de 50 (75 ids → 2 chunks)', async () => {
+      const ids = Array.from({ length: 75 }, (_, i) => `n${i}`);
+      ids.forEach((id) => notesStore.setRow('notes', id, { title: id }));
+      deleteDocMock.mockResolvedValue(undefined);
+
+      await notesRepo.purgeAll(ids);
+
+      expect(deleteDocMock).toHaveBeenCalledTimes(75);
+      expect(notesStore.getRow('notes', 'n0')).toEqual({});
+      expect(notesStore.getRow('notes', 'n74')).toEqual({});
+    });
+  });
+
   describe('auth guard', () => {
     it('throws cuando auth.currentUser es null en toggleFavorite', async () => {
       const firebase = await import('@/lib/firebase');
       (firebase.auth as { currentUser: { uid: string } | null }).currentUser = null;
       notesStore.setRow('notes', 'n6', { isFavorite: false });
       await expect(notesRepo.toggleFavorite('n6')).rejects.toThrow(/uid/i);
+    });
+
+    it('throws cuando auth.currentUser es null en hardDelete', async () => {
+      const firebase = await import('@/lib/firebase');
+      (firebase.auth as { currentUser: { uid: string } | null }).currentUser = null;
+      notesStore.setRow('notes', 'n8', { title: 'x' });
+      await expect(notesRepo.hardDelete('n8')).rejects.toThrow(/uid/i);
     });
   });
 });

@@ -4,5 +4,7 @@ admin.initializeApp();
 
 export { processInboxItem } from './inbox/processInboxItem';
 export { autoTagNote } from './notes/autoTagNote';
+export { onNoteDeleted } from './notes/onNoteDeleted';
+export { autoPurgeTrash } from './notes/autoPurgeTrash';
 export { generateEmbedding } from './embeddings/generateEmbedding';
 export { embedQuery } from './search/embedQuery';

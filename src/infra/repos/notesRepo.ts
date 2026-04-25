@@ -260,10 +260,52 @@ async function softDelete(id: string): Promise<void> {
 
 /**
  * Restore: limpia `deletedAt` para que la nota vuelva a aparecer en lecturas.
- * Exportado pero no usado en UI esta fase — habilita F19 (papelera).
  */
 async function restore(id: string): Promise<void> {
   await repo.update(id, { deletedAt: 0, updatedAt: Date.now() });
+}
+
+/**
+ * Hard delete: borra la nota permanentemente de TinyBase y Firestore.
+ * Wrapper trivial sobre `baseRepo.remove(id)` que respeta el patrón
+ * canónico del proyecto sync→async (delRow ANTES de await deleteDoc).
+ *
+ * Trade-off conocido: si `deleteDoc` falla por red, la row ya desapareció
+ * del store local pero el doc sigue en Firestore. El onSnapshot del
+ * persister la re-hidrata al reconectar y la nota "reaparece" en la
+ * papelera. Para hard delete esto es más confuso que para soft delete,
+ * pero respetamos el patrón canónico por consistencia con el resto de
+ * repos. El usuario puede reintentar la acción trivialmente.
+ *
+ * El cleanup de embeddings y links bidireccionales NO se hace acá — lo
+ * dispara la CF onNoteDeleted (F3) automáticamente al borrar el doc.
+ */
+async function hardDelete(id: string): Promise<void> {
+  await repo.remove(id);
+}
+
+const PURGE_CHUNK_SIZE = 50;
+
+/**
+ * Purga masiva: borra permanentemente todas las notas listadas. Chunkea
+ * de 50 en 50 con `Promise.allSettled` para evitar saturar quotas de
+ * Firestore (cada delete cascadea a F3 con embedding + links cleanup).
+ * Rejects de chunks individuales se loggean pero no abortan el resto.
+ */
+async function purgeAll(ids: string[]): Promise<void> {
+  if (ids.length === 0) return;
+  for (let i = 0; i < ids.length; i += PURGE_CHUNK_SIZE) {
+    const chunk = ids.slice(i, i + PURGE_CHUNK_SIZE);
+    const results = await Promise.allSettled(chunk.map((id) => repo.remove(id)));
+    const failures = results.filter((r) => r.status === 'rejected');
+    if (failures.length > 0) {
+      console.error('[notesRepo] purgeAll: fallaron deletes', {
+        chunkStart: i,
+        chunkSize: chunk.length,
+        failures: failures.length,
+      });
+    }
+  }
 }
 
 export const notesRepo = {
@@ -274,4 +316,6 @@ export const notesRepo = {
   toggleFavorite,
   softDelete,
   restore,
+  hardDelete,
+  purgeAll,
 };

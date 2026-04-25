@@ -64,6 +64,17 @@ export default function useNote(noteId: string | undefined): UseNoteReturn {
         }
 
         const data = snap.data();
+        const deletedAt = (data.deletedAt as number | undefined) ?? 0;
+        if (deletedAt > 0) {
+          setState({
+            initialContent: null,
+            initialSummaryL3: '',
+            isLoading: false,
+            error: null,
+            notFound: true,
+          });
+          return;
+        }
         const raw = data.content as string | undefined;
         const parsed = parseContent(raw);
         const summaryL3 = (data.summaryL3 as string | undefined) ?? '';
