@@ -48,6 +48,7 @@ export default function NotesListPage() {
   const {
     notes: trashNotes,
     count: trashCount,
+    allIds: trashAllIds,
     isLoading: isTrashLoading,
   } = useTrashNotes({
     filter: trashQuery,
@@ -99,6 +100,8 @@ export default function NotesListPage() {
     keywordResults.length > 0;
   const showTrashSkeleton = isTrashView && isTrashLoading && trashCount === 0;
   const showTrashEmpty = isTrashView && !isTrashLoading && trashCount === 0;
+  const showTrashFilterEmpty =
+    isTrashView && !isTrashLoading && trashCount > 0 && trashNotes.length === 0;
 
   const purgeDays = preferences.trashAutoPurgeDays;
   const trashCaption =
@@ -108,7 +111,7 @@ export default function NotesListPage() {
 
   function handleConfirmPurge() {
     if (trashCount === 0) return;
-    void notesRepo.purgeAll(trashNotes.map((n) => n.id));
+    void notesRepo.purgeAll(trashAllIds);
   }
 
   return (
@@ -210,6 +213,7 @@ export default function NotesListPage() {
       {showAllNotesEmpty && <EmptyNotesState onCreate={handleCreate} />}
       {showFavoritesEmpty && <EmptyFavoritesState onClear={() => setFilter('all')} />}
       {showTrashEmpty && <EmptyTrashState onClear={() => setFilter('all')} />}
+      {showTrashFilterEmpty && <EmptyTrashFilterState onClear={() => setTrashQuery('')} />}
 
       {!isTrashView && displayedKeywordResults.length > 0 && (
         <ul className="flex flex-col gap-3">
@@ -380,6 +384,22 @@ function EmptyTrashState({ onClear }: { onClear: () => void }) {
         className="mt-4 inline-flex items-center gap-1.5 rounded-md border border-border bg-card px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
       >
         Volver a todas las notas
+      </button>
+    </div>
+  );
+}
+
+function EmptyTrashFilterState({ onClear }: { onClear: () => void }) {
+  return (
+    <div className="rounded-lg border border-dashed border-border p-10 text-center">
+      <Search className="mx-auto mb-3 h-8 w-8 text-muted-foreground" />
+      <p className="text-sm text-muted-foreground">No se encontraron notas en la papelera.</p>
+      <button
+        type="button"
+        onClick={onClear}
+        className="mt-4 inline-flex items-center gap-1.5 rounded-md border border-border bg-card px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+      >
+        Limpiar búsqueda
       </button>
     </div>
   );
