@@ -109,7 +109,14 @@
       "mcp__playwright__browser_wait_for",
       "Read(//d/d/Proyectos VS CODE/SecondMind/**)",
       "Bash(grep -n -A1 '^name = \"secondmind\"$' src-tauri/Cargo.lock)",
-      "Bash(git pull *)"
+      "Bash(git pull *)",
+      "Bash(git ls-remote *)",
+      "Bash(git reset *)",
+      "Bash(git cherry-pick *)",
+      "Bash(grep -v 'main$')",
+      "Bash(grep -v '^\\\\*\\\\|main$')",
+      "Bash(xargs -n 1 git branch -d)",
+      "Read(//c/Users/sebas/**)"
     ],
     "additionalDirectories": [
       "C:\\Users\\sebas\\.claude",
