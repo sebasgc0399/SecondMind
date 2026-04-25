@@ -24,11 +24,10 @@ vi.mock('firebase/firestore', () => ({
 
 vi.mock('firebase/app', () => ({
   FirebaseError: class FirebaseError extends Error {
-    constructor(
-      public code: string,
-      message: string,
-    ) {
+    code: string;
+    constructor(code: string, message: string) {
       super(message);
+      this.code = code;
     }
   },
 }));
