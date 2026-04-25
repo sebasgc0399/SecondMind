@@ -166,6 +166,15 @@ export default function NoteCard({
         {showSnippet && (
           <p className="mt-1 line-clamp-2 text-sm text-muted-foreground">{snippet}</p>
         )}
+        {note.aiSummary && mode !== 'trash' && (
+          <p
+            className="mt-1 flex items-start gap-1.5 text-xs italic text-muted-foreground/80"
+            aria-label="Resumen generado por IA"
+          >
+            <Sparkles className="mt-0.5 h-3 w-3 shrink-0 text-violet-500" aria-hidden />
+            <span className="line-clamp-2">{note.aiSummary}</span>
+          </p>
+        )}
         <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
           {note.distillLevel > 0 && (
             <Badge className={DISTILL_BADGE_STYLES[note.distillLevel as 1 | 2 | 3]}>
