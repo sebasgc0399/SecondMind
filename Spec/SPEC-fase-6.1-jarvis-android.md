@@ -20,6 +20,7 @@ Al terminar esta fase, Sebastian puede decir "Jarvis" con el teléfono en el bol
 **Qué:** Fork del repositorio `yuga-hashimoto/openclaw-assistant` (MIT license) a la cuenta de Sebastian. Auditoría completa del código fuente enfocada en seguridad: networking, manejo de audio, storage de credenciales, y permisos.
 
 **Criterio de done:**
+
 - [ ] Fork creado en la cuenta de Sebastian en GitHub
 - [ ] Código clonado localmente y proyecto abre sin errores en Android Studio
 - [ ] `./gradlew assembleDebug` compila exitosamente
@@ -30,6 +31,7 @@ Al terminar esta fase, Sebastian puede decir "Jarvis" con el teléfono en el bol
 - [ ] Documento de auditoría breve (checklist con hallazgos) guardado en `docs/AUDIT.md` del fork
 
 **Notas de implementación:**
+
 - Fuente: `https://github.com/yuga-hashimoto/openclaw-assistant` — 78 commits, 44 releases, MIT license, Kotlin 100%.
 - El desarrollador (yuga-hashimoto) tiene PRs aceptados en el repo oficial de OpenClaw (#30364, #30415). Es contributor activo del ecosistema.
 - Revisar en orden de prioridad: (1) clases de networking (`OkHttp` calls — ¿a dónde van los requests?), (2) manejo de audio (`Vosk` init y SpeechRecognizer — ¿cuándo se graba y a dónde se envía?), (3) storage (`EncryptedSharedPreferences` — ¿qué se guarda y cómo?), (4) permisos runtime (¿pide algo que no necesita?).
@@ -42,6 +44,7 @@ Al terminar esta fase, Sebastian puede decir "Jarvis" con el teléfono en el bol
 **Qué:** Renombrar la app de "OpenClaw Assistant" a "Jarvis", cambiar ícono, colores, y wake word default. Alinear con la identidad visual de SecondMind donde tenga sentido.
 
 **Criterio de done:**
+
 - [ ] App name cambiado a "Jarvis" en `strings.xml` y `AndroidManifest.xml`
 - [ ] Ícono de la app reemplazado (reusar brain-circuit icon de SecondMind o variante de Jarvis)
 - [ ] Color primario alineado con SecondMind (`#7b2ad1` purple o variante compatible con Material 3)
@@ -50,6 +53,7 @@ Al terminar esta fase, Sebastian puede decir "Jarvis" con el teléfono en el bol
 - [ ] Package name cambiado a `com.secondmind.jarvis` (evita conflicto con la app original si se instala)
 
 **Archivos a modificar (estimados, verificar en auditoría):**
+
 - `app/src/main/res/values/strings.xml` — App name, textos UI
 - `app/src/main/res/values/colors.xml` — Color scheme
 - `app/src/main/AndroidManifest.xml` — Package name, app label
@@ -58,6 +62,7 @@ Al terminar esta fase, Sebastian puede decir "Jarvis" con el teléfono en el bol
 - Archivos Compose con hardcoded strings de "OpenClaw"
 
 **Notas de implementación:**
+
 - El ícono se puede generar con el pipeline existente de SecondMind: Recraft AI → SVG → Node.js `sharp` → todos los tamaños de mipmap. O usar Android Studio Image Asset Studio para generar adaptive icons.
 - Material 3 usa dynamic color theming. Verificar si la app usa `dynamicColorScheme` o colores estáticos antes de cambiar.
 - El cambio de `applicationId` es crítico — sin esto, no se puede instalar junto a la app original.
@@ -69,6 +74,7 @@ Al terminar esta fase, Sebastian puede decir "Jarvis" con el teléfono en el bol
 **Qué:** Configurar la app para conectar al gateway OpenClaw que corre en el VPS de Sebastian. Incluye setup de auth, URL del endpoint, y verificación de conectividad end-to-end.
 
 **Criterio de done:**
+
 - [ ] La app conecta al gateway en el VPS via HTTPS (URL pública o Tailscale)
 - [ ] Auth token configurado y validado (Bearer token del gateway)
 - [ ] Enviar un mensaje de texto desde la app y recibir respuesta del gateway
@@ -79,15 +85,18 @@ Al terminar esta fase, Sebastian puede decir "Jarvis" con el teléfono en el bol
 **Notas de implementación:**
 
 La app soporta dos modos de conexión:
+
 1. **Gateway Chat** — via WebSocket al gateway OpenClaw (puerto 18789 por default). Soporta streaming, sessions, y agent selection. Requiere device pairing (`openclaw devices approve`).
 2. **HTTP Chat Completions** — POST directo al endpoint `/v1/chat/completions`. Más simple, no requiere pairing, pero sin streaming.
 
 Para VPS remoto, opciones de exposición:
+
 - **HTTPS directo**: reverse proxy (nginx/Caddy) con SSL cert frente al gateway. La más limpia.
 - **Tailscale**: si el teléfono y VPS están en la misma Tailnet, conexión privada sin exponer puerto público.
 - **ngrok**: quick and dirty para testing, no para producción (latencia, dominio rotativo en free tier).
 
 Recomendación: **Caddy reverse proxy** en el VPS con dominio propio y SSL automático. Ejemplo:
+
 ```
 jarvis.tudominio.com {
     reverse_proxy localhost:18789
@@ -107,6 +116,7 @@ Para el MCP de SecondMind: el gateway de OpenClaw se conecta al MCP server de Cl
 **Qué:** Configurar STT y TTS para español (Colombia). Verificar que el wake word "Jarvis" se detecta correctamente con acento colombiano.
 
 **Criterio de done:**
+
 - [ ] STT reconoce español hablado con acento colombiano (locale `es-CO` o `es-419`)
 - [ ] TTS responde en español con voz natural (Android TTS engine o ElevenLabs si se configura)
 - [ ] Wake word "Jarvis" se detecta consistentemente (>80% de las veces) en ambiente normal (no ruidoso)
@@ -114,6 +124,7 @@ Para el MCP de SecondMind: el gateway de OpenClaw se conecta al MCP server de Cl
 - [ ] Continuous conversation mode funciona: Jarvis responde → escucha automáticamente la siguiente instrucción
 
 **Notas de implementación:**
+
 - Android `SpeechRecognizer` soporta `es-CO` nativamente. Configurar en settings de la app.
 - Vosk para wake word necesita un modelo de español. El modelo default puede ser inglés. Verificar si el wake word "Jarvis" (que suena igual en cualquier idioma) se detecta con el modelo default o si necesita modelo español.
 - Si Vosk no detecta "Jarvis" bien con modelo default: (a) probar con modelo español de Vosk (`vosk-model-small-es-0.42`), o (b) cambiar a un wake word más fonéticamente distintivo.
@@ -127,6 +138,7 @@ Para el MCP de SecondMind: el gateway de OpenClaw se conecta al MCP server de Cl
 **Qué:** Build final del APK desde source, testing completo en el teléfono de Sebastian, y setup como asistente del sistema.
 
 **Criterio de done:**
+
 - [ ] `./gradlew assembleRelease` genera APK firmado (keystore propio, NO el del autor original)
 - [ ] APK instalado en el teléfono de Sebastian
 - [ ] Wake word "Jarvis" activa la app desde cualquier pantalla (foreground service corriendo)
@@ -138,6 +150,7 @@ Para el MCP de SecondMind: el gateway de OpenClaw se conecta al MCP server de Cl
 - [ ] El consumo de batería del wake word listener es aceptable (<5% en un día normal)
 
 **Notas de implementación:**
+
 - **Keystore**: generar un keystore propio con `keytool`. NUNCA usar el keystore del autor original. Guardar el keystore de forma segura (no en el repo).
   ```bash
   keytool -genkey -v -keystore jarvis.keystore -alias jarvis -keyalg RSA -keysize 2048 -validity 10000
@@ -204,6 +217,7 @@ ngrok en free tier rota el dominio, agrega latencia (~100ms), y tiene rate limit
 ### D4: ¿Qué pasa si Vosk no detecta bien "Jarvis" en español?
 
 Opciones ordenadas por esfuerzo:
+
 1. Probar con el modelo default (inglés) — "Jarvis" es fonéticamente similar en todos los idiomas.
 2. Descargar modelo español de Vosk (`vosk-model-small-es-0.42`, ~50MB) y configurar.
 3. Cambiar wake word a algo más fonéticamente marcado ("Computador", "Segundo").

@@ -20,6 +20,7 @@ Al terminar esta fase, Sebastian puede hablarle a su asistente "Jarvis" desde Wh
 **Qué:** Proyecto Node.js + TypeScript independiente que implementa un MCP server con Streamable HTTP transport. Usa `@modelcontextprotocol/sdk` para el protocolo y `firebase-admin` para acceso a Firestore. Auth via Bearer token estático (único usuario).
 
 **Criterio de done:**
+
 - [ ] `npm run dev` levanta el server en `localhost:3000/mcp`
 - [ ] El endpoint responde al MCP handshake (`initialize` → capabilities)
 - [ ] Un tool de prueba `ping` responde `{ content: [{ type: "text", text: "pong" }] }`
@@ -27,6 +28,7 @@ Al terminar esta fase, Sebastian puede hablarle a su asistente "Jarvis" desde Wh
 - [ ] `npm run build` compila sin errores TypeScript
 
 **Archivos a crear:**
+
 - `mcp-server/package.json` — deps: `@modelcontextprotocol/sdk`, `firebase-admin`, `zod`
 - `mcp-server/tsconfig.json` — ESM, strict, Node 20
 - `mcp-server/src/index.ts` — Entry point: McpServer + Streamable HTTP transport
@@ -37,6 +39,7 @@ Al terminar esta fase, Sebastian puede hablarle a su asistente "Jarvis" desde Wh
 - `mcp-server/.env.example` — `MCP_BEARER_TOKEN`, `GOOGLE_APPLICATION_CREDENTIALS`
 
 **Notas de implementación:**
+
 - El MCP server es un proyecto **separado** del app principal. Tiene su propio `package.json` y deploy independiente.
 - Usar Streamable HTTP (spec 2025-03-26), NO el legacy HTTP+SSE. Un solo endpoint `POST /mcp`.
 - Firebase Admin se inicializa con service account JSON (variable de entorno o archivo montado en Cloud Run). El userId de Sebastian se hardcodea como constante (único usuario).
@@ -49,6 +52,7 @@ Al terminar esta fase, Sebastian puede hablarle a su asistente "Jarvis" desde Wh
 **Qué:** 6 tools de lectura que exponen el estado actual de SecondMind. Cada tool hace queries a Firestore via Admin SDK y retorna datos formateados como texto.
 
 **Criterio de done:**
+
 - [ ] `get_daily_summary` retorna tareas de hoy, inbox pendiente, hábitos, notas FSRS due — todo en un solo call
 - [ ] `get_today_tasks` retorna tareas con `dueDate` = hoy, ordenadas por prioridad
 - [ ] `get_overdue_tasks` retorna tareas con `dueDate` < hoy y status != completed
@@ -57,6 +61,7 @@ Al terminar esta fase, Sebastian puede hablarle a su asistente "Jarvis" desde Wh
 - [ ] `get_active_projects` retorna proyectos `in-progress` con conteo de tareas completadas/total
 
 **Archivos a crear:**
+
 - `mcp-server/src/tools/daily-summary.ts` — Agregación de todas las entidades
 - `mcp-server/src/tools/tasks.ts` — `get_today_tasks` + `get_overdue_tasks`
 - `mcp-server/src/tools/inbox.ts` — `get_inbox_pending`
@@ -65,6 +70,7 @@ Al terminar esta fase, Sebastian puede hablarle a su asistente "Jarvis" desde Wh
 - `mcp-server/src/lib/firestore-queries.ts` — Queries compartidas (helper para paths `users/{uid}/...`)
 
 **Notas de implementación:**
+
 - Todas las queries usan el path `users/{SEBASTIAN_UID}/collection`. El UID se lee de una constante de entorno.
 - `get_daily_summary` es el tool más importante — combina datos de 4 colecciones en un solo response.
 - Los hábitos usan IDs determinísticos `YYYY-MM-DD` dentro de cada habit doc. Los 14 hábitos están hardcodeados (ver doc arquitectura). El tool necesita saber los nombres para formatear la respuesta.
@@ -78,16 +84,19 @@ Al terminar esta fase, Sebastian puede hablarle a su asistente "Jarvis" desde Wh
 **Qué:** 4 tools de lectura enfocados en notas y el sistema de conocimiento.
 
 **Criterio de done:**
+
 - [ ] `get_fsrs_due_notes` retorna notas con `fsrsDue` ≤ ahora, con título y resumen
 - [ ] `get_recent_notes` acepta parámetros opcionales `limit`, `area`, `tag` y retorna notas recientes
 - [ ] `search_notes` acepta `query` (string) y busca en título, contentPlain, y aiTags
 - [ ] `get_objectives_progress` retorna objetivos con sus proyectos vinculados y % de avance
 
 **Archivos a crear:**
+
 - `mcp-server/src/tools/notes.ts` — `get_fsrs_due_notes` + `get_recent_notes` + `search_notes`
 - `mcp-server/src/tools/objectives.ts` — `get_objectives_progress`
 
 **Notas de implementación:**
+
 - `search_notes` en server-side NO puede usar Orama (es client-side). Para <500 notas, fetch all + `.filter()` con `.includes()` en memoria. Simple, suficiente para escala personal.
 - `get_objectives_progress` hace join: para cada objetivo, contar tareas de sus proyectos vinculados.
 - Los responses de notas incluyen: título, resumen AI (si existe), tags, fecha. NO incluir el content completo — es demasiado largo.
@@ -99,6 +108,7 @@ Al terminar esta fase, Sebastian puede hablarle a su asistente "Jarvis" desde Wh
 **Qué:** 6 tools de escritura que permiten crear y modificar entidades en SecondMind.
 
 **Criterio de done:**
+
 - [ ] `create_task` crea una tarea con name, priority, dueDate (opcional), projectId (opcional), areaId (opcional)
 - [ ] `complete_task` marca una tarea como `completed` con `completedAt` = now
 - [ ] `create_note` crea una nota con title, contentPlain, tags (opcional), areaIds (opcional), noteType (default: 'fleeting')
@@ -109,6 +119,7 @@ Al terminar esta fase, Sebastian puede hablarle a su asistente "Jarvis" desde Wh
 - [ ] Las escrituras disparan las Cloud Functions existentes (`processInboxItem` para inbox, `autoTagNote` para notas)
 
 **Archivos a crear:**
+
 - `mcp-server/src/tools/create-task.ts`
 - `mcp-server/src/tools/complete-task.ts`
 - `mcp-server/src/tools/create-note.ts`
@@ -120,22 +131,30 @@ Al terminar esta fase, Sebastian puede hablarle a su asistente "Jarvis" desde Wh
 
 ```typescript
 interface Briefing {
-  id: string;                    // crypto.randomUUID()
+  id: string; // crypto.randomUUID()
   type: BriefingType;
-  content: string;               // Markdown del briefing completo
-  summary: string;               // Resumen de 1 línea para el card del Dashboard
-  createdAt: number;              // Date.now() — UNIX ms, consistente con el resto del modelo
+  content: string; // Markdown del briefing completo
+  summary: string; // Resumen de 1 línea para el card del Dashboard
+  createdAt: number; // Date.now() — UNIX ms, consistente con el resto del modelo
 }
 
 type BriefingType =
-  | 'daily-tasks' | 'inbox-check' | 'notes-review'
-  | 'task-progress' | 'habits-check' | 'projects-status'
-  | 'day-closing' | 'habits-final'
-  | 'weekly-planning' | 'objectives-review'
-  | 'orphan-notes' | 'inbox-cleanup';
+  | 'daily-tasks'
+  | 'inbox-check'
+  | 'notes-review'
+  | 'task-progress'
+  | 'habits-check'
+  | 'projects-status'
+  | 'day-closing'
+  | 'habits-final'
+  | 'weekly-planning'
+  | 'objectives-review'
+  | 'orphan-notes'
+  | 'inbox-cleanup';
 ```
 
 **Notas de implementación:**
+
 - Las escrituras usan `admin.firestore().doc(path).set(data)` / `.update(data)`. No hay TinyBase server-side.
 - Al crear inbox items, `processInboxItem` (trigger `onDocumentCreated`) se dispara automáticamente.
 - Al crear notas, `autoTagNote` (trigger `onDocumentWritten`) se dispara si `aiProcessed === false`.
@@ -150,6 +169,7 @@ type BriefingType =
 **Qué:** Containerizar el MCP server y deployar a Cloud Run en el proyecto GCP `secondmindv1`.
 
 **Criterio de done:**
+
 - [ ] `docker build` genera imagen funcional
 - [ ] `gcloud run deploy` despliega exitosamente en Cloud Run
 - [ ] El endpoint HTTPS responde al handshake MCP desde internet
@@ -158,11 +178,13 @@ type BriefingType =
 - [ ] Las Cloud Functions existentes siguen funcionando
 
 **Archivos a crear/modificar:**
+
 - `mcp-server/Dockerfile` — Multi-stage build (build TS → run Node)
 - `mcp-server/.dockerignore`
 - `mcp-server/deploy.sh` — Script con `gcloud run deploy` + flags
 
 **Notas de implementación:**
+
 - Cloud Run region: `us-central1` (misma que las Cloud Functions).
 - El service account del proyecto ya tiene acceso a Firestore. No necesita JSON explícito.
 - Secrets: `MCP_BEARER_TOKEN` en Secret Manager, montado como env var en Cloud Run.
@@ -176,6 +198,7 @@ type BriefingType =
 **Qué:** Configurar OpenClaw con MiniMax M2.7 como modelo, canal de messaging (Telegram o WhatsApp), y conexión al MCP server de SecondMind. Incluye el SOUL.md que define la personalidad "Jarvis".
 
 **Criterio de done:**
+
 - [ ] OpenClaw gateway corriendo localmente (o en server personal)
 - [ ] MiniMax M2.7 configurado como modelo primario en `openclaw.json`
 - [ ] Al menos un canal de messaging conectado (Telegram recomendado para arrancar)
@@ -185,6 +208,7 @@ type BriefingType =
 - [ ] SOUL.md configurado con personalidad "Jarvis"
 
 **Archivos a crear:**
+
 - `openclaw/SOUL.md` — Personalidad de Jarvis (versionado en el repo de SecondMind para backup)
 - `openclaw/openclaw.json.example` — Config de referencia con modelo, MCP, y defaults
 
@@ -193,6 +217,7 @@ type BriefingType =
 OpenClaw se configura en `~/.openclaw/` en la máquina donde corre el gateway. Los archivos en `openclaw/` del repo son **backups de referencia**, no el source of truth operativo.
 
 Configuración del modelo en `openclaw.json`:
+
 ```json
 {
   "agents": {
@@ -207,6 +232,7 @@ Configuración del modelo en `openclaw.json`:
 ```
 
 Conexión MCP — OpenClaw soporta MCP servers remotos via URL. Agregar en la config:
+
 ```json
 {
   "tools": {
@@ -224,18 +250,21 @@ Conexión MCP — OpenClaw soporta MCP servers remotos via URL. Agregar en la co
 ```
 
 SOUL.md define la personalidad:
+
 ```markdown
 # Jarvis — Asistente Personal de Sebastian
 
 Eres Jarvis, el asistente personal de Sebastian. Tu fuente de verdad es SecondMind (via MCP).
 
 ## Principios
+
 - Sé conciso, directo, sin rodeos. Sebastian habla en español.
 - Usa los tools de SecondMind para TODO lo relacionado con tareas, notas, proyectos, hábitos, inbox.
 - No inventes datos — si no lo encuentras en SecondMind, di que no lo encontraste.
 - Al crear entidades, confirma qué creaste con el ID.
 
 ## Contexto
+
 - Sebastian es desarrollador .NET (trabajo) y React + Firebase (proyectos personales).
 - Zona horaria: Colombia (COT, UTC-5).
 - SecondMind tiene: notas Zettelkasten, tareas, proyectos, objetivos, hábitos (14), inbox.
@@ -250,6 +279,7 @@ Eres Jarvis, el asistente personal de Sebastian. Tu fuente de verdad es SecondMi
 **Qué:** 12 OpenClaw skills con schedule que generan briefings automáticos. Cada skill llama read tools del MCP, genera un resumen, lo guarda en SecondMind via `save_briefing`, y lo envía al canal de messaging. En el lado de la app, un BriefingCard en el Dashboard muestra los últimos briefings.
 
 **Criterio de done:**
+
 - [ ] Las 12 skills están configuradas en `~/.openclaw/workspace/skills/` con sus schedules
 - [ ] Cada skill lee datos con read tools y escribe resultado con `save_briefing`
 - [ ] Los briefings generados aparecen en el Dashboard de SecondMind (PWA, Tauri, Capacitor)
@@ -258,6 +288,7 @@ Eres Jarvis, el asistente personal de Sebastian. Tu fuente de verdad es SecondMi
 - [ ] Los briefings llegan como mensaje al canal de messaging de OpenClaw
 
 **Archivos a crear (OpenClaw skills — backups en repo):**
+
 - `openclaw/skills/daily-tasks/SKILL.md`
 - `openclaw/skills/inbox-check/SKILL.md`
 - `openclaw/skills/notes-review/SKILL.md`
@@ -272,6 +303,7 @@ Eres Jarvis, el asistente personal de Sebastian. Tu fuente de verdad es SecondMi
 - `openclaw/skills/inbox-cleanup/SKILL.md`
 
 **Archivos a crear (app SecondMind):**
+
 - `src/stores/briefingsStore.ts` — TinyBase store para briefings
 - `src/hooks/useBriefings.ts` — Hook: últimos briefings, filtro por tipo
 - `src/components/dashboard/BriefingCard.tsx` — Card en Dashboard
@@ -279,25 +311,26 @@ Eres Jarvis, el asistente personal de Sebastian. Tu fuente de verdad es SecondMi
 - `src/types/briefing.ts` — Interface Briefing + BriefingType
 
 **Archivos a modificar:**
+
 - `src/app/page.tsx` — Agregar `<BriefingCard />` al Dashboard (posición: arriba de todo)
 - `src/hooks/useStoreInit.ts` — Agregar persister para briefingsStore
 
 **Schedules de las 12 skills:**
 
-| Skill | Schedule | Type |
-|---|---|---|
-| daily-tasks | L-V 6:30 AM | `daily-tasks` |
-| inbox-check | L-V 7:00 AM | `inbox-check` |
-| notes-review | L-V 7:30 AM | `notes-review` |
-| task-progress | L-V 12:00 PM | `task-progress` |
-| habits-check | Diaria 1:00 PM | `habits-check` |
-| projects-status | L-V 2:00 PM | `projects-status` |
-| day-closing | Diaria 9:00 PM | `day-closing` |
-| habits-final | Diaria 9:30 PM | `habits-final` |
-| weekly-planning | Domingo 7:00 PM | `weekly-planning` |
-| objectives-review | Viernes 6:00 PM | `objectives-review` |
-| orphan-notes | Miércoles 12:00 PM | `orphan-notes` |
-| inbox-cleanup | Diaria 11:00 AM | `inbox-cleanup` |
+| Skill             | Schedule           | Type                |
+| ----------------- | ------------------ | ------------------- |
+| daily-tasks       | L-V 6:30 AM        | `daily-tasks`       |
+| inbox-check       | L-V 7:00 AM        | `inbox-check`       |
+| notes-review      | L-V 7:30 AM        | `notes-review`      |
+| task-progress     | L-V 12:00 PM       | `task-progress`     |
+| habits-check      | Diaria 1:00 PM     | `habits-check`      |
+| projects-status   | L-V 2:00 PM        | `projects-status`   |
+| day-closing       | Diaria 9:00 PM     | `day-closing`       |
+| habits-final      | Diaria 9:30 PM     | `habits-final`      |
+| weekly-planning   | Domingo 7:00 PM    | `weekly-planning`   |
+| objectives-review | Viernes 6:00 PM    | `objectives-review` |
+| orphan-notes      | Miércoles 12:00 PM | `orphan-notes`      |
+| inbox-cleanup     | Diaria 11:00 AM    | `inbox-cleanup`     |
 
 **Ejemplo de skill (`daily-tasks/SKILL.md`):**
 
@@ -305,7 +338,7 @@ Eres Jarvis, el asistente personal de Sebastian. Tu fuente de verdad es SecondMi
 ---
 name: daily-tasks
 description: Briefing matutino con las tareas del día
-schedule: "30 6 * * 1-5"
+schedule: '30 6 * * 1-5'
 ---
 
 # Daily Tasks Briefing
@@ -313,6 +346,7 @@ schedule: "30 6 * * 1-5"
 Llama `get_today_tasks` y `get_overdue_tasks` del MCP de SecondMind.
 
 Genera un briefing conciso:
+
 - Tareas de hoy ordenadas por prioridad (urgent → high → medium → low)
 - Tareas overdue resaltadas con ⚠️
 - Total: N para hoy + N overdue
@@ -321,6 +355,7 @@ Genera un briefing conciso:
 Máximo 10 líneas.
 
 Al terminar, SIEMPRE llama `save_briefing` con:
+
 - type: "daily-tasks"
 - content: el briefing en markdown
 - summary: resumen de máximo 15 palabras
@@ -328,39 +363,40 @@ Al terminar, SIEMPRE llama `save_briefing` con:
 
 **Contenido de cada skill (resumen):**
 
-| Skill | Tools que usa | Lógica clave |
-|---|---|---|
-| daily-tasks | `get_today_tasks`, `get_overdue_tasks` | Tareas por prioridad, overdue con ⚠️ |
-| inbox-check | `get_inbox_pending` | Conteo + preview últimos 5 |
-| notes-review | `get_fsrs_due_notes` | Títulos + resúmenes de notas due |
-| task-progress | `get_today_tasks` | Completadas vs pendientes, % progreso |
-| habits-check | `get_habit_status` | Completados/14, lista de faltantes |
-| projects-status | `get_active_projects` | Estado por proyecto, ⚠️ sin avance |
-| day-closing | `get_daily_summary` | Resumen ejecutivo del día completo |
-| habits-final | `get_habit_status` | Último empujón: solo los que faltan |
-| weekly-planning | `get_daily_summary`, `get_active_projects`, `get_objectives_progress` | Resumen semana + top 3 prioridades |
-| objectives-review | `get_objectives_progress` | Estado por objetivo, sugerencia de acción |
-| orphan-notes | `get_recent_notes` | Notas sin tags, sin área, sin links |
-| inbox-cleanup | `get_inbox_pending` | Agrupado por antigüedad, alerta >1 semana |
+| Skill             | Tools que usa                                                         | Lógica clave                              |
+| ----------------- | --------------------------------------------------------------------- | ----------------------------------------- |
+| daily-tasks       | `get_today_tasks`, `get_overdue_tasks`                                | Tareas por prioridad, overdue con ⚠️      |
+| inbox-check       | `get_inbox_pending`                                                   | Conteo + preview últimos 5                |
+| notes-review      | `get_fsrs_due_notes`                                                  | Títulos + resúmenes de notas due          |
+| task-progress     | `get_today_tasks`                                                     | Completadas vs pendientes, % progreso     |
+| habits-check      | `get_habit_status`                                                    | Completados/14, lista de faltantes        |
+| projects-status   | `get_active_projects`                                                 | Estado por proyecto, ⚠️ sin avance        |
+| day-closing       | `get_daily_summary`                                                   | Resumen ejecutivo del día completo        |
+| habits-final      | `get_habit_status`                                                    | Último empujón: solo los que faltan       |
+| weekly-planning   | `get_daily_summary`, `get_active_projects`, `get_objectives_progress` | Resumen semana + top 3 prioridades        |
+| objectives-review | `get_objectives_progress`                                             | Estado por objetivo, sugerencia de acción |
+| orphan-notes      | `get_recent_notes`                                                    | Notas sin tags, sin área, sin links       |
+| inbox-cleanup     | `get_inbox_pending`                                                   | Agrupado por antigüedad, alerta >1 semana |
 
 **Iconos por tipo de briefing (para BriefingCard):**
 
-| Type | Icono | Label |
-|---|---|---|
-| daily-tasks | 📋 | Tareas del día |
-| inbox-check | 📬 | Inbox |
-| notes-review | 🧠 | Notas para repasar |
-| task-progress | 📊 | Progreso |
-| habits-check | ☑️ | Hábitos |
-| projects-status | 🚀 | Proyectos |
-| day-closing | 🌙 | Cierre del día |
-| habits-final | 🔔 | Hábitos — último check |
-| weekly-planning | 📅 | Planning semanal |
-| objectives-review | 🎯 | Objetivos |
-| orphan-notes | 🔗 | Notas huérfanas |
-| inbox-cleanup | 🧹 | Limpieza inbox |
+| Type              | Icono | Label                  |
+| ----------------- | ----- | ---------------------- |
+| daily-tasks       | 📋    | Tareas del día         |
+| inbox-check       | 📬    | Inbox                  |
+| notes-review      | 🧠    | Notas para repasar     |
+| task-progress     | 📊    | Progreso               |
+| habits-check      | ☑️    | Hábitos                |
+| projects-status   | 🚀    | Proyectos              |
+| day-closing       | 🌙    | Cierre del día         |
+| habits-final      | 🔔    | Hábitos — último check |
+| weekly-planning   | 📅    | Planning semanal       |
+| objectives-review | 🎯    | Objetivos              |
+| orphan-notes      | 🔗    | Notas huérfanas        |
+| inbox-cleanup     | 🧹    | Limpieza inbox         |
 
 **Notas de implementación:**
+
 - Las skills se instalan copiando los `.md` a `~/.openclaw/workspace/skills/`. Los schedules se manejan via `schedule` en el frontmatter (cron syntax) — OpenClaw los ejecuta automáticamente.
 - Zona horaria: Colombia (COT, UTC-5). Verificar que OpenClaw respeta TZ del sistema.
 - Las skills generan briefings que se guardan en SecondMind Y se envían por el canal de messaging. El usuario ve el briefing en ambos lados.
@@ -450,15 +486,19 @@ src/
 ## Definiciones técnicas
 
 ### D1: ¿Por qué Cloud Run y no Cloud Functions HTTP?
+
 Cloud Functions HTTP limita a 60s y no da control sobre el container. Cloud Run está en el mismo proyecto GCP, usa el mismo service account, y escala a cero. Free tier: 2M requests/mes — más que suficiente para uso personal.
 
 ### D2: ¿Por qué Bearer token estático y no OAuth?
+
 Un solo usuario. El token se genera una vez (`openssl rand -hex 32`), se almacena en Secret Manager. OpenClaw lo envía como header en cada request MCP. Si en el futuro se necesita OAuth (ej: para conectar también a claude.ai), se evalúa entonces.
 
 ### D3: ¿Por qué proyecto separado del app principal?
+
 Las Cloud Functions existentes son triggers de Firestore, no HTTP endpoints. El MCP server es un proceso HTTP con su propio lifecycle. Deploy independiente: `cd mcp-server && gcloud run deploy`.
 
 ### D4: ¿Por qué OpenClaw + MiniMax y no Claude Routines?
+
 - **Canal**: OpenClaw permite hablarle al sistema desde WhatsApp/Telegram — Claude Routines solo genera output en claude.ai.
 - **Always-on**: El gateway corre 24/7, no depende de abrir una app.
 - **Costo**: MiniMax Plus $200/año vs funcionalidad similar en Claude Pro $240/año, con la ventaja del canal de messaging.
@@ -466,12 +506,15 @@ Las Cloud Functions existentes son triggers de Firestore, no HTTP endpoints. El 
 - **Skills vs Routines**: Las skills de OpenClaw son `.md` extensibles, con cron del sistema. Más control que las Claude Routines (que están en preview con límites).
 
 ### D5: ¿Por qué MiniMax M2.7 específicamente?
+
 Modelo MoE de 230B params (10B activos) con benchmarks tier-1 en tareas agénticas. 97% de adherencia en skills complejos. Costo: ~$200/año en plan Plus (4500 req/5hrs). Velocidad: ~50-100 TPS. Para las tareas de Jarvis (leer datos, generar resúmenes, crear entidades) es más que suficiente.
 
 ### D6: ¿Búsqueda de notas — por qué filtro en memoria?
+
 Firestore no tiene FTS nativo. Para <500 notas, fetch all + `.filter()` con `.includes()` es instantáneo. Si escala a >1000 notas, evaluar Orama server-side o extensión de Firestore.
 
 ### D7: ¿Por qué no Push Notifications (FCM)?
+
 OpenClaw ya envía los briefings y respuestas por el canal de messaging (WhatsApp/Telegram). Agregar FCM duplica el canal de notificación sin valor adicional. Si en el futuro se quiere notificaciones nativas del OS independientes de OpenClaw, se agrega FCM como fase separada.
 
 ---
