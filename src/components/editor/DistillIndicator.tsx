@@ -1,6 +1,10 @@
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Popover } from '@base-ui/react/popover';
 import { Sparkles } from 'lucide-react';
 import { useCell } from 'tinybase/ui-react';
+import useAuth from '@/hooks/useAuth';
+import usePreferences from '@/hooks/usePreferences';
+import { setPreferences } from '@/lib/preferences';
 
 interface DistillIndicatorProps {
   noteId: string;
@@ -38,8 +42,44 @@ export default function DistillIndicator({ noteId, onOpenSummary }: DistillIndic
   const level = (Number(raw) || 0) as Level;
   const meta = LEVEL_META[level];
 
+  const { user } = useAuth();
+  const { preferences, isLoaded } = usePreferences();
+  const [open, setOpen] = useState(false);
+  // Garantiza que la apertura automática del intro corre una sola vez por
+  // mount. Sin esto, cualquier re-render con preferences/isLoaded estables
+  // dispararia setOpen(true) en bucle. El user puede cerrar y volver a abrir
+  // manualmente despues — el flag persistido evita que vuelva a auto-abrir
+  // en futuros mounts.
+  const initialAutoOpenedRef = useRef(false);
+
+  useEffect(() => {
+    if (initialAutoOpenedRef.current) return;
+    if (!isLoaded) return;
+    initialAutoOpenedRef.current = true;
+    if (preferences.distillIntroSeen) return;
+    setOpen(true);
+  }, [isLoaded, preferences.distillIntroSeen]);
+
+  const handleOpenChange = useCallback(
+    (next: boolean) => {
+      setOpen(next);
+      if (!next && user && isLoaded && !preferences.distillIntroSeen) {
+        void setPreferences(user.uid, { distillIntroSeen: true });
+      }
+    },
+    [user, isLoaded, preferences.distillIntroSeen],
+  );
+
+  const handleOpenSummaryClick = useCallback(() => {
+    // Cerrar dispara handleOpenChange → persiste distillIntroSeen si era
+    // la primera apertura. UX: el usuario "completa la accion sugerida",
+    // ya no necesita ver el popover otra vez.
+    setOpen(false);
+    onOpenSummary();
+  }, [onOpenSummary]);
+
   return (
-    <Popover.Root>
+    <Popover.Root open={open} onOpenChange={handleOpenChange}>
       <Popover.Trigger
         aria-label={`Nivel de destilación: L${level} — ${meta.label}`}
         className="inline-flex h-11 min-w-11 items-center justify-center rounded-full px-2 outline-none transition-colors hover:bg-accent/40"
@@ -67,7 +107,7 @@ export default function DistillIndicator({ noteId, onOpenSummary }: DistillIndic
             {level < 3 && (
               <button
                 type="button"
-                onClick={onOpenSummary}
+                onClick={handleOpenSummaryClick}
                 className="mt-3 inline-flex min-h-9 w-full items-center justify-center rounded-md bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground transition-colors hover:bg-primary/90"
               >
                 Escribir resumen L3
