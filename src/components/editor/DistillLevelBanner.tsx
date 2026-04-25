@@ -59,10 +59,16 @@ export default function DistillLevelBanner({ noteId }: DistillLevelBannerProps) 
 
     setVisibleLevel(target);
     void markDistillBannerSeen(user.uid, target);
+  }, [level, isLoaded, user, preferences.distillBannersSeen]);
 
+  // Auto-hide separado del trigger: si lo mantenemos en el mismo useEffect,
+  // el cleanup lo cancela cuando preferences cambia tras markDistillBannerSeen
+  // → onSnapshot, dejando el banner visible para siempre.
+  useEffect(() => {
+    if (visibleLevel === null) return;
     const timerId = window.setTimeout(() => setVisibleLevel(null), 3000);
     return () => window.clearTimeout(timerId);
-  }, [level, isLoaded, user, preferences.distillBannersSeen]);
+  }, [visibleLevel]);
 
   if (visibleLevel === null) return null;
 

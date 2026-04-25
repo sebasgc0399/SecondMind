@@ -1,4 +1,5 @@
-import { doc, getDoc, onSnapshot, setDoc } from 'firebase/firestore';
+import { doc, getDoc, onSnapshot, setDoc, updateDoc } from 'firebase/firestore';
+import { FirebaseError } from 'firebase/app';
 import { db } from '@/lib/firebase';
 import { DEFAULT_PREFERENCES, type UserPreferences } from '@/types/preferences';
 
@@ -105,13 +106,27 @@ export async function setPreferences(
 }
 
 // Helper específico para marcar que el banner de transición a un nivel
-// ya fue visto. Usa dot-notation Firestore para evitar race de closure
-// stale: si dos banners disparan rápido y ambos leen `preferences` del
-// mismo snapshot React, el segundo `setPreferences({ distillBannersSeen: {...} })`
-// sobrescribiría el primero por shallow merge. Con dot-notation cada
-// path se actualiza de forma independiente.
+// ya fue visto. Usa dot-notation con `updateDoc` para crear/actualizar
+// el path nested sin race de closure stale: si dos banners disparan
+// rápido y ambos leen `preferences` del mismo snapshot React, ninguno
+// sobrescribe al otro porque cada `updateDoc` toca solo su path.
+//
+// CRITICO: `setDoc({merge:true})` con dot-notation NO crea estructura
+// nested — guarda literal el campo con punto en la key (`"a.b"`).
+// Solo `updateDoc` interpreta dot-notation. Si el doc no existe,
+// updateDoc falla con `not-found` y caemos a setDoc con objeto nested
+// (race nulo porque no había nada que pisar).
 export async function markDistillBannerSeen(uid: string, level: 1 | 2 | 3): Promise<void> {
-  await setDoc(pathFor(uid), { [`distillBannersSeen.l${level}`]: true }, { merge: true });
+  const ref = pathFor(uid);
+  try {
+    await updateDoc(ref, { [`distillBannersSeen.l${level}`]: true });
+  } catch (error) {
+    if (error instanceof FirebaseError && error.code === 'not-found') {
+      await setDoc(ref, { distillBannersSeen: { [`l${level}`]: true } }, { merge: true });
+      return;
+    }
+    throw error;
+  }
 }
 
 // Útil en signOut para no filtrar prefs entre cuentas (mismo principio que

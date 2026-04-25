@@ -4,9 +4,10 @@ import { DEFAULT_PREFERENCES } from '@/types/preferences';
 
 // Mocks de Firebase imitando el patrón de baseRepo.test.ts. parsePrefs es
 // pura y no toca Firestore, pero markDistillBannerSeen sí — los mocks
-// permiten verificar el path y el shape del setDoc.
+// permiten verificar el path y el shape del updateDoc/setDoc.
 
 const setDocMock = vi.fn();
+const updateDocMock = vi.fn();
 const docMock = vi.fn((_db: object, path: string) => ({ __path: path }));
 
 vi.mock('@/lib/firebase', () => ({
@@ -15,9 +16,21 @@ vi.mock('@/lib/firebase', () => ({
 
 vi.mock('firebase/firestore', () => ({
   setDoc: (...args: unknown[]) => setDocMock(...args),
+  updateDoc: (...args: unknown[]) => updateDocMock(...args),
   doc: (...args: unknown[]) => docMock(args[0] as object, args[1] as string),
   getDoc: vi.fn(),
   onSnapshot: vi.fn(),
+}));
+
+vi.mock('firebase/app', () => ({
+  FirebaseError: class FirebaseError extends Error {
+    constructor(
+      public code: string,
+      message: string,
+    ) {
+      super(message);
+    }
+  },
 }));
 
 describe('parsePrefs', () => {
@@ -58,26 +71,48 @@ describe('parsePrefs', () => {
 describe('markDistillBannerSeen', () => {
   beforeEach(() => {
     setDocMock.mockReset();
+    updateDocMock.mockReset();
     docMock.mockClear();
+    updateDocMock.mockResolvedValue(undefined);
     setDocMock.mockResolvedValue(undefined);
   });
 
-  it('ejecuta setDoc con dot-notation y merge:true para nivel 1', async () => {
+  it('ejecuta updateDoc con dot-notation para crear path nested', async () => {
     await markDistillBannerSeen('user-x', 1);
     expect(docMock).toHaveBeenCalledWith({}, 'users/user-x/settings/preferences');
-    expect(setDocMock).toHaveBeenCalledWith(
+    expect(updateDocMock).toHaveBeenCalledWith(
       { __path: 'users/user-x/settings/preferences' },
       { 'distillBannersSeen.l1': true },
-      { merge: true },
     );
+    expect(setDocMock).not.toHaveBeenCalled();
   });
 
   it('cada nivel actualiza un path Firestore único (l3)', async () => {
     await markDistillBannerSeen('user-y', 3);
+    expect(updateDocMock).toHaveBeenCalledWith(expect.anything(), {
+      'distillBannersSeen.l3': true,
+    });
+  });
+
+  it('si updateDoc falla con not-found cae a setDoc con objeto nested', async () => {
+    const { FirebaseError } = await import('firebase/app');
+    updateDocMock.mockRejectedValueOnce(new FirebaseError('not-found', 'no doc'));
+
+    await markDistillBannerSeen('user-z', 2);
+
+    expect(updateDocMock).toHaveBeenCalledOnce();
     expect(setDocMock).toHaveBeenCalledWith(
       expect.anything(),
-      { 'distillBannersSeen.l3': true },
+      { distillBannersSeen: { l2: true } },
       { merge: true },
     );
+  });
+
+  it('errores no-not-found se re-lanzan sin caer a setDoc', async () => {
+    const { FirebaseError } = await import('firebase/app');
+    updateDocMock.mockRejectedValueOnce(new FirebaseError('permission-denied', 'no perms'));
+
+    await expect(markDistillBannerSeen('user-w', 1)).rejects.toThrow(/no perms/);
+    expect(setDocMock).not.toHaveBeenCalled();
   });
 });
