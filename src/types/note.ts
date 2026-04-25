@@ -32,3 +32,21 @@ export interface Note {
   fsrsDue?: number;
   fsrsLastReview?: number;
 }
+
+// Subset usado en la papelera (/notes filtro "Papelera"). Reutiliza los
+// campos de NoteOramaDoc que NoteCard renderiza, agrega daysUntilPurge
+// derivado de preferences.trashAutoPurgeDays + deletedAt. null cuando
+// trashAutoPurgeDays === 0 ("Nunca").
+export interface TrashNote {
+  id: string;
+  title: string;
+  contentPlain: string;
+  paraType: string;
+  noteType: string;
+  distillLevel: 0 | 1 | 2 | 3;
+  linkCount: number;
+  isFavorite: boolean;
+  updatedAt: number;
+  deletedAt: number;
+  daysUntilPurge: number | null;
+}
