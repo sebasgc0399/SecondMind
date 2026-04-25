@@ -13,7 +13,8 @@ const LEVEL_META: Record<Level, { label: string; tip: string; badgeClass: string
   0: {
     label: 'Sin destilación',
     tip: 'Selecciona los pasajes clave y aplícales negrita (Ctrl+B) para marcarlos como L1.',
-    badgeClass: 'bg-muted/40 text-muted-foreground',
+    badgeClass:
+      'border border-dashed border-violet-400/60 bg-violet-500/5 text-violet-700 dark:border-violet-300/40 dark:text-violet-300',
   },
   1: {
     label: 'Pasajes clave marcados',
