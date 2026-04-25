@@ -1,7 +1,6 @@
 import { useEffect } from 'react';
 import { useLocation } from 'react-router';
 import AppInfoSection from '@/components/settings/AppInfoSection';
-import DefaultNoteTypeSelector from '@/components/settings/DefaultNoteTypeSelector';
 import ThemeSelector from '@/components/settings/ThemeSelector';
 import TrashAutoPurgeSelector from '@/components/settings/TrashAutoPurgeSelector';
 
@@ -33,18 +32,6 @@ export default function SettingsPage() {
           </p>
         </div>
         <ThemeSelector />
-      </section>
-
-      <section id="notes" aria-labelledby="notes-heading" className="scroll-mt-14">
-        <div className="mb-3">
-          <h2 id="notes-heading" className="text-sm font-semibold text-foreground">
-            Tipo de nota por defecto
-          </h2>
-          <p className="mt-0.5 text-xs text-muted-foreground">
-            Al crear una nota nueva, se usa este tipo por defecto.
-          </p>
-        </div>
-        <DefaultNoteTypeSelector />
       </section>
 
       <section id="trash" aria-labelledby="trash-heading" className="scroll-mt-14">
