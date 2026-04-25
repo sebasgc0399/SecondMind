@@ -238,8 +238,10 @@ describe('useEditorPopup', () => {
     // dispatched scroll events. The actual close-on-scroll behavior is verified
     // end-to-end by Playwright in F5. Here we assert the contract: when the
     // popup opens, the hook adds a `scroll` listener on `document` with
-    // { capture: true, passive: true }; when it closes, the listener is removed.
-    it('adds and removes scroll listener on document with capture: true', () => {
+    // { capture: true, passive: true } after a 1-task defer (to skip the
+    // synchronous ProseMirror scrollIntoView that follows the trigger char
+    // insertion); when it closes, the listener is removed.
+    it('adds and removes scroll listener on document with capture: true', async () => {
       const addSpy = vi.spyOn(document, 'addEventListener');
       const removeSpy = vi.spyOn(document, 'removeEventListener');
 
@@ -256,6 +258,11 @@ describe('useEditorPopup', () => {
 
       // open the popup
       act(() => listener.onStart(mockSuggestionProps('')));
+
+      // Listener registers in the next task — flush the timer.
+      await act(async () => {
+        await new Promise((resolve) => setTimeout(resolve, 0));
+      });
 
       const scrollAdds = addSpy.mock.calls.filter(([type]) => type === 'scroll');
       expect(scrollAdds).toHaveLength(1);

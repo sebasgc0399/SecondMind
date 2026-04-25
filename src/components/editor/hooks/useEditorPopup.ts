@@ -190,8 +190,15 @@ export function useEditorPopup<TItem>(
     };
     // scroll events do not bubble; capture phase intercepts scrolls of any
     // descendant scrollable container (including inner <main> on mobile).
-    document.addEventListener('scroll', handleScroll, { capture: true, passive: true });
+    // Defer one task: opening the popup typically follows a ProseMirror
+    // scrollIntoView() that fires synchronously when the trigger char is
+    // inserted. Without this defer the listener catches that scroll and
+    // closes the popup before the user sees it.
+    const timer = setTimeout(() => {
+      document.addEventListener('scroll', handleScroll, { capture: true, passive: true });
+    }, 0);
     return () => {
+      clearTimeout(timer);
       document.removeEventListener('scroll', handleScroll, { capture: true });
     };
   }, [state.isOpen]);
