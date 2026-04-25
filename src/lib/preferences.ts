@@ -23,20 +23,13 @@ function pathFor(uid: string) {
   return doc(db, `users/${uid}/settings/preferences`);
 }
 
-const VALID_NOTE_TYPES = ['fleeting', 'literature', 'permanent'];
-
 function parsePrefs(data: Record<string, unknown> | undefined): UserPreferences {
   const days = data?.trashAutoPurgeDays;
-  const noteType = data?.defaultNoteType;
   return {
     trashAutoPurgeDays:
       days === 0 || days === 7 || days === 15 || days === 30
         ? days
         : DEFAULT_PREFERENCES.trashAutoPurgeDays,
-    defaultNoteType:
-      typeof noteType === 'string' && VALID_NOTE_TYPES.includes(noteType)
-        ? (noteType as UserPreferences['defaultNoteType'])
-        : DEFAULT_PREFERENCES.defaultNoteType,
   };
 }
 

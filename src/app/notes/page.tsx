@@ -35,6 +35,7 @@ function trashNoteToOramaDoc(t: TrashNote): NoteOramaDoc {
     isFavorite: t.isFavorite,
     deletedAt: t.deletedAt,
     distillLevel: t.distillLevel,
+    aiSummary: '',
   };
 }
 
@@ -62,10 +63,10 @@ export default function NotesListPage() {
     // correcto. El await garantiza que Firestore terminó antes de navigate,
     // preservando el gotcha "useNote.getDoc en página destino necesita doc
     // presente en Firestore al momento de navegar".
-    const newId = await notesRepo.createNote({ noteType: preferences.defaultNoteType });
+    const newId = await notesRepo.createNote();
     if (!newId) return;
     navigate(`/notes/${newId}`);
-  }, [navigate, user, preferences.defaultNoteType]);
+  }, [navigate, user]);
 
   const hasQuery = query.trim().length > 0;
   const isTrashView = filter === 'trash';

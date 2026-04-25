@@ -72,6 +72,7 @@ export const NOTES_SCHEMA = {
   isFavorite: 'boolean',
   deletedAt: 'number',
   distillLevel: 'number',
+  aiSummary: 'string',
 } as const;
 
 export interface NoteOramaDoc {
@@ -86,6 +87,7 @@ export interface NoteOramaDoc {
   isFavorite: boolean;
   deletedAt: number;
   distillLevel: 0 | 1 | 2 | 3;
+  aiSummary: string;
 }
 
 export function createNotesIndex(): AnyOrama {
@@ -110,5 +112,6 @@ export function rowToOramaDoc(id: string, row: Row): NoteOramaDoc {
     isFavorite: Boolean(row.isFavorite),
     deletedAt: Number(row.deletedAt) || 0,
     distillLevel,
+    aiSummary: (row.aiSummary as string) || '',
   };
 }

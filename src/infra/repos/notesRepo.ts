@@ -51,7 +51,6 @@ export interface NoteCreateOverrides {
   title?: string;
   contentPlain?: string;
   paraType?: string;
-  noteType?: string;
   source?: string;
 }
 
@@ -68,7 +67,7 @@ async function createNote(overrides?: NoteCreateOverrides): Promise<string | nul
     title: overrides?.title ?? '',
     contentPlain: overrides?.contentPlain ?? '',
     paraType: overrides?.paraType ?? 'resource',
-    noteType: overrides?.noteType ?? 'fleeting',
+    noteType: 'fleeting',
     source: overrides?.source ?? '',
     projectIds: '[]',
     areaIds: '[]',
