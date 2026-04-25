@@ -119,7 +119,14 @@
       "Read(//c/Users/sebas/**)",
       "Skill(update-config)",
       "Skill(update-config:*)",
-      "Bash(python -c \"import json; d=json.load\\(open\\(r'C:\\\\Users\\\\sebas\\\\.claude\\\\settings.json','r',encoding='utf-8'\\)\\); print\\('defaultMode:', d['permissions']['defaultMode']\\); print\\('ask:', d['permissions']['ask']\\); print\\('top-level keys:', list\\(d.keys\\(\\)\\)\\)\")"
+      "Bash(python -c \"import json; d=json.load\\(open\\(r'C:\\\\Users\\\\sebas\\\\.claude\\\\settings.json','r',encoding='utf-8'\\)\\); print\\('defaultMode:', d['permissions']['defaultMode']\\); print\\('ask:', d['permissions']['ask']\\); print\\('top-level keys:', list\\(d.keys\\(\\)\\)\\)\")",
+      "Bash(grep -B 1 -A 3 \"useGraph\\\\.ts$\\\\|useNote\\\\.ts$\\\\|useNote\\\\.ts:30\")",
+      "Read(//tmp/**)",
+      "Bash(curl -s -o /dev/null -w \"HTTP %{http_code}\\\\n\" http://localhost:5173/)",
+      "Bash(firebase firestore:get \"users/gYPP7NIo5JanxIbPqMe6nC3SQfE3/notes/12c98cd6-ec4e-4439-a3c6-9dbc215d20a3\")",
+      "Bash(gcloud firestore *)",
+      "Bash(curl -s \"https://firestore.googleapis.com/v1/projects/secondmindv1/databases/\\(default\\)/documents/users/gYPP7NIo5JanxIbPqMe6nC3SQfE3/embeddings/12c98cd6-ec4e-4439-a3c6-9dbc215d20a3\")",
+      "Bash(firebase functions:log --only onNoteDeleted -n 5)"
     ],
     "additionalDirectories": [
       "C:\\Users\\sebas\\.claude",
