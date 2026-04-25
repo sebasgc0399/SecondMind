@@ -255,6 +255,7 @@ Aplican a cualquier sesión sin importar la feature. Gotchas de dominio específ
 - **`grid` en Tailwind sin `grid-cols-1` explícito deja children crecer.** Un `<div class="grid gap-4 lg:grid-cols-2">` con hijos de content largo estira la implicit column auto hasta miles de px en mobile. Siempre empezar con `grid-cols-1`: `grid grid-cols-1 gap-4 lg:grid-cols-2`.
 - **`min-w-0 flex-1 truncate` obligatorio** en `<span>` dentro de `<a class="flex">` para que `truncate` funcione. Solo `truncate` sin `min-w-0` deja el child expandirse a content-size.
 - **`$USERPROFILE` no expande en cmd.exe** — usa `%USERPROFILE%` (cmd) o `$USERPROFILE` (git bash/PowerShell). Si una herramienta acepta un path literal como argumento (ej. `tauri signer generate -w "$USERPROFILE/..."`), la variable no expandida crea un dir literal `$USERPROFILE/` en el cwd. Ser consciente del shell target cuando se dan comandos con env vars en Windows.
+- **`@media (hover: hover)` se evalúa por capacidad del input device, NO por viewport.** En navegadores headless con mouse simulator (Playwright, Puppeteer) y en mobile real con teclado/mouse externo, el query reporta `true` sin importar el ancho de pantalla — los iconos hover-revealed quedan invisibles aunque el viewport sea de 375px. Para hover-reveal "solo en pantallas grandes", usar breakpoint Tailwind (`md:opacity-0 md:group-hover:opacity-100`). Patrón vivo en [src/components/editor/NoteCard.tsx](src/components/editor/NoteCard.tsx).
 
 ## Estado de features
 

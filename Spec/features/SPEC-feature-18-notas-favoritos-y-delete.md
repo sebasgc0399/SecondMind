@@ -29,14 +29,15 @@ Permitir al usuario marcar notas como favoritas (estrella amarilla persistente) 
 
 **`@media (hover: hover)` se evalúa por input device, no por viewport.** El plan inicial ocultaba el cluster con `[@media(hover:hover)]:opacity-0` para que touch siempre los viera y desktop hiciera hover-reveal. En E2E con Playwright a 375px los iconos quedaban invisibles: Chromium headless con mouse simulator reporta `(hover: hover) === true` sin importar el viewport. El media query distingue por capacidad del input primary device, no por ancho de pantalla. Fix: `md:opacity-0 md:group-hover:opacity-100 md:focus-visible:opacity-100` (breakpoint Tailwind ≥768px). Mobile real con teclado/mouse externo también queda cubierto correctamente. Detectado solo porque la verificación E2E mobile estaba en el checklist; sin ella, el bug se hubiera filtrado a producción invisible para el usuario táctil más usuario-mouse.
 
-## Lecciones
+## Gotchas escalados
 
-- **`@media (hover: hover)` no equivale a "pantalla desktop".** Se evalúa por capacidad del input device, no por ancho. Falla en headless con mouse simulation y en mobile real con periféricos externos. Para hover-reveal "solo en pantallas grandes", usar breakpoint Tailwind (`md:`, `lg:`), no el media query de hover.
-- **shadcn con style `base-nova` genera Base UI primitives, no Radix.** Confirmado empírico al agregar `alert-dialog`. Los data attributes son `data-open` / `data-closed` / `data-starting-style` / `data-ending-style`, no `data-state`. Las clases `animate-in/animate-out` igual aplican porque el style está pensado para esos selectors.
-- **TinyBase Cell types no soportan `null`.** Para campos opcionales tipo timestamp, el patrón es: dominio TS expone `field: number | null`, capa persistencia (Row) usa `0` como sentinel + helper boolean. Aplicable a cualquier futuro soft-delete o "campo no seteado".
-- **Las CFs `autoTagNote` y `generateEmbedding` se disparan en CADA write a una nota**, incluyendo toggles de flags como `isFavorite`. Aceptable hoy porque `aiProcessed` y el hash de content actúan como guards. Si en el futuro se agregan más flags toggleables, considerar guard explícito de "no reprocesar si solo cambió metadata".
-- **Vitest hoistea `vi.mock(...)` al top: las vars del scope del test no existen cuando el factory corre.** Si el mock necesita un objeto compartido (ej. un store TinyBase), crearlo DENTRO del factory con `await import()` y leerlo desde el módulo mockeado en el resto del archivo.
-- **Lint `import/order` interpreta `vi.mock(...)` como statement separador entre import groups.** Imports antes y después de `vi.mock` reportan "empty line between import groups". Solución: todos los imports al top del archivo, vi.mock después (Vitest los hoistea igual).
+Las lecciones operacionales de F18 viven en docs vigentes; este SPEC solo conserva la traza:
+
+- `@media (hover: hover)` por input device, no viewport → `CLAUDE.md` "Gotchas universales".
+- `npx shadcn add` con `base-nova` genera Base UI → `Spec/ESTADO-ACTUAL.md` "UI y componentes".
+- TinyBase Cell sin `null` (sentinel `0` + check) → `Spec/ESTADO-ACTUAL.md` "TinyBase + Firestore sync".
+- CFs disparadas en cada write incluyendo toggles de flags → `Spec/ESTADO-ACTUAL.md` "Cloud Functions > Guards y edge cases".
+- `vi.mock` hoist + `import/order` con vi.mock como separador → `Spec/ESTADO-ACTUAL.md` "Patrones establecidos".
 
 ## Habilita
 
