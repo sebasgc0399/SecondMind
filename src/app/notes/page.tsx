@@ -1,19 +1,52 @@
 import { useCallback, useMemo, useState } from 'react';
-import { useNavigate } from 'react-router';
-import { Link } from 'react-router';
-import { Plus, Search, Network, Sparkles, Star } from 'lucide-react';
+import { useNavigate, Link } from 'react-router';
+import { Plus, Search, Network, Sparkles, Trash2, Settings } from 'lucide-react';
 import { notesRepo } from '@/infra/repos/notesRepo';
 import useAuth from '@/hooks/useAuth';
 import useHybridSearch, { type SemanticResult } from '@/hooks/useHybridSearch';
+import useTrashNotes from '@/hooks/useTrashNotes';
+import usePreferences from '@/hooks/usePreferences';
 import NoteCard from '@/components/editor/NoteCard';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import type { NoteOramaDoc } from '@/lib/orama';
+import type { TrashNote } from '@/types/note';
+
+type Filter = 'all' | 'favorites' | 'trash';
+
+const TABS: { key: Filter; label: string }[] = [
+  { key: 'all', label: 'Todas' },
+  { key: 'favorites', label: 'Favoritas' },
+  { key: 'trash', label: 'Papelera' },
+];
+
+// TrashNote tiene los mismos campos que NoteOramaDoc excepto isArchived
+// (que en papelera es siempre false implícito). Mapeo trivial para que
+// NoteCard reciba la shape canónica.
+function trashNoteToOramaDoc(t: TrashNote): NoteOramaDoc {
+  return {
+    id: t.id,
+    title: t.title,
+    contentPlain: t.contentPlain,
+    noteType: t.noteType,
+    paraType: t.paraType,
+    linkCount: t.linkCount,
+    updatedAt: t.updatedAt,
+    isArchived: false,
+    isFavorite: t.isFavorite,
+    deletedAt: t.deletedAt,
+    distillLevel: t.distillLevel,
+  };
+}
 
 export default function NotesListPage() {
   const navigate = useNavigate();
   const { user } = useAuth();
+  const [filter, setFilter] = useState<Filter>('all');
   const { query, setQuery, keywordResults, semanticResults, isInitializing, isLoadingSemantic } =
     useHybridSearch();
-  const [favoritesOnly, setFavoritesOnly] = useState(false);
+  const { notes: trashNotes, count: trashCount, isLoading: isTrashLoading } = useTrashNotes();
+  const { preferences } = usePreferences();
+  const [isPurgeOpen, setIsPurgeOpen] = useState(false);
 
   const handleCreate = useCallback(async () => {
     if (!user) return;
@@ -27,12 +60,14 @@ export default function NotesListPage() {
   }, [navigate, user]);
 
   const hasQuery = query.trim().length > 0;
+  const isTrashView = filter === 'trash';
+  const isFavoritesView = filter === 'favorites';
 
   // Sort estable: cuando NO hay query, ancla favoritos al tope manteniendo
   // el orden interno de updatedAt desc que ya viene de useNoteSearch. Con
   // query activo respetamos el orden de relevancia de Orama (no resort).
-  const displayedResults = useMemo<NoteOramaDoc[]>(() => {
-    let list: NoteOramaDoc[] = favoritesOnly
+  const displayedKeywordResults = useMemo<NoteOramaDoc[]>(() => {
+    let list: NoteOramaDoc[] = isFavoritesView
       ? keywordResults.filter((n) => n.isFavorite)
       : keywordResults;
     if (!hasQuery) {
@@ -42,17 +77,32 @@ export default function NotesListPage() {
       });
     }
     return list;
-  }, [keywordResults, favoritesOnly, hasQuery]);
+  }, [keywordResults, isFavoritesView, hasQuery]);
 
-  const showSkeleton = isInitializing && keywordResults.length === 0;
-  const showKeywordEmpty = !isInitializing && hasQuery && keywordResults.length === 0;
-  const showNotesEmpty = !isInitializing && !hasQuery && keywordResults.length === 0;
+  const showSearchSkeleton = !isTrashView && isInitializing && keywordResults.length === 0;
+  const showKeywordEmpty =
+    !isTrashView && !isInitializing && hasQuery && keywordResults.length === 0;
+  const showAllNotesEmpty =
+    filter === 'all' && !isInitializing && !hasQuery && keywordResults.length === 0;
   const showFavoritesEmpty =
+    isFavoritesView &&
     !isInitializing &&
     !hasQuery &&
-    favoritesOnly &&
-    displayedResults.length === 0 &&
+    displayedKeywordResults.length === 0 &&
     keywordResults.length > 0;
+  const showTrashSkeleton = isTrashView && isTrashLoading && trashCount === 0;
+  const showTrashEmpty = isTrashView && !isTrashLoading && trashCount === 0;
+
+  const purgeDays = preferences.trashAutoPurgeDays;
+  const trashCaption =
+    purgeDays === 0
+      ? 'Las notas en papelera no se eliminan automáticamente.'
+      : `Las notas se eliminan definitivamente a los ${purgeDays} días.`;
+
+  function handleConfirmPurge() {
+    if (trashCount === 0) return;
+    void notesRepo.purgeAll(trashNotes.map((n) => n.id));
+  }
 
   return (
     <div className="mx-auto max-w-3xl">
@@ -79,46 +129,80 @@ export default function NotesListPage() {
         </div>
       </header>
 
-      <div className="mb-4 flex items-center gap-2">
-        <div className="relative flex-1">
-          <Search className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <input
-            type="text"
-            value={query}
-            onChange={(event) => setQuery(event.target.value)}
-            placeholder="Buscar notas..."
-            className="w-full rounded-md border border-border bg-card py-2 pr-3 pl-9 text-sm text-foreground outline-none placeholder:text-muted-foreground focus:border-border/80"
-          />
+      <nav className="mb-4 flex gap-1 overflow-x-auto overflow-y-hidden border-b border-border">
+        {TABS.map((tab) => {
+          const isActive = tab.key === filter;
+          const showCount = tab.key === 'trash' && trashCount > 0;
+          return (
+            <button
+              key={tab.key}
+              type="button"
+              onClick={() => setFilter(tab.key)}
+              className={`-mb-px inline-flex shrink-0 items-center gap-1.5 border-b-2 px-4 py-3 text-sm font-medium transition-colors md:py-2 ${
+                isActive
+                  ? 'border-primary text-foreground'
+                  : 'border-transparent text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              {tab.label}
+              {showCount && (
+                <span className="rounded-full bg-muted px-1.5 py-0.5 text-[10px] font-semibold">
+                  {trashCount}
+                </span>
+              )}
+            </button>
+          );
+        })}
+      </nav>
+
+      {!isTrashView && (
+        <div className="mb-4">
+          <div className="relative">
+            <Search className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <input
+              type="text"
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+              placeholder="Buscar notas..."
+              className="w-full rounded-md border border-border bg-card py-2 pr-3 pl-9 text-sm text-foreground outline-none placeholder:text-muted-foreground focus:border-border/80"
+            />
+          </div>
         </div>
-        <button
-          type="button"
-          onClick={() => setFavoritesOnly((v) => !v)}
-          aria-pressed={favoritesOnly}
-          aria-label={favoritesOnly ? 'Mostrar todas las notas' : 'Mostrar solo favoritas'}
-          className={
-            favoritesOnly
-              ? 'inline-flex shrink-0 items-center gap-1.5 rounded-md border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-sm font-medium text-amber-500 transition-colors'
-              : 'inline-flex shrink-0 items-center gap-1.5 rounded-md border border-border bg-card px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground'
-          }
-        >
-          <Star
-            className="h-4 w-4"
-            fill={favoritesOnly ? 'currentColor' : 'none'}
-            strokeWidth={favoritesOnly ? 1.5 : 2}
-          />
-          <span className="hidden sm:inline">Solo favoritas</span>
-        </button>
-      </div>
+      )}
 
-      {showSkeleton && <NoteListSkeleton />}
+      {isTrashView && (
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-2 rounded-md border border-border bg-card px-3 py-2 text-xs text-muted-foreground">
+          <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+            <span>{trashCaption}</span>
+            <Link
+              to="/settings#trash"
+              className="inline-flex items-center gap-1 underline-offset-2 hover:text-foreground hover:underline"
+            >
+              <Settings className="h-3 w-3" />
+              Cambiar
+            </Link>
+          </div>
+          <button
+            type="button"
+            onClick={() => setIsPurgeOpen(true)}
+            disabled={trashCount === 0}
+            className="inline-flex items-center gap-1.5 rounded-md border border-border bg-card px-2.5 py-1.5 text-xs font-medium text-foreground transition-colors hover:bg-destructive/10 hover:text-destructive disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            <Trash2 className="h-3.5 w-3.5" />
+            Vaciar papelera
+          </button>
+        </div>
+      )}
 
-      {showNotesEmpty && <EmptyNotesState onCreate={handleCreate} />}
+      {(showSearchSkeleton || showTrashSkeleton) && <NoteListSkeleton />}
 
-      {showFavoritesEmpty && <EmptyFavoritesState onClear={() => setFavoritesOnly(false)} />}
+      {showAllNotesEmpty && <EmptyNotesState onCreate={handleCreate} />}
+      {showFavoritesEmpty && <EmptyFavoritesState onClear={() => setFilter('all')} />}
+      {showTrashEmpty && <EmptyTrashState onClear={() => setFilter('all')} />}
 
-      {displayedResults.length > 0 && (
+      {!isTrashView && displayedKeywordResults.length > 0 && (
         <ul className="flex flex-col gap-3">
-          {displayedResults.map((note) => (
+          {displayedKeywordResults.map((note) => (
             <li key={note.id}>
               <NoteCard note={note} />
             </li>
@@ -126,7 +210,21 @@ export default function NotesListPage() {
         </ul>
       )}
 
-      {hasQuery && (
+      {isTrashView && trashNotes.length > 0 && (
+        <ul className="flex flex-col gap-3">
+          {trashNotes.map((tn) => (
+            <li key={tn.id}>
+              <NoteCard
+                note={trashNoteToOramaDoc(tn)}
+                mode="trash"
+                daysUntilPurge={tn.daysUntilPurge}
+              />
+            </li>
+          ))}
+        </ul>
+      )}
+
+      {!isTrashView && hasQuery && (
         <SemanticSection
           results={semanticResults}
           isLoading={isLoadingSemantic}
@@ -134,6 +232,18 @@ export default function NotesListPage() {
           showKeywordEmpty={showKeywordEmpty}
         />
       )}
+
+      <ConfirmDialog
+        open={isPurgeOpen}
+        onOpenChange={setIsPurgeOpen}
+        title="¿Vaciar la papelera?"
+        description={`Se eliminarán para siempre ${trashCount} ${
+          trashCount === 1 ? 'nota' : 'notas'
+        }, sus embeddings y los links que las mencionan. Esta acción no se puede deshacer.`}
+        confirmLabel="Vaciar papelera"
+        variant="destructive"
+        onConfirm={handleConfirmPurge}
+      />
     </div>
   );
 }
@@ -243,6 +353,22 @@ function EmptyFavoritesState({ onClear }: { onClear: () => void }) {
         className="mt-4 inline-flex items-center gap-1.5 rounded-md border border-border bg-card px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
       >
         Mostrar todas las notas
+      </button>
+    </div>
+  );
+}
+
+function EmptyTrashState({ onClear }: { onClear: () => void }) {
+  return (
+    <div className="rounded-lg border border-dashed border-border p-10 text-center">
+      <Trash2 className="mx-auto mb-3 h-8 w-8 text-muted-foreground" />
+      <p className="text-sm text-muted-foreground">Tu papelera está vacía.</p>
+      <button
+        type="button"
+        onClick={onClear}
+        className="mt-4 inline-flex items-center gap-1.5 rounded-md border border-border bg-card px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+      >
+        Volver a todas las notas
       </button>
     </div>
   );
