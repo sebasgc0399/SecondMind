@@ -35,6 +35,7 @@ function trashNoteToOramaDoc(t: TrashNote): NoteOramaDoc {
     isFavorite: t.isFavorite,
     deletedAt: t.deletedAt,
     distillLevel: t.distillLevel,
+    aiSummary: '',
   };
 }
 
