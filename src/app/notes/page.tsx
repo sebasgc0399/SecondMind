@@ -1,17 +1,19 @@
-import { useCallback } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router';
 import { Link } from 'react-router';
-import { Plus, Search, Network, Sparkles } from 'lucide-react';
+import { Plus, Search, Network, Sparkles, Star } from 'lucide-react';
 import { notesRepo } from '@/infra/repos/notesRepo';
 import useAuth from '@/hooks/useAuth';
 import useHybridSearch, { type SemanticResult } from '@/hooks/useHybridSearch';
 import NoteCard from '@/components/editor/NoteCard';
+import type { NoteOramaDoc } from '@/lib/orama';
 
 export default function NotesListPage() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { query, setQuery, keywordResults, semanticResults, isInitializing, isLoadingSemantic } =
     useHybridSearch();
+  const [favoritesOnly, setFavoritesOnly] = useState(false);
 
   const handleCreate = useCallback(async () => {
     if (!user) return;
@@ -25,9 +27,32 @@ export default function NotesListPage() {
   }, [navigate, user]);
 
   const hasQuery = query.trim().length > 0;
+
+  // Sort estable: cuando NO hay query, ancla favoritos al tope manteniendo
+  // el orden interno de updatedAt desc que ya viene de useNoteSearch. Con
+  // query activo respetamos el orden de relevancia de Orama (no resort).
+  const displayedResults = useMemo<NoteOramaDoc[]>(() => {
+    let list: NoteOramaDoc[] = favoritesOnly
+      ? keywordResults.filter((n) => n.isFavorite)
+      : keywordResults;
+    if (!hasQuery) {
+      list = [...list].sort((a, b) => {
+        if (a.isFavorite === b.isFavorite) return 0;
+        return a.isFavorite ? -1 : 1;
+      });
+    }
+    return list;
+  }, [keywordResults, favoritesOnly, hasQuery]);
+
   const showSkeleton = isInitializing && keywordResults.length === 0;
   const showKeywordEmpty = !isInitializing && hasQuery && keywordResults.length === 0;
   const showNotesEmpty = !isInitializing && !hasQuery && keywordResults.length === 0;
+  const showFavoritesEmpty =
+    !isInitializing &&
+    !hasQuery &&
+    favoritesOnly &&
+    displayedResults.length === 0 &&
+    keywordResults.length > 0;
 
   return (
     <div className="mx-auto max-w-3xl">
@@ -54,24 +79,46 @@ export default function NotesListPage() {
         </div>
       </header>
 
-      <div className="relative mb-4">
-        <Search className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-        <input
-          type="text"
-          value={query}
-          onChange={(event) => setQuery(event.target.value)}
-          placeholder="Buscar notas..."
-          className="w-full rounded-md border border-border bg-card py-2 pr-3 pl-9 text-sm text-foreground outline-none placeholder:text-muted-foreground focus:border-border/80"
-        />
+      <div className="mb-4 flex items-center gap-2">
+        <div className="relative flex-1">
+          <Search className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <input
+            type="text"
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+            placeholder="Buscar notas..."
+            className="w-full rounded-md border border-border bg-card py-2 pr-3 pl-9 text-sm text-foreground outline-none placeholder:text-muted-foreground focus:border-border/80"
+          />
+        </div>
+        <button
+          type="button"
+          onClick={() => setFavoritesOnly((v) => !v)}
+          aria-pressed={favoritesOnly}
+          aria-label={favoritesOnly ? 'Mostrar todas las notas' : 'Mostrar solo favoritas'}
+          className={
+            favoritesOnly
+              ? 'inline-flex shrink-0 items-center gap-1.5 rounded-md border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-sm font-medium text-amber-500 transition-colors'
+              : 'inline-flex shrink-0 items-center gap-1.5 rounded-md border border-border bg-card px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground'
+          }
+        >
+          <Star
+            className="h-4 w-4"
+            fill={favoritesOnly ? 'currentColor' : 'none'}
+            strokeWidth={favoritesOnly ? 1.5 : 2}
+          />
+          <span className="hidden sm:inline">Solo favoritas</span>
+        </button>
       </div>
 
       {showSkeleton && <NoteListSkeleton />}
 
       {showNotesEmpty && <EmptyNotesState onCreate={handleCreate} />}
 
-      {keywordResults.length > 0 && (
+      {showFavoritesEmpty && <EmptyFavoritesState onClear={() => setFavoritesOnly(false)} />}
+
+      {displayedResults.length > 0 && (
         <ul className="flex flex-col gap-3">
-          {keywordResults.map((note) => (
+          {displayedResults.map((note) => (
             <li key={note.id}>
               <NoteCard note={note} />
             </li>
@@ -181,6 +228,21 @@ function EmptyNotesState({ onCreate }: { onCreate: () => void }) {
       >
         <Plus className="h-4 w-4" />
         Crear primera nota
+      </button>
+    </div>
+  );
+}
+
+function EmptyFavoritesState({ onClear }: { onClear: () => void }) {
+  return (
+    <div className="rounded-lg border border-dashed border-border p-10 text-center">
+      <p className="text-sm text-muted-foreground">No tenés notas favoritas todavía.</p>
+      <button
+        type="button"
+        onClick={onClear}
+        className="mt-4 inline-flex items-center gap-1.5 rounded-md border border-border bg-card px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+      >
+        Mostrar todas las notas
       </button>
     </div>
   );

@@ -45,6 +45,7 @@ export default function useGlobalSearch(query: string): SearchResult[] {
       const notesTable = notesStore.getTable('notes');
       for (const [id, row] of Object.entries(notesTable)) {
         if (row.isArchived) continue;
+        if ((row.deletedAt as number) > 0) continue;
         docs.push(noteRowToGlobalDoc(id, row));
       }
 
@@ -117,6 +118,7 @@ function getRecents(): SearchResult[] {
   const notesTable = notesStore.getTable('notes');
   for (const [id, row] of Object.entries(notesTable)) {
     if (row.isArchived) continue;
+    if ((row.deletedAt as number) > 0) continue;
     all.push({
       id,
       type: 'note',

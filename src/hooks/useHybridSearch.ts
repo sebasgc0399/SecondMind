@@ -35,6 +35,7 @@ function getNoteDoc(id: string): NoteOramaDoc | null {
   if (!row || Object.keys(row).length === 0) return null;
   const doc = rowToOramaDoc(id, row);
   if (doc.isArchived) return null;
+  if (doc.deletedAt > 0) return null;
   return doc;
 }
 
