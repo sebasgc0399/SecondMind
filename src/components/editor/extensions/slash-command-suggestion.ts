@@ -4,25 +4,15 @@ import {
   type SlashCommandContext,
   type SlashMenuItem,
 } from '@/components/editor/menus/slashMenuItems';
+import type { PopupListener } from '@/components/editor/hooks/useEditorPopup';
 import type { Editor, Range } from '@tiptap/core';
-import type {
-  SuggestionKeyDownProps,
-  SuggestionOptions,
-  SuggestionProps,
-} from '@tiptap/suggestion';
+import type { SuggestionOptions } from '@tiptap/suggestion';
 
 export const slashCommandPluginKey = new PluginKey('slash-command-suggestion');
 
-export interface SlashMenuListener {
-  onStart: (props: SuggestionProps<SlashMenuItem>) => void;
-  onUpdate: (props: SuggestionProps<SlashMenuItem>) => void;
-  onKeyDown: (props: SuggestionKeyDownProps) => boolean;
-  onExit: () => void;
-}
+let activeListener: PopupListener<SlashMenuItem> | null = null;
 
-let activeListener: SlashMenuListener | null = null;
-
-export function setSlashMenuListener(listener: SlashMenuListener | null): void {
+export function setSlashMenuListener(listener: PopupListener<SlashMenuItem> | null): void {
   activeListener = listener;
 }
 
