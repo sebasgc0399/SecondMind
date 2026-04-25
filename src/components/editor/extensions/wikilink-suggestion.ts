@@ -1,35 +1,23 @@
 import { PluginKey } from '@tiptap/pm/state';
 import { notesStore } from '@/stores/notesStore';
+import type { PopupListener } from '@/components/editor/hooks/useEditorPopup';
 import type { Editor, Range } from '@tiptap/core';
-import type {
-  SuggestionKeyDownProps,
-  SuggestionOptions,
-  SuggestionProps,
-} from '@tiptap/suggestion';
+import type { SuggestionOptions } from '@tiptap/suggestion';
 
 export interface WikilinkSuggestionItem {
   id: string;
   title: string;
 }
 
-// Listener global para el render del Suggestion plugin. El plugin se crea
-// una sola vez en la inicialización del editor — no podemos pasarle React
-// state directamente. El WikilinkMenu monta/desmonta un listener en esta
-// variable módulo-level. Asume un solo editor activo a la vez (OK para MVP).
-export interface WikilinkMenuListener {
-  onStart: (props: SuggestionProps<WikilinkSuggestionItem>) => void;
-  onUpdate: (props: SuggestionProps<WikilinkSuggestionItem>) => void;
-  onKeyDown: (props: SuggestionKeyDownProps) => boolean;
-  onExit: () => void;
-}
+let activeListener: PopupListener<WikilinkSuggestionItem> | null = null;
 
-let activeListener: WikilinkMenuListener | null = null;
-
-export function setWikilinkMenuListener(listener: WikilinkMenuListener | null): void {
+export function setWikilinkMenuListener(
+  listener: PopupListener<WikilinkSuggestionItem> | null,
+): void {
   activeListener = listener;
 }
 
-function queryItems(query: string): WikilinkSuggestionItem[] {
+export function queryWikilinkItems(query: string): WikilinkSuggestionItem[] {
   const table = notesStore.getTable('notes');
   const queryLower = query.trim().toLowerCase();
   const rows = Object.entries(table).map(([id, row]) => ({
@@ -65,7 +53,7 @@ export const wikilinkSuggestion: Omit<SuggestionOptions<WikilinkSuggestionItem>,
     return !ALPHANUMERIC.test(prevChar);
   },
 
-  items: ({ query }) => queryItems(query),
+  items: ({ query }) => queryWikilinkItems(query),
 
   command: ({
     editor,
