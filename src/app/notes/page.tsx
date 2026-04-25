@@ -42,9 +42,16 @@ export default function NotesListPage() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const [filter, setFilter] = useState<Filter>('all');
+  const [trashQuery, setTrashQuery] = useState('');
   const { query, setQuery, keywordResults, semanticResults, isInitializing, isLoadingSemantic } =
     useHybridSearch();
-  const { notes: trashNotes, count: trashCount, isLoading: isTrashLoading } = useTrashNotes();
+  const {
+    notes: trashNotes,
+    count: trashCount,
+    isLoading: isTrashLoading,
+  } = useTrashNotes({
+    filter: trashQuery,
+  });
   const { preferences } = usePreferences();
   const [isPurgeOpen, setIsPurgeOpen] = useState(false);
 
@@ -137,7 +144,11 @@ export default function NotesListPage() {
             <button
               key={tab.key}
               type="button"
-              onClick={() => setFilter(tab.key)}
+              onClick={() => {
+                setFilter(tab.key);
+                setQuery('');
+                setTrashQuery('');
+              }}
               className={`-mb-px inline-flex shrink-0 items-center gap-1.5 border-b-2 px-4 py-3 text-sm font-medium transition-colors md:py-2 ${
                 isActive
                   ? 'border-primary text-foreground'
@@ -155,20 +166,20 @@ export default function NotesListPage() {
         })}
       </nav>
 
-      {!isTrashView && (
-        <div className="mb-4">
-          <div className="relative">
-            <Search className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-            <input
-              type="text"
-              value={query}
-              onChange={(event) => setQuery(event.target.value)}
-              placeholder="Buscar notas..."
-              className="w-full rounded-md border border-border bg-card py-2 pr-3 pl-9 text-sm text-foreground outline-none placeholder:text-muted-foreground focus:border-border/80"
-            />
-          </div>
+      <div className="mb-4">
+        <div className="relative">
+          <Search className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <input
+            type="text"
+            value={isTrashView ? trashQuery : query}
+            onChange={(event) =>
+              isTrashView ? setTrashQuery(event.target.value) : setQuery(event.target.value)
+            }
+            placeholder={isTrashView ? 'Buscar en papelera...' : 'Buscar notas...'}
+            className="w-full rounded-md border border-border bg-card py-2 pr-3 pl-9 text-sm text-foreground outline-none placeholder:text-muted-foreground focus:border-border/80"
+          />
         </div>
-      )}
+      </div>
 
       {isTrashView && (
         <div className="mb-4 flex flex-wrap items-center justify-between gap-2 rounded-md border border-border bg-card px-3 py-2 text-xs text-muted-foreground">
