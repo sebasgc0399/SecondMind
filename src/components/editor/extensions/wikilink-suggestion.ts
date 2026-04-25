@@ -25,10 +25,11 @@ export function queryWikilinkItems(query: string): WikilinkSuggestionItem[] {
     title: ((row.title as string) || '').trim() || 'Sin título',
     updatedAt: (row.updatedAt as number) || 0,
     isArchived: Boolean(row.isArchived),
+    deletedAt: Number(row.deletedAt) || 0,
   }));
 
   return rows
-    .filter((row) => !row.isArchived)
+    .filter((row) => !row.isArchived && row.deletedAt === 0)
     .filter((row) => queryLower === '' || row.title.toLowerCase().includes(queryLower))
     .sort((a, b) => b.updatedAt - a.updatedAt)
     .slice(0, 8)

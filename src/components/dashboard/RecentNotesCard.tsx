@@ -14,7 +14,7 @@ export default function RecentNotesCard() {
   const recent = useMemo<NoteOramaDoc[]>(() => {
     return Object.entries(table)
       .map(([id, row]) => rowToOramaDoc(id, row))
-      .filter((doc) => !doc.isArchived)
+      .filter((doc) => !doc.isArchived && doc.deletedAt === 0)
       .sort((a, b) => b.updatedAt - a.updatedAt)
       .slice(0, RECENT_LIMIT);
   }, [table]);

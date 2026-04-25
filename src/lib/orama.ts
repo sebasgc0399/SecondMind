@@ -69,6 +69,8 @@ export const NOTES_SCHEMA = {
   linkCount: 'number',
   updatedAt: 'number',
   isArchived: 'boolean',
+  isFavorite: 'boolean',
+  deletedAt: 'number',
   distillLevel: 'number',
 } as const;
 
@@ -81,6 +83,8 @@ export interface NoteOramaDoc {
   linkCount: number;
   updatedAt: number;
   isArchived: boolean;
+  isFavorite: boolean;
+  deletedAt: number;
   distillLevel: 0 | 1 | 2 | 3;
 }
 
@@ -103,6 +107,8 @@ export function rowToOramaDoc(id: string, row: Row): NoteOramaDoc {
     linkCount: Number(row.linkCount) || 0,
     updatedAt: Number(row.updatedAt) || 0,
     isArchived: Boolean(row.isArchived),
+    isFavorite: Boolean(row.isFavorite),
+    deletedAt: Number(row.deletedAt) || 0,
     distillLevel,
   };
 }
