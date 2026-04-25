@@ -116,7 +116,10 @@
       "Bash(grep -v 'main$')",
       "Bash(grep -v '^\\\\*\\\\|main$')",
       "Bash(xargs -n 1 git branch -d)",
-      "Read(//c/Users/sebas/**)"
+      "Read(//c/Users/sebas/**)",
+      "Skill(update-config)",
+      "Skill(update-config:*)",
+      "Bash(python -c \"import json; d=json.load\\(open\\(r'C:\\\\Users\\\\sebas\\\\.claude\\\\settings.json','r',encoding='utf-8'\\)\\); print\\('defaultMode:', d['permissions']['defaultMode']\\); print\\('ask:', d['permissions']['ask']\\); print\\('top-level keys:', list\\(d.keys\\(\\)\\)\\)\")"
     ],
     "additionalDirectories": [
       "C:\\Users\\sebas\\.claude",
