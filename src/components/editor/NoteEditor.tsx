@@ -11,6 +11,7 @@ import SlashCommand from '@/components/editor/extensions/slash-command';
 import WikilinkMenu from '@/components/editor/menus/WikilinkMenu';
 import SlashMenu from '@/components/editor/menus/SlashMenu';
 import BubbleToolbar from '@/components/editor/menus/BubbleToolbar';
+import DistillLevelBanner from '@/components/editor/DistillLevelBanner';
 import SummaryL3 from '@/components/editor/SummaryL3';
 import useNoteSave, { type SaveStatus } from '@/hooks/useNoteSave';
 import type { JSONContent } from '@tiptap/core';
@@ -92,6 +93,7 @@ export default function NoteEditor({
         isOpen={summaryIsOpen}
         onToggle={onSummaryToggle}
       />
+      <DistillLevelBanner noteId={noteId} />
       <div className="note-editor px-4" onClick={handleClick}>
         <EditorContent editor={editor} />
       </div>
