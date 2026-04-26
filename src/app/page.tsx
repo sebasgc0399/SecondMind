@@ -1,11 +1,12 @@
 import Greeting from '@/components/dashboard/Greeting';
 import QuickCaptureButton from '@/components/dashboard/QuickCaptureButton';
-import InboxCard from '@/components/dashboard/InboxCard';
-import RecentNotesCard from '@/components/dashboard/RecentNotesCard';
+import ReviewCard from '@/components/dashboard/ReviewCard';
 import TasksTodayCard from '@/components/dashboard/TasksTodayCard';
-import ProjectsActiveCard from '@/components/dashboard/ProjectsActiveCard';
-import HabitsTodayCard from '@/components/dashboard/HabitsTodayCard';
+import InboxCard from '@/components/dashboard/InboxCard';
 import HubsCard from '@/components/dashboard/HubsCard';
+import ProjectsActiveCard from '@/components/dashboard/ProjectsActiveCard';
+import RecentNotesCard from '@/components/dashboard/RecentNotesCard';
+import HabitsTodayCard from '@/components/dashboard/HabitsTodayCard';
 
 export default function DashboardPage() {
   return (
@@ -17,9 +18,10 @@ export default function DashboardPage() {
         </div>
       </header>
       <div className="mb-4 grid grid-cols-1 gap-4 lg:grid-cols-2">
-        <HubsCard />
+        <ReviewCard />
         <TasksTodayCard />
         <InboxCard />
+        <HubsCard />
         <ProjectsActiveCard />
         <RecentNotesCard />
       </div>
