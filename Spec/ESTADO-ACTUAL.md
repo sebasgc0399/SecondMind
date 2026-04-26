@@ -104,6 +104,8 @@ Cada feature comprimida a 1 línea con pointer al SPEC archivado. Para detalles 
 - **Paste sin `transformPastedHTML` preserva atributos HTML del nodo aunque el schema filtre marks.** El schema ProseMirror descarta marks no registrados (FontSize, TextStyle, Color) al reconstruir el documento, pero `<p style="font-size: 32px">` entra como atributo del paragraph y gana por CSS specificity sobre el estilo del editor. Cualquier extensión nueva que permita paste necesita sanitizar HTML a nivel string antes de que el schema lo procese. Hook canónico: `editorProps.transformPastedHTML` en el `useEditor()` con regex defensivo `/\s(style|class)=["'][^"']*["']/gi` (cubre comillas simples y dobles). Vive en [NoteEditor.tsx:62-64](../src/components/editor/NoteEditor.tsx#L62-L64). `linkOnPaste` sigue funcionando porque opera sobre el texto post-strip.
 - **Menús anchored en cursor position usan `@floating-ui/dom` con virtual element + `autoUpdate` (post-F14).** El virtual element solo requiere `getBoundingClientRect: () => DOMRect` — perfecto para `SuggestionProps.clientRect` de TipTap que devuelve coords del cursor. `autoUpdate` instala `ResizeObserver` + `IntersectionObserver` + scroll ancestors listeners con un único handle de cleanup → re-posiciona en scroll/resize sin código extra. Crítico: **guardar la función `clientRect`, NO un snapshot `DOMRect`**. Snapshot queda stale al scrollear con el menú abierto; función invocada desde `virtualRef.getBoundingClientRect()` devuelve coords actuales siempre. Render con `visibility: hidden` hasta el primer `computePosition()` resuelva (evita flash de posición `(0,0)`). Patrón vivo en [SlashMenu.tsx](../src/components/editor/menus/SlashMenu.tsx); reusable para hover cards de wikilinks, tooltips de AI suggestions, cualquier overlay del editor cuyo anchor no es un DOM node.
 - **`padding-bottom: 50vh` en `.note-editor .ProseMirror` para breathing room al final de notas largas.** Spacer CSS invisible que permite que el scroll del `<main>` corra aunque el contenido real termine antes — el cursor al final nunca queda pegado al borde inferior del viewport. Principio generalizable: antes de montar un listener JS que corre en cada keystroke/selection change (typewriter-mode via `selectionUpdate` + `scrollIntoView`), verificar si un padding/margin/spacer estático alcanza. El listener tiene costo de performance y tradeoff de UX (some users hate typewriter mode); el padding no. Documentado en [src/index.css:167](../src/index.css#L167).
+- **Popup wikilinks sin `tippy.js`** — `createPortal` + virtual anchor del `clientRect()` de TipTap. ~30 líneas, sin dep extra.
+- **Tokens de popup styling unificados:** todos los menus flotantes del editor (WikilinkMenu, SlashMenu, BubbleToolbar, LinkInput, LinkHoverView) usan `rounded-lg border border-border bg-popover text-popover-foreground shadow-xl` + `p-1`.
 
 ### UI y componentes
 
@@ -122,6 +124,7 @@ Cada feature comprimida a 1 línea con pointer al SPEC archivado. Para detalles 
 - **Optimistic state vive en una sola fuente (hook), no duplicado en componente** (post-F23). Si un hook expone state derivado (ej. `suggestions: Suggestion[]` filtrado por `dismissedSuggestions`) Y también handlers (`accept`/`dismiss`), el `Set<string>` del optimistic local debe vivir DENTRO del hook — no en el componente que lo consume. Razón: dos Sets paralelos (uno en hook, uno en componente) divergen en remounts y reconciliación, dejando sugerencias visibles cuando deberían ocultarse o viceversa. El componente queda stateless en accept/dismiss, solo invoca handlers del hook. Patrón vivo en [src/hooks/useNoteSuggestions.ts](../src/hooks/useNoteSuggestions.ts) + [EditorSuggestionBanner.tsx](../src/components/editor/EditorSuggestionBanner.tsx).
 - **H1 duplicado en mobile oculto con estrategia granular (post-F15).** `MobileHeader` en [src/components/layout/MobileHeader.tsx:36](../src/components/layout/MobileHeader.tsx#L36) ya renderea `<h1>` sticky con `getPageTitle(pathname)` — las páginas duplicaban el título en un H1 interno. Regla: ocultar el H1 interno con `hidden md:block` (o `md:flex` en flex containers, `md:inline` si está inline con siblings). Si el `<header>` contiene solo el H1, aplicar al wrapper completo; si tiene siblings esenciales para mobile (botones críticos, nav flechas, Links), aplicar solo al H1 y preservar siblings. **Excepciones reconocidas**: Dashboard (`/` con saludo personalizado "Buenas noches, X" — copy distinto del label del nav). `/notes/graph` originalmente asumida como excepción por prefix-match (descartada en el plan) — pero `navItems` en [src/components/layout/Sidebar.tsx:38](../src/components/layout/Sidebar.tsx#L38) la registra con exact match → devuelve "Grafo". Lección: **verificar `navItems` antes de asumir el label del MobileHeader para cualquier ruta con exact/prefix match ambiguo.** Patrón vivo en las 8 páginas bajo `src/app/*/page.tsx` y `src/app/notes/graph/page.tsx`.
 - **Anchor scroll en React Router NO es automático (post-F19).** Navegar a `/ruta#anchor` no scrollea al elemento — React Router solo cambia la URL. Implementación canónica en la página destino: `useEffect(() => { if (location.hash !== '#X') return; requestAnimationFrame(() => document.getElementById('X')?.scrollIntoView({ behavior: 'smooth', block: 'start' })); }, [location.key, location.hash])`. Dep en **`location.key`, NO solo `.hash`**, para re-trigger en navegaciones repetidas al mismo hash (sino la 2da vez no dispara). `requestAnimationFrame` porque el DOM puede no estar pintado al primer tick post-navigate (`getElementById` devuelve null sino). En la sección target, agregar `scroll-mt-14` para compensar `MobileHeader` sticky de `h-14` (sino el título queda tapado). Aplicable a cualquier deep-link interno con `#anchor` (settings, docs in-app, FAQs futuras). Vivo en [src/app/settings/page.tsx](../src/app/settings/page.tsx).
+- **Tap target 44×44 en desktop también** (Feature 5). Un solo tamaño facilita lectura y mantiene convención con TaskCard, HabitRow, DistillIndicator.
 
 ### Responsive & Mobile UX (Feature 1)
 
@@ -158,6 +161,7 @@ Cada feature comprimida a 1 línea con pointer al SPEC archivado. Para detalles 
 - **Threshold empírico con `text-embedding-3-small` + notas cortas en español: 0.30.** Cosine satura en 0.15–0.45 para documentos cortos. `SimilarNotesPanel` usa 0.5 (compara notas completas); `useHybridSearch` usa 0.3 (queries más cortas). Recalibrar si el corpus cambia.
 - **Pipeline semántico en orden estricto, per-note dentro del loop**: excluir `isArchived` + excluir IDs ya en keyword results → sort score desc → slice(0, 5). Si se slicea antes de excluir, con 5 keyword matches `semanticResults` queda vacío aunque haya hits válidos.
 - **Race handling con snapshot del query, no `AbortController`.** Firebase callable no expone abort. Patrón: `const frozenQuery = trimmed` al iniciar, `if (frozenQuery !== query.trim()) return` al volver del CF.
+- **Command Palette: Orama rebuild con debounce 100ms** para agrupar los 3 store listeners iniciales.
 
 ### FSRS y resurfacing
 
@@ -168,6 +172,7 @@ Cada feature comprimida a 1 línea con pointer al SPEC archivado. Para detalles 
 
 - **Orama sync: full rebuild en cada `addTableListener` es el patrón.** <50ms para ~100 notas. Evita edge cases de sync incremental. Aceptable hasta ~1k filas.
 - **`useBacklinks` auto-refresca `sourceTitle`** vía join in-memory con `useTable('notes')`. No hay que re-sincronizar cache de `links/`.
+- **Full rebuild de índices < 50ms** para ~100 entidades. Patrón `addTableListener` + rebuild completo, sin sync incremental.
 
 ### PWA + Offline
 
@@ -242,6 +247,15 @@ Cada feature comprimida a 1 línea con pointer al SPEC archivado. Para detalles 
 - **Auth branching order: `isCapacitor()` ANTES de `isTauri()` ANTES de web.** Mutuamente excluyentes por plataforma; el orden importa porque web es el fallback implícito. Aplica a cualquier código cross-plataforma que deba bifurcar behavior (auth, capture window, share intent).
 - **Launcher cache Android no invalida ícono tras reinstalar APK.** `adb install -r` deja el launcher con el ícono viejo cacheado. Workaround confiable: `adb uninstall com.secondmind.app` + `adb install` fresh. Relevante cuando se prueba rebranding o cambios visuales de la app.
 
+### Tooling local
+
+- **Helpers compartidos existentes:** `formatDate`, `startOfDay`, `isSameDay`, `getWeekStart`, `addDays` en [`src/lib/dateUtils.ts`](../src/lib/dateUtils.ts); `parseIds`, `stringifyIds` en [`src/lib/tinybase.ts`](../src/lib/tinybase.ts).
+- **`vi.mock(...)` se hoistea al top del archivo de test por Vitest** — vars del scope no son accesibles desde el factory en tiempo de evaluación. Si el mock necesita un objeto compartido (ej. un store TinyBase de testing), crearlo DENTRO del factory con `await import()` y leerlo desde el módulo mockeado en el resto del archivo. Y porque ESLint `import/order` interpreta `vi.mock(...)` como statement separador entre import groups, **todos los imports al top del archivo + `vi.mock` después** (Vitest los hoistea igual). Imports antes y después de un `vi.mock` reportan "empty line between import groups". Patrón vivo en [src/infra/repos/notesRepo.test.ts](../src/infra/repos/notesRepo.test.ts).
+- **TypeScript LSP plugin requiere patch en Windows.** `child_process.spawn()` no resuelve wrappers `.cmd` de npm global. Fix: `marketplace.json` con `command: "node"` + ruta absoluta a `cli.mjs`. Procedimiento en `Docs/SETUP-WINDOWS.md`.
+- **Firebase MCP: `node` directo al CLI local, no `npx`.** `npx firebase@latest` falla con "Invalid Version". Configurado en `.mcp.json`.
+- **Brave Search: `BRAVE_API_KEY` como variable de sistema Windows**, no en `.env.local`.
+- **ui-ux-pro-max symlinks rotos en Windows** sin Developer Mode. Scripts reales en `src/ui-ux-pro-max/scripts/search.py`. Fix: Developer Mode + `git config --global core.symlinks true` + reinstalar plugin.
+
 ---
 
 ## Cloud Functions
@@ -278,28 +292,6 @@ Ambas CFs con Claude usan `tools` + `tool_choice: { type: 'tool', name: '...' }`
 - **Firestore `firestore.rules` catch-all `match /users/{userId}/{document=**}`** cubre cualquier sub-colección nueva sin cambios en rules (post-F19, confirmado al agregar `users/{uid}/settings/preferences`). El catch-all funciona también para queries `collectionGroup`desde el client SDK — Firestore enforce la rule por doc-path; un cliente autenticado como uidA solo puede leer sus propias notas en una collection group query. Cualquier PR futuro que toque`firestore.rules`debe re-correr test cross-user (auth como uidA + intentar leer`users/uidB/...` → permission-denied) antes de mergear. Vivo en [firestore.rules](../firestore.rules).
 - **Firestore RECHAZA single-field indexes en `firestore.indexes.json`** (post-F19) con `"this index is not necessary, configure using single field index controls"`. Los single-field indexes están auto-habilitados en COLLECTION + COLLECTION_GROUP scope por default. Solo se declaran composite indexes (multi-field) en JSON. La query `collectionGroup('notes').where('deletedAt', '>', 0)` funciona con el implícito sin declaración. Si se necesita un single-field exemption (ej. desactivar índice para campos grandes), usar `fieldOverrides` con `indexes: []`. La entry `"indexes": "firestore.indexes.json"` en `firebase.json` sigue siendo necesaria para que `firebase deploy --only firestore:indexes` encuentre el archivo (sino falla silencioso, no es opcional).
 - **Bulk delete masivo: chunkear de 50; sleep 200ms entre chunks SOLO en CFs scheduled** (post-F19). Cuando una operación dispara N deletes paralelos que cascadean a CFs (ej. F3 `onNoteDeleted` con embedding + link queries por cada nota), N>100 puede saturar quotas de Firestore o disparar cold starts masivos. Dos patrones según contexto: (a) **cliente browser** ([src/infra/repos/notesRepo.ts](../src/infra/repos/notesRepo.ts) `purgeAll`) chunkea de 50 con `Promise.allSettled` SIN sleep — el round-trip al servidor ya espacia los writes lo suficiente; (b) **CF scheduled** ([src/functions/src/notes/autoPurgeTrash.ts](../src/functions/src/notes/autoPurgeTrash.ts)) sí mete `await sleep(200ms)` entre chunks — sin viaje cliente-servidor, los chunks se ejecutan back-to-back y saturan quotas si no se espacian explícitamente. Aplicable a cualquier futuro bulk-delete (vaciar inbox, purgar tareas viejas).
-
----
-
-## Patrones establecidos
-
-- **"Three similar lines beat premature abstraction"** — duplicar 8 líneas triviales es OK hasta el 4to uso. No extraer helpers prematuramente.
-- **Helpers compartidos existentes:** `formatDate`, `startOfDay`, `isSameDay`, `getWeekStart`, `addDays` en [`src/lib/dateUtils.ts`](../src/lib/dateUtils.ts); `parseIds`, `stringifyIds` en [`src/lib/tinybase.ts`](../src/lib/tinybase.ts).
-- **Popup wikilinks sin `tippy.js`** — `createPortal` + virtual anchor del `clientRect()` de TipTap. ~30 líneas, sin dep extra.
-- **Tokens de popup styling unificados:** todos los menus flotantes del editor (WikilinkMenu, SlashMenu, BubbleToolbar, LinkInput, LinkHoverView) usan `rounded-lg border border-border bg-popover text-popover-foreground shadow-xl` + `p-1`.
-- **Tap target 44×44 en desktop también** (Feature 5). Un solo tamaño facilita lectura y mantiene convención con TaskCard, HabitRow, DistillIndicator.
-- **Full rebuild de índices < 50ms** para ~100 entidades. Patrón `addTableListener` + rebuild completo, sin sync incremental.
-- **Command Palette: Orama rebuild con debounce 100ms** para agrupar los 3 store listeners iniciales.
-- **`vi.mock(...)` se hoistea al top del archivo de test por Vitest** — vars del scope no son accesibles desde el factory en tiempo de evaluación. Si el mock necesita un objeto compartido (ej. un store TinyBase de testing), crearlo DENTRO del factory con `await import()` y leerlo desde el módulo mockeado en el resto del archivo. Y porque ESLint `import/order` interpreta `vi.mock(...)` como statement separador entre import groups, **todos los imports al top del archivo + `vi.mock` después** (Vitest los hoistea igual). Imports antes y después de un `vi.mock` reportan "empty line between import groups". Patrón vivo en [src/infra/repos/notesRepo.test.ts](../src/infra/repos/notesRepo.test.ts).
-
----
-
-## Gotchas de tooling
-
-- **TypeScript LSP plugin requiere patch en Windows.** `child_process.spawn()` no resuelve wrappers `.cmd` de npm global. Fix: `marketplace.json` con `command: "node"` + ruta absoluta a `cli.mjs`. Procedimiento en `Docs/SETUP-WINDOWS.md`.
-- **Firebase MCP: `node` directo al CLI local, no `npx`.** `npx firebase@latest` falla con "Invalid Version". Configurado en `.mcp.json`.
-- **Brave Search: `BRAVE_API_KEY` como variable de sistema Windows**, no en `.env.local`.
-- **ui-ux-pro-max symlinks rotos en Windows** sin Developer Mode. Scripts reales en `src/ui-ux-pro-max/scripts/search.py`. Fix: Developer Mode + `git config --global core.symlinks true` + reinstalar plugin.
 
 ---
 
