@@ -20,6 +20,7 @@ interface InboxRow extends RepoRow {
   aiSuggestedArea: string;
   aiSummary: string;
   aiPriority: string;
+  aiConfidence: number;
   createdAt: number;
 }
 

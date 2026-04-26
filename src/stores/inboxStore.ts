@@ -16,6 +16,7 @@ export const inboxStore = createStore().setTablesSchema({
     aiSuggestedArea: { type: 'string', default: '' },
     aiSummary: { type: 'string', default: '' },
     aiPriority: { type: 'string', default: '' },
+    aiConfidence: { type: 'number', default: 0 },
     status: { type: 'string', default: 'pending' },
     processedAs: { type: 'string', default: '' },
     createdAt: { type: 'number', default: 0 },

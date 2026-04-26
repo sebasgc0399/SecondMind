@@ -60,6 +60,10 @@ export default function useInbox(): UseInboxReturn {
               suggestedArea: ((row.aiSuggestedArea as string) || 'conocimiento') as AreaKey,
               summary: (row.aiSummary as string) || '',
               priority: ((row.aiPriority as string) || 'medium') as Priority,
+              confidence:
+                typeof row.aiConfidence === 'number' && row.aiConfidence > 0
+                  ? row.aiConfidence
+                  : undefined,
               relatedNoteIds: [],
             }
           : undefined;
