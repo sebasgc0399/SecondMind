@@ -272,7 +272,7 @@ function DoneScreen({ counts, batchSize, initialEmpty }: DoneScreenProps) {
         <p className="mt-3 text-sm text-muted-foreground">{summary}</p>
         {initialEmpty && (
           <p className="mt-2 text-xs text-muted-foreground">
-            Capturá una idea con Alt+N desde cualquier pantalla.
+            Captura una idea con Alt+N desde cualquier pantalla.
           </p>
         )}
         <Link

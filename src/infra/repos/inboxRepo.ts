@@ -71,7 +71,11 @@ async function convertToNote(
   const rawContent = (row.rawContent as string) || '';
   const firstLine = rawContent.split('\n', 1)[0]?.trim() ?? '';
   const defaultTitle = firstLine.slice(0, 200) || 'Sin título';
-  const title = overrides?.title ?? defaultTitle;
+  // Fallback: aiSuggestedTitle si no hay override del caller — alinea con
+  // convertToTask y convertToProject. Sin esto, accept batch (que no pasa
+  // overrides) terminaba con el firstLine como título en lugar del título
+  // sugerido por la CF.
+  const title = (overrides?.title ?? (row.aiSuggestedTitle as string)) || defaultTitle;
   const tagIds = overrides?.tags ?? [];
 
   const newNoteId = await notesRepo.createFromInbox(rawContent, { title, tagIds });

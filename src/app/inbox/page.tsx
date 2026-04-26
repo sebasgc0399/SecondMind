@@ -205,7 +205,7 @@ function EmptyInboxState() {
     <div className="rounded-lg border border-dashed border-border p-10 text-center">
       <p className="text-base font-medium text-foreground">Inbox limpio 🎉</p>
       <p className="mt-2 text-sm text-muted-foreground">
-        Capturá una idea nueva con{' '}
+        Captura una idea nueva con{' '}
         <kbd className="rounded bg-muted px-1.5 py-0.5 font-mono text-[10px] text-foreground">
           Alt+N
         </kbd>{' '}
