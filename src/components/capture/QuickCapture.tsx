@@ -26,12 +26,17 @@ function QuickCaptureContent({ initialContent, onSave, onClose }: QuickCaptureCo
     return () => cancelAnimationFrame(id);
   }, []);
 
+  useEffect(() => {
+    if (status !== 'saved') return;
+    const id = window.setTimeout(onClose, 300);
+    return () => window.clearTimeout(id);
+  }, [status, onClose]);
+
   function submit() {
     const trimmed = rawContent.trim();
     if (!trimmed) return;
     onSave(trimmed);
     setStatus('saved');
-    window.setTimeout(onClose, 300);
   }
 
   function handleKeyDown(event: React.KeyboardEvent<HTMLTextAreaElement>) {
