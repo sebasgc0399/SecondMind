@@ -64,12 +64,26 @@ export const NOTE_TAGGING_SCHEMA = {
       type: 'string',
       description: 'Resumen de una linea de la nota',
     },
+    suggestedNoteType: {
+      type: 'string',
+      enum: ['fleeting', 'literature', 'permanent'],
+      description:
+        'Tipo Zettelkasten que mejor encaja: fleeting (captura cruda), literature (cita o resume fuente externa), permanent (idea atomica original del autor).',
+    },
+    noteTypeConfidence: {
+      type: 'number',
+      minimum: 0,
+      maximum: 1,
+      description: 'Confianza de la clasificacion suggestedNoteType (0 a 1).',
+    },
   },
-  required: ['tags', 'summary'],
+  required: ['tags', 'summary', 'suggestedNoteType', 'noteTypeConfidence'],
   additionalProperties: false,
 };
 
 export interface NoteTagging {
   tags: string[];
   summary: string;
+  suggestedNoteType: 'fleeting' | 'literature' | 'permanent';
+  noteTypeConfidence: number;
 }
