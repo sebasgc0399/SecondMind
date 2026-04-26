@@ -1,9 +1,6 @@
 import { Node, mergeAttributes } from '@tiptap/core';
-import Suggestion, { type SuggestionOptions } from '@tiptap/suggestion';
-import {
-  wikilinkSuggestion,
-  type WikilinkSuggestionItem,
-} from '@/components/editor/extensions/wikilink-suggestion';
+import Suggestion from '@tiptap/suggestion';
+import { wikilinkSuggestion } from '@/components/editor/extensions/wikilink-suggestion';
 
 export interface WikilinkAttrs {
   noteId: string | null;
@@ -11,7 +8,7 @@ export interface WikilinkAttrs {
 }
 
 interface WikilinkOptions {
-  suggestion: Omit<SuggestionOptions<WikilinkSuggestionItem>, 'editor'>;
+  noteId: string;
 }
 
 declare module '@tiptap/core' {
@@ -35,7 +32,7 @@ export const Wikilink = Node.create<WikilinkOptions>({
 
   addOptions() {
     return {
-      suggestion: wikilinkSuggestion,
+      noteId: '',
     };
   },
 
@@ -91,7 +88,7 @@ export const Wikilink = Node.create<WikilinkOptions>({
     return [
       Suggestion({
         editor: this.editor,
-        ...this.options.suggestion,
+        ...wikilinkSuggestion({ noteId: this.options.noteId }),
       }),
     ];
   },

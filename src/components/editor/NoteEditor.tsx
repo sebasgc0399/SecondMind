@@ -57,7 +57,7 @@ export default function NoteEditor({
       TaskItem.configure({ nested: true }),
       Highlight,
       Placeholder.configure({ placeholder: 'Escribe una idea...' }),
-      Wikilink,
+      Wikilink.configure({ noteId }),
       SlashCommand.configure({ noteId }),
     ],
     content: initialContent ?? undefined,
@@ -99,7 +99,7 @@ export default function NoteEditor({
       <div className="note-editor px-4" onClick={handleClick}>
         <EditorContent editor={editor} />
       </div>
-      <WikilinkMenu />
+      <WikilinkMenu noteId={noteId} />
       <SlashMenu />
       <BubbleToolbar editor={editor} />
     </div>
