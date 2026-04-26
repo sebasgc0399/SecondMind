@@ -201,7 +201,6 @@
 - **Shortcut global `Ctrl+Shift+Space`.** Cero conflictos en Windows. `Alt+N` local sigue intacto (QuickCaptureProvider).
 - **`--legacy-peer-deps` también para `@tauri-apps/*`** con Vite 8.
 - **Bundle MSI + NSIS ambos activos.** MSI para distribución corporativa, NSIS para auto-updater futuro. Output en `src-tauri/target/release/bundle/{msi,nsis}/`.
-- **Primer `cargo build` tarda 5-10 min** (~400 crates). Incrementales luego 10-30s.
 - **Capture multi-monitor (Feature 7):** `tray.rs::show_capture` centra en monitor del cursor. Hit-test cursor-based con `?? monitors[0]` fallback. Dimensiones físicas con `scale_factor * LOGICAL_SIZE` (NO `outer_size()`). `set_position` llamado DOS veces (pre + post `show()`) por Windows hidden-window queue quirk. `set_size(LogicalSize(480, 220))` post-show para resetear tamaño canónico — seguro porque corre al rest.
 - **Drag de capture window fue revertido (F7 round 3).** Cross-DPI drag disparaba feedback loop de `onScaleChanged` + `setSize` que paniceaba tao con integer underflow (`event_loop.rs:2035/2042`). Bug upstream tauri#3610 abierto desde 2022 sin fix. Para mover a otro monitor, re-invocar shortcut.
 - **Menu items inmutables post-build en Tauri.** `CheckMenuItem` lee `is_enabled()` al construirse; no se puede reconstruir el menú en runtime. Para toggle (ej. "Iniciar con Windows"), alternar `enable()/disable()` + `set_checked(!enabled)` sobre el item existente. Aplica a cualquier menu item Tauri que cambie estado post-setup.
@@ -238,10 +237,8 @@
 - **Splash: drawable XML simple `@color/splashBackground` (`#878bf9`).** Los PNGs generados usaban fondo gris default ignorando el flag. XML con color sólido es más simple y confiable.
 - **Edge-to-edge via `env(safe-area-inset-*)` en el `body`.** Inocuo en web (env() = 0 sin `viewport-fit=cover`). Capacitor 8 aplica edge-to-edge automáticamente.
 - **Capacitor CLI `cap run android` falla en Windows por `gradlew` sin `.bat`.** Workaround en `Docs/SETUP-WINDOWS.md`. `--legacy-peer-deps` también para `@capacitor/*` y `@capgo/*`.
-- **HTML entities en share intent.** Chrome Android envía títulos con `&#34;` en vez de `"`. Decoder via `DOMParser` o `textarea.innerHTML = title` es trivial. No implementado — pulir si molesta en uso real.
 - **Auth branching order: `isCapacitor()` ANTES de `isTauri()` ANTES de web.** Mutuamente excluyentes por plataforma; el orden importa porque web es el fallback implícito. Aplica a cualquier código cross-plataforma que deba bifurcar behavior (auth, capture window, share intent).
 - **Launcher cache Android no invalida ícono tras reinstalar APK.** `adb install -r` deja el launcher con el ícono viejo cacheado. Workaround confiable: `adb uninstall com.secondmind.app` + `adb install` fresh. Relevante cuando se prueba rebranding o cambios visuales de la app.
-- **Primer build Gradle descarga ~400 deps + distribución Gradle 8.14.3 (~3min).** Incrementales después son 5-10s. Impacto solo en primer clone del repo o CI runner nuevo; no es un problema operativo de sesión.
 
 ---
 
@@ -348,4 +345,5 @@ Lista curada sin compromiso de orden ni scope. La próxima feature se decide con
 - **Sync de preferencias cross-device** via Firestore `users/{uid}/preferences.theme` si demanda aparece.
 - **Visual regression baselines** con Playwright si se introduce screenshot testing.
 - **Limpiar `summaryL1`/`summaryL2` del schema TinyBase** — campos dead weight derivables de marks (bold/highlight) en `content`. Preservados por compatibilidad pre-F22; verificar que ningún consumidor los lee antes de migrar el schema.
+- **Decodificar HTML entities en share intent (Capacitor Android)** — Chrome Android envía títulos con `&#34;` en vez de `"`. Trivial: `DOMParser` o `textarea.innerHTML = title`. Pendiente hasta que moleste en uso real.
 - **Distribución:** code signing Windows para MSI, Play Store publish (AAB + $25 one-time + privacy policy).
