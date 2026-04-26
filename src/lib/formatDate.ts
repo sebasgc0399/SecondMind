@@ -23,6 +23,12 @@ export function startOfDay(ms: number): number {
   return d.getTime();
 }
 
+export function endOfDay(ms: number = Date.now()): number {
+  const d = new Date(ms);
+  d.setHours(23, 59, 59, 999);
+  return d.getTime();
+}
+
 export function isSameDay(a: number, b: number): boolean {
   return startOfDay(a) === startOfDay(b);
 }

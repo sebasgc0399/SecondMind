@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import { useTable } from 'tinybase/ui-react';
 import { useStoreHydration } from '@/hooks/useStoreHydration';
+import { endOfDay } from '@/lib/formatDate';
 
 export interface DigestItem {
   noteId: string;
@@ -15,12 +16,6 @@ const MIN_HUB_LINKS = 3;
 
 function hashString(s: string): number {
   return [...s].reduce((h, c) => (h * 31 + c.charCodeAt(0)) | 0, 0);
-}
-
-function endOfDay(): number {
-  const d = new Date();
-  d.setHours(23, 59, 59, 999);
-  return d.getTime();
 }
 
 export default function useDailyDigest(): {
