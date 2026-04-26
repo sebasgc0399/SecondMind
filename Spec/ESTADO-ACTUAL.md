@@ -1,6 +1,6 @@
 # Estado Actual — SecondMind (Snapshot consolidado)
 
-> Última actualización: Feature 23 AI suggestions — banner contextual con accept/dismiss en el editor, AI server-side via autoTagNote extendida + heurística client-side dedupada (Abril 2026)
+> Última actualización: Feature 27 Cleanup deuda QA Inbox+Notas — borrar campo muerto relatedNoteIds, cleanup setTimeout batchStatus en unmount, borrar embedding stale cuando contentPlain queda vacío (Abril 2026)
 > Snapshot de arquitectura vigente, gotchas por dominio, patrones, deps clave.
 > Se actualiza al cerrar cada feature con la regla de escalación de CLAUDE.md:
 > gotchas nacen en SPEC → suben acá si aplican a >1 feature → suben a CLAUDE.md si son universales.
@@ -45,6 +45,9 @@ Cada feature comprimida a 1 línea con pointer al SPEC archivado. Para detalles 
 - **Feature 21 — aiSummary fleeting default:** revierte F20 F3/F4 + surfacea `aiSummary` huérfano en NoteCard. → [SPEC](features/SPEC-feature-21-aisummary-fleeting-default.md).
 - **Feature 22 — Distill levels descubribilidad:** badge L0 visible + popover auto-abre primer mount + banner ascendente per-nivel. → [SPEC](features/SPEC-feature-22-distill-discoverability.md).
 - **Feature 23 — AI suggestions:** banner contextual en editor con accept/dismiss + AI server-side via `autoTagNote` extendida + heurística client-side. → [SPEC](features/SPEC-feature-23-ai-suggestions.md).
+- **Feature 24 — FSRS Widget Mejorado:** ReviewCard separado de hubs con copy `Te toca/Te tocan N`, botón "Ver todas las due" cuando >5, tab "Por revisar" en `/notes` con search local + deep-link. → [SPEC](features/SPEC-feature-24-fsrs-widget.md).
+- **Feature 26 — Inbox: batch processing + confidence:** CF `processInboxItem` devuelve `confidence: number (0..1)` global, UI agrupa items en buckets "Alta confianza ≥0.85" / "Revisar" con botón "Aceptar N items" sobre el bucket alto. → [SPEC](features/SPEC-feature-26-inbox-batch-confidence.md).
+- **Feature 27 — Cleanup deuda QA Inbox+Notas:** borra campo muerto `relatedNoteIds` de `InboxAiResult`, cleanup `setTimeout` batchStatus en unmount con `useEffect` (patrón canónico F22), borra embedding stale en `generateEmbedding` cuando `contentPlain` queda vacío con guard de existencia. → [SPEC](features/SPEC-feature-27-cleanup-deuda-qa.md).
 
 ---
 

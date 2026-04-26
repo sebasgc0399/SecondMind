@@ -1,155 +1,51 @@
-# SPEC F27 — Cleanup deuda técnica QA Inbox+Notas
+# SPEC F27 — Cleanup deuda QA Inbox+Notas (Registro de implementación)
 
-> Alcance: cerrar 3 ítems de deuda residual detectados en el QA del subsistema Inbox+Notas (Fases A+B post-F26).
-> Dependencias: F26 (inbox-batch-confidence) ya merged y deployed.
-> Estimado: medio día.
-> Stack relevante: TypeScript strict, Firebase Functions v2 (Node 22), React + TinyBase.
-
----
+> Estado: Completada abril 2026
+> Commits: `c6f927f` SPEC, `3c782f1` F27.1 borrar `relatedNoteIds`, `d268602` F27.3 cleanup setTimeout batchStatus, `d9f97e9` F27.2 borrar embedding stale, `44e1d4a` merge.
+> Gotchas operativos vigentes → `Spec/ESTADO-ACTUAL.md`
 
 ## Objetivo
 
-Cerrar deuda técnica acumulada que el QA destapó pero que no entró en los 2 paquetes de fix anteriores (`fix/baserepo-update-mutation` y `fix/inbox-batch-title-and-copy`). Los 3 ítems son chicos, ortogonales entre sí, y juntos forman un paquete coherente "post-QA cleanup" sin overlap con scope de feature.
+Cerrar 3 ítems de deuda residual destapados por el QA del subsistema Inbox+Notas (Fases A+B post-F26 + post-fix de paquetes 1 y 2). Los 3 son ortogonales entre sí, chicos, y juntos forman un paquete coherente "post-QA cleanup" sin overlap con scope de feature.
 
-**Excluido del scope** (evaluación aparte): `notesRepo.saveContent` sin retry/rollback en falla `updateDoc` (P1, fix serio = queue + UX feedback, scope grande). Queda en backlog.
+Excluido por scope grande (evaluación aparte): `notesRepo.saveContent` retry/rollback en falla `updateDoc` (P1, requiere queue + UX feedback).
 
----
+## Qué se implementó
 
-## Features
+- **F27.1 — Borrar campo muerto `relatedNoteIds`:** declarado en `InboxAiResult` pero nunca poblado por la CF `processInboxItem` (no estaba en `INBOX_CLASSIFICATION_SCHEMA`) ni consumido por la UI. 3 sites limpiados: `src/types/inbox.ts:24` (declaración), `src/hooks/useInbox.ts:70` (literal `[]` al construir aiResult desde TinyBase), `src/components/capture/InboxProcessorForm.tsx:42` (literal `[]` en initial state del draft). Sin migración: el campo nunca se persistió en Firestore.
 
-### F27.1 — Borrar `relatedNoteIds` de `InboxAiResult` (campo muerto)
+- **F27.3 — Cleanup `setTimeout` de `batchStatus` en unmount:** el reset a `idle` tras 3s vivía dentro del callback `handleAcceptAll` sin cleanup. Si el usuario navegaba antes de los 3s, el timer disparaba `setState` post-unmount → React warning. Fix: extraer el reset a `useEffect` con dep `[batchStatus.kind]`, patrón canónico de gotcha F22 ("cleanup compartido entre side-effect y auto-dismiss timer = anti-pattern"; vivo en `DistillLevelBanner.tsx:67-71`). `handleAcceptAll` queda solo con `processing → await → done`; el reset a idle lo gobierna el effect. Archivos: `src/app/inbox/page.tsx`.
 
-**Qué:** El tipo `InboxAiResult` declara `relatedNoteIds: string[]` pero el campo nunca se popula. La CF `processInboxItem` no lo incluye en `INBOX_CLASSIFICATION_SCHEMA`, los call sites lo pasan como `[]` literal, y la UI nunca lo lee. Eliminar la declaración + los 2 sites que lo populan.
+- **F27.2 — Borrar embedding stale con `contentPlain` vacío:** la CF `generateEmbedding` (Firebase Functions v2 `onDocumentWritten`) hacía early return cuando `contentPlain.trim() === ''` sin borrar el doc previo en `users/{uid}/embeddings/{noteId}`. El vector viejo seguía surfaceando en `useSimilarNotes` y `useHybridSearch`. Fix: mover `embeddingRef` y `existingDoc.get()` antes del split de paths, y reescribir el early return como `if (existingDoc.exists) await embeddingRef.delete().catch(...)` + `logger.info` estructurado. El guard `existingDoc.exists` (refinamiento sobre el SPEC original) evita log spam en el flujo "Nueva nota desde dashboard" donde `processInboxItem`-style writes vacíos no necesitan loggear nada. Archivos: `src/functions/src/embeddings/generateEmbedding.ts`.
 
-**Criterio de done:**
+E2E validado en producción:
 
-- [ ] `grep -r "relatedNoteIds" src/` devuelve 0 matches.
-- [ ] `tsc -b` (parte de `npm run build`) verde.
-- [ ] Tests existentes verdes (no requiere tests nuevos — fix de cleanup, sin cambio de comportamiento).
+- F27.3 con Playwright: aceptar batch de 2 items + navegar a `/notes` antes de los 3s → 0 React warnings de "Can't perform a React state update on an unmounted component".
+- F27.2 con Firebase MCP: nota nueva con contenido → embedding generado en `users/{uid}/embeddings/{noteId}` (con `vector` + `contentHash` + `model`) → vaciar contentPlain (Ctrl+A + Delete) → wait autosave (2s) + CF (~3s) → embedding doc not found ✅.
 
-**Archivos a modificar:**
+## Decisiones clave
 
-- `src/types/inbox.ts` — eliminar campo `relatedNoteIds: string[]` de `InboxAiResult` (línea 24).
-- `src/hooks/useInbox.ts` — eliminar `relatedNoteIds: []` del literal que construye `aiResult` (línea 70).
-- `src/components/capture/InboxProcessorForm.tsx` — eliminar `relatedNoteIds: []` del literal que construye el `edited` initial state (línea 42).
+| ID  | Decisión                                                                                | Por qué                                                                                                                                                                                                                                                          |
+| --- | --------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| D1  | F27.2: mover `embeddingRef` y `existingDoc.get()` antes del split de paths.             | `admin.firestore().doc(...)` es construcción puramente sintáctica (cero I/O). Reusarla evita duplicar la declaración entre el path vacío y el path con contenido. Costo: 1 `.get()` extra para writes con `contentPlain === ''` (raros). Beneficio: legibilidad. |
+| D2  | F27.2: agregar guard `if (existingDoc.exists)` antes del delete + log (refinó el SPEC). | `onDocumentWritten` también dispara en CREATE de nota vacía (flujo "Nueva nota desde dashboard"). Sin guard, cada create vacío spammeaba `logger.info`. Con guard, el log solo aparece cuando realmente borramos algo stale.                                     |
+| D3  | F27.1: 1 commit para los 3 sites (no 3 commits chicos).                                 | Es UN cambio conceptual (eliminar campo muerto). Bisect-friendly. Fragmentar en 3 commits aporta ruido sin valor.                                                                                                                                                |
+| D4  | F27.2 sin functions emulator local: smoke E2E directo en producción post-deploy.        | Montar emulator con mock OpenAI = scope alto. SecondMind no tiene staging Firebase. El fix es un if-block; riesgo bajo, validación post-deploy alcanza con UID test `gYPP7NIo5JanxIbPqMe6nC3SQfE3`.                                                              |
+| D5  | F27.3 sin tests unitarios nuevos.                                                       | El patrón es match exacto al canónico de `DistillLevelBanner.tsx`, ya cubierto por su uso real. Tests del componente entero serían más útiles, fuera de scope.                                                                                                   |
+| D6  | Anti-patrones residuales detectados (QuickCapture, capture/page) NO escalan a F27.      | Plan agent detectó 3 más vía grep (`setTimeout` sin cleanup en handlers). Quedan como observación backlog, no se fixean acá para mantener el paquete acotado y reversible. Si emergen como bug real, ticket dedicado.                                            |
 
-**Notas de implementación:** ninguna — eliminación trivial, sin migración (no había datos persistidos).
+## Lecciones
 
----
+- **Construcción de `DocumentReference` Firestore es side-effect free.** Mover `admin.firestore().doc(...)` arriba de un early return es 100% safe (no hace I/O hasta que invocás `.get()`/`.set()`/`.delete()`). Aplicable a cualquier refactor que quiera centralizar el ref antes de un split de paths.
 
-### F27.2 — Borrar embedding stale cuando `contentPlain` queda vacío
+- **`onDocumentWritten` dispara en create + update + delete.** En CFs que reaccionan a content para mantener artefactos derivados (embeddings, índices, summaries cached), el path "vacío post-update" tiene que limpiar lo que se escribió antes. Pero ojo: el path "create vacío" también dispara — guard con `existingDoc.exists` evita log spam y round-trips innecesarios. Patrón aplicable a `onDocumentWritten` con artefactos derivados (futuras CFs sobre `users/{uid}/notes/`, `inbox/`, `tasks/` que generen embeddings/summaries/etc.).
 
-**Qué:** En la CF `generateEmbedding`, cuando una nota queda con `contentPlain.trim() === ''` (el usuario borró todo el contenido), la CF hace early return sin borrar el embedding previo. El vector viejo sigue en `users/{uid}/embeddings/{noteId}` y surfacéa stale en `useSimilarNotes` y `useHybridSearch`. Cambiar el early return para que primero intente borrar el embedding si existe.
+- **`.delete()` en Firestore Admin SDK es idempotente.** Borrar un doc inexistente es no-op, no rejecta. El `.catch()` solo cubre errores reales (quotas, permissions, network). Permite escribir paths defensivos sin existence-check previo cuando log spam no importa.
 
-**Criterio de done:**
+- **El patrón canónico de auto-dismiss timer es: timer en `useEffect` separado del side-effect que lo dispara, dep en el state monitorizado, cleanup `clearTimeout` en return.** Match exacto a `DistillLevelBanner.tsx`. Cualquier nuevo auto-dismiss UI debe seguir esta estructura literal — no improvisar variantes con `useRef + setTimeout en handler`.
 
-- [ ] Editar una nota que tenía contenido y borrar todo → tras el debounce + onSnapshot del client, el doc en `users/{uid}/embeddings/{noteId}` queda eliminado.
-- [ ] Crear una nota vacía (sin tocar después) → no falla con "no such document" (delete idempotente: `.delete()` en doc inexistente es no-op).
-- [ ] Logs estructurados de la CF muestran `generateEmbedding: empty content, deleted stale embedding` con `{ userId, noteId }` cuando aplica.
-- [ ] `npm run deploy:functions` exitoso.
+- **`window.setTimeout` (no `setTimeout`) garantiza tipo `number` en TS.** En Node-aware envs (vitest con `@types/node` cargados globalmente), `setTimeout` global puede inferirse como `NodeJS.Timeout`, lo que rompe `clearTimeout(id)` con tipo `number`. Prefijar `window.` es defensivo y consistente con el patrón canónico.
 
-**Archivos a modificar:**
+- **Plan agent acotado vale para fixes triviales pero ortogonales.** Para 3 cambios chicos pero sobre dominios distintos (types, UI hook, Cloud Function), el Plan agent atrapó 1 refinamiento real (guard de existencia) + validó decisiones de placement + sugirió orden de commits + detectó anti-patrones residuales fuera del scope. Costo: ~30s de prompt; beneficio: evitar gotcha sutil del log spam y tener una trail explícita de razones por commit.
 
-- `src/functions/src/embeddings/generateEmbedding.ts` — reemplazar el `if (!contentPlain) return;` (línea 27) por un bloque que borre el embedding si existe.
-
-**Notas de implementación:**
-
-- Patrón: `embeddingRef.delete()` es idempotente — borrar un doc inexistente no falla. Usar `.catch()` defensivo solo para loggear errores reales (cuotas, permisos), no para existence check.
-- Mantener el guard del `contentHash` (líneas 33-36) — sigue siendo correcto cuando hay contenido.
-- Ejemplo de la nueva ruta empty-content:
-
-  ```ts
-  if (!contentPlain) {
-    const embeddingRef = admin.firestore().doc(`users/${userId}/embeddings/${noteId}`);
-    await embeddingRef.delete().catch((err) => {
-      logger.warn('generateEmbedding: delete stale embedding failed', {
-        userId,
-        noteId,
-        error: err instanceof Error ? err.message : String(err),
-      });
-    });
-    logger.info('generateEmbedding: empty content, deleted stale embedding', {
-      userId,
-      noteId,
-    });
-    return;
-  }
-  ```
-
----
-
-### F27.3 — Cleanup `setTimeout` de `batchStatus` en unmount
-
-**Qué:** En `src/app/inbox/page.tsx`, el handler `handleAcceptAll` (línea 73-78) hace `setTimeout(() => setBatchStatus({ kind: 'idle' }), 3000)` sin cleanup. Si el usuario navega antes de los 3s, el timer dispara `setBatchStatus` post-unmount → React warning. Extraer el reset a un `useEffect` con dep `[batchStatus.kind]` que limpie el timer en cleanup. Aplica el patrón canónico del gotcha F22 ("cleanup compartido entre side-effect y auto-dismiss timer").
-
-**Criterio de done:**
-
-- [ ] Aceptar batch en `/inbox` → navegar a otra ruta antes de los 3s → 0 warnings de "Can't perform a React state update on an unmounted component" en console.
-- [ ] El label `"✓ N aceptados"` sigue apareciendo 3s cuando el componente queda montado (comportamiento UX preservado).
-- [ ] Tests del proyecto verdes.
-
-**Archivos a modificar:**
-
-- `src/app/inbox/page.tsx` — sacar el `setTimeout` del callback `handleAcceptAll`; agregar `useEffect` con dep `[batchStatus.kind]` que arme + limpie el timer cuando el state pasa a `'done'`.
-
-**Notas de implementación:**
-
-- Patrón canónico (gotcha F22 vigente en `Spec/ESTADO-ACTUAL.md`): el timer va en su propio `useEffect`, no compartido con el side-effect que lo dispara. Patrón vivo en [`DistillLevelBanner.tsx`](../../src/components/editor/DistillLevelBanner.tsx).
-- Esqueleto:
-
-  ```tsx
-  useEffect(() => {
-    if (batchStatus.kind !== 'done') return;
-    const id = window.setTimeout(() => setBatchStatus({ kind: 'idle' }), 3000);
-    return () => window.clearTimeout(id);
-  }, [batchStatus.kind]);
-  ```
-
-- `handleAcceptAll` queda solo con: `setBatchStatus({ kind: 'processing' }) → await → setBatchStatus({ kind: 'done', ...result })`. El reset a idle lo gobierna el `useEffect`.
-
----
-
-## Orden de implementación
-
-1. **F27.1** primero — cleanup puro, sin riesgo, baseline limpia para los siguientes commits.
-2. **F27.3** segundo — UI client-side, no toca CFs ni rules. Validable con build + manual smoke en `/inbox`.
-3. **F27.2** último — toca Cloud Functions, requiere `npm run deploy:functions` al cierre. Aislarlo al final para que un retraso del deploy no bloquee F27.1/F27.3.
-
-Las 3 features son independientes (sin dependencias cruzadas), pero el orden anterior minimiza el blast radius de cada commit.
-
----
-
-## Estructura de archivos
-
-No se crean archivos nuevos. Solo modificaciones a:
-
-```
-src/
-├── types/inbox.ts                                       # F27.1
-├── hooks/useInbox.ts                                    # F27.1
-├── components/capture/InboxProcessorForm.tsx            # F27.1
-├── app/inbox/page.tsx                                   # F27.3
-└── functions/src/embeddings/generateEmbedding.ts        # F27.2
-```
-
----
-
-## Checklist global
-
-Al terminar la fase, TODAS estas condiciones deben ser verdaderas:
-
-- [ ] F27.1, F27.2, F27.3 con sus criterios de done individuales cumplidos.
-- [ ] `npm run build` verde (TS strict + Vite).
-- [ ] `npm test` verde (suite completa, sin tests nuevos requeridos).
-- [ ] `npm run lint` no introduce errores nuevos en los archivos tocados (errors pre-existentes en otros archivos quedan fuera de scope).
-- [ ] CFs deployadas: `npm run deploy:functions` exitoso (necesario por F27.2).
-- [ ] Hosting deployado: `npm run build && npm run deploy` exitoso (cambios client-side de F27.1/F27.3).
-- [ ] Rama `feat/cleanup-deuda-qa` mergeada `--no-ff` a `main` y pusheada a origin.
-- [ ] SPEC archivado a registro de implementación (formato compacto post-cierre).
-- [ ] `Spec/ESTADO-ACTUAL.md` revisado: ¿algún hallazgo nuevo de implementación que valga escalar como gotcha cross-feature? Si no, no tocar.
-
----
-
-## Siguiente fase
-
-No hay siguiente fase planeada. La próxima feature se decide post-F27 según prioridad real. Candidatos vigentes en `Spec/ESTADO-ACTUAL.md` sección "Candidatos próximos" + el ítem P1 `saveContent` retry/rollback que quedó fuera del scope de este SPEC.
+- **F27 no introduce gotchas cross-feature nuevos.** El refinamiento de F27.2 (guard de existencia + log spam) es específico al dominio embeddings/CFs y ya está documentado en el commit + este SPEC; no escala a `ESTADO-ACTUAL.md` porque no se aplica a otra feature actualmente. El patrón de timer cleanup (F27.3) ya estaba escalado como gotcha F22. Conclusión: cerrar el paquete sin tocar `ESTADO-ACTUAL.md` salvo el pointer de fase completada.
