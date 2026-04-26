@@ -5,7 +5,7 @@ import RecentNotesCard from '@/components/dashboard/RecentNotesCard';
 import TasksTodayCard from '@/components/dashboard/TasksTodayCard';
 import ProjectsActiveCard from '@/components/dashboard/ProjectsActiveCard';
 import HabitsTodayCard from '@/components/dashboard/HabitsTodayCard';
-import DailyDigest from '@/components/dashboard/DailyDigest';
+import HubsCard from '@/components/dashboard/HubsCard';
 
 export default function DashboardPage() {
   return (
@@ -17,7 +17,7 @@ export default function DashboardPage() {
         </div>
       </header>
       <div className="mb-4 grid grid-cols-1 gap-4 lg:grid-cols-2">
-        <DailyDigest />
+        <HubsCard />
         <TasksTodayCard />
         <InboxCard />
         <ProjectsActiveCard />
