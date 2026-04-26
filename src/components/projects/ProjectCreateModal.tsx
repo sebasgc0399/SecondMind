@@ -33,6 +33,7 @@ export default function ProjectCreateModal({
   // Reset del form al cerrar
   useEffect(() => {
     if (!open) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- reset del form cuando el modal cierra (alternativa: key={} para remount). Backlog
       setName('');
       setAreaId(DEFAULT_AREA);
       setPriority('medium');

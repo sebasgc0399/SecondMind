@@ -1,8 +1,9 @@
 // @vitest-environment jsdom
+import type { ReactNode } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, renderHook } from '@testing-library/react';
+// eslint-disable-next-line import/order -- false positive con import type al inicio; auto-fix no resuelve
 import { Provider } from 'tinybase/ui-react';
-import type { ReactNode } from 'react';
 
 vi.mock('@/stores/notesStore', async () => {
   const { createStore } = await import('tinybase');

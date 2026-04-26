@@ -1,7 +1,7 @@
 import { Dialog } from '@base-ui/react/dialog';
 import { X } from 'lucide-react';
-import type { User } from 'firebase/auth';
 import { SidebarContent } from './Sidebar';
+import type { User } from 'firebase/auth';
 
 interface NavigationDrawerProps {
   open: boolean;

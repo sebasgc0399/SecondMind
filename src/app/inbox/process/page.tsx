@@ -26,6 +26,7 @@ export default function InboxProcessorPage() {
   useEffect(() => {
     if (batch !== null) return;
     if (items.length > 0) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- snapshot único de items al primer render con datos. Backlog
       setBatch(items.filter((i) => i.status === 'pending'));
       return;
     }

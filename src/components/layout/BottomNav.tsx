@@ -1,8 +1,8 @@
 import { NavLink } from 'react-router';
 import { LayoutDashboard, FileText, CheckSquare, Inbox, MoreHorizontal } from 'lucide-react';
-import type { LucideIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { usePendingInboxCount } from '@/hooks/useInbox';
+import type { LucideIcon } from 'lucide-react';
 
 interface BottomNavProps {
   onMoreClick: () => void;

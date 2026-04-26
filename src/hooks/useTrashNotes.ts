@@ -28,6 +28,7 @@ export default function useTrashNotes(opts?: UseTrashNotesOpts): UseTrashNotesRe
   const { preferences } = usePreferences();
 
   const result = useMemo(() => {
+    // eslint-disable-next-line react-hooks/purity -- render se invalida por cambios de table/preferences; drift sub-segundo es invisible
     const now = Date.now();
     const purgeDays = preferences.trashAutoPurgeDays;
     const filter = opts?.filter?.trim().toLowerCase() ?? '';

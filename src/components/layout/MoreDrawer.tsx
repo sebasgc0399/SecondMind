@@ -1,8 +1,8 @@
 import { Dialog } from '@base-ui/react/dialog';
 import { NavLink } from 'react-router';
 import { FolderKanban, Target, Repeat, Network, Settings } from 'lucide-react';
-import type { LucideIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import type { LucideIcon } from 'lucide-react';
 
 interface MoreDrawerProps {
   open: boolean;

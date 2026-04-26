@@ -40,6 +40,7 @@ export default function TasksPage() {
   }, [projectOptions]);
 
   const groups = useMemo<TaskGroup[]>(() => {
+    // eslint-disable-next-line react-hooks/purity -- render se invalida por cambios en tasks; drift sub-segundo invisible
     const now = Date.now();
     const today = startOfDay(now);
     const weekFromNow = now + 7 * DAY_MS;

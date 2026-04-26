@@ -1,8 +1,8 @@
 // @vitest-environment jsdom
 import { act, renderHook } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
-import type { SuggestionProps } from '@tiptap/suggestion';
 import { useEditorPopup, type PopupListener } from './useEditorPopup';
+import type { SuggestionProps } from '@tiptap/suggestion';
 
 interface TestItem {
   id: string;

@@ -1,13 +1,13 @@
 import { useState, useCallback } from 'react';
 import { Link } from 'react-router';
 import { ArrowLeft, Maximize2, Minimize2 } from 'lucide-react';
-import type { GraphNode } from 'reagraph';
 import KnowledgeGraph from '@/components/graph/KnowledgeGraph';
 import GraphNodePanel from '@/components/graph/GraphNodePanel';
 import GraphFiltersPanel from '@/components/graph/GraphFilters';
 import useGraph, { DEFAULT_FILTERS } from '@/hooks/useGraph';
 import type { GraphFilters } from '@/hooks/useGraph';
 import type { ParaType, NoteType } from '@/types/common';
+import type { GraphNode } from 'reagraph';
 
 export default function GraphPage() {
   const [filters, setFilters] = useState<GraphFilters>(DEFAULT_FILTERS);

@@ -25,6 +25,7 @@ export default function TasksTodayCard() {
   const { tasks, isInitializing, completeTask } = useTasks();
 
   const todayTasks = useMemo<Task[]>(() => {
+    // eslint-disable-next-line react-hooks/purity -- render se invalida por cambios en tasks; drift sub-segundo invisible
     const now = Date.now();
     return tasks
       .filter((t) => t.status !== 'completed' && t.dueDate > 0 && isSameDay(t.dueDate, now))

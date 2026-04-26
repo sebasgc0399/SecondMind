@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react';
 import { doc, getDoc } from 'firebase/firestore';
-import type { JSONContent } from '@tiptap/core';
 import { db } from '@/lib/firebase';
 import useAuth from '@/hooks/useAuth';
+import type { JSONContent } from '@tiptap/core';
 
 interface UseNoteReturn {
   initialContent: JSONContent | null;
@@ -27,6 +27,7 @@ export default function useNote(noteId: string | undefined): UseNoteReturn {
 
   useEffect(() => {
     if (!user || !noteId) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- reset del state cuando user/noteId cambian (lectura MVP one-shot). Backlog
       setState({
         initialContent: null,
         initialSummaryL3: '',

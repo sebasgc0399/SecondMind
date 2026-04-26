@@ -31,6 +31,7 @@ interface NavItem {
   end?: boolean;
 }
 
+// eslint-disable-next-line react-refresh/only-export-components -- helper export consumido por BottomNav y NavigationDrawer; mover a archivo aparte solo afecta HMR. Backlog
 export const navItems: NavItem[] = [
   { label: 'Dashboard', icon: LayoutDashboard, to: '/', end: true },
   { label: 'Inbox', icon: Inbox, to: '/inbox' },

@@ -57,6 +57,7 @@ export default function DistillLevelBanner({ noteId }: DistillLevelBannerProps) 
     const key = `l${target}` as 'l1' | 'l2' | 'l3';
     if (preferences.distillBannersSeen[key]) return;
 
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- trigger del banner basado en cell change (post-autosave); F22. Backlog
     setVisibleLevel(target);
     void markDistillBannerSeen(user.uid, target);
   }, [level, isLoaded, user, preferences.distillBannersSeen]);

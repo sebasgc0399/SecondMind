@@ -1,14 +1,14 @@
 import { useMemo, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router';
 import { GraphCanvas, lightTheme, useSelection } from 'reagraph';
-import type { GraphCanvasRef, Theme as ReagraphTheme } from 'reagraph';
-import type { GraphNode, GraphEdge } from 'reagraph';
 import useTheme from '@/hooks/useTheme';
 import {
   getGraphCanvasBackground,
   getGraphEdgeColor,
   getGraphLabelColor,
 } from '@/lib/theme-colors';
+import type { GraphCanvasRef, Theme as ReagraphTheme } from 'reagraph';
+import type { GraphNode, GraphEdge } from 'reagraph';
 
 interface KnowledgeGraphProps {
   nodes: GraphNode[];
