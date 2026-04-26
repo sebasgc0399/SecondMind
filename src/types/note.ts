@@ -21,6 +21,9 @@ export interface Note {
   aiTags?: string[];
   aiSummary?: string;
   aiProcessed: boolean;
+  suggestedNoteType?: NoteType;
+  noteTypeConfidence?: number;
+  dismissedSuggestions?: string[];
   createdAt: number;
   updatedAt: number;
   lastViewedAt?: number;
