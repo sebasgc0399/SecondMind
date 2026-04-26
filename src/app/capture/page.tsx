@@ -5,7 +5,7 @@ import useAuth from '@/hooks/useAuth';
 import { db } from '@/lib/firebase';
 import { hideCurrentWindow, showMainWindow } from '@/lib/tauri';
 
-type Status = 'editing' | 'saving' | 'saved';
+type Status = 'editing' | 'saving' | 'saved' | 'closing';
 
 export default function CapturePage() {
   const { user, isLoading } = useAuth();
@@ -21,11 +21,28 @@ export default function CapturePage() {
 
   const closeWindow = useCallback(() => {
     void hideCurrentWindow();
-    window.setTimeout(() => {
+    setStatus('closing');
+  }, []);
+
+  // Tras 'saved' → cerrar ventana a los 600ms. Cleanup en unmount o si el
+  // status cambia antes (p. ej. ESC durante el delay).
+  useEffect(() => {
+    if (status !== 'saved') return;
+    const id = window.setTimeout(closeWindow, 600);
+    return () => window.clearTimeout(id);
+  }, [status, closeWindow]);
+
+  // Tras 'closing' → resetear a 'editing' a los 200ms (deja respirar al
+  // hide de Tauri). Cleanup garantiza que un unmount durante el delay no
+  // dispare setState fantasma.
+  useEffect(() => {
+    if (status !== 'closing') return;
+    const id = window.setTimeout(() => {
       setStatus('editing');
       setRawContent('');
     }, 200);
-  }, []);
+    return () => window.clearTimeout(id);
+  }, [status]);
 
   useEffect(() => {
     function handleKeyDown(event: KeyboardEvent) {
@@ -53,7 +70,6 @@ export default function CapturePage() {
         createdAt: serverTimestamp(),
       });
       setStatus('saved');
-      window.setTimeout(closeWindow, 600);
     } catch (error) {
       console.error('capture save failed', error);
       setStatus('editing');
