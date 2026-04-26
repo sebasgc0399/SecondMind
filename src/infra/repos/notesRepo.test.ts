@@ -226,7 +226,7 @@ describe('notesRepo', () => {
 
       expect(arrayUnionMock).toHaveBeenCalledWith('promote-to-literature');
       expect(docMock).toHaveBeenCalledWith({}, 'users/test-uid/notes/n11');
-      const payload = updateDocMock.mock.calls[0][1] as Record<string, unknown>;
+      const payload = updateDocMock.mock.calls[0]![1] as Record<string, unknown>;
       expect(payload.noteType).toBe('literature');
       expect(payload.dismissedSuggestions).toEqual({
         __op: 'arrayUnion',
@@ -252,7 +252,7 @@ describe('notesRepo', () => {
       await notesRepo.dismissSuggestion('n13', 'promote-to-permanent-heuristic');
 
       expect(arrayUnionMock).toHaveBeenCalledWith('promote-to-permanent-heuristic');
-      const payload = updateDocMock.mock.calls[0][1] as Record<string, unknown>;
+      const payload = updateDocMock.mock.calls[0]![1] as Record<string, unknown>;
       expect(payload).toEqual({
         dismissedSuggestions: { __op: 'arrayUnion', value: 'promote-to-permanent-heuristic' },
         updatedAt: expect.any(Number),

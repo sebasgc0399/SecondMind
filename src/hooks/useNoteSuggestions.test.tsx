@@ -175,7 +175,7 @@ describe('useNoteSuggestions', () => {
       dismissedSuggestions: [],
     });
     expect(result.current.suggestions).toHaveLength(1);
-    expect(result.current.suggestions[0].id).toBe('promote-to-permanent');
+    expect(result.current.suggestions[0]!.id).toBe('promote-to-permanent');
   });
 
   it('dismiss(): llama notesRepo.dismissSuggestion + filtra optimisticamente', () => {
@@ -188,7 +188,7 @@ describe('useNoteSuggestions', () => {
     });
     expect(result.current.suggestions).toHaveLength(1);
 
-    const suggestion = result.current.suggestions[0];
+    const suggestion = result.current.suggestions[0]!;
     act(() => {
       result.current.dismiss(suggestion);
     });
@@ -206,7 +206,7 @@ describe('useNoteSuggestions', () => {
       dismissedSuggestions: [],
     });
 
-    const suggestion = result.current.suggestions[0];
+    const suggestion = result.current.suggestions[0]!;
     act(() => {
       result.current.accept(suggestion);
     });
