@@ -31,12 +31,14 @@ export function createFirestoreRepo<Row extends RepoRow>(cfg: RepoConfig): Repo<
     async create(data, opts) {
       const uid = requireUid();
       const id = opts?.id ?? crypto.randomUUID();
-      // sync TinyBase ANTES de async Firestore — el persister con startAutoSave
-      // auto-sincroniza como safety-net redundante; el setDoc explícito provee
-      // awaitability y orden determinístico. merge:true por consistencia con
-      // el persister y defensa ante colisión de IDs.
+      // Shallow copy ANTES del setRow: TinyBase muta el objeto recibido,
+      // removiendo campos no declarados en el schema (ej. `content` en
+      // notesRepo.createFromInbox que va a Firestore pero no a TinyBase).
+      // Sin la copia, setDoc abajo recibiría el objeto ya mutado y los
+      // campos extra nunca llegarían a Firestore.
+      const dataForFirestore = { ...data };
       store.setRow(table, id, data);
-      await setDoc(doc(db, pathFor(uid, id)), data, { merge: true });
+      await setDoc(doc(db, pathFor(uid, id)), dataForFirestore, { merge: true });
       return id;
     },
 
