@@ -78,6 +78,7 @@ export default function useNoteSearch(): UseNoteSearchReturn {
     return result.hits
       .map((hit) => hit.document as unknown as NoteOramaDoc)
       .filter((doc) => !doc.isArchived && doc.deletedAt === 0);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- 'version' es counter explícito para invalidar el memo tras Orama rebuild
   }, [query, version]);
 
   return { query, setQuery, results, isInitializing: isHydrating };

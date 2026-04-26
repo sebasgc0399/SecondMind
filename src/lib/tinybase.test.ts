@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+// eslint-disable-next-line import/order -- false positive con vi.mock() hoisted como flujo de imports; auto-fix no resuelve
 import { createStore } from 'tinybase';
 
 vi.mock('@/lib/firebase', () => ({

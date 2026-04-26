@@ -26,6 +26,7 @@ export default function usePreferences(): UsePreferencesReturn {
   useEffect(() => {
     userIdRef.current = user?.uid ?? null;
     if (!user) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- reset al sign-out (subscription cleanup). Backlog
       setPreferences(DEFAULT_PREFERENCES);
       setIsLoaded(false);
       return;

@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router';
 import { Dialog } from '@base-ui/react';
 import { FileText, Inbox, Layers, ListTodo, Search } from 'lucide-react';
 import { CommandPaletteContext, type CommandPaletteContextValue } from '@/hooks/useCommandPalette';
+// eslint-disable-next-line import/order -- false positive con type imports inline; auto-fix no resuelve
 import useGlobalSearch, { type SearchResult } from '@/hooks/useGlobalSearch';
 
 // --- Provider ---
@@ -100,6 +101,7 @@ function CommandPaletteContent({ onClose }: CommandPaletteContentProps) {
 
   // Reset selection on query change
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- reset del cursor cuando el usuario tipea; podría migrarse a useDeferredValue. Backlog
     setSelectedIndex(0);
   }, [query]);
 

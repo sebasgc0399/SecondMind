@@ -1,10 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import type { Editor } from '@tiptap/react';
 import { notesRepo } from '@/infra/repos/notesRepo';
 import { extractLinks } from '@/lib/editor/extractLinks';
 import { computeDistillLevel } from '@/lib/editor/computeDistillLevel';
 import { syncLinks } from '@/lib/editor/syncLinks';
 import useAuth from '@/hooks/useAuth';
+import type { Editor } from '@tiptap/react';
 
 export const AUTOSAVE_DEBOUNCE_MS = 2000;
 const SAVED_BADGE_MS = 1500;
@@ -35,9 +35,13 @@ export default function useNoteSave(
   const pendingRef = useRef<boolean>(false);
   const summaryL3Ref = useRef<string>(initialSummaryL3);
 
+  // eslint-disable-next-line react-hooks/refs -- cache de props/state para acceso en callback estable (`save` con [] deps); refactor cambia comportamiento. Backlog
   editorRef.current = editor;
+  // eslint-disable-next-line react-hooks/refs -- ver línea anterior
   noteIdRef.current = noteId;
+  // eslint-disable-next-line react-hooks/refs -- ver línea anterior
   uidRef.current = user?.uid ?? null;
+  // eslint-disable-next-line react-hooks/refs -- ver línea anterior
   summaryL3Ref.current = summaryL3;
 
   const save = useCallback(async () => {

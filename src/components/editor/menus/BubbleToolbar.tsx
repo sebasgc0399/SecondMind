@@ -12,8 +12,8 @@ import {
   Pencil,
   Unlink,
 } from 'lucide-react';
-import type { EditorState } from '@tiptap/pm/state';
 import LinkInput from '@/components/editor/menus/LinkInput';
+import type { EditorState } from '@tiptap/pm/state';
 
 function shouldShow({ editor, state }: { editor: Editor; state: EditorState }): boolean {
   if (!editor.isEditable) return false;
@@ -49,6 +49,7 @@ export default function BubbleToolbar({ editor }: BubbleToolbarProps) {
   useEffect(() => {
     if (!state) return;
     if (!state.isLink && state.selectionEmpty) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- reset de mode cuando la selección/link cambia externamente. Backlog
       setMode('default');
     }
   }, [state]);

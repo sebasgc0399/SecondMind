@@ -109,6 +109,7 @@ export default function useGlobalSearch(query: string): SearchResult[] {
         updatedAt: doc.updatedAt,
       };
     });
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- 'version' es counter explícito para invalidar el memo tras Orama rebuild
   }, [query, version]);
 }
 

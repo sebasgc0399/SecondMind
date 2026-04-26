@@ -203,6 +203,7 @@ export default function TaskCard({
 }
 
 // Helper exportado para que la page lo use al detectar tareas vencidas
+// eslint-disable-next-line react-refresh/only-export-components -- helper coupled al componente; mover a archivo aparte solo afecta HMR. Backlog
 export function isOverdue(task: Task): boolean {
   if (task.status === 'completed' || task.dueDate === 0) return false;
   return task.dueDate < startOfDay(Date.now());

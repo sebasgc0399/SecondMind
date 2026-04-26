@@ -27,6 +27,7 @@ export default function useResurfacing(noteId: string): UseResurfacingReturn {
   const fsrsDue = typeof row.fsrsDue === 'number' ? row.fsrsDue : 0;
 
   const hasReviewState = fsrsState !== '' && fsrsDue > 0;
+  // eslint-disable-next-line react-hooks/purity -- render se invalida por cambios de fsrsDue/fsrsState; drift sub-segundo es invisible
   const now = Date.now();
   const isDue = hasReviewState && fsrsDue <= now + TWENTY_FOUR_HOURS;
   const nextReviewDate = hasReviewState ? new Date(fsrsDue) : null;
