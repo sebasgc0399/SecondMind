@@ -1,201 +1,51 @@
-# SPEC F26 — Inbox: batch processing + confidence
+# SPEC F26 — Inbox: batch processing + confidence (Registro de implementación)
+
+> Estado: Completada abril 2026
+> Commits: `db28495` SPEC, `269e700` F26.1 backend CF (schema + system prompt + persistencia), `dddb602` F26.1 cliente (store schema + repo row + types + lectura `useInbox`), `60c698c` badge visual de confidence en `InboxItem`, `a503625` F26.2 `acceptHighConfidence` + UI agrupada en 2 secciones.
+> Gotchas operativos vigentes → `Spec/ESTADO-ACTUAL.md`
 
 ## Objetivo
 
 Reducir la fricción del procesamiento one-by-one del Inbox aprovechando que **9/10 capturas se aceptan tal como las sugiere la AI**. Solución de dos partes acopladas:
 
 1. La Cloud Function que clasifica cada item devuelve también un **confidence score global** (0..1).
-2. La UI agrupa los items en dos buckets ("Alta confianza ≥0.85" y "Revisar") y ofrece un botón **"Aceptar todos"** que actúa solo sobre el bucket alto, ejecutando la conversión correspondiente a cada `aiSuggestedType` (`note/task/project/trash`) sin abrir cada item uno por uno.
+2. La UI agrupa los items en dos buckets ("Alta confianza ≥0.85" y "Revisar") y ofrece un botón **"Aceptar N items"** que actúa solo sobre el bucket alto, ejecutando la conversión correspondiente a cada `aiSuggestedType` (`note/task/project/trash`) sin abrir cada item uno por uno.
 
-El bucket "Revisar" preserva el flujo manual existente — no cambia el modelo mental del Inbox como staging visible. **No** se introduce auto-accept silencioso en background; es decisión explícita postergar ese cambio de paradigma.
+El bucket "Revisar" preserva el flujo manual existente — no cambia el modelo mental del Inbox como staging visible. **No** se introduce auto-accept silencioso en background; decisión explícita para postergar ese cambio de paradigma hasta validar con uso real.
 
-## Hipótesis y constraints
+## Qué se implementó
 
-- **Patrón `confidence` ya consolidado en codebase.** `NOTE_TAGGING_SCHEMA` define `noteTypeConfidence: number (0..1)` (`src/functions/src/lib/schemas.ts:73-78`). F26.1 replica el mismo shape para mantener consistencia.
-- **Conversores ya existen.** `inboxRepo` expone `convertToNote/Task/Project` + `dismiss`; el batch los reusa en loop con `skipNavigate: true`. No se escribe lógica de conversión nueva.
-- **`'trash'` no tiene `convertToTrash`.** Mapeo del batch: `note/task/project` → `convertTo*`, `trash` → `dismiss`.
-- **Items pre-deploy.** Capturas existentes en Firestore no tienen `aiConfidence`. `useInbox` los lee como `undefined` → caen automáticamente en bucket "Revisar". Sin código defensivo extra, sin script retroactivo.
-- **Threshold hardcodeado** = `0.85`, declarado como constante en `useInbox.ts`. Si después no calza con el comportamiento real del modelo, se promueve a setting de usuario en una feature futura.
+- **F26.1 — Confidence en CF + cliente:** `processInboxItem` devuelve un campo nuevo `confidence: number (0..1)` global (un solo número, no por campo), persistido como `aiConfidence` en Firestore con guard defensivo `typeof === 'number' ? x : 0` (Firestore rechaza `undefined`). Cliente extiende el schema TinyBase + `InboxRow` del repo + `InboxAiResult.confidence?` (opcional para compat con items pre-deploy) y `useInbox` lo lee con guard `> 0` que neutraliza el `default: 0` del schema para items pre-deploy. Archivos tocados: `src/functions/src/lib/schemas.ts`, `src/functions/src/inbox/processInboxItem.ts`, `src/stores/inboxStore.ts`, `src/infra/repos/inboxRepo.ts`, `src/types/inbox.ts`, `src/hooks/useInbox.ts`.
 
-## Sub-features
+- **F26.2 — UI bucket alta confianza + batch accept:** `useInbox` exporta `HIGH_CONFIDENCE_THRESHOLD = 0.85` y `acceptHighConfidence` que itera items con `confidence >= threshold` llamando `inboxRepo.*` directo (no los wrappers del hook que navegan), con switch sobre `aiSuggestedType` (`note/task/project` → `convertTo*`, `trash` → `dismiss`), contando `ok` y `failed` por throw o por `null` retornado del converter. UI parte items en 2 secciones (`Alta confianza` / `Revisar`) con header + count; sección alta tiene botón "Aceptar N items" con label transitorio (`Procesando...` → `✓ N aceptados` → idle a los 3s, agrega `⚠ M fallaron` si hubo errores). Badge `%` verde (≥0.85) / ámbar (<0.85) en footer de cada `InboxItem`. Archivos tocados: `src/hooks/useInbox.ts`, `src/components/capture/InboxItem.tsx`, `src/app/inbox/page.tsx`.
 
-### F26.1 — Confidence score en Cloud Function de clasificación
+## Decisiones clave
 
-**Qué:** El clasificador (`processInboxItem`) devuelve un campo nuevo `confidence: number (0..1)` que representa qué tan seguro está el modelo de su clasificación global (un solo número, no por campo). El valor se persiste en Firestore como `aiConfidence` y se expone vía `useInbox` en `aiResult.confidence`.
+| ID  | Decisión                                                                           | Por qué                                                                                                                                                                                   |
+| --- | ---------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| D1  | Threshold `0.85` hardcodeado, no setting de usuario.                               | Si el modelo tiende a valores canónicos (ver Lecciones), ajustar requiere cambio consciente. Setting prematuro genera fricción sin valor demostrado.                                      |
+| D2  | Sin script retroactivo para items pre-deploy.                                      | Caen en bucket "Revisar" naturalmente vía guard `> 0` en lectura. Re-disparar la CF para backfillear cuesta tokens y agrega complejidad sin beneficio.                                    |
+| D3  | Sin auto-accept silencioso en background.                                          | Inbox sigue siendo staging visible que el user abre y revisa. Cambio de paradigma → feature aparte si tras 1 mes con F26.2 el bucket alto demuestra acertar siempre.                      |
+| D4  | Confidence global (un número), no por campo.                                       | El caso de uso (batch accept) no necesita granularidad por campo. Un solo número es más simple para el modelo y para el usuario.                                                          |
+| D5  | `acceptHighConfidence` llama `inboxRepo.*` directo, no los wrappers de `useInbox`. | Los wrappers usan `useNavigate()` (incondicional en el hook). El repo es puro y reusable sin Router context. Patrón ya consolidado: `useTasks` expone `tasksRepo.*` directo sin wrappear. |
+| D6  | Sin sistema de toast nuevo (no `BatchActionToast.tsx`).                            | El codebase no tiene sonner ni equivalente. Crear infra solo para esta feature es scope creep. Feedback inline en el botón (label transitorio 3s) cumple.                                 |
 
-**Criterio de done:**
+## Lecciones
 
-- Item nuevo capturado tras deploy de la CF tiene campo `aiConfidence` numérico entre 0 y 1 en Firestore (`users/{uid}/inbox/{itemId}.aiConfidence`).
-- `useInbox().items[i].aiResult?.confidence` retorna el número o `undefined` (items pre-deploy).
-- TypeScript compila sin errores; el tipo es opcional para preservar compat con items existentes.
+- **Buscar prior art de shapes de campo antes de inventar.** F26.1 replicó 1:1 el patrón de `noteTypeConfidence: number (0..1)` ya existente en `NOTE_TAGGING_SCHEMA` (`src/functions/src/lib/schemas.ts`). Aplicable a cualquier feature que agregue un campo "score" / "probability" / "confidence" — buscar primero, copiar el shape, evitar divergencia.
 
-**Archivos a tocar:**
+- **TinyBase v8 `setTablesSchema` es estricto en escritura.** Sin declarar el campo nuevo en el schema del store (con `default: <valor>`), el persister no lo manda a Firestore. No es laxo — agregar al store es paso obligatorio. Los stores actuales declaran `default` para todos los campos; seguir el patrón.
 
-1. `src/functions/src/lib/schemas.ts`
-   - Agregar al `INBOX_CLASSIFICATION_SCHEMA.properties`:
-     ```ts
-     confidence: {
-       type: 'number',
-       minimum: 0,
-       maximum: 1,
-       description: 'Confianza global de la clasificacion (0 a 1).',
-     },
-     ```
-   - Incluir `'confidence'` en el array `required`.
-   - Agregar `confidence: number;` a `interface InboxClassification`.
+- **Hooks que invocan `useNavigate` no son reusables fuera de Router context.** Si necesitás llamar la lógica desde otro hook o desde una utility no-React, llamá al repo directamente. Patrón consolidado: `useTasks` expone `tasksRepo.*` sin wrappers. Wrappear solo cuando la navegación es parte del contrato esperado para todos los consumidores.
 
-2. `src/functions/src/inbox/processInboxItem.ts`
-   - Actualizar `SYSTEM_PROMPT` para pedir auto-evaluación de confianza global. Sugerencia:
-     > "Devuelve también `confidence` entre 0 y 1: qué tan seguro estás de la clasificación completa (tipo + área + título). Usa >0.9 para casos obvios, 0.7-0.9 para casos claros, <0.7 para ambigüedades."
-   - Persistir en `docRef.update`: `aiConfidence: result.confidence`.
+- **Converters como `tasksRepo.createTask` retornan `null` silenciosamente además de throw.** Ver `inboxRepo.ts:97-100`. Cualquier loop que cuente `ok` / `failed` debe chequear ambos casos: `try { const r = await x(); if (!r) failed++; else ok++; } catch { failed++ }`. Solo contar throws subestima fallos reales.
 
-3. `src/types/inbox.ts`
-   - Agregar `confidence?: number;` a `interface InboxAiResult` (opcional).
+- **`default: 0` en schema TinyBase colisiona con "no definido".** Items pre-deploy se leen como `0` (no `undefined`). Si la lógica distingue ausencia de valor 0 (caso F26: confidence real = 0 vs item sin procesar), agregar guard `> 0` en lectura. La alternativa (no declarar default) puede afectar otras lógicas que dependen del fallback.
 
-4. `src/hooks/useInbox.ts`
-   - En el `useMemo` de `items`, agregar al construir `aiResult`:
-     ```ts
-     confidence: typeof row.aiConfidence === 'number' ? row.aiConfidence : undefined,
-     ```
-   - Validar que el campo `aiConfidence` se incluya en el `InboxRow` de `inboxRepo.ts` si la lectura lo exige (chequear en plan mode si TinyBase requiere declaración explícita).
+- **Cloud Function `update()` con `undefined` falla en Firestore.** Si la respuesta del modelo cacheada o malformada puede no incluir un campo nuevo, defender en el escritor con `typeof === 'number' ? x : 0`. Aplica también a otros valores opcionales escritos a Firestore desde CFs.
 
-**Snippet referencia (system prompt actualizado):**
+- **Confidence del modelo Haiku 4.5 tiende a un valor canónico (0.85 observado en E2E) sin la dispersión esperada.** En testing con prompts de claridad variada (`comprar leche mañana` esperado >0.9, `explorar concepto cuántico tal vez algún día` esperado <0.7, `leer doc TinyBase` esperado ~0.85) el modelo asignó `0.85` exacto a los 3. Implicación: el threshold 0.85 puede necesitar ajuste, o el system prompt requiere refinamiento (ej. few-shot con ejemplos de cada banda) para que el modelo se anime a valores extremos. Validar con uso real antes de tunear.
 
-```ts
-const SYSTEM_PROMPT = `Eres un asistente de productividad personal. Analizas capturas rapidas del usuario y sugieres como clasificarlas. El usuario tiene estas areas: Proyectos, Conocimiento, Finanzas, Salud y Ejercicio, Pareja, Habitos.
+- **Feedback inline transitorio se oculta junto con su contenedor cuando ese contenedor depende del estado que el feedback acaba de modificar.** En F26.2, la sección "Alta confianza" se condiciona por `high.length > 0`; al aceptar todos los items, `high.length === 0` y la sección se oculta antes de que el label `✓ N aceptados` cumpla sus 3s. Trade-off: o se preserva la sección con condición especial mientras `batchStatus.kind === 'done'`, o se confía en el empty state alternativo (`Inbox limpio 🎉`) como feedback. F26 eligió la segunda — agregar la lógica solo si el feedback se siente faltante con uso real.
 
-Devuelve confidence entre 0 y 1: que tan seguro estas de la clasificacion completa (tipo + area + titulo). Usa >0.9 para casos obvios, 0.7-0.9 para casos claros, <0.7 para ambiguedades.`;
-```
-
----
-
-### F26.2 — UI: agrupación por bucket + acción batch
-
-**Qué:** En `/inbox`, los items pendientes se agrupan en dos secciones:
-
-- **"Alta confianza (≥0.85)"** — items con `aiResult?.confidence >= 0.85`. Botón **"Aceptar N items"** que itera el bucket y ejecuta el converter correcto para cada `aiSuggestedType` con `skipNavigate: true`. Toast con resultado (`N aceptados, M fallaron`).
-- **"Revisar"** — todo lo demás: items sin `confidence` (pre-deploy o sin AI procesada aún), items con `confidence < 0.85`. Comportamiento idéntico al actual (procesamiento manual uno a uno).
-
-Cada `InboxItem` muestra un badge visual del confidence (% o color) cuando está disponible.
-
-**Criterio de done:**
-
-- Items con `confidence ≥ 0.85` aparecen bajo encabezado "Alta confianza"; el resto bajo "Revisar".
-- Botón "Aceptar N items" visible solo si el bucket alto tiene ≥1 item; al click, los procesa todos sin navegar y muestra toast con conteo de éxitos/fallos.
-- Items procesados desaparecen del listado (status pasa a `processed` o `dismissed` según el tipo).
-- Items "Revisar" se procesan exactamente como hoy, sin cambios de UX.
-- Cada `InboxItem` con `aiResult.confidence` definido muestra badge (porcentaje o equivalente visual).
-
-**Archivos a tocar:**
-
-1. `src/app/inbox/page.tsx`
-   - Particionar `items` en dos arrays según threshold.
-   - Renderizar dos secciones con encabezado (count en cada uno).
-   - Botón "Aceptar N items" en encabezado del bucket alto, deshabilitado si N=0.
-
-2. `src/hooks/useInbox.ts`
-   - Exportar constante `HIGH_CONFIDENCE_THRESHOLD = 0.85`.
-   - Nuevo método en `UseInboxReturn`:
-     ```ts
-     acceptHighConfidence: () => Promise<{ ok: number; failed: number }>;
-     ```
-   - Implementación: filtrar items con `confidence >= threshold`, iterar, mapear `aiSuggestedType` al converter (`note → convertToNote`, `task → convertToTask`, `project → convertToProject`, `trash → dismiss`), todos con `skipNavigate: true`. Acumular ok/failed.
-
-3. `src/components/capture/InboxItem.tsx`
-   - Badge mínimo del confidence cuando `aiResult?.confidence !== undefined`. Decisión visual concreta a definir en plan mode (color por threshold, número, o ambos). Mantener escala chica (no dominar la card).
-
-**Snippet referencia (acceptHighConfidence):**
-
-```ts
-const acceptHighConfidence = useCallback(async () => {
-  let ok = 0;
-  let failed = 0;
-  const targets = items.filter(
-    (i) =>
-      typeof i.aiResult?.confidence === 'number' &&
-      i.aiResult.confidence >= HIGH_CONFIDENCE_THRESHOLD,
-  );
-  for (const item of targets) {
-    try {
-      const type = item.aiResult?.suggestedType ?? 'note';
-      if (type === 'trash') {
-        dismiss(item.id);
-      } else if (type === 'task') {
-        await inboxRepo.convertToTask(item.id);
-      } else if (type === 'project') {
-        await inboxRepo.convertToProject(item.id);
-      } else {
-        await inboxRepo.convertToNote(item.id);
-      }
-      ok += 1;
-    } catch {
-      failed += 1;
-    }
-  }
-  return { ok, failed };
-}, [items, dismiss]);
-```
-
-> Nota: el snippet usa `inboxRepo` directo en vez de los wrappers `convertToNote/Task/Project` del hook porque esos navegan por defecto. Validar en plan mode si conviene exponer un parámetro `skipNavigate` en los wrappers o llamar al repo directamente. Probable: directo al repo, los wrappers son para uso single-item.
-
-## Decisiones de scope (anti-creep)
-
-Documentadas explícitamente para que no vuelvan como tentación durante la implementación:
-
-- **Threshold = 0.85 hardcodeado.** Constante en `useInbox.ts`. No setting de usuario en F26.
-- **Sin script retroactivo.** Items pre-deploy quedan en bucket "Revisar" hasta procesarlos manualmente. No se re-dispara la CF para backfillearlos.
-- **Sin selección múltiple manual** (checkboxes por item). Solo "todos los de alta confianza". Si emerge necesidad de control granular, se agrega después.
-- **Sin auto-accept silencioso en background.** Inbox sigue siendo staging visible que el user abre y revisa. Decisión explícita: mantener modelo mental, evitar paradigm shift prematuro. Si tras 1 mes con F26.2 el bucket "Alta confianza" siempre acierta, ese cambio futuro tiene base sólida.
-- **Confidence global, no por campo.** Un solo número que evalúa la clasificación completa (tipo + área + título). Más simple para el modelo y para el usuario.
-- **Áreas dinámicas, review prompt, re-procesamiento** — fuera de F26. No son la fricción real reportada. Si emergen como problema, futuras features.
-
-## Orden de implementación
-
-1. **F26.1 primero** (CF + tipo + lectura). Sin esto, F26.2 no tiene buckets para agrupar.
-2. **Deploy CF antes de codear F26.2** para empezar a generar items con `confidence` en el dataset real, así la UI tiene datos para validar manualmente.
-3. **F26.2 después.**
-
-## Verificación E2E
-
-Con dev server (`npm run dev`) + Firebase MCP + Playwright MCP, UID `gYPP7NIo5JanxIbPqMe6nC3SQfE3`:
-
-1. **F26.1 — confidence se persiste:**
-   - Crear nuevo item via Quick Capture.
-   - Esperar ~3-5s (CF async).
-   - Verificar con Firebase MCP que `users/gYPP7NIo5JanxIbPqMe6nC3SQfE3/inbox/{itemId}` tiene `aiConfidence: <número 0-1>`.
-   - Probar 3 capturas con grados de claridad distintos (ej. "comprar leche" debería ser >0.9, "explorar X concepto a futuro" debería ser <0.7).
-
-2. **F26.2 — agrupación + batch accept:**
-   - Abrir `/inbox`.
-   - Confirmar dos secciones con counts correctos según el dataset actual.
-   - Click "Aceptar N items" en bucket alto.
-   - Verificar toast con `N aceptados, 0 fallaron` (idealmente).
-   - Verificar que items procesados desaparecen del listado.
-   - Verificar con Firebase MCP que `status` cambió a `processed` (o `dismissed` si era trash) en cada uno.
-   - Verificar que items "Revisar" siguen ahí intactos.
-
-3. **Regresión:**
-   - Procesar manualmente un item del bucket "Revisar" via flujo single-item (`/inbox/process/...`). Debe funcionar idéntico a hoy.
-   - Quick Capture sigue funcionando.
-
-## Deploy pipeline al cerrar
-
-- `npm run deploy:functions` — **obligatorio** (cambió `processInboxItem` + schema).
-- `npm run build && npm run deploy` — UI cambió.
-- Tauri: opcional (cambio 100% client-side sin tocar `src-tauri/`).
-- Android: opcional (sin cambios en `android/`).
-
-## Checklist
-
-- [ ] F26.1 — schema CF actualizado con `confidence` (required).
-- [ ] F26.1 — `processInboxItem.ts` system prompt + persiste `aiConfidence`.
-- [ ] F26.1 — `InboxAiResult.confidence?` agregado.
-- [ ] F26.1 — `useInbox` lee `aiConfidence`.
-- [ ] F26.1 — Deploy CF + verificación E2E paso 1.
-- [ ] F26.2 — `acceptHighConfidence` en `useInbox`.
-- [ ] F26.2 — `/inbox` agrupa en 2 buckets + botón.
-- [ ] F26.2 — Badge confidence en `InboxItem`.
-- [ ] F26.2 — Verificación E2E pasos 2 y 3.
-- [ ] Deploy hosting.
-- [ ] Merge `--no-ff` a main.
-- [ ] Step 8 SDD: archivar SPEC + escalar gotchas si aplica.
+- **Tokens semánticos `--accent-success` / `--accent-warning` no están definidos en el design system actual.** Tailwind directo (`emerald-*` / `amber-*`) es el fallback hasta que se promuevan. Considerar promoverlos a `src/index.css` `@theme inline { ... }` cuando una segunda feature necesite el mismo color semántico.
