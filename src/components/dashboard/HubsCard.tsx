@@ -1,28 +1,28 @@
 import { Link } from 'react-router';
-import { CalendarClock, Network } from 'lucide-react';
-import useDailyDigest from '@/hooks/useDailyDigest';
-import type { DigestItem } from '@/hooks/useDailyDigest';
+import { Network } from 'lucide-react';
+import useKnowledgeHubs from '@/hooks/useKnowledgeHubs';
+import type { HubItem } from '@/hooks/useKnowledgeHubs';
 
-export default function DailyDigest() {
-  const { items, isInitializing } = useDailyDigest();
+export default function HubsCard() {
+  const { items, isInitializing } = useKnowledgeHubs();
 
   return (
     <section className="rounded-lg border border-border bg-card p-5">
       <header className="mb-4">
-        <h2 className="text-base font-semibold text-foreground">Daily Digest</h2>
+        <h2 className="text-base font-semibold text-foreground">Hubs activos</h2>
       </header>
 
       {isInitializing && items.length === 0 ? (
         <CardSkeleton />
       ) : items.length === 0 ? (
         <p className="text-sm text-muted-foreground">
-          Crea y revisa notas para activar tu Daily Digest.
+          Conecta tus notas con [[wikilinks]] — los hubs aparecerán acá.
         </p>
       ) : (
         <ul className="flex flex-col gap-1">
           {items.map((item) => (
             <li key={item.noteId}>
-              <DigestItemRow item={item} />
+              <HubRow item={item} />
             </li>
           ))}
         </ul>
@@ -31,19 +31,19 @@ export default function DailyDigest() {
   );
 }
 
-function DigestItemRow({ item }: { item: DigestItem }) {
-  const Icon = item.reason === 'review' ? CalendarClock : Network;
-
+function HubRow({ item }: { item: HubItem }) {
   return (
     <Link
       to={`/notes/${item.noteId}`}
       className="flex items-center gap-2 rounded-md px-2 py-1.5 transition-colors hover:bg-accent/40"
     >
-      <Icon className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+      <Network className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
       <span className="min-w-0 flex-1 truncate text-sm font-medium text-foreground">
         {item.title}
       </span>
-      <span className="shrink-0 text-[11px] text-muted-foreground">{item.detail}</span>
+      <span className="shrink-0 text-[11px] text-muted-foreground">
+        Hub: {item.linkCount} conexiones
+      </span>
     </Link>
   );
 }

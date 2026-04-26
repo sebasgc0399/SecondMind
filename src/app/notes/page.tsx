@@ -1,21 +1,23 @@
 import { useCallback, useMemo, useState } from 'react';
-import { useNavigate, Link } from 'react-router';
-import { Plus, Search, Network, Sparkles, Trash2, Settings } from 'lucide-react';
+import { useNavigate, Link, useSearchParams } from 'react-router';
+import { Plus, Search, Network, Sparkles, Trash2, Settings, Brain } from 'lucide-react';
 import { notesRepo } from '@/infra/repos/notesRepo';
 import useAuth from '@/hooks/useAuth';
 import useHybridSearch, { type SemanticResult } from '@/hooks/useHybridSearch';
 import useTrashNotes from '@/hooks/useTrashNotes';
+import useReviewQueue from '@/hooks/useReviewQueue';
 import usePreferences from '@/hooks/usePreferences';
 import NoteCard from '@/components/editor/NoteCard';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import type { NoteOramaDoc } from '@/lib/orama';
 import type { TrashNote } from '@/types/note';
 
-type Filter = 'all' | 'favorites' | 'trash';
+type Filter = 'all' | 'favorites' | 'review' | 'trash';
 
 const TABS: { key: Filter; label: string }[] = [
   { key: 'all', label: 'Todas' },
   { key: 'favorites', label: 'Favoritas' },
+  { key: 'review', label: 'Por revisar' },
   { key: 'trash', label: 'Papelera' },
 ];
 
@@ -42,8 +44,16 @@ function trashNoteToOramaDoc(t: TrashNote): NoteOramaDoc {
 export default function NotesListPage() {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const [filter, setFilter] = useState<Filter>('all');
+  const [searchParams] = useSearchParams();
+  // Deep-link `?filter=review` lee el param solo en el primer render via lazy
+  // initializer. Cambios manuales de tab no actualizan la URL (sync unidireccional)
+  // — UX más limpia, evita push history en cada click.
+  const [filter, setFilter] = useState<Filter>(() => {
+    const f = searchParams.get('filter');
+    return f === 'review' ? 'review' : 'all';
+  });
   const [trashQuery, setTrashQuery] = useState('');
+  const [reviewQuery, setReviewQuery] = useState('');
   const { query, setQuery, keywordResults, semanticResults, isInitializing, isLoadingSemantic } =
     useHybridSearch();
   const {
@@ -54,6 +64,7 @@ export default function NotesListPage() {
   } = useTrashNotes({
     filter: trashQuery,
   });
+  const { items: reviewItems, total: reviewTotal, isLoading: isReviewLoading } = useReviewQueue();
   const { preferences } = usePreferences();
   const [isPurgeOpen, setIsPurgeOpen] = useState(false);
 
@@ -71,6 +82,7 @@ export default function NotesListPage() {
   const hasQuery = query.trim().length > 0;
   const isTrashView = filter === 'trash';
   const isFavoritesView = filter === 'favorites';
+  const isReviewView = filter === 'review';
 
   // Sort estable: cuando NO hay query, ancla favoritos al tope manteniendo
   // el orden interno de updatedAt desc que ya viene de useNoteSearch. Con
@@ -88,9 +100,21 @@ export default function NotesListPage() {
     return list;
   }, [keywordResults, isFavoritesView, hasQuery]);
 
-  const showSearchSkeleton = !isTrashView && isInitializing && keywordResults.length === 0;
+  // Filter local in-memory para la tab "Por revisar". Mismo patrón que
+  // useTrashNotes con su `filter` arg — sin Orama, match plano por title
+  // y contentPlain.
+  const filteredReviewItems = useMemo(() => {
+    if (!reviewQuery.trim()) return reviewItems;
+    const q = reviewQuery.toLowerCase();
+    return reviewItems.filter(
+      (item) => item.title.toLowerCase().includes(q) || item.contentPlain.toLowerCase().includes(q),
+    );
+  }, [reviewItems, reviewQuery]);
+
+  const showSearchSkeleton =
+    !isTrashView && !isReviewView && isInitializing && keywordResults.length === 0;
   const showKeywordEmpty =
-    !isTrashView && !isInitializing && hasQuery && keywordResults.length === 0;
+    !isTrashView && !isReviewView && !isInitializing && hasQuery && keywordResults.length === 0;
   const showAllNotesEmpty =
     filter === 'all' && !isInitializing && !hasQuery && keywordResults.length === 0;
   const showFavoritesEmpty =
@@ -103,6 +127,11 @@ export default function NotesListPage() {
   const showTrashEmpty = isTrashView && !isTrashLoading && trashCount === 0;
   const showTrashFilterEmpty =
     isTrashView && !isTrashLoading && trashCount > 0 && trashNotes.length === 0;
+  const showReviewSkeleton = isReviewView && isReviewLoading && reviewTotal === 0;
+  const showReviewEmpty =
+    isReviewView && !isReviewLoading && reviewTotal === 0 && !reviewQuery.trim();
+  const showReviewFilterEmpty =
+    isReviewView && !isReviewLoading && reviewTotal > 0 && filteredReviewItems.length === 0;
 
   const purgeDays = preferences.trashAutoPurgeDays;
   const trashCaption =
@@ -143,7 +172,9 @@ export default function NotesListPage() {
       <nav className="mb-4 flex gap-1 overflow-x-auto overflow-y-hidden border-b border-border">
         {TABS.map((tab) => {
           const isActive = tab.key === filter;
-          const showCount = tab.key === 'trash' && trashCount > 0;
+          const showCount =
+            (tab.key === 'trash' && trashCount > 0) || (tab.key === 'review' && reviewTotal > 0);
+          const tabCount = tab.key === 'trash' ? trashCount : reviewTotal;
           return (
             <button
               key={tab.key}
@@ -152,6 +183,7 @@ export default function NotesListPage() {
                 setFilter(tab.key);
                 setQuery('');
                 setTrashQuery('');
+                setReviewQuery('');
               }}
               className={`-mb-px inline-flex shrink-0 items-center gap-1.5 border-b-2 px-4 py-3 text-sm font-medium transition-colors md:py-2 ${
                 isActive
@@ -162,7 +194,7 @@ export default function NotesListPage() {
               {tab.label}
               {showCount && (
                 <span className="rounded-full bg-muted px-1.5 py-0.5 text-[10px] font-semibold">
-                  {trashCount}
+                  {tabCount}
                 </span>
               )}
             </button>
@@ -175,11 +207,21 @@ export default function NotesListPage() {
           <Search className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <input
             type="text"
-            value={isTrashView ? trashQuery : query}
+            value={isTrashView ? trashQuery : isReviewView ? reviewQuery : query}
             onChange={(event) =>
-              isTrashView ? setTrashQuery(event.target.value) : setQuery(event.target.value)
+              isTrashView
+                ? setTrashQuery(event.target.value)
+                : isReviewView
+                  ? setReviewQuery(event.target.value)
+                  : setQuery(event.target.value)
             }
-            placeholder={isTrashView ? 'Buscar en papelera...' : 'Buscar notas...'}
+            placeholder={
+              isTrashView
+                ? 'Buscar en papelera...'
+                : isReviewView
+                  ? 'Buscar en notas por revisar...'
+                  : 'Buscar notas...'
+            }
             className="w-full rounded-md border border-border bg-card py-2 pr-3 pl-9 text-sm text-foreground outline-none placeholder:text-muted-foreground focus:border-border/80"
           />
         </div>
@@ -209,18 +251,30 @@ export default function NotesListPage() {
         </div>
       )}
 
-      {(showSearchSkeleton || showTrashSkeleton) && <NoteListSkeleton />}
+      {(showSearchSkeleton || showTrashSkeleton || showReviewSkeleton) && <NoteListSkeleton />}
 
       {showAllNotesEmpty && <EmptyNotesState onCreate={handleCreate} />}
       {showFavoritesEmpty && <EmptyFavoritesState onClear={() => setFilter('all')} />}
+      {showReviewEmpty && <EmptyReviewState onClear={() => setFilter('all')} />}
+      {showReviewFilterEmpty && <EmptyReviewFilterState onClear={() => setReviewQuery('')} />}
       {showTrashEmpty && <EmptyTrashState onClear={() => setFilter('all')} />}
       {showTrashFilterEmpty && <EmptyTrashFilterState onClear={() => setTrashQuery('')} />}
 
-      {!isTrashView && displayedKeywordResults.length > 0 && (
+      {!isTrashView && !isReviewView && displayedKeywordResults.length > 0 && (
         <ul className="flex flex-col gap-3">
           {displayedKeywordResults.map((note) => (
             <li key={note.id}>
               <NoteCard note={note} />
+            </li>
+          ))}
+        </ul>
+      )}
+
+      {isReviewView && filteredReviewItems.length > 0 && (
+        <ul className="flex flex-col gap-3">
+          {filteredReviewItems.map((item) => (
+            <li key={item.id}>
+              <NoteCard note={item} />
             </li>
           ))}
         </ul>
@@ -240,7 +294,7 @@ export default function NotesListPage() {
         </ul>
       )}
 
-      {!isTrashView && hasQuery && (
+      {!isTrashView && !isReviewView && hasQuery && (
         <SemanticSection
           results={semanticResults}
           isLoading={isLoadingSemantic}
@@ -395,6 +449,38 @@ function EmptyTrashFilterState({ onClear }: { onClear: () => void }) {
     <div className="rounded-lg border border-dashed border-border p-10 text-center">
       <Search className="mx-auto mb-3 h-8 w-8 text-muted-foreground" />
       <p className="text-sm text-muted-foreground">No se encontraron notas en la papelera.</p>
+      <button
+        type="button"
+        onClick={onClear}
+        className="mt-4 inline-flex items-center gap-1.5 rounded-md border border-border bg-card px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+      >
+        Limpiar búsqueda
+      </button>
+    </div>
+  );
+}
+
+function EmptyReviewState({ onClear }: { onClear: () => void }) {
+  return (
+    <div className="rounded-lg border border-dashed border-border p-10 text-center">
+      <Brain className="mx-auto mb-3 h-8 w-8 text-muted-foreground" />
+      <p className="text-sm text-muted-foreground">Nada por revisar hoy.</p>
+      <button
+        type="button"
+        onClick={onClear}
+        className="mt-4 inline-flex items-center gap-1.5 rounded-md border border-border bg-card px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+      >
+        Volver a todas las notas
+      </button>
+    </div>
+  );
+}
+
+function EmptyReviewFilterState({ onClear }: { onClear: () => void }) {
+  return (
+    <div className="rounded-lg border border-dashed border-border p-10 text-center">
+      <Search className="mx-auto mb-3 h-8 w-8 text-muted-foreground" />
+      <p className="text-sm text-muted-foreground">No se encontraron notas en revisión.</p>
       <button
         type="button"
         onClick={onClear}
