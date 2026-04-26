@@ -1,4 +1,3 @@
-import { doc, updateDoc } from 'firebase/firestore';
 import {
   AtSign,
   BookOpen,
@@ -14,8 +13,7 @@ import {
   Quote,
   type LucideIcon,
 } from 'lucide-react';
-import { auth, db } from '@/lib/firebase';
-import { notesStore } from '@/stores/notesStore';
+import { notesRepo } from '@/infra/repos/notesRepo';
 import type { NoteType } from '@/types/common';
 import { literatureTemplate } from '@/components/editor/templates/literatureTemplate';
 import { permanentTemplate } from '@/components/editor/templates/permanentTemplate';
@@ -26,14 +24,7 @@ export interface SlashCommandContext {
 }
 
 async function updateNoteType(noteId: string, type: NoteType): Promise<void> {
-  const uid = auth.currentUser?.uid;
-  if (!uid) return;
-  notesStore.setPartialRow('notes', noteId, { noteType: type });
-  try {
-    await updateDoc(doc(db, 'users', uid, 'notes', noteId), { noteType: type });
-  } catch (error) {
-    console.error('[slashMenu] updateNoteType failed', error);
-  }
+  await notesRepo.updateMeta(noteId, { noteType: type });
 }
 
 export type SlashMenuCategory = 'Texto' | 'Listas' | 'Bloques' | 'Menciones' | 'Templates';

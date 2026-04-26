@@ -269,4 +269,75 @@ describe('notesRepo', () => {
       );
     });
   });
+
+  describe('updateMeta', () => {
+    it('aplica partial sync a TinyBase y delega a setDoc', async () => {
+      notesStore.setRow('notes', 'm1', { noteType: 'fleeting', title: 'before' });
+      let resolveSetDoc: () => void = () => {};
+      setDocMock.mockImplementation(() => new Promise<void>((r) => (resolveSetDoc = r)));
+
+      const promise = notesRepo.updateMeta('m1', { noteType: 'permanent' });
+
+      // setDoc pending, pero setPartialRow ya aplicó
+      expect(notesStore.getCell('notes', 'm1', 'noteType')).toBe('permanent');
+      expect(setDocMock).toHaveBeenCalledOnce();
+      const payload = setDocMock.mock.calls[0]![1] as Record<string, unknown>;
+      expect(payload).toEqual({ noteType: 'permanent' });
+
+      resolveSetDoc();
+      await promise;
+    });
+  });
+
+  describe('createFromInbox', () => {
+    it('persiste content (TipTap JSON) en Firestore aunque NO esté en schema TinyBase', async () => {
+      setDocMock.mockResolvedValue(undefined);
+
+      const noteId = await notesRepo.createFromInbox('hello\nworld', {
+        title: 'From inbox',
+        tagIds: [],
+      });
+
+      expect(noteId).toBeTruthy();
+      // TinyBase no tiene `content` en schema mock — descartado por mutación de setRow
+      const row = notesStore.getRow('notes', noteId!);
+      expect(row.content).toBeUndefined();
+      expect(row.title).toBe('From inbox');
+
+      // Firestore SÍ recibe content (donde vive el JSON TipTap por gotcha universal)
+      const payload = setDocMock.mock.calls[0]![1] as Record<string, unknown>;
+      expect(payload.content).toBeTypeOf('string');
+      const parsed = JSON.parse(payload.content as string);
+      expect(parsed).toEqual({
+        type: 'doc',
+        content: [
+          { type: 'paragraph', content: [{ type: 'text', text: 'hello' }] },
+          { type: 'paragraph', content: [{ type: 'text', text: 'world' }] },
+        ],
+      });
+      expect(payload.title).toBe('From inbox');
+    });
+
+    it('aiProcessed: true cuando hay tags del inbox (evita autoTagNote sobreescribir)', async () => {
+      setDocMock.mockResolvedValue(undefined);
+
+      await notesRepo.createFromInbox('content', {
+        title: 'with tags',
+        tagIds: ['tag-1', 'tag-2'],
+      });
+
+      const payload = setDocMock.mock.calls[0]![1] as Record<string, unknown>;
+      expect(payload.aiProcessed).toBe(true);
+      expect(typeof payload.tagIds).toBe('string'); // serializado JSON
+    });
+
+    it('aiProcessed: false cuando no hay tags', async () => {
+      setDocMock.mockResolvedValue(undefined);
+
+      await notesRepo.createFromInbox('content', { title: 'no tags', tagIds: [] });
+
+      const payload = setDocMock.mock.calls[0]![1] as Record<string, unknown>;
+      expect(payload.aiProcessed).toBe(false);
+    });
+  });
 });

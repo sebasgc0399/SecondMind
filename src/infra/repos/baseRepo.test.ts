@@ -125,6 +125,49 @@ describe('createFirestoreRepo', () => {
     await promise;
   });
 
+  it('create preserva campos no-en-schema en setDoc (no los pierde por mutación de setRow)', async () => {
+    const store = makeStore();
+    setDocMock.mockResolvedValue(undefined);
+
+    const repo = createFirestoreRepo<TestRow>({
+      store,
+      table: 'items',
+      pathFor: (uid, id) => `users/${uid}/items/${id}`,
+    });
+
+    type RowWithExtra = TestRow & { extraField: string };
+    await repo.create({ name: 'hi', count: 1, extraField: 'persisted' } as RowWithExtra, {
+      id: 'row-extra',
+    });
+
+    // TinyBase ignora extraField (no en schema { name, count })
+    expect(store.getRow('items', 'row-extra')).toEqual({ name: 'hi', count: 1 });
+    // Firestore lo recibe íntegro porque dataForFirestore es shallow copy pre-setRow
+    const setDocPayload = setDocMock.mock.calls[0]![1] as Record<string, unknown>;
+    expect(setDocPayload).toEqual({ name: 'hi', count: 1, extraField: 'persisted' });
+  });
+
+  it('update preserva campos no-en-schema en setDoc (mismo gotcha que create)', async () => {
+    const store = makeStore();
+    store.setRow('items', 'row-upd', { name: 'old', count: 5 });
+    setDocMock.mockResolvedValue(undefined);
+
+    const repo = createFirestoreRepo<TestRow>({
+      store,
+      table: 'items',
+      pathFor: (uid, id) => `users/${uid}/items/${id}`,
+    });
+
+    type PartialWithExtra = Partial<TestRow> & { extraField: string };
+    await repo.update('row-upd', { count: 10, extraField: 'persisted' } as PartialWithExtra);
+
+    // TinyBase aplicó count, ignoró extraField
+    expect(store.getRow('items', 'row-upd')).toEqual({ name: 'old', count: 10 });
+    // Firestore recibe ambos campos
+    const setDocPayload = setDocMock.mock.calls[0]![1] as Record<string, unknown>;
+    expect(setDocPayload).toEqual({ count: 10, extraField: 'persisted' });
+  });
+
   it('auth.currentUser null → throw con mensaje claro en create/update/remove', async () => {
     const firebase = await import('@/lib/firebase');
     (firebase.auth as { currentUser: { uid: string } | null }).currentUser = null;

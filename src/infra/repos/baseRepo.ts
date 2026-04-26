@@ -44,8 +44,11 @@ export function createFirestoreRepo<Row extends RepoRow>(cfg: RepoConfig): Repo<
 
     async update(id, partial) {
       const uid = requireUid();
+      // Shallow copy por el mismo motivo que create — TinyBase muta el objeto
+      // pasado y los campos no-en-schema se perderían antes del setDoc.
+      const partialForFirestore = { ...partial };
       store.setPartialRow(table, id, partial as RepoRow);
-      await setDoc(doc(db, pathFor(uid, id)), partial, { merge: true });
+      await setDoc(doc(db, pathFor(uid, id)), partialForFirestore, { merge: true });
     },
 
     async remove(id) {
