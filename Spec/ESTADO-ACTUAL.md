@@ -154,7 +154,7 @@
 - **Primera CF callable del proyecto usa `onCall` v2.** `import { onCall, HttpsError } from 'firebase-functions/v2/https'`. Signature: `(request) => { request.auth?.uid; request.data }` — NO v1 (`context.auth`). Cliente via `getFunctions(app, 'us-central1') + httpsCallable`. Callable ref se crea una vez a nivel de módulo.
 - **Cache de embeddings module-level compartido** entre `useSimilarNotes` y `useHybridSearch`. `getEmbeddingsCache(uid)` deduplica fetches concurrentes via `fetchPromise`; reusa si uid no cambió. `invalidateEmbeddingsCache()` se llama en `signOut` (antes de `firebaseSignOut`) para no filtrar entre cuentas.
 - **Threshold empírico con `text-embedding-3-small` + notas cortas en español: 0.30.** Cosine satura en 0.15–0.45 para documentos cortos. `SimilarNotesPanel` usa 0.5 (compara notas completas); `useHybridSearch` usa 0.3 (queries más cortas). Recalibrar si el corpus cambia.
-- **Pipeline semántico en orden estricto**: `filter isArchived → exclude keyword IDs → sort score desc → slice(0, 5)`. Si se slicea antes de excluir, con 5 keyword matches `semanticResults` queda vacío aunque haya hits válidos.
+- **Pipeline semántico en orden estricto, per-note dentro del loop**: excluir `isArchived` + excluir IDs ya en keyword results → sort score desc → slice(0, 5). Si se slicea antes de excluir, con 5 keyword matches `semanticResults` queda vacío aunque haya hits válidos.
 - **Race handling con snapshot del query, no `AbortController`.** Firebase callable no expone abort. Patrón: `const frozenQuery = trimmed` al iniciar, `if (frozenQuery !== query.trim()) return` al volver del CF.
 
 ### FSRS y resurfacing
@@ -169,8 +169,8 @@
 
 ### PWA + Offline
 
-- **`vite-plugin-pwa` con `generateSW` y `autoUpdate`.** `navigateFallback: 'index.html'` permite SPA routing offline. `navigateFallbackDenylist: [/^\/api/, /^\/__\//]` evita interceptar rutas Firebase internas. Requiere `--legacy-peer-deps` con Vite 8.
-- **TinyBase es el offline layer.** Datos en memoria sobreviven pérdida de red. Persister con `autoSave` sincroniza al reconectar. No se usa `enableOfflineDataPersistence()` de Firestore.
+- **`vite-plugin-pwa` con `generateSW` y `autoUpdate`.** `navigateFallback: 'index.html'` permite SPA routing offline. `navigateFallbackDenylist: [/^\/api/, /^\/__\//]` evita interceptar rutas Firebase internas.
+- **TinyBase es el offline layer.** Datos en memoria sobreviven pérdida de red. Persister custom (`createCustomPersister` v8) emite `setDoc` por cada cambio local; `onSnapshot` se re-arma automáticamente al reconectar y rehidrata. No se usa `enableOfflineDataPersistence()` de Firestore.
 - **Guards offline solo en features AI.** Escrituras locales (notas, tareas, hábitos) funcionan via TinyBase. Solo "Procesar" inbox (CF + Claude) y SimilarNotesPanel (embeddings Firestore) se deshabilitan offline.
 - **`useOnlineStatus` usa `useSyncExternalStore`** — más correcto semánticamente que useState+useEffect para subscripciones a APIs del browser.
 - **`maximumFileSizeToCacheInBytes: 4MB` en workbox config.** Bundle principal ~2.7MB por Reagraph/Three.js. Cuando haya code-splitting del grafo, se puede bajar.
