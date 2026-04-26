@@ -6,11 +6,15 @@ import {
 } from '@/components/editor/extensions/wikilink-suggestion';
 import { useEditorPopup } from '@/components/editor/hooks/useEditorPopup';
 
-export default function WikilinkMenu() {
+interface WikilinkMenuProps {
+  noteId: string;
+}
+
+export default function WikilinkMenu({ noteId }: WikilinkMenuProps) {
   const { isOpen, items, query, selectedIndex, setSelectedIndex, position, menuRef, selectItem } =
     useEditorPopup<WikilinkSuggestionItem>({
       setListener: setWikilinkMenuListener,
-      queryItems: queryWikilinkItems,
+      queryItems: (q) => queryWikilinkItems(q, noteId),
       executeCommand: (item, props) => props.command(item),
     });
 
