@@ -14,6 +14,7 @@ vi.mock('@/stores/notesStore', async () => {
       deletedAt: { type: 'number', default: 0 },
       updatedAt: { type: 'number', default: 0 },
       title: { type: 'string', default: '' },
+      noteType: { type: 'string', default: 'fleeting' },
     },
   });
   return { notesStore: store };
@@ -28,12 +29,14 @@ const setDocMock = vi.fn();
 const deleteDocMock = vi.fn();
 const updateDocMock = vi.fn();
 const docMock = vi.fn((_db: object, path: string) => ({ __path: path }));
+const arrayUnionMock = vi.fn((value: string) => ({ __op: 'arrayUnion', value }));
 
 vi.mock('firebase/firestore', () => ({
   setDoc: (...args: unknown[]) => setDocMock(...args),
   deleteDoc: (...args: unknown[]) => deleteDocMock(...args),
   updateDoc: (...args: unknown[]) => updateDocMock(...args),
   doc: (...args: unknown[]) => docMock(args[0] as object, args[1] as string),
+  arrayUnion: (...args: unknown[]) => arrayUnionMock(args[0] as string),
 }));
 
 describe('notesRepo', () => {
@@ -43,6 +46,7 @@ describe('notesRepo', () => {
     deleteDocMock.mockReset();
     updateDocMock.mockReset();
     docMock.mockClear();
+    arrayUnionMock.mockClear();
     notesStore.delTable('notes');
     const firebase = await import('@/lib/firebase');
     (firebase.auth as { currentUser: { uid: string } | null }).currentUser = {
@@ -191,6 +195,78 @@ describe('notesRepo', () => {
       (firebase.auth as { currentUser: { uid: string } | null }).currentUser = null;
       notesStore.setRow('notes', 'n8', { title: 'x' });
       await expect(notesRepo.hardDelete('n8')).rejects.toThrow(/uid/i);
+    });
+  });
+
+  describe('acceptSuggestion', () => {
+    it('aplica noteType sync ANTES de await updateDoc', async () => {
+      notesStore.setRow('notes', 'n10', { noteType: 'fleeting' });
+      let resolveUpdate: () => void = () => {};
+      updateDocMock.mockImplementation(() => new Promise<void>((r) => (resolveUpdate = r)));
+
+      const promise = notesRepo.acceptSuggestion('n10', 'promote-to-permanent', {
+        noteType: 'permanent',
+      });
+
+      // TinyBase ya refleja el flip aunque updateDoc esté pending
+      expect(notesStore.getCell('notes', 'n10', 'noteType')).toBe('permanent');
+      expect(updateDocMock).toHaveBeenCalledOnce();
+
+      resolveUpdate();
+      await promise;
+    });
+
+    it('updateDoc payload incluye arrayUnion sentinel para dismissedSuggestions', async () => {
+      notesStore.setRow('notes', 'n11', { noteType: 'fleeting' });
+      updateDocMock.mockResolvedValue(undefined);
+
+      await notesRepo.acceptSuggestion('n11', 'promote-to-literature', {
+        noteType: 'literature',
+      });
+
+      expect(arrayUnionMock).toHaveBeenCalledWith('promote-to-literature');
+      expect(docMock).toHaveBeenCalledWith({}, 'users/test-uid/notes/n11');
+      const payload = updateDocMock.mock.calls[0]![1] as Record<string, unknown>;
+      expect(payload.noteType).toBe('literature');
+      expect(payload.dismissedSuggestions).toEqual({
+        __op: 'arrayUnion',
+        value: 'promote-to-literature',
+      });
+      expect(payload.updatedAt).toEqual(expect.any(Number));
+    });
+
+    it('throws cuando auth.currentUser es null', async () => {
+      const firebase = await import('@/lib/firebase');
+      (firebase.auth as { currentUser: { uid: string } | null }).currentUser = null;
+      await expect(
+        notesRepo.acceptSuggestion('n12', 'promote-to-permanent', { noteType: 'permanent' }),
+      ).rejects.toThrow(/uid/i);
+    });
+  });
+
+  describe('dismissSuggestion', () => {
+    it('updateDoc payload solo incluye dismissedSuggestions + updatedAt (no noteType)', async () => {
+      notesStore.setRow('notes', 'n13', { noteType: 'fleeting' });
+      updateDocMock.mockResolvedValue(undefined);
+
+      await notesRepo.dismissSuggestion('n13', 'promote-to-permanent-heuristic');
+
+      expect(arrayUnionMock).toHaveBeenCalledWith('promote-to-permanent-heuristic');
+      const payload = updateDocMock.mock.calls[0]![1] as Record<string, unknown>;
+      expect(payload).toEqual({
+        dismissedSuggestions: { __op: 'arrayUnion', value: 'promote-to-permanent-heuristic' },
+        updatedAt: expect.any(Number),
+      });
+      // noteType intacto en TinyBase
+      expect(notesStore.getCell('notes', 'n13', 'noteType')).toBe('fleeting');
+    });
+
+    it('throws cuando auth.currentUser es null', async () => {
+      const firebase = await import('@/lib/firebase');
+      (firebase.auth as { currentUser: { uid: string } | null }).currentUser = null;
+      await expect(notesRepo.dismissSuggestion('n14', 'promote-to-permanent')).rejects.toThrow(
+        /uid/i,
+      );
     });
   });
 });

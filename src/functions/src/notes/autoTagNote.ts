@@ -10,7 +10,20 @@ const anthropicApiKey = defineSecret('ANTHROPIC_API_KEY');
 const MODEL = 'claude-haiku-4-5-20251001';
 const MAX_TOKENS = 256;
 
-const SYSTEM_PROMPT = `Eres un asistente que analiza notas personales y sugiere tags relevantes. Maximo 5 tags. Tambien genera un resumen de una linea.`;
+const SYSTEM_PROMPT = `Eres un asistente que analiza notas personales para un sistema Zettelkasten.
+
+Dada una nota, devuelve vía la herramienta tag_note:
+
+1. tags: hasta 5 etiquetas conceptuales bajadas del contenido. No inventes términos ajenos al texto.
+
+2. summary: una oración (máx 120 caracteres) que captura la idea central. Sin floreos.
+
+3. suggestedNoteType + noteTypeConfidence: clasifica el tipo Zettelkasten:
+   - "literature": la nota cita o resume una fuente externa (link http, mención explícita de libro/paper/blog, frases tipo "según X dice"). Confianza alta (0.85-1.0) con link explícito; media (0.7-0.85) con mención clara sin link.
+   - "permanent": idea atómica original del usuario en sus propias palabras (no es cita), conceptualmente clara, idealmente con interconexiones. Confianza alta cuando hay claridad conceptual y voz del autor.
+   - "fleeting": captura cruda, fragmentaria o sin estructura clara. Default conservador. Confianza baja-media (0.5-0.7).
+
+Si dudas, prefiere fleeting con confianza baja antes que forzar otra categoría.`;
 
 export const autoTagNote = onDocumentWritten(
   {
@@ -38,11 +51,17 @@ export const autoTagNote = onDocumentWritten(
       const response = await client.messages.create({
         model: MODEL,
         max_tokens: MAX_TOKENS,
-        system: SYSTEM_PROMPT,
+        system: [
+          {
+            type: 'text',
+            text: SYSTEM_PROMPT,
+            cache_control: { type: 'ephemeral' },
+          },
+        ],
         tools: [
           {
             name: 'tag_note',
-            description: 'Sugiere tags y resumen para una nota personal',
+            description: 'Sugiere tags, resumen y tipo Zettelkasten para una nota personal',
             input_schema: NOTE_TAGGING_SCHEMA,
           },
         ],
@@ -66,17 +85,22 @@ export const autoTagNote = onDocumentWritten(
       }
 
       const result = toolBlock.input as NoteTagging;
+      const confidence = Math.min(1, Math.max(0, result.noteTypeConfidence ?? 0));
 
       await docRef.update({
         aiTags: JSON.stringify(result.tags),
         aiSummary: result.summary,
         aiProcessed: true,
+        suggestedNoteType: result.suggestedNoteType,
+        noteTypeConfidence: confidence,
       });
 
       logger.info('autoTagNote: ok', {
         userId,
         noteId,
         tagCount: result.tags.length,
+        suggestedNoteType: result.suggestedNoteType,
+        noteTypeConfidence: confidence,
       });
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);

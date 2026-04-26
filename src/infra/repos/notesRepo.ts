@@ -1,8 +1,9 @@
-import { doc, updateDoc } from 'firebase/firestore';
+import { arrayUnion, doc, updateDoc } from 'firebase/firestore';
 import { auth, db } from '@/lib/firebase';
 import { createFirestoreRepo, type RepoRow } from '@/infra/repos/baseRepo';
 import { notesStore } from '@/stores/notesStore';
 import { stringifyIds } from '@/lib/tinybase';
+import type { NoteType } from '@/types/common';
 
 // Schema TinyBase de notes — NO incluye `content` (el JSON TipTap solo
 // vive en Firestore, gotcha universal del proyecto). saveContent más
@@ -307,6 +308,47 @@ async function purgeAll(ids: string[]): Promise<void> {
   }
 }
 
+/**
+ * Acepta una sugerencia de promoción de tipo. Aplica el nuevo `noteType`
+ * sync a TinyBase (feedback inmediato del banner) y persiste a Firestore
+ * agregando el `suggestionId` a `dismissedSuggestions` con `arrayUnion`.
+ *
+ * `arrayUnion` requiere `updateDoc` directo — `setDoc(merge:true)` del
+ * factory NO interpreta el sentinel, así que este helper bypassa
+ * intencionalmente `repo.update` para garantizar atomicidad cross-device.
+ */
+async function acceptSuggestion(
+  noteId: string,
+  suggestionId: string,
+  payload: { noteType: NoteType },
+): Promise<void> {
+  const uid = auth.currentUser?.uid;
+  if (!uid) {
+    throw new Error('[notesRepo] acceptSuggestion: no auth.currentUser.uid');
+  }
+  notesStore.setPartialRow('notes', noteId, { noteType: payload.noteType });
+  await updateDoc(doc(db, `users/${uid}/notes/${noteId}`), {
+    noteType: payload.noteType,
+    dismissedSuggestions: arrayUnion(suggestionId),
+    updatedAt: Date.now(),
+  });
+}
+
+/**
+ * Descarta una sugerencia. Persiste el dismiss vía `arrayUnion` para que
+ * dos clicks rápidos (o cross-device) no se pisen entre sí.
+ */
+async function dismissSuggestion(noteId: string, suggestionId: string): Promise<void> {
+  const uid = auth.currentUser?.uid;
+  if (!uid) {
+    throw new Error('[notesRepo] dismissSuggestion: no auth.currentUser.uid');
+  }
+  await updateDoc(doc(db, `users/${uid}/notes/${noteId}`), {
+    dismissedSuggestions: arrayUnion(suggestionId),
+    updatedAt: Date.now(),
+  });
+}
+
 export const notesRepo = {
   createNote,
   createFromInbox,
@@ -317,4 +359,6 @@ export const notesRepo = {
   restore,
   hardDelete,
   purgeAll,
+  acceptSuggestion,
+  dismissSuggestion,
 };
