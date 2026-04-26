@@ -303,31 +303,9 @@ Ambas CFs con Claude usan `tools` + `tool_choice: { type: 'tool', name: '...' }`
 
 ---
 
-## Dependencias clave con historia
+## Dependencias clave
 
-| Paquete                         | Versión   | Nota                                                                               |
-| ------------------------------- | --------- | ---------------------------------------------------------------------------------- |
-| `firebase-functions`            | `^7.2.5`  | v6 fallaba con timeout en discovery                                                |
-| `@anthropic-ai/sdk`             | `^0.40.1` | Soporta `tools` + `tool_choice` para schema enforcement                            |
-| `tinybase`                      | v8        | Sin `persister-firestore` nativo. Custom persister con `createCustomPersister`     |
-| `@orama/orama`                  | v3        | `search()` es sync at runtime aunque el tipo diga `Promise`                        |
-| `reagraph`                      | latest    | WebGL graph viz (Three.js). Compatible React 19. ~1.3MB bundle                     |
-| `openai`                        | `^4.85`   | SDK para embeddings en CF `generateEmbedding`. Solo en `src/functions/`            |
-| `ts-fsrs`                       | latest    | FSRS spaced repetition. Client-side (~15KB)                                        |
-| `vite-plugin-pwa`               | `^1.2.0`  | Requiere `--legacy-peer-deps` con Vite 8. `generateSW` + `autoUpdate`              |
-| `@crxjs/vite-plugin`            | `^2.4.0`  | Named export `{ crx }`. Soporta Vite 8 + MV3 + React + HMR                         |
-| `@tauri-apps/cli`               | `^2.10.1` | CLI para scaffold/dev/build. Requiere Rust + MSVC Build Tools en Windows           |
-| `@tauri-apps/api`               | `^2.10.1` | Window management, webview, event system. Import dinámico para no romper build web |
-| `tauri-plugin-global-shortcut`  | `2.3.1`   | Registro OS-level de hotkeys. Rust-side con `with_handler` en `setup()` (post F7)  |
-| `tauri-plugin-autostart`        | `2.5.1`   | Autostart con Windows (registry key HKCU Run)                                      |
-| `tauri-plugin-window-state`     | `2.4.1`   | Persiste pos/size. `.with_denylist(&["capture"])` para excluir la ventana efímera  |
-| `tauri-plugin-single-instance`  | `2.4.1`   | Previene múltiples procesos simultáneos. Crítico con autostart                     |
-| `@capacitor/core`               | `^8.3.0`  | Runtime Cap 8. Requiere Node 22+ y Android Studio Otter+                           |
-| `@capacitor/cli`                | `^8.3.0`  | `cap run android` falla en Windows por `gradlew` sin `.bat` (workaround en SETUP)  |
-| `@capacitor/android`            | `^8.3.0`  | Plataforma Android. `minSdk 24`, `compileSdk 36`, `targetSdk 36`                   |
-| `@capacitor/splash-screen`      | `^8.0.1`  | `launchAutoHide: false` + `SplashScreen.hide()` manual                             |
-| `@capgo/capacitor-social-login` | `^8.3.14` | Google Sign-In nativo. Sucesor oficial del abandonado `codetrix-studio`            |
-| `@capgo/capacitor-share-target` | `^8.0.27` | Listener `shareReceived` + intent-filter SEND. Único con soporte Cap 8 free        |
+Tabla de versiones + notas operativas movida a [`Docs/01-arquitectura-hibrida-progresiva.md`](../Docs/01-arquitectura-hibrida-progresiva.md#dependencias-clave-con-historia) (sección "Dependencias clave con historia" dentro del stack técnico). Es referencia estática que rara vez se consulta — vive con el resto del stack.
 
 ---
 
