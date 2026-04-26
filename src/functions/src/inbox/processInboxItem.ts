@@ -10,7 +10,9 @@ const anthropicApiKey = defineSecret('ANTHROPIC_API_KEY');
 const MODEL = 'claude-haiku-4-5-20251001';
 const MAX_TOKENS = 512;
 
-const SYSTEM_PROMPT = `Eres un asistente de productividad personal. Analizas capturas rapidas del usuario y sugieres como clasificarlas. El usuario tiene estas areas: Proyectos, Conocimiento, Finanzas, Salud y Ejercicio, Pareja, Habitos.`;
+const SYSTEM_PROMPT = `Eres un asistente de productividad personal. Analizas capturas rapidas del usuario y sugieres como clasificarlas. El usuario tiene estas areas: Proyectos, Conocimiento, Finanzas, Salud y Ejercicio, Pareja, Habitos.
+
+Devuelve confidence entre 0 y 1: que tan seguro estas de la clasificacion completa (tipo + area + titulo). Usa >0.9 para casos obvios, 0.7-0.9 para casos claros, <0.7 para ambiguedades.`;
 
 export const processInboxItem = onDocumentCreated(
   {
@@ -82,6 +84,7 @@ export const processInboxItem = onDocumentCreated(
         aiSuggestedArea: result.suggestedArea,
         aiSummary: result.summary,
         aiPriority: result.priority,
+        aiConfidence: typeof result.confidence === 'number' ? result.confidence : 0,
         aiProcessed: true,
       });
 
