@@ -1,9 +1,9 @@
 import { useMemo } from 'react';
 import { useTable } from 'tinybase/ui-react';
-import type { GraphNode, GraphEdge } from 'reagraph';
 import useTheme from '@/hooks/useTheme';
 import { getGraphColors } from '@/lib/theme-colors';
 import type { ParaType, NoteType } from '@/types/common';
+import type { GraphNode, GraphEdge } from 'reagraph';
 
 function truncate(str: string, max: number): string {
   if (str.length <= max) return str;
