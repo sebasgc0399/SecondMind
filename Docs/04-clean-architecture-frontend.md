@@ -246,10 +246,6 @@ No todo el frontend cabe en el molde "componente → repo → Firestore". En Sec
 
 **3. Type imports externos en capa 2:** importar `type User` de `firebase/auth` en componentes (ej. [`NavigationDrawer.tsx`](../src/components/layout/NavigationDrawer.tsx), [`Sidebar.tsx`](../src/components/layout/Sidebar.tsx)) es aceptable. La regla estricta aplica a **capa 1 (`src/types/`)**, que debe quedar libre de tipos de librerías externas; en componentes es pragmático y no propaga el acoplamiento al dominio.
 
-**Candidatos pendientes de migrar al repo layer** (violaciones legítimas, deuda técnica conocida):
-
-- [`slashMenuItems.ts`](../src/components/editor/menus/slashMenuItems.ts) — `updateNoteType` hace `updateDoc` directo; debería moverse a un método `notesRepo.updateNoteType`.
-
 Estas excepciones son **excepciones reales, no etiqueta para cualquier violación nueva**. Antes de agregar una nueva, preguntá: "¿esto es genuinamente transversal/MVP como las tres de arriba, o estoy evitando escribir un repo?".
 
 ---
