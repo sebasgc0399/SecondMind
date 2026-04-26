@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router';
 import { Play, Sparkles } from 'lucide-react';
 import useInbox, { HIGH_CONFIDENCE_THRESHOLD } from '@/hooks/useInbox';
@@ -70,11 +70,19 @@ export default function InboxPage() {
 
   const [batchStatus, setBatchStatus] = useState<BatchStatus>({ kind: 'idle' });
 
+  // Auto-dismiss del label "✓ N aceptados" tras 3s. Patrón canónico (gotcha F22):
+  // el timer va en su propio useEffect con cleanup, no en el callback que lo dispara.
+  // Sin esto, navegar antes de los 3s causaba setState post-unmount.
+  useEffect(() => {
+    if (batchStatus.kind !== 'done') return;
+    const id = window.setTimeout(() => setBatchStatus({ kind: 'idle' }), 3000);
+    return () => window.clearTimeout(id);
+  }, [batchStatus.kind]);
+
   const handleAcceptAll = useCallback(async () => {
     setBatchStatus({ kind: 'processing' });
     const result = await acceptHighConfidence();
     setBatchStatus({ kind: 'done', ...result });
-    setTimeout(() => setBatchStatus({ kind: 'idle' }), 3000);
   }, [acceptHighConfidence]);
 
   const batchLabel =

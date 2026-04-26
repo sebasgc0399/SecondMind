@@ -23,14 +23,29 @@ export const generateEmbedding = onDocumentWritten(
 
     if (!after) return;
 
+    const embeddingRef = admin.firestore().doc(`users/${userId}/embeddings/${noteId}`);
+    const existingDoc = await embeddingRef.get();
     const contentPlain = typeof after.contentPlain === 'string' ? after.contentPlain.trim() : '';
-    if (!contentPlain) return;
+
+    if (!contentPlain) {
+      if (existingDoc.exists) {
+        await embeddingRef.delete().catch((err) => {
+          logger.warn('generateEmbedding: delete stale embedding failed', {
+            userId,
+            noteId,
+            error: err instanceof Error ? err.message : String(err),
+          });
+        });
+        logger.info('generateEmbedding: empty content, deleted stale embedding', {
+          userId,
+          noteId,
+        });
+      }
+      return;
+    }
 
     const contentHash = crypto.createHash('sha256').update(contentPlain).digest('hex');
 
-    const embeddingRef = admin.firestore().doc(`users/${userId}/embeddings/${noteId}`);
-
-    const existingDoc = await embeddingRef.get();
     if (existingDoc.exists && existingDoc.data()?.contentHash === contentHash) {
       return;
     }

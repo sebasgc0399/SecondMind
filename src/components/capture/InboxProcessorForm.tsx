@@ -39,7 +39,6 @@ function buildInitialDraft(item: InboxItem): InboxAiResult {
     suggestedArea: 'conocimiento',
     summary: '',
     priority: 'medium',
-    relatedNoteIds: [],
   };
 }
 

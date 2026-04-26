@@ -21,7 +21,6 @@ export interface InboxAiResult {
   summary: string;
   priority: Priority;
   confidence?: number;
-  relatedNoteIds: string[];
 }
 
 export interface InboxProcessedAs {

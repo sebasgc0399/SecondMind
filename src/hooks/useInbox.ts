@@ -67,7 +67,6 @@ export default function useInbox(): UseInboxReturn {
                 typeof row.aiConfidence === 'number' && row.aiConfidence > 0
                   ? row.aiConfidence
                   : undefined,
-              relatedNoteIds: [],
             }
           : undefined;
 
