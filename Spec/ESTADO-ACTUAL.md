@@ -51,7 +51,6 @@
 ### TinyBase + Firestore sync
 
 - **Persister con `merge: true` es precondición global.** Sin merge, borra campos fuera del schema TinyBase (como `content` de notas, campos `ai*` de CFs). Aplica a todo persister nuevo.
-- **Content largo de notas (TipTap JSON) va directo a Firestore, NO en TinyBase.** `useNoteSave` es el único punto que escribe `content`.
 - **Capa de repos en [src/infra/repos/](../src/infra/repos/) centraliza el patrón optimistic (desde F10).** Todo write a Firestore debe pasar por un repo (`tasksRepo`, `projectsRepo`, etc.) en lugar de llamar `setDoc`/`setPartialRow` inline desde un hook. El factory garantiza orden `setRow (sync) → await setDoc (async)` y auto-genera UUID v4 si no se provee `id`. Ver [baseRepo.ts](../src/infra/repos/baseRepo.ts) para la firma y [baseRepo.test.ts](../src/infra/repos/baseRepo.test.ts) para patrones de mocking con `vi.mock`.
 - **Creación de recursos con navegación inmediata: `await repo.create(...)` → `navigate()`.** El factory retorna la promesa tras completar setDoc, entonces `useNote.getDoc` en la página destino encuentra el doc presente en Firestore. Patrón aplicado en `app/notes/page.tsx` y `convertToNote` de inboxRepo.
 - **Content largo (TipTap JSON) sigue yendo solo a Firestore, NO a TinyBase.** `notesRepo.saveContent(id, payload)` es el único método que persiste `content`: hace `setPartialRow` a TinyBase con todos los campos derivados (title, contentPlain, updatedAt, distillLevel, linkCount, outgoingLinkIds) EXCEPTO content, y después `updateDoc` explícito a Firestore con content incluido. Un solo write atómico. `notesRepo.createFromInbox` es la variante que construye un docJson TipTap desde rawContent y lo persiste junto con metadata.
@@ -72,7 +71,6 @@
 
 - **Vinculaciones 1:N: el lado singular es autoritativo.** `project.objectiveId === objective.id` es más robusto que `objective.projectIds.includes(projectId)` para render.
 - **Links bidireccionales con IDs determinísticos** — `source__target` como docId en `links/`. `extractLinks()` se ejecuta en cada save del editor.
-- **Self-links filtrados en `syncLinks`:** `targetId !== sourceId`. Sin este guard, una nota que se referencia a sí misma con wikilink poluciona el grafo.
 - **ID determinístico `YYYY-MM-DD` para hábitos** como `rowId` en TinyBase y `docId` en Firestore. Docs creados implícitamente al primer toggle. Patrón reutilizable para entidades time-indexed.
 
 ### Editor (TipTap)
