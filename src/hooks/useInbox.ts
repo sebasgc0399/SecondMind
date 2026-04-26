@@ -18,6 +18,8 @@ interface ConvertOptions {
   skipNavigate?: boolean;
 }
 
+export const HIGH_CONFIDENCE_THRESHOLD = 0.85;
+
 interface UseInboxReturn {
   items: InboxItem[];
   isInitializing: boolean;
@@ -37,6 +39,7 @@ interface UseInboxReturn {
     options?: ConvertOptions,
   ) => Promise<void>;
   dismiss: (itemId: string) => void;
+  acceptHighConfidence: () => Promise<{ ok: number; failed: number }>;
 }
 
 export default function useInbox(): UseInboxReturn {
@@ -60,6 +63,10 @@ export default function useInbox(): UseInboxReturn {
               suggestedArea: ((row.aiSuggestedArea as string) || 'conocimiento') as AreaKey,
               summary: (row.aiSummary as string) || '',
               priority: ((row.aiPriority as string) || 'medium') as Priority,
+              confidence:
+                typeof row.aiConfidence === 'number' && row.aiConfidence > 0
+                  ? row.aiConfidence
+                  : undefined,
               relatedNoteIds: [],
             }
           : undefined;
@@ -109,6 +116,37 @@ export default function useInbox(): UseInboxReturn {
     void inboxRepo.dismiss(itemId);
   }, []);
 
+  const acceptHighConfidence = useCallback(async () => {
+    let ok = 0;
+    let failed = 0;
+    const targets = items.filter(
+      (i) =>
+        typeof i.aiResult?.confidence === 'number' &&
+        i.aiResult.confidence >= HIGH_CONFIDENCE_THRESHOLD,
+    );
+    for (const item of targets) {
+      try {
+        const type = item.aiResult?.suggestedType ?? 'note';
+        if (type === 'trash') {
+          await inboxRepo.dismiss(item.id);
+          ok += 1;
+        } else {
+          const result =
+            type === 'task'
+              ? await inboxRepo.convertToTask(item.id)
+              : type === 'project'
+                ? await inboxRepo.convertToProject(item.id)
+                : await inboxRepo.convertToNote(item.id);
+          if (!result) failed += 1;
+          else ok += 1;
+        }
+      } catch {
+        failed += 1;
+      }
+    }
+    return { ok, failed };
+  }, [items]);
+
   return {
     items,
     isInitializing: isHydrating,
@@ -116,6 +154,7 @@ export default function useInbox(): UseInboxReturn {
     convertToTask,
     convertToProject,
     dismiss,
+    acceptHighConfidence,
   };
 }
 

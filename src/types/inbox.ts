@@ -20,6 +20,7 @@ export interface InboxAiResult {
   suggestedArea: AreaKey;
   summary: string;
   priority: Priority;
+  confidence?: number;
   relatedNoteIds: string[];
 }
 

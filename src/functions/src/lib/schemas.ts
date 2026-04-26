@@ -30,6 +30,12 @@ export const INBOX_CLASSIFICATION_SCHEMA = {
       enum: ['low', 'medium', 'high', 'urgent'],
       description: 'Prioridad sugerida',
     },
+    confidence: {
+      type: 'number',
+      minimum: 0,
+      maximum: 1,
+      description: 'Confianza global de la clasificacion (0 a 1).',
+    },
   },
   required: [
     'suggestedTitle',
@@ -38,6 +44,7 @@ export const INBOX_CLASSIFICATION_SCHEMA = {
     'suggestedArea',
     'summary',
     'priority',
+    'confidence',
   ],
   additionalProperties: false,
 };
@@ -49,6 +56,7 @@ export interface InboxClassification {
   suggestedArea: 'proyectos' | 'conocimiento' | 'finanzas' | 'salud' | 'pareja' | 'habitos';
   summary: string;
   priority: 'low' | 'medium' | 'high' | 'urgent';
+  confidence: number;
 }
 
 export const NOTE_TAGGING_SCHEMA = {

@@ -44,6 +44,17 @@ export default function InboxItemCard({
       )}
 
       <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+        {typeof item.aiResult?.confidence === 'number' && (
+          <span
+            className={`rounded-full border px-2 py-0.5 text-[10px] font-medium ${
+              item.aiResult.confidence >= 0.85
+                ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400'
+                : 'border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-400'
+            }`}
+          >
+            {Math.round(item.aiResult.confidence * 100)}%
+          </span>
+        )}
         <span className="rounded-full border border-border bg-muted/40 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide">
           {SOURCE_LABELS[item.source] ?? item.source}
         </span>
