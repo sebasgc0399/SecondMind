@@ -291,11 +291,28 @@ async function acceptSuggestion(
   if (!uid) {
     throw new Error('[notesRepo] acceptSuggestion: no auth.currentUser.uid');
   }
+  // SYNC: TinyBase refleja el flip inmediato para que el banner UI desaparezca.
   notesStore.setPartialRow('notes', noteId, { noteType: payload.noteType });
-  await updateDoc(doc(db, `users/${uid}/notes/${noteId}`), {
+
+  // Composite key evita colisión con un updateMeta paralelo del mismo noteId.
+  // Trade-off (F29 plan, accept v1): el indicator cuenta entries por queue,
+  // no por noteId — si hay updateMeta + acceptSuggestion en flight a la vez,
+  // muestra "2 notas pendientes" cuando técnicamente es 1 nota con 2 writes.
+  // De-dupe per-id es deuda explícita.
+  const queueKey = `${noteId}:accept-${suggestionId}`;
+  const docPayload = {
     noteType: payload.noteType,
     dismissedSuggestions: arrayUnion(suggestionId),
     updatedAt: Date.now(),
+  };
+  // Cast: arrayUnion devuelve un FieldValue opaco al tipo Partial<NoteRow>
+  // del queue (que solo lo pasa al executor sin inspeccionarlo).
+  saveNotesMetaQueue.enqueue(queueKey, docPayload as Partial<NoteRow>, async (p) => {
+    const currentUid = auth.currentUser?.uid;
+    if (!currentUid || currentUid !== uid) {
+      throw new Error('[notesRepo] uid changed mid-retry — aborting stale write');
+    }
+    await updateDoc(doc(db, `users/${uid}/notes/${noteId}`), p);
   });
 }
 
@@ -308,9 +325,20 @@ async function dismissSuggestion(noteId: string, suggestionId: string): Promise<
   if (!uid) {
     throw new Error('[notesRepo] dismissSuggestion: no auth.currentUser.uid');
   }
-  await updateDoc(doc(db, `users/${uid}/notes/${noteId}`), {
+  // dismiss no muta TinyBase (suggestedNoteType vive solo en Firestore por
+  // gotcha CF-write-only). Solo encola el updateDoc con arrayUnion al queue
+  // de notes con composite key.
+  const queueKey = `${noteId}:dismiss-${suggestionId}`;
+  const docPayload = {
     dismissedSuggestions: arrayUnion(suggestionId),
     updatedAt: Date.now(),
+  };
+  saveNotesMetaQueue.enqueue(queueKey, docPayload as Partial<NoteRow>, async (p) => {
+    const currentUid = auth.currentUser?.uid;
+    if (!currentUid || currentUid !== uid) {
+      throw new Error('[notesRepo] uid changed mid-retry — aborting stale write');
+    }
+    await updateDoc(doc(db, `users/${uid}/notes/${noteId}`), p);
   });
 }
 

@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { notesRepo } from '@/infra/repos/notesRepo';
+import { saveNotesMetaQueue } from '@/lib/saveQueue';
 import { notesStore } from '@/stores/notesStore';
 
 // vi.mock se hoistea al top por Vitest — el factory se evalúa ANTES que
@@ -45,9 +46,14 @@ describe('notesRepo', () => {
     setDocMock.mockResolvedValue(undefined);
     deleteDocMock.mockReset();
     updateDocMock.mockReset();
+    updateDocMock.mockResolvedValue(undefined);
     docMock.mockClear();
     arrayUnionMock.mockClear();
     notesStore.delTable('notes');
+    // F29: limpia entries pendientes del queue compartido entre tests
+    // (acceptSuggestion / dismissSuggestion + updateMeta usan el mismo
+    // saveNotesMetaQueue singleton). clear() preserva subscribers.
+    saveNotesMetaQueue.clear();
     const firebase = await import('@/lib/firebase');
     (firebase.auth as { currentUser: { uid: string } | null }).currentUser = {
       uid: 'test-uid',
