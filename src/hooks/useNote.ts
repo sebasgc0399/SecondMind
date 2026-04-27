@@ -32,7 +32,7 @@ export default function useNote(noteId: string | undefined, version = 0): UseNot
 
   useEffect(() => {
     if (!user || !noteId) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect -- reset del state cuando user/noteId cambian (lectura MVP one-shot). Backlog
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- fetcher MVP one-shot con state local; migrar a Suspense/datafetcher (React Query, Suspense data) es refactor de capa, fuera del scope del cleanup F10
       setState({
         initialContent: null,
         initialSummaryL3: '',

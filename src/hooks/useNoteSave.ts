@@ -41,7 +41,7 @@ export default function useNoteSave(
   const summaryL3Ref = useRef<string>(initialSummaryL3);
   const prevQueueStatusRef = useRef<QueueStatus | undefined>(undefined);
 
-  // eslint-disable-next-line react-hooks/refs -- cache de props/state para acceso en callback estable (`save` con [] deps); refactor cambia comportamiento. Backlog
+  // eslint-disable-next-line react-hooks/refs -- F28 saveContentQueue depende de identidad estable del callback `save` (deps []); refs son cache para acceder a state actual sin invalidar la identidad. Cualquier refactor a deps reales rompe el debouncer del autosave
   editorRef.current = editor;
   // eslint-disable-next-line react-hooks/refs -- ver línea anterior
   noteIdRef.current = noteId;

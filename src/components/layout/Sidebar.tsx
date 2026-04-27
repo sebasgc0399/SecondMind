@@ -1,21 +1,9 @@
 import { NavLink } from 'react-router';
-import {
-  LayoutDashboard,
-  Inbox,
-  FileText,
-  CheckSquare,
-  FolderKanban,
-  Target,
-  Network,
-  Repeat,
-  Settings,
-  LogOut,
-  Menu,
-} from 'lucide-react';
+import { Settings, LogOut, Menu } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { usePendingInboxCount } from '@/hooks/useInbox';
+import { navItems } from './navItems';
 import type { User } from 'firebase/auth';
-import type { LucideIcon } from 'lucide-react';
 
 interface SidebarProps {
   user: User;
@@ -23,25 +11,6 @@ interface SidebarProps {
   collapsed?: boolean;
   onExpandClick?: () => void;
 }
-
-interface NavItem {
-  label: string;
-  icon: LucideIcon;
-  to: string;
-  end?: boolean;
-}
-
-// eslint-disable-next-line react-refresh/only-export-components -- helper export consumido por BottomNav y NavigationDrawer; mover a archivo aparte solo afecta HMR. Backlog
-export const navItems: NavItem[] = [
-  { label: 'Dashboard', icon: LayoutDashboard, to: '/', end: true },
-  { label: 'Inbox', icon: Inbox, to: '/inbox' },
-  { label: 'Notas', icon: FileText, to: '/notes' },
-  { label: 'Grafo', icon: Network, to: '/notes/graph' },
-  { label: 'Tareas', icon: CheckSquare, to: '/tasks' },
-  { label: 'Proyectos', icon: FolderKanban, to: '/projects' },
-  { label: 'Objetivos', icon: Target, to: '/objectives' },
-  { label: 'Hábitos', icon: Repeat, to: '/habits' },
-];
 
 const baseItemClass = 'flex w-full items-center gap-3 rounded-md text-sm transition-colors';
 const inactiveClass =

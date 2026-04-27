@@ -26,7 +26,7 @@ export default function usePreferences(): UsePreferencesReturn {
   useEffect(() => {
     userIdRef.current = user?.uid ?? null;
     if (!user) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect -- reset al sign-out (subscription cleanup). Backlog
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- subscription stream lifecycle: reset a defaults al sign-out antes del cleanup del onSnapshot. Sin esto, valores del user anterior persisten hasta el próximo sign-in
       setPreferences(DEFAULT_PREFERENCES);
       setIsLoaded(false);
       return;

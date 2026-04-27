@@ -57,7 +57,7 @@ export default function DistillLevelBanner({ noteId }: DistillLevelBannerProps) 
     const key = `l${target}` as 'l1' | 'l2' | 'l3';
     if (preferences.distillBannersSeen[key]) return;
 
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- trigger del banner basado en cell change (post-autosave); F22. Backlog
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- side-effect genuino: trigger del banner cuando el cell `distillLevel` cambia post-autosave. Auto-hide vive en useEffect aparte (F22 — el cleanup compartido pisaba el banner durante onSnapshot)
     setVisibleLevel(target);
     void markDistillBannerSeen(user.uid, target);
   }, [level, isLoaded, user, preferences.distillBannersSeen]);

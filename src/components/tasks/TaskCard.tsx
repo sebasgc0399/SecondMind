@@ -1,7 +1,7 @@
 import { useState, type ChangeEvent } from 'react';
 import { Link } from 'react-router';
 import { MoreHorizontal, ChevronUp } from 'lucide-react';
-import { formatRelative, startOfDay } from '@/lib/formatDate';
+import { formatRelative } from '@/lib/formatDate';
 import type { Task } from '@/types/task';
 import type { Priority } from '@/types/common';
 
@@ -200,11 +200,4 @@ export default function TaskCard({
       )}
     </div>
   );
-}
-
-// Helper exportado para que la page lo use al detectar tareas vencidas
-// eslint-disable-next-line react-refresh/only-export-components -- helper coupled al componente; mover a archivo aparte solo afecta HMR. Backlog
-export function isOverdue(task: Task): boolean {
-  if (task.status === 'completed' || task.dueDate === 0) return false;
-  return task.dueDate < startOfDay(Date.now());
 }

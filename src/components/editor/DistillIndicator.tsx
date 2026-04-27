@@ -57,7 +57,7 @@ export default function DistillIndicator({ noteId, onOpenSummary }: DistillIndic
     if (!isLoaded) return;
     initialAutoOpenedRef.current = true;
     if (preferences.distillIntroSeen) return;
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- auto-open intro tras hidratación de preferences (one-shot via ref guard). Backlog
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- auto-open one-shot tras hidratación async de preferences; ref guard `initialAutoOpenedRef` previene re-disparo en futuros re-renders. Patrón canónico para "primer render con datos hidratados"
     setOpen(true);
   }, [isLoaded, preferences.distillIntroSeen]);
 
