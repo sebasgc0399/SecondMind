@@ -18,8 +18,6 @@ export const notesStore = createStore().setTablesSchema({
     outgoingLinkIds: { type: 'string', default: '[]' },
     incomingLinkIds: { type: 'string', default: '[]' },
     linkCount: { type: 'number', default: 0 },
-    summaryL1: { type: 'string', default: '' },
-    summaryL2: { type: 'string', default: '' },
     summaryL3: { type: 'string', default: '' },
     distillLevel: { type: 'number', default: 0 },
     aiTags: { type: 'string', default: '[]' },

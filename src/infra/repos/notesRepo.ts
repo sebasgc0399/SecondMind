@@ -20,8 +20,6 @@ interface NoteRow extends RepoRow {
   outgoingLinkIds: string;
   incomingLinkIds: string;
   linkCount: number;
-  summaryL1: string;
-  summaryL2: string;
   summaryL3: string;
   distillLevel: number;
   aiTags: string;
@@ -76,8 +74,6 @@ async function createNote(overrides?: NoteCreateOverrides): Promise<string | nul
     outgoingLinkIds: '[]',
     incomingLinkIds: '[]',
     linkCount: 0,
-    summaryL1: '',
-    summaryL2: '',
     summaryL3: '',
     distillLevel: 0,
     aiTags: '[]',
@@ -209,8 +205,6 @@ async function createFromInbox(
     outgoingLinkIds: '[]',
     incomingLinkIds: '[]',
     linkCount: 0,
-    summaryL1: '',
-    summaryL2: '',
     summaryL3: '',
     distillLevel: 0,
     aiTags: '[]',

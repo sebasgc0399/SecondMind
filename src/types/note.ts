@@ -14,8 +14,6 @@ export interface Note {
   outgoingLinkIds: string[];
   incomingLinkIds: string[];
   linkCount: number;
-  summaryL1?: string;
-  summaryL2?: string;
   summaryL3?: string;
   distillLevel: 0 | 1 | 2 | 3;
   aiTags?: string[];

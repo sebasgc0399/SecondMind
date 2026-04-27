@@ -144,8 +144,8 @@ interface Note {
   linkCount: number; // Total de conexiones (para ranking)
 
   // Progressive Summarization
-  summaryL1?: string; // Pasajes clave resaltados
-  summaryL2?: string; // Lo más importante de L1
+  // L1 (bold) y L2 (highlight) viven como marks en `content` (TipTap JSON),
+  // no como strings extraídos. distillLevel se deriva vía computeDistillLevel.
   summaryL3?: string; // Resumen ejecutivo en tus palabras
   distillLevel: 0 | 1 | 2 | 3; // Nivel actual de destilación
 

@@ -325,6 +325,5 @@ Lista curada sin compromiso de orden ni scope. La próxima feature se decide con
 - **Temas de acento** — elegir color de acento (azul/verde/naranja) cambiando solo `--primary-*` tokens.
 - **Sync de preferencias cross-device** via Firestore `users/{uid}/preferences.theme` si demanda aparece.
 - **Visual regression baselines** con Playwright si se introduce screenshot testing.
-- **Limpiar `summaryL1`/`summaryL2` del schema TinyBase** — campos dead weight derivables de marks (bold/highlight) en `content`. Preservados por compatibilidad pre-F22; verificar que ningún consumidor los lee antes de migrar el schema.
 - **Decodificar HTML entities en share intent (Capacitor Android)** — Chrome Android envía títulos con `&#34;` en vez de `"`. Trivial: `DOMParser` o `textarea.innerHTML = title`. Pendiente hasta que moleste en uso real.
 - **Distribución:** code signing Windows para MSI, Play Store publish (AAB + $25 one-time + privacy policy).
