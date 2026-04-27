@@ -18,13 +18,25 @@ export default function NoteDetailPage() {
   const { noteId } = useParams<{ noteId: string }>();
   const navigate = useNavigate();
   const row = useRow('notes', noteId ?? '');
-  const { initialContent, initialSummaryL3, isLoading, error, notFound } = useNote(noteId);
+  const [discardCount, setDiscardCount] = useState(0);
+  const { initialContent, initialSummaryL3, isLoading, error, notFound } = useNote(
+    noteId,
+    discardCount,
+  );
   const backlinks = useBacklinks(noteId);
   const [isPanelOpen, setIsPanelOpen] = useState<boolean>(getInitialPanelState);
   const [summaryIsOpen, setSummaryIsOpen] = useState<boolean>(
     () => initialSummaryL3.trim().length > 0,
   );
   const summaryTextareaRef = useRef<HTMLTextAreaElement | null>(null);
+
+  // discardCount NO se resetea al cambiar de nota — cuando noteId cambia, el
+  // sufijo de `key={`${noteId}-${discardCount}`}` cambia igual (porque noteId
+  // es parte de la key), forzando re-mount limpio del editor sin importar el
+  // valor de discardCount. El counter solo crece, no rompe semántica.
+  const handleDiscardSaveError = useCallback(() => {
+    setDiscardCount((prev) => prev + 1);
+  }, []);
 
   // Si el usuario llega a una nota que ya tiene summaryL3 guardado, auto-open
   // el colapsable. initialSummaryL3 puede cambiar despues del primer render
@@ -82,13 +94,14 @@ export default function NoteDetailPage() {
       <div className="min-w-0 flex-1">
         <ReviewBanner noteId={noteId} />
         <NoteEditor
-          key={noteId}
+          key={`${noteId}-${discardCount}`}
           noteId={noteId}
           initialContent={initialContent}
           initialSummaryL3={initialSummaryL3}
           summaryIsOpen={summaryIsOpen}
           onSummaryToggle={handleToggleSummary}
           summaryTextareaRef={summaryTextareaRef}
+          onDiscardSaveError={handleDiscardSaveError}
           headerSlot={
             <>
               <DistillIndicator noteId={noteId} onOpenSummary={handleOpenSummary} />

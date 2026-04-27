@@ -15,7 +15,12 @@ interface UseNoteReturn {
 // MVP: carga one-shot con getDoc, no onSnapshot. Evita loops save/load
 // donde nuestra propia escritura re-dispara el listener y resetea el
 // editor. Multi-tab concurrent editing no soportado en MVP (last write wins).
-export default function useNote(noteId: string | undefined): UseNoteReturn {
+//
+// `version` (opcional, default 0): bump manual desde el caller para forzar
+// re-fetch sin cambiar noteId. Caso de uso: discard de cambios locales
+// post-error de save (F28) — el caller incrementa version, el effect re-corre,
+// getDoc trae el content server-side fresh.
+export default function useNote(noteId: string | undefined, version = 0): UseNoteReturn {
   const { user } = useAuth();
   const [state, setState] = useState<UseNoteReturn>({
     initialContent: null,
@@ -101,7 +106,7 @@ export default function useNote(noteId: string | undefined): UseNoteReturn {
     return () => {
       ignore = true;
     };
-  }, [user, noteId]);
+  }, [user, noteId, version]);
 
   return state;
 }
