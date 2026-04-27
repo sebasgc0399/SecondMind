@@ -2,10 +2,9 @@ import { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router';
 import { useTable } from 'tinybase/ui-react';
 import { ArrowLeft, Plus } from 'lucide-react';
-import { doc, updateDoc } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
 import { notesStore } from '@/stores/notesStore';
 import { parseIds, stringifyIds } from '@/lib/tinybase';
+import { notesRepo } from '@/infra/repos/notesRepo';
 import useAuth from '@/hooks/useAuth';
 import useProjects from '@/hooks/useProjects';
 import useTasks from '@/hooks/useTasks';
@@ -138,23 +137,12 @@ export default function ProjectDetailPage() {
     const currentProjectIds = parseIds(noteRow.projectIds as string | undefined);
     if (currentProjectIds.includes(projectId)) return;
     const nextProjectIds = [...currentProjectIds, projectId];
-    const now = Date.now();
 
-    try {
-      await updateDoc(doc(db, 'users', user.uid, 'notes', noteId), {
-        projectIds: stringifyIds(nextProjectIds),
-        updatedAt: now,
-      });
-      notesStore.setPartialRow('notes', noteId, {
-        projectIds: stringifyIds(nextProjectIds),
-        updatedAt: now,
-      });
-    } catch (error) {
-      console.error('[ProjectDetailPage] handleLinkNote note update failed', error);
-      return;
-    }
+    await notesRepo.updateMeta(noteId, {
+      projectIds: stringifyIds(nextProjectIds),
+      updatedAt: Date.now(),
+    });
 
-    // Actualizar el proyecto: agregar noteId al array noteIds (si no está)
     if (!project.noteIds.includes(noteId)) {
       await updateProject(projectId, { noteIds: [...project.noteIds, noteId] });
     }
@@ -166,21 +154,11 @@ export default function ProjectDetailPage() {
     const noteRow = notesStore.getRow('notes', noteId);
     const currentProjectIds = parseIds(noteRow.projectIds as string | undefined);
     const nextProjectIds = currentProjectIds.filter((id) => id !== projectId);
-    const now = Date.now();
 
-    try {
-      await updateDoc(doc(db, 'users', user.uid, 'notes', noteId), {
-        projectIds: stringifyIds(nextProjectIds),
-        updatedAt: now,
-      });
-      notesStore.setPartialRow('notes', noteId, {
-        projectIds: stringifyIds(nextProjectIds),
-        updatedAt: now,
-      });
-    } catch (error) {
-      console.error('[ProjectDetailPage] handleUnlinkNote note update failed', error);
-      return;
-    }
+    await notesRepo.updateMeta(noteId, {
+      projectIds: stringifyIds(nextProjectIds),
+      updatedAt: Date.now(),
+    });
 
     const nextProjectNoteIds = project.noteIds.filter((id) => id !== noteId);
     await updateProject(projectId, { noteIds: nextProjectNoteIds });
