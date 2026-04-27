@@ -153,7 +153,7 @@ Post-F30, durante la ventana entre `createNote()` retorna y el queue persiste el
 **Solución**: agregar a `useNote` un cross-check con `saveNotesCreatesQueue.getEntry(noteId)`. Si existe entry pending/syncing/retrying para ese id, **NO redirect** aunque `getDoc` retorne notFound. Tratar la row de TinyBase como fuente de verdad mientras el create está in-flight. Cuando el queue confirma:
 
 - Status `synced` → entry se borra del queue tras 100ms (SYNCED_GC_MS) → el siguiente `getDoc` o el `onSnapshot` re-hidrata con el server doc real.
-- Status `error` → entry queda visible en `<PendingSyncIndicator />` con badge ERROR. La página destino sigue mostrando la row local (caso usuario ya escribió contenido + se fue offline). Si el usuario hace "Descartar" desde el indicator, `clear()` borra el entry → el siguiente snapshot del persister limpia la row local. Si retry-now eventualmente sucede, sync.
+- Status `error` → entry queda visible en `<PendingSyncIndicator />` con badge ERROR. La página destino sigue mostrando la row local (caso usuario ya escribió contenido + se fue offline). Si el usuario hace "Descartar" desde el indicator, el handler hace `delRow(table, id)` + `clear()` (ver G4 + F30.5) → la row local desaparece inmediatamente → la página destino re-evalúa: `existsInStore=false` + sin entry pending → redirect. Si retry-now eventualmente sucede, sync.
 
 **Criterio de done:**
 
@@ -172,9 +172,9 @@ Post-F30, durante la ventana entre `createNote()` retorna y el queue persiste el
 
 ---
 
-### F30.5 — Indicator + flush hooks extendidos
+### F30.5 — Indicator + flush hooks extendidos + handler descarte para creates
 
-**Qué**: el `<PendingSyncIndicator />` y `usePendingSyncCount` (F29.5) ya iteran `allQueues` linealmente — son agnósticos al número. Cambios mínimos:
+**Qué**: el `<PendingSyncIndicator />` y `usePendingSyncCount` (F29.5) ya iteran `allQueues` linealmente — son agnósticos al número. Cambios:
 
 1. **`ENTITY_LABELS`** (en `src/hooks/usePendingSyncCount.ts` o donde viva el array) extender con 4 entries en el orden exacto de `createsQueues` dentro de `allQueues`. Labels propuestos:
    - `{ singular: 'nota nueva', plural: 'notas nuevas' }`
@@ -182,7 +182,39 @@ Post-F30, durante la ventana entre `createNote()` retorna y el queue persiste el
    - `{ singular: 'proyecto nuevo', plural: 'proyectos nuevos' }`
    - `{ singular: 'objetivo nuevo', plural: 'objetivos nuevos' }`
    - Distinguir verbalmente "nueva" (creación pendiente) vs "edición" (meta update pendiente — labels F29 ya usan "edición de nota") para que el popover sea legible.
+
 2. **Flush hooks** (`useSaveQueueFlush.ts`, `useCloseToTray.ts`) ya iteran `allQueues` con `Promise.allSettled` (F29.6). Sin cambios — los 4 nuevos queues entran automáticamente al expandir el array.
+
+3. **Handler `handleDiscardAll`** del indicator (`src/components/layout/PendingSyncIndicator.tsx:24-27`) **debe distinguir creates vs metas** (ver G4). Para entries de createsQueues: hacer `store.delRow(table, id)` ANTES del `clear()` por cada entry pending (incluyendo error). Para entries de meta + content queue: solo `clear()` (el persister auto-converge desde server vía `onSnapshot` cuando reconecta — el doc existe). Necesita un array exportado en `saveQueue.ts` con bindings:
+
+   ```ts
+   export const createsQueueBindings: ReadonlyArray<{
+     queue: SaveQueue<unknown>; // tipado real es SaveQueue<NoteRow> | etc; downcast porque el handler solo usa getSnapshot/clear
+     store: Store;
+     table: string;
+   }> = [
+     { queue: saveNotesCreatesQueue, store: notesStore, table: 'notes' },
+     { queue: saveTasksCreatesQueue, store: tasksStore, table: 'tasks' },
+     { queue: saveProjectsCreatesQueue, store: projectsStore, table: 'projects' },
+     { queue: saveObjectivesCreatesQueue, store: objectivesStore, table: 'objectives' },
+   ];
+   ```
+
+   Handler ajustado:
+
+   ```ts
+   function handleDiscardAll() {
+     // Creates: delRow ANTES de clear() porque el persister no auto-limpia rows
+     // huérfanas — el doc nunca llegó a Firestore → onSnapshot no emite delete →
+     // didChange no se llama → la row local queda hasta refresh manual.
+     // Ver G4 + tinybase.ts:65-72 (delRow standalone NO propaga delete, perfecto acá).
+     for (const { queue, store, table } of createsQueueBindings) {
+       for (const [id] of queue.getSnapshot()) store.delRow(table, id);
+     }
+     // Después clear() de TODOS los queues (los 11: 1 content + 6 metas + 4 creates).
+     allQueues.forEach((q) => q.clear());
+   }
+   ```
 
 **Criterio de done:**
 
@@ -190,12 +222,15 @@ Post-F30, durante la ventana entre `createNote()` retorna y el queue persiste el
 - [ ] Indicator amber con "1 nota nueva pendiente" cuando hay un create pending.
 - [ ] Indicator destructive con "1 sin guardar" + popover "1 nota nueva (ERROR)" cuando un create alcanza status error.
 - [ ] `beforeunload` dialog dispara con creates pendientes (validar que `totalPending()` cuenta los 4 nuevos queues).
-- [ ] Botón "Descartar" del indicator limpia los 11 queues.
+- [ ] Botón "Descartar": limpia los 11 queues + `delRow` aplicado a todas las rows de createsQueues. Verificar E2E que la entidad creada DESAPARECE de la UI inmediatamente (sin refresh).
+- [ ] `createsQueueBindings` exportado en `saveQueue.ts` con tipado correcto.
 
 **Archivos:**
 
 - `src/hooks/usePendingSyncCount.ts` — extender `ENTITY_LABELS`.
-- (Verificar al implementar si el array vive en otro path.)
+- `src/lib/saveQueue.ts` — agregar `createsQueueBindings` (importa stores).
+- `src/components/layout/PendingSyncIndicator.tsx` — modificar `handleDiscardAll` con la lógica de delRow para creates.
+- (Verificar al implementar si `ENTITY_LABELS` vive en otro path.)
 
 ---
 
@@ -212,9 +247,13 @@ Post-F30, durante la ventana entre `createNote()` retorna y el queue persiste el
    - Inyectar entry con executor que rechaza con `Error('transient')` plano.
    - Tras ~7s (1+2+4 backoff) → status `error`, indicator destructive.
    - Click "Reintentar" del popover, swap executor a `mockResolvedValue(undefined)` → status `synced` → entry GC tras 100ms → indicator desaparece.
-3. **Create error + Descartar**:
+3. **Create error + Descartar (verifica G4)**:
    - Mismo setup que (2).
-   - Click "Descartar" → `clear()` limpia el entry. Verificar: la row local en TinyBase persiste hasta que `onSnapshot` la limpia (probablemente requiere recargar para forzar persister snapshot — documentar el comportamiento).
+   - Click "Descartar" → handler hace `delRow` + `clear()`. Verificar:
+     - El entry desaparece del queue (indicator vuelve a 0).
+     - La entidad desaparece de la UI **inmediatamente** sin requerir refresh (la lista de notas ya no muestra el title; el `useTable` re-renderiza al `delRow`).
+     - Si la página destino estaba abierta sobre esa entidad: redirect a `/notes` (porque ya no existe en TinyBase ni hay entry pending).
+     - Verificar via Firebase MCP `firestore_get_document` que el doc nunca existió en server (confirma que NO necesitamos `deleteDoc` — solo `delRow` local).
 4. **Beforeunload con create pending**:
    - Inyectar entry pending.
    - Trigger `window.dispatchEvent(new Event('beforeunload'))` → confirmar que el dialog dispara (mediante `getRecentDialogs` de Playwright).
@@ -242,19 +281,21 @@ Post-F30, durante la ventana entre `createNote()` retorna y el queue persiste el
 
 ## Decisiones clave
 
-| ID  | Decisión                                                                                                       | Por qué                                                                                                                                                                                                                       |
-| --- | -------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| D1  | Queue dedicado por entidad para creates (4 nuevos), NO compartido con `metaQueue`.                             | Upsert collision: `saveQueue` reemplaza payload entero al re-enqueue con misma key (verificado en `saveQueue.ts:180-208`). Compartir queue create+update colapsaría payloads dispares. Queue dedicado evita por construcción. |
-| D2  | Payload tipado como `Row` completo, NO `Partial<Row>`.                                                         | Un create siempre carga el row entero. `Partial<Row>` deja la puerta a creates incompletos que romperían defaults. Tipado fuerte = caller errors at compile.                                                                  |
-| D3  | `RepoConfig<Row>` con dos queues: `queue?` (meta) + `createsQueue?` (creates). Separados, ambos opcionales.    | Retro-compat (sin queues = comportamiento pre-F29). Tipos distintos (`Partial<Row>` vs `Row`). Inyección granular per repo.                                                                                                   |
-| D4  | `setDoc(merge: true)` para creates (paridad con updates).                                                      | Si una CF (autoTagNote, generateEmbedding) escribe el doc antes que el queue de creates flushee, `merge:true` no pisa esos campos. `merge:false` sería técnicamente correcto para "primer write" pero introduce race con CFs. |
-| D5  | `useNote` cross-check con `saveNotesCreatesQueue.getEntry(id)` para tolerar `getDoc(notFound)` durante create. | Sin esto, `/notes/:id` post-create redirige al usuario fuera de su nota recién creada. Cross-check con queue distingue "create pending" (no redirect) de "doc borrado cross-device" (redirect).                               |
-| D6  | `createFromInbox` reusa `saveNotesCreatesQueue` con tipo `SaveQueue<NoteRow & { content?: string }>`.          | El campo `content` extra-schema viaja en el payload del queue al executor sin contaminar el `NoteRow` global (que TinyBase usa con schema-strict). Cast localizado.                                                           |
-| D7  | Single commit para F30.3 (wiring 4 repos).                                                                     | Cambio mecánico uniforme (1 import + 1 línea config × 4). Aplica regla F29.G6.                                                                                                                                                |
-| D8  | Labels custom para creates ("nota nueva" vs "edición de nota").                                                | El popover del indicator hoy lista "1 nota" para meta updates. Para creates necesita verbalmente distinguir — el usuario ve "1 nota nueva" y entiende "una nota recién creada que no se ha sincronizado".                     |
-| G1  | Sign-out mid-retry guard en el executor de `create` (paridad con `update`/`remove` F29.G3).                    | Mismo riesgo cross-user write si el usuario se desloggea durante el backoff. Recheck `auth.currentUser?.uid !== capturedUid` al inicio de cada attempt. Sin esto, defense-in-depth queda incompleto comparado con updates.    |
-| G2  | Queue de creates entra en `allQueues` → cubierto automáticamente por flush hooks `beforeunload` + `online`.    | Sin agregar a `allQueues`, los flush hooks no cubren creates → user puede cerrar la pestaña con creates pending sin warning. F29.6 ya itera el array, expandirlo es 0 LOC en hooks.                                           |
-| G3  | `useNote` cross-check one-shot al render, NO suscripción al queue.                                             | Re-renders ya están cubiertos por `useRow` (TinyBase) + `getDoc` (Firestore re-fetched cuando el `onSnapshot` re-hidrata post-flush). Suscribirse al queue agrega un subscriber por instancia de `useNote` sin valor neto.    |
+| ID  | Decisión                                                                                                                                   | Por qué                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
+| --- | ------------------------------------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| D1  | Queue dedicado por entidad para creates (4 nuevos), NO compartido con `metaQueue`.                                                         | Upsert collision: `saveQueue` reemplaza payload entero al re-enqueue con misma key (verificado en `saveQueue.ts:180-208`). Compartir queue create+update colapsaría payloads dispares. Queue dedicado evita por construcción.                                                                                                                                                                                                                                                                                                                                                                                                                         |
+| D2  | Payload tipado como `Row` completo, NO `Partial<Row>`.                                                                                     | Un create siempre carga el row entero. `Partial<Row>` deja la puerta a creates incompletos que romperían defaults. Tipado fuerte = caller errors at compile.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
+| D3  | `RepoConfig<Row>` con dos queues: `queue?` (meta) + `createsQueue?` (creates). Separados, ambos opcionales.                                | Retro-compat (sin queues = comportamiento pre-F29). Tipos distintos (`Partial<Row>` vs `Row`). Inyección granular per repo.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
+| D4  | `setDoc(merge: true)` para creates (paridad con updates).                                                                                  | Si una CF (autoTagNote, generateEmbedding) escribe el doc antes que el queue de creates flushee, `merge:true` no pisa esos campos. `merge:false` sería técnicamente correcto para "primer write" pero introduce race con CFs.                                                                                                                                                                                                                                                                                                                                                                                                                         |
+| D5  | `useNote` cross-check con `saveNotesCreatesQueue.getEntry(id)` para tolerar `getDoc(notFound)` durante create.                             | Sin esto, `/notes/:id` post-create redirige al usuario fuera de su nota recién creada. Cross-check con queue distingue "create pending" (no redirect) de "doc borrado cross-device" (redirect).                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
+| D6  | `createFromInbox` reusa `saveNotesCreatesQueue` con tipo `SaveQueue<NoteRow & { content?: string }>`.                                      | El campo `content` extra-schema viaja en el payload del queue al executor sin contaminar el `NoteRow` global (que TinyBase usa con schema-strict). Cast localizado.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
+| D7  | Single commit para F30.3 (wiring 4 repos).                                                                                                 | Cambio mecánico uniforme (1 import + 1 línea config × 4). Aplica regla F29.G6.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
+| D8  | Labels custom para creates ("nota nueva" vs "edición de nota").                                                                            | El popover del indicator hoy lista "1 nota" para meta updates. Para creates necesita verbalmente distinguir — el usuario ve "1 nota nueva" y entiende "una nota recién creada que no se ha sincronizado".                                                                                                                                                                                                                                                                                                                                                                                                                                             |
+| G1  | Sign-out mid-retry guard en el executor de `create` (paridad con `update`/`remove` F29.G3).                                                | Mismo riesgo cross-user write si el usuario se desloggea durante el backoff. Recheck `auth.currentUser?.uid !== capturedUid` al inicio de cada attempt. Sin esto, defense-in-depth queda incompleto comparado con updates.                                                                                                                                                                                                                                                                                                                                                                                                                            |
+| G2  | Queue de creates entra en `allQueues` → cubierto automáticamente por flush hooks `beforeunload` + `online`.                                | Sin agregar a `allQueues`, los flush hooks no cubren creates → user puede cerrar la pestaña con creates pending sin warning. F29.6 ya itera el array, expandirlo es 0 LOC en hooks.                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
+| G3  | `useNote` cross-check one-shot al render, NO suscripción al queue.                                                                         | Re-renders ya están cubiertos por `useRow` (TinyBase) + `getDoc` (Firestore re-fetched cuando el `onSnapshot` re-hidrata post-flush). Suscribirse al queue agrega un subscriber por instancia de `useNote` sin valor neto.                                                                                                                                                                                                                                                                                                                                                                                                                            |
+| G4  | "Descartar" un entry de createsQueues requiere `store.delRow(table, id)` explícito ANTES de `clear()`. Para meta/content queues NO aplica. | Si el doc nunca llegó a Firestore (caso típico del descarte antes del flush), `onSnapshot` no emite delete → `didChange` no se llama → la row local queda huérfana hasta refresh manual o hasta que otro cambio dispare un snapshot de la colección. Para meta queues NO aplica: el doc existe en server, el persister auto-converge al reconectar. La distinción se hace en el handler vía `createsQueueBindings`. Ver `tinybase.ts:65-72` (gotcha de `delRow` que NO propaga delete a Firestore — perfecto acá: borra local sin tocar server donde no hay nada).                                                                                    |
+| G5  | Tipo de retorno `Promise<string \| null>` en wrappers mantiene null por validación interna pre-enqueue. NO cambiar a non-nullable en v1.   | Post-F30, el null path se reduce: ya no atrapa errores de red async (eso lo maneja el queue), solo validaciones internas (ej. `tasksRepo.createTask:31` retorna null si trim vacío) y el `requireUid` throw del factory. Cambiar a `Promise<string>` rompe los callers que dependen del null check para validación. Mitigación v1: doc-comment en cada wrapper (notesRepo, tasksRepo, projectsRepo, objectivesRepo) indicando que post-F30 el null tiene scope reducido — "retorna null solo si {validación específica} falla; errores de persistencia van por queue + indicator". Cleanup de tipo a non-nullable es Out-of-scope (ver Out of scope). |
 
 ---
 
@@ -307,6 +348,7 @@ Al cerrar F30 todas estas condiciones deben ser verdaderas:
 - [ ] `npm run lint` pasa.
 - [ ] Crear una nota offline en dev (DevTools Network throttling = Offline) → entrar a `/notes/:id` → ver el editor con la row local → indicator amber con "1 nota nueva pendiente". Reconectar online → indicator desaparece, doc en Firestore aparece (validar via Firebase MCP `firestore_get_document`).
 - [ ] Forzar error en setDoc (rules deny temporal o offline persistente >7s) → indicator destructive con "1 sin guardar" → popover "1 nota nueva (ERROR)" con [Reintentar] habilitado.
+- [ ] **Descartar create pending**: la entidad desaparece de la UI inmediatamente (sin refresh), tanto desde la lista como desde la página destino abierta sobre ella (que redirige). Verifica G4.
 - [ ] `beforeunload` dialog dispara con un create pending.
 - [ ] Sign-out con creates pending → executor recheca uid → entries transitionan a error sin escribir al uid viejo.
 - [ ] `Spec/ESTADO-ACTUAL.md`: deuda "Creates con retry queue" tachada de "Candidatos próximos".
@@ -317,7 +359,7 @@ Al cerrar F30 todas estas condiciones deben ser verdaderas:
 
 ## Notas para Plan mode (step 2 SDD en otra ventana)
 
-El SPEC deja resueltas las decisiones D1-D8 + G1-G3. Plan mode debe validar estas y resolver las **siguientes preguntas abiertas**:
+El SPEC deja resueltas las decisiones D1-D8 + G1-G5. Plan mode debe validar estas y resolver las **siguientes preguntas abiertas**:
 
 1. **`NoteRow` extension para `content`**: opción (a) extender el type global, (b) tipar el singleton `saveNotesCreatesQueue` con intersection, (c) cast en sitio. Default propuesto: (b). Plan mode confirma con un Explore sobre `repoRows.ts` y los consumers de `NoteRow` para detectar contaminación.
 2. **`useNote` reactivity al queue**: G3 propone one-shot `getEntry()` al render. Plan mode valida con un dry-run del flow create + error + retry: ¿hay algún caso donde el render no se actualiza tras el sync? Si lo hay, suscribirse al queue.
@@ -327,6 +369,7 @@ El SPEC deja resueltas las decisiones D1-D8 + G1-G3. Plan mode debe validar esta
 6. **`createFromInbox` test específico**: validar que el `content` extra-schema llega a Firestore via queue. Plan mode propone el test exacto.
 7. **`useNote` page redirect: timing**: hoy redirect post-hidratación. Con cross-check al queue, ¿el guard se evalúa al mismo momento? Plan mode hace dry-run del orden useEffect + queue read.
 8. **Riesgos de race con `onSnapshot` durante el flush**: ¿el persister puede disparar `onSnapshot` mientras el queue está en mitad de un flush y pisar la row local con server stale? F29 lo cerró para updates; verificar que aplica al create (cuando el doc no existe en server, ¿el `onSnapshot` reporta `notFound` y borra la row local?). Plan mode valida con Firebase MCP.
+9. **`cancel()` programático sobre createsQueues**: el handler "Descartar" del indicator orquesta `delRow + clear` (G4), pero `cancel(id)` es API pública del queue. ¿Algún caller futuro lo invoca sobre un create entry sin pasar por el indicator? Default v1: documentar contrato "cancel/clear sobre createsQueues NO auto-limpia el store; el caller orquesta". Plan mode evalúa si vale automatizar el delRow dentro del queue (cross-cutting con stores) o mantener manual. Default propuesto: manual + doc-comment en `cancel()` específico de createsQueues.
 
 ---
 
@@ -336,4 +379,6 @@ El SPEC deja resueltas las decisiones D1-D8 + G1-G3. Plan mode debe validar esta
 - **Ajuste de `/projects/:id` y `/objectives/:id`** para tolerar create-pending: hoy esas páginas leen solo de TinyBase (`useTable`), no hay `getDoc` directo → no race. Si en el futuro alguna página destino agrega `getDoc`, replicar el patrón F30.4.
 - **Inbox creates por queue**: `QuickCaptureProvider.tsx` ya hace setRow sync con UUID local; el sync a Firestore va por persister auto-loop, no por factory. Migrarlo a queue formal es separadísimo (cambia el provider, no el repo).
 - **De-dupe per-noteId del indicator** (deuda F29.G5): si un mismo noteId tiene `create` + `updateMeta` simultáneos, el popover muestra "1 nota nueva + 1 edición de nota" cuando técnicamente es 1 nota con 2 writes. Aceptado para v1 igual que en F29.
+
+- **Cleanup del tipo de retorno a `Promise<string>` non-nullable** (relacionado con G5): los wrappers `notesRepo.createNote`, `tasksRepo.createTask`, etc. retornan `Promise<string | null>`. Post-F30 el null tiene scope reducido (solo validación interna pre-enqueue). Cambiar a non-nullable rompe los callers que dependen del null check. Cleanup futuro tras un audit de callers que defina cómo manejar la validación sin null (ej. throw + try/catch al caller). F31+ si surge demanda real.
 - **Cambiar el contrato `Promise<string | null>` a `Promise<string>` (sin null)**: hoy `createNote` retorna null en error pre-enqueue (validación de defaults, etc.). Post-F30 los callers que asumían "null = error" siguen funcionando — el queue maneja errores async via indicator, no via return value. Cambiar el tipo a non-nullable es un cleanup futuro.
