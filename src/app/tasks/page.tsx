@@ -2,7 +2,8 @@ import { useMemo, useState } from 'react';
 import { useTable } from 'tinybase/ui-react';
 import useTasks from '@/hooks/useTasks';
 import TaskInlineCreate from '@/components/tasks/TaskInlineCreate';
-import TaskCard, { isOverdue } from '@/components/tasks/TaskCard';
+import TaskCard from '@/components/tasks/TaskCard';
+import { isOverdue } from '@/lib/taskHelpers';
 import { isSameDay, startOfDay } from '@/lib/formatDate';
 import type { Task } from '@/types/task';
 

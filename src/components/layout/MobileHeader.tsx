@@ -1,6 +1,6 @@
 import { Menu } from 'lucide-react';
 import { useLocation } from 'react-router';
-import { navItems } from './Sidebar';
+import { navItems } from './navItems';
 
 interface MobileHeaderProps {
   onMenuClick: () => void;
