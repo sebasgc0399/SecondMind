@@ -13,6 +13,7 @@ import SlashMenu from '@/components/editor/menus/SlashMenu';
 import BubbleToolbar from '@/components/editor/menus/BubbleToolbar';
 import DistillLevelBanner from '@/components/editor/DistillLevelBanner';
 import EditorSuggestionBanner from '@/components/editor/EditorSuggestionBanner';
+import SaveErrorBanner from '@/components/editor/SaveErrorBanner';
 import SummaryL3 from '@/components/editor/SummaryL3';
 import useNoteSave, { type SaveStatus } from '@/hooks/useNoteSave';
 import type { JSONContent } from '@tiptap/core';
@@ -25,6 +26,7 @@ interface NoteEditorProps {
   onSummaryToggle: () => void;
   summaryTextareaRef: React.RefObject<HTMLTextAreaElement | null>;
   headerSlot?: React.ReactNode;
+  onDiscardSaveError: () => void;
 }
 
 export default function NoteEditor({
@@ -35,6 +37,7 @@ export default function NoteEditor({
   onSummaryToggle,
   summaryTextareaRef,
   headerSlot,
+  onDiscardSaveError,
 }: NoteEditorProps) {
   const navigate = useNavigate();
   const editor = useEditor({
@@ -94,6 +97,7 @@ export default function NoteEditor({
         isOpen={summaryIsOpen}
         onToggle={onSummaryToggle}
       />
+      <SaveErrorBanner noteId={noteId} onDiscard={onDiscardSaveError} />
       <DistillLevelBanner noteId={noteId} />
       <EditorSuggestionBanner noteId={noteId} />
       <div className="note-editor px-4" onClick={handleClick}>
@@ -109,6 +113,12 @@ export default function NoteEditor({
 function SaveIndicator({ status }: { status: SaveStatus }) {
   if (status === 'saving') {
     return <span className="text-xs text-muted-foreground">Guardando...</span>;
+  }
+  if (status === 'retrying') {
+    return <span className="text-xs text-amber-600 dark:text-amber-400">Reintentando...</span>;
+  }
+  if (status === 'error') {
+    return <span className="text-xs text-destructive">Error al guardar</span>;
   }
   if (status === 'saved') {
     return <span className="text-xs text-primary">✓ Guardado</span>;
