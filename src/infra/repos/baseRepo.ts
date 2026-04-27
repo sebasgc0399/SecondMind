@@ -1,19 +1,27 @@
 import { deleteDoc, doc, setDoc } from 'firebase/firestore';
 import { auth, db } from '@/lib/firebase';
+import type { SaveQueue } from '@/lib/saveQueue';
 import type { Store } from 'tinybase';
 
 export type RepoRow = Record<string, string | number | boolean>;
 
-export interface RepoConfig {
+export interface RepoConfig<Row extends RepoRow> {
   store: Store;
   table: string;
   pathFor: (uid: string, id: string) => string;
+  // Si se pasa, update/remove delegan al queue (sync setRow/delRow ANTES,
+  // setDoc/deleteDoc encolado con backoff + uid recheck). Sin queue, el
+  // factory mantiene el comportamiento pre-F29 (await directo).
+  queue?: SaveQueue<Partial<Row>>;
 }
 
 export interface Repo<Row extends RepoRow> {
   create(data: Row, opts?: { id?: string }): Promise<string>;
   update(id: string, partial: Partial<Row>): Promise<void>;
   remove(id: string): Promise<void>;
+  // Bypass del queue. Uso F29: notesRepo.purgeAll, donde encolar 50
+  // deleteDocs paralelos chocaria con el LRU cap (50) del queue.
+  removeRaw(id: string): Promise<void>;
 }
 
 function requireUid(): string {
@@ -24,8 +32,8 @@ function requireUid(): string {
   return uid;
 }
 
-export function createFirestoreRepo<Row extends RepoRow>(cfg: RepoConfig): Repo<Row> {
-  const { store, table, pathFor } = cfg;
+export function createFirestoreRepo<Row extends RepoRow>(cfg: RepoConfig<Row>): Repo<Row> {
+  const { store, table, pathFor, queue } = cfg;
 
   return {
     async create(data, opts) {
@@ -48,10 +56,43 @@ export function createFirestoreRepo<Row extends RepoRow>(cfg: RepoConfig): Repo<
       // pasado y los campos no-en-schema se perderían antes del setDoc.
       const partialForFirestore = { ...partial };
       store.setPartialRow(table, id, partial as RepoRow);
+
+      if (queue) {
+        // El executor cierra sobre el uid capturado en este call. Si el user
+        // sale e ingresa con otra cuenta mid-retry, recheca y aborta antes
+        // de escribir al path stale (mitigación G3, F29 plan).
+        queue.enqueue(id, partialForFirestore, async (p) => {
+          const currentUid = auth.currentUser?.uid;
+          if (!currentUid || currentUid !== uid) {
+            throw new Error('[repo] uid changed mid-retry — aborting stale write');
+          }
+          await setDoc(doc(db, pathFor(uid, id)), p, { merge: true });
+        });
+        return;
+      }
       await setDoc(doc(db, pathFor(uid, id)), partialForFirestore, { merge: true });
     },
 
     async remove(id) {
+      const uid = requireUid();
+      store.delRow(table, id);
+
+      if (queue) {
+        // Payload sentinel vacío — el executor solo necesita id+uid
+        // (capturados en la closure) para emitir deleteDoc.
+        queue.enqueue(id, {} as Partial<Row>, async () => {
+          const currentUid = auth.currentUser?.uid;
+          if (!currentUid || currentUid !== uid) {
+            throw new Error('[repo] uid changed mid-retry — aborting stale delete');
+          }
+          await deleteDoc(doc(db, pathFor(uid, id)));
+        });
+        return;
+      }
+      await deleteDoc(doc(db, pathFor(uid, id)));
+    },
+
+    async removeRaw(id) {
       const uid = requireUid();
       store.delRow(table, id);
       await deleteDoc(doc(db, pathFor(uid, id)));

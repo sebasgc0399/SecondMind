@@ -1,6 +1,7 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createStore } from 'tinybase';
 import { createFirestoreRepo, type RepoRow } from '@/infra/repos/baseRepo';
+import { createSaveQueue } from '@/lib/saveQueue';
 
 // Mock de @/lib/firebase — auth.currentUser mutable para cada test.
 vi.mock('@/lib/firebase', () => ({
@@ -168,7 +169,7 @@ describe('createFirestoreRepo', () => {
     expect(setDocPayload).toEqual({ count: 10, extraField: 'persisted' });
   });
 
-  it('auth.currentUser null → throw con mensaje claro en create/update/remove', async () => {
+  it('auth.currentUser null → throw con mensaje claro en create/update/remove/removeRaw', async () => {
     const firebase = await import('@/lib/firebase');
     (firebase.auth as { currentUser: { uid: string } | null }).currentUser = null;
 
@@ -182,5 +183,130 @@ describe('createFirestoreRepo', () => {
     await expect(repo.create({ name: 'x', count: 1 })).rejects.toThrow(/uid/i);
     await expect(repo.update('any-id', { count: 2 })).rejects.toThrow(/uid/i);
     await expect(repo.remove('any-id')).rejects.toThrow(/uid/i);
+    await expect(repo.removeRaw('any-id')).rejects.toThrow(/uid/i);
+  });
+
+  describe('createFirestoreRepo con queue', () => {
+    beforeEach(() => {
+      vi.useFakeTimers();
+    });
+
+    afterEach(() => {
+      vi.useRealTimers();
+    });
+
+    it('update con queue → enqueue + executor llama setDoc tras microtask', async () => {
+      const store = makeStore();
+      store.setRow('items', 'q1', { name: 'old', count: 1 });
+      setDocMock.mockResolvedValue(undefined);
+      const queue = createSaveQueue<Partial<TestRow>>();
+
+      const repo = createFirestoreRepo<TestRow>({
+        store,
+        table: 'items',
+        pathFor: (uid, id) => `users/${uid}/items/${id}`,
+        queue,
+      });
+
+      await repo.update('q1', { count: 5 });
+
+      // TinyBase ya aplicó el partial sync.
+      expect(store.getRow('items', 'q1')).toEqual({ name: 'old', count: 5 });
+
+      await vi.advanceTimersByTimeAsync(200);
+
+      expect(setDocMock).toHaveBeenCalledOnce();
+      const payload = setDocMock.mock.calls[0]![1] as Record<string, unknown>;
+      expect(payload).toEqual({ count: 5 });
+
+      queue.dispose();
+    });
+
+    it('remove con queue → enqueue + executor llama deleteDoc tras microtask', async () => {
+      const store = makeStore();
+      store.setRow('items', 'r1', { name: 'doomed', count: 0 });
+      deleteDocMock.mockResolvedValue(undefined);
+      const queue = createSaveQueue<Partial<TestRow>>();
+
+      const repo = createFirestoreRepo<TestRow>({
+        store,
+        table: 'items',
+        pathFor: (uid, id) => `users/${uid}/items/${id}`,
+        queue,
+      });
+
+      await repo.remove('r1');
+
+      // delRow sync.
+      expect(store.getRow('items', 'r1')).toEqual({});
+
+      await vi.advanceTimersByTimeAsync(200);
+      expect(deleteDocMock).toHaveBeenCalledOnce();
+
+      queue.dispose();
+    });
+
+    it('removeRaw bypassa queue: deleteDoc directo, sin enqueue', async () => {
+      const store = makeStore();
+      store.setRow('items', 'raw1', { name: 'bulk', count: 0 });
+      deleteDocMock.mockResolvedValue(undefined);
+      const queue = createSaveQueue<Partial<TestRow>>();
+
+      const repo = createFirestoreRepo<TestRow>({
+        store,
+        table: 'items',
+        pathFor: (uid, id) => `users/${uid}/items/${id}`,
+        queue,
+      });
+
+      await repo.removeRaw('raw1');
+
+      expect(store.getRow('items', 'raw1')).toEqual({});
+      expect(deleteDocMock).toHaveBeenCalledOnce();
+      // Queue intacto.
+      expect(queue.getSnapshot().size).toBe(0);
+
+      queue.dispose();
+    });
+
+    it('update con queue + uid distinto en retry → executor throws stale-write', async () => {
+      const store = makeStore();
+      store.setRow('items', 's1', { name: 'a', count: 1 });
+      setDocMock.mockRejectedValue(new Error('transient'));
+      const queue = createSaveQueue<Partial<TestRow>>();
+
+      const repo = createFirestoreRepo<TestRow>({
+        store,
+        table: 'items',
+        pathFor: (uid, id) => `users/${uid}/items/${id}`,
+        queue,
+      });
+
+      await repo.update('s1', { count: 2 });
+      await vi.advanceTimersByTimeAsync(0);
+      // Primer attempt llamó setDoc (rechazó con transient).
+      expect(setDocMock).toHaveBeenCalledTimes(1);
+      expect(queue.getEntry('s1')?.status).toBe('retrying');
+
+      // Cambio de uid mid-retry.
+      const firebase = await import('@/lib/firebase');
+      (firebase.auth as { currentUser: { uid: string } | null }).currentUser = {
+        uid: 'other-uid',
+      };
+
+      // Próximos retries (1s, 2s, 4s): el executor recheca uid → throw
+      // genérico (no FirebaseError → no permanente). attempts: 2, 3, 4 → 'error'.
+      await vi.advanceTimersByTimeAsync(1000);
+      await vi.advanceTimersByTimeAsync(2000);
+      await vi.advanceTimersByTimeAsync(4000);
+
+      // setDoc NO se llamó más allá del primer attempt: el executor abortó
+      // antes de tocar setDoc en cada retry post-cambio de uid.
+      expect(setDocMock).toHaveBeenCalledTimes(1);
+      expect(queue.getEntry('s1')?.status).toBe('error');
+      expect(queue.getEntry('s1')?.lastError?.message).toMatch(/stale write/i);
+
+      queue.dispose();
+    });
   });
 });
