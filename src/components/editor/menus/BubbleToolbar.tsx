@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { BubbleMenu } from '@tiptap/react/menus';
 import { useEditorState, type Editor } from '@tiptap/react';
 import {
@@ -46,13 +46,23 @@ export default function BubbleToolbar({ editor }: BubbleToolbarProps) {
     }),
   });
 
-  useEffect(() => {
-    if (!state) return;
-    if (!state.isLink && state.selectionEmpty) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect -- reset de mode cuando la selección/link cambia externamente. Backlog
+  // Reset mode a 'default' cuando la selección externa cambia a "sin selección y sin link".
+  // Patrón "Adjusting state when prop changes" (react.dev): tracker explícito de los campos
+  // causantes evita useEffect y solo dispara setState cuando isLink o selectionEmpty mutan.
+  const [prevSelection, setPrevSelection] = useState<{
+    isLink: boolean;
+    selectionEmpty: boolean;
+  } | null>(null);
+  if (
+    state &&
+    (state.isLink !== prevSelection?.isLink ||
+      state.selectionEmpty !== prevSelection?.selectionEmpty)
+  ) {
+    setPrevSelection({ isLink: state.isLink, selectionEmpty: state.selectionEmpty });
+    if (!state.isLink && state.selectionEmpty && mode !== 'default') {
       setMode('default');
     }
-  }, [state]);
+  }
 
   if (!editor || !state) return null;
 
