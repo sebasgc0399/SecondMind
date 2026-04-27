@@ -101,7 +101,7 @@ function CommandPaletteContent({ onClose }: CommandPaletteContentProps) {
 
   // Reset selection on query change
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- reset del cursor cuando el usuario tipea; podría migrarse a useDeferredValue. Backlog
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- reset del cursor al cambio de query; refactor canónico (lift state up al CommandPaletteProvider o useReducer con action 'queryChanged') está fuera del scope de este componente
     setSelectedIndex(0);
   }, [query]);
 
