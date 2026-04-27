@@ -1,27 +1,31 @@
 import { useEffect } from 'react';
-import { saveContentQueue } from '@/lib/saveQueue';
+import { allQueues } from '@/lib/saveQueue';
 
-// Listeners globales del saveContentQueue:
+// Listeners globales sobre los 7 queues (saveContent + 6 de F29):
 // - 'beforeunload': si hay entries pending al cerrar tab/ventana, dispara
 //   preventDefault para mostrar el dialog nativo "Hay cambios sin guardar"
 //   + intento best-effort de flushAll. El browser puede tener tiempo para un
 //   round-trip antes del unload si el usuario cancela el dialog. No bloquea
-//   cierre limpio cuando el queue está vacío.
-// - 'online': cuando vuelve la conexión, dispara flushAll inmediato. Recovery
-//   instantánea sin esperar al próximo backoff tick (1/2/4s).
+//   cierre limpio cuando todos los queues están vacíos.
+// - 'online': cuando vuelve la conexión, dispara flushAll inmediato sobre
+//   todos los queues. Recovery instantánea sin esperar al próximo backoff tick.
 export default function useSaveQueueFlush(): void {
   useEffect(() => {
+    function totalPending(): number {
+      return allQueues.reduce((acc, q) => acc + q.getSnapshot().size, 0);
+    }
+    function flushAll(): Promise<unknown> {
+      return Promise.allSettled(allQueues.map((q) => q.flushAll()));
+    }
     function handleBeforeUnload(event: BeforeUnloadEvent) {
-      const snapshot = saveContentQueue.getSnapshot();
-      if (snapshot.size === 0) return;
+      if (totalPending() === 0) return;
       event.preventDefault();
       event.returnValue = '';
-      void saveContentQueue.flushAll();
+      void flushAll();
     }
     function handleOnline() {
-      const snapshot = saveContentQueue.getSnapshot();
-      if (snapshot.size === 0) return;
-      void saveContentQueue.flushAll();
+      if (totalPending() === 0) return;
+      void flushAll();
     }
     window.addEventListener('beforeunload', handleBeforeUnload);
     window.addEventListener('online', handleOnline);
