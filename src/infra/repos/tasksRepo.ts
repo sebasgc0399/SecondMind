@@ -1,4 +1,5 @@
 import { createFirestoreRepo } from '@/infra/repos/baseRepo';
+import { saveTasksQueue } from '@/lib/saveQueue';
 import { stringifyIds } from '@/lib/tinybase';
 import { tasksStore } from '@/stores/tasksStore';
 import type { Priority, TaskStatus } from '@/types/common';
@@ -15,6 +16,7 @@ const repo = createFirestoreRepo<TaskRow>({
   store: tasksStore,
   table: 'tasks',
   pathFor: (uid, id) => `users/${uid}/tasks/${id}`,
+  queue: saveTasksQueue,
 });
 
 function computeNextTaskStatus(current: string): { status: TaskStatus; completedAt: number } {

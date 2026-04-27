@@ -1,4 +1,5 @@
 import { createFirestoreRepo } from '@/infra/repos/baseRepo';
+import { saveHabitsQueue } from '@/lib/saveQueue';
 import { habitsStore } from '@/stores/habitsStore';
 import { HABITS, type HabitKey } from '@/types/habit';
 import type { HabitRow } from '@/types/repoRows';
@@ -7,6 +8,7 @@ const repo = createFirestoreRepo<HabitRow>({
   store: habitsStore,
   table: 'habits',
   pathFor: (uid, id) => `users/${uid}/habits/${id}`,
+  queue: saveHabitsQueue,
 });
 
 /**

@@ -1,4 +1,5 @@
 import { createFirestoreRepo } from '@/infra/repos/baseRepo';
+import { saveInboxQueue } from '@/lib/saveQueue';
 import { inboxStore } from '@/stores/inboxStore';
 import { notesRepo } from '@/infra/repos/notesRepo';
 import { tasksRepo } from '@/infra/repos/tasksRepo';
@@ -12,6 +13,7 @@ const repo = createFirestoreRepo<InboxRow>({
   store: inboxStore,
   table: 'inbox',
   pathFor: (uid, id) => `users/${uid}/inbox/${id}`,
+  queue: saveInboxQueue,
 });
 
 /**

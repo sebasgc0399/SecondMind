@@ -1,6 +1,7 @@
 import { arrayUnion, doc, updateDoc } from 'firebase/firestore';
 import { auth, db } from '@/lib/firebase';
 import { createFirestoreRepo } from '@/infra/repos/baseRepo';
+import { saveNotesMetaQueue } from '@/lib/saveQueue';
 import { notesStore } from '@/stores/notesStore';
 import { stringifyIds } from '@/lib/tinybase';
 import type { NoteType } from '@/types/common';
@@ -10,6 +11,7 @@ const repo = createFirestoreRepo<NoteRow>({
   store: notesStore,
   table: 'notes',
   pathFor: (uid, id) => `users/${uid}/notes/${id}`,
+  queue: saveNotesMetaQueue,
 });
 
 export interface NoteCreateOverrides {
@@ -256,7 +258,10 @@ async function purgeAll(ids: string[]): Promise<void> {
   if (ids.length === 0) return;
   for (let i = 0; i < ids.length; i += PURGE_CHUNK_SIZE) {
     const chunk = ids.slice(i, i + PURGE_CHUNK_SIZE);
-    const results = await Promise.allSettled(chunk.map((id) => repo.remove(id)));
+    // removeRaw bypassa el queue: bulk paralelo de 50 deleteDocs chocaria
+    // con el LRU cap (50). Acepta el trade-off "best-effort sin retry"
+    // porque purgeAll es low-frequency intencional (vaciar papelera).
+    const results = await Promise.allSettled(chunk.map((id) => repo.removeRaw(id)));
     const failures = results.filter((r) => r.status === 'rejected');
     if (failures.length > 0) {
       console.error('[notesRepo] purgeAll: fallaron deletes', {
