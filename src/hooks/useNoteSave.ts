@@ -1,15 +1,17 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import { notesRepo } from '@/infra/repos/notesRepo';
 import { extractLinks } from '@/lib/editor/extractLinks';
 import { computeDistillLevel } from '@/lib/editor/computeDistillLevel';
 import { syncLinks } from '@/lib/editor/syncLinks';
+import { saveContentQueue } from '@/lib/saveQueue';
 import useAuth from '@/hooks/useAuth';
+import type { QueueStatus } from '@/lib/saveQueue';
 import type { Editor } from '@tiptap/react';
 
 export const AUTOSAVE_DEBOUNCE_MS = 2000;
 const SAVED_BADGE_MS = 1500;
 
-export type SaveStatus = 'idle' | 'saving' | 'saved';
+export type SaveStatus = 'idle' | 'saving' | 'saved' | 'retrying' | 'error';
 
 interface UseNoteSaveReturn {
   status: SaveStatus;
@@ -18,22 +20,26 @@ interface UseNoteSaveReturn {
   setSummaryL3: (next: string) => void;
 }
 
+function subscribeToQueue(cb: () => void): () => void {
+  return saveContentQueue.subscribe(cb);
+}
+
 export default function useNoteSave(
   noteId: string | undefined,
   editor: Editor | null,
   initialSummaryL3: string,
 ): UseNoteSaveReturn {
   const { user } = useAuth();
-  const [status, setStatus] = useState<SaveStatus>('idle');
   const [summaryL3, setSummaryL3State] = useState<string>(() => initialSummaryL3);
+  const [savedBadgeVisible, setSavedBadgeVisible] = useState<boolean>(false);
 
   const timerRef = useRef<number | null>(null);
-  const savedBadgeRef = useRef<number | null>(null);
   const editorRef = useRef<Editor | null>(null);
   const noteIdRef = useRef<string | undefined>(noteId);
   const uidRef = useRef<string | null>(null);
   const pendingRef = useRef<boolean>(false);
   const summaryL3Ref = useRef<string>(initialSummaryL3);
+  const prevQueueStatusRef = useRef<QueueStatus | undefined>(undefined);
 
   // eslint-disable-next-line react-hooks/refs -- cache de props/state para acceso en callback estable (`save` con [] deps); refactor cambia comportamiento. Backlog
   editorRef.current = editor;
@@ -44,6 +50,43 @@ export default function useNoteSave(
   // eslint-disable-next-line react-hooks/refs -- ver línea anterior
   summaryL3Ref.current = summaryL3;
 
+  const getQueueEntry = useCallback(
+    () => (noteId ? saveContentQueue.getEntry(noteId) : undefined),
+    [noteId],
+  );
+  const queueEntry = useSyncExternalStore(subscribeToQueue, getQueueEntry, () => undefined);
+
+  const status: SaveStatus = useMemo(() => {
+    if (savedBadgeVisible) return 'saved';
+    if (!queueEntry) return 'idle';
+    switch (queueEntry.status) {
+      case 'pending':
+      case 'syncing':
+        return 'saving';
+      case 'retrying':
+        return 'retrying';
+      case 'error':
+        return 'error';
+      case 'synced':
+        return 'saved';
+    }
+  }, [queueEntry, savedBadgeVisible]);
+
+  // Latch del badge "✓ Guardado" 1.5s al transicionar a synced. Cuando el queue
+  // GC-ea la entry tras synced, queueEntry pasa a undefined; el badge se mantiene
+  // visible hasta que el timer expire (no depende del queue para el bookkeeping).
+  useEffect(() => {
+    const current = queueEntry?.status;
+    const prev = prevQueueStatusRef.current;
+    prevQueueStatusRef.current = current;
+
+    if (current === 'synced' && prev !== 'synced') {
+      setSavedBadgeVisible(true);
+      const timerId = window.setTimeout(() => setSavedBadgeVisible(false), SAVED_BADGE_MS);
+      return () => window.clearTimeout(timerId);
+    }
+  }, [queueEntry?.status]);
+
   const save = useCallback(async () => {
     const currentEditor = editorRef.current;
     const currentNoteId = noteIdRef.current;
@@ -51,18 +94,22 @@ export default function useNoteSave(
     if (!currentEditor || !currentNoteId || !currentUid) return;
     if (!pendingRef.current) return;
 
+    // Guard único: NO encolar si hay error pending para este noteId. El usuario
+    // debe resolverlo via SaveErrorBanner antes de que se reanuden saves.
+    const currentEntry = saveContentQueue.getEntry(currentNoteId);
+    if (currentEntry?.status === 'error') return;
+
     pendingRef.current = false;
-    setStatus('saving');
+
+    const json = currentEditor.getJSON();
+    const contentPlain = currentEditor.getText();
+    const firstLine = contentPlain.split('\n', 1)[0]?.trim() ?? '';
+    const title = firstLine.slice(0, 200) || 'Sin título';
+    const updatedAt = Date.now();
+    const currentSummaryL3 = summaryL3Ref.current;
+    const distillLevel = computeDistillLevel(json, currentSummaryL3);
 
     try {
-      const json = currentEditor.getJSON();
-      const contentPlain = currentEditor.getText();
-      const firstLine = contentPlain.split('\n', 1)[0]?.trim() ?? '';
-      const title = firstLine.slice(0, 200) || 'Sin título';
-      const updatedAt = Date.now();
-      const summaryL3 = summaryL3Ref.current;
-      const distillLevel = computeDistillLevel(json, summaryL3);
-
       const extracted = extractLinks(json);
       const { outgoingLinkIds, linkCount } = await syncLinks({
         sourceId: currentNoteId,
@@ -71,26 +118,25 @@ export default function useNoteSave(
         newLinks: extracted,
       });
 
-      await notesRepo.saveContent(currentNoteId, {
-        content: JSON.stringify(json),
-        contentPlain,
-        title,
-        updatedAt,
-        summaryL3,
-        distillLevel,
-        linkCount,
-        outgoingLinkIds,
-      });
-
-      setStatus('saved');
-      if (savedBadgeRef.current) window.clearTimeout(savedBadgeRef.current);
-      savedBadgeRef.current = window.setTimeout(() => {
-        setStatus((prev) => (prev === 'saved' ? 'idle' : prev));
-      }, SAVED_BADGE_MS);
+      saveContentQueue.enqueue(
+        currentNoteId,
+        {
+          content: JSON.stringify(json),
+          contentPlain,
+          title,
+          updatedAt,
+          summaryL3: currentSummaryL3,
+          distillLevel,
+          linkCount,
+          outgoingLinkIds,
+        },
+        (payload) => notesRepo.saveContent(currentNoteId, payload),
+      );
     } catch (error) {
-      console.error('[useNoteSave] save failed', error);
+      // syncLinks falló (pre-queue). Restaurar pendingRef para que el próximo
+      // save() reintente. Path conocido fuera de scope F28 (deuda visible).
+      console.error('[useNoteSave] save failed (pre-queue)', error);
       pendingRef.current = true;
-      setStatus('idle');
     }
   }, []);
 
@@ -109,7 +155,6 @@ export default function useNoteSave(
     (next: string) => {
       setSummaryL3State(next);
       pendingRef.current = true;
-      setStatus('idle');
       if (timerRef.current) window.clearTimeout(timerRef.current);
       timerRef.current = window.setTimeout(() => {
         timerRef.current = null;
@@ -124,7 +169,6 @@ export default function useNoteSave(
 
     function handleUpdate() {
       pendingRef.current = true;
-      setStatus('idle');
       if (timerRef.current) window.clearTimeout(timerRef.current);
       timerRef.current = window.setTimeout(() => {
         timerRef.current = null;
@@ -138,15 +182,14 @@ export default function useNoteSave(
     };
   }, [editor, save]);
 
+  // Cleanup F22: timers locales del debounce. NO cancelar el queue entry — el
+  // retry sigue corriendo background si el usuario navega a otra nota. Si hay
+  // pendingRef sin encolar todavía, intento flush best-effort al unmount.
   useEffect(() => {
     return () => {
       if (timerRef.current) {
         window.clearTimeout(timerRef.current);
         timerRef.current = null;
-      }
-      if (savedBadgeRef.current) {
-        window.clearTimeout(savedBadgeRef.current);
-        savedBadgeRef.current = null;
       }
       if (pendingRef.current) {
         void save();

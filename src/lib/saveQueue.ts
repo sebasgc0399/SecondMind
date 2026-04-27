@@ -120,6 +120,13 @@ export function createSaveQueue<T>(): SaveQueue<T> {
       }
 
       const delay = RETRY_DELAYS_MS[newAttempts - 1];
+      if (delay === undefined) {
+        // Defensivo: newAttempts ya pasó el guard MAX_ATTEMPTS arriba; no debería
+        // entrar acá nunca. Tratar como error final por seguridad.
+        patchEntry(id, { status: 'error', attempts: newAttempts, lastError: error });
+        notify();
+        return;
+      }
       const timerId = setTimeout(() => {
         void executeEntry(id);
       }, delay);
