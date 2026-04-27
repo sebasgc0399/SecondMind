@@ -72,9 +72,9 @@ export default function useNoteSave(
     }
   }, [queueEntry, savedBadgeVisible]);
 
-  // Latch del badge "✓ Guardado" 1.5s al transicionar a synced. Cuando el queue
-  // GC-ea la entry tras synced, queueEntry pasa a undefined; el badge se mantiene
-  // visible hasta que el timer expire (no depende del queue para el bookkeeping).
+  // Trigger del badge "✓ Guardado" al transicionar a synced. Resetea el badge
+  // cuando aparece un nuevo entry no-synced (nuevo enqueue/retry/error) para
+  // que el SaveIndicator refleje el estado real del queue, no el latch viejo.
   useEffect(() => {
     const current = queueEntry?.status;
     const prev = prevQueueStatusRef.current;
@@ -82,10 +82,24 @@ export default function useNoteSave(
 
     if (current === 'synced' && prev !== 'synced') {
       setSavedBadgeVisible(true);
-      const timerId = window.setTimeout(() => setSavedBadgeVisible(false), SAVED_BADGE_MS);
-      return () => window.clearTimeout(timerId);
+      return;
+    }
+    // Nuevo entry no-synced (pending/syncing/retrying/error) invalida el latch:
+    // sin este reset el badge "✓ Guardado" queda pegado durante un nuevo ciclo
+    // de retry/error porque el cleanup del setTimeout cancela su propio false.
+    if (current !== undefined && current !== 'synced') {
+      setSavedBadgeVisible(false);
     }
   }, [queueEntry?.status]);
+
+  // Auto-hide del badge tras 1.5s en useEffect separado del trigger (gotcha F22:
+  // el cleanup vivo en el mismo effect que el setState cancela el timer cuando
+  // la dep cambia, dejando el badge pegado).
+  useEffect(() => {
+    if (!savedBadgeVisible) return;
+    const timerId = window.setTimeout(() => setSavedBadgeVisible(false), SAVED_BADGE_MS);
+    return () => window.clearTimeout(timerId);
+  }, [savedBadgeVisible]);
 
   const save = useCallback(async () => {
     const currentEditor = editorRef.current;
