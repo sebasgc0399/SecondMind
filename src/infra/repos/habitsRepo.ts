@@ -1,31 +1,7 @@
-import { createFirestoreRepo, type RepoRow } from '@/infra/repos/baseRepo';
+import { createFirestoreRepo } from '@/infra/repos/baseRepo';
 import { habitsStore } from '@/stores/habitsStore';
 import { HABITS, type HabitKey } from '@/types/habit';
-
-// Schema del row en TinyBase/Firestore — doc por día, IDs YYYY-MM-DD
-// (ver habitsStore.ts). setPartialRow sobre un id inexistente crea la row
-// con defaults del schema, por eso toggleHabit puede usar update() para
-// ambos casos (create al primer toggle del día + update en siguientes).
-interface HabitRow extends RepoRow {
-  date: number;
-  ejercicio: boolean;
-  codear: boolean;
-  leer: boolean;
-  meditar: boolean;
-  comerBien: boolean;
-  tomarAgua: boolean;
-  planificarDia: boolean;
-  madrugar: boolean;
-  gratitud: boolean;
-  ingles: boolean;
-  pareja: boolean;
-  estirar: boolean;
-  tenderCama: boolean;
-  noComerDulce: boolean;
-  progress: number;
-  createdAt: number;
-  updatedAt: number;
-}
+import type { HabitRow } from '@/types/repoRows';
 
 const repo = createFirestoreRepo<HabitRow>({
   store: habitsStore,

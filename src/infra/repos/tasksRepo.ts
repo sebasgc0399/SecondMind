@@ -1,30 +1,14 @@
-import { createFirestoreRepo, type RepoRow } from '@/infra/repos/baseRepo';
+import { createFirestoreRepo } from '@/infra/repos/baseRepo';
 import { stringifyIds } from '@/lib/tinybase';
 import { tasksStore } from '@/stores/tasksStore';
 import type { Priority, TaskStatus } from '@/types/common';
 import type { Task } from '@/types/task';
+import type { TaskRow } from '@/types/repoRows';
 
 export interface CreateTaskOptions {
   priority?: Priority;
   areaId?: string;
   projectId?: string;
-}
-
-// Row serializada para TinyBase/Firestore (noteIds como JSON string).
-interface TaskRow extends RepoRow {
-  name: string;
-  status: string;
-  priority: string;
-  dueDate: number;
-  projectId: string;
-  areaId: string;
-  objectiveId: string;
-  noteIds: string;
-  description: string;
-  isArchived: boolean;
-  createdAt: number;
-  updatedAt: number;
-  completedAt: number;
 }
 
 const repo = createFirestoreRepo<TaskRow>({

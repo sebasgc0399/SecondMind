@@ -1,44 +1,10 @@
 import { arrayUnion, doc, updateDoc } from 'firebase/firestore';
 import { auth, db } from '@/lib/firebase';
-import { createFirestoreRepo, type RepoRow } from '@/infra/repos/baseRepo';
+import { createFirestoreRepo } from '@/infra/repos/baseRepo';
 import { notesStore } from '@/stores/notesStore';
 import { stringifyIds } from '@/lib/tinybase';
 import type { NoteType } from '@/types/common';
-
-// Schema TinyBase de notes — NO incluye `content` (el JSON TipTap solo
-// vive en Firestore, gotcha universal del proyecto). saveContent más
-// abajo usa updateDoc directo con `content` en el payload remoto.
-interface NoteRow extends RepoRow {
-  title: string;
-  contentPlain: string;
-  paraType: string;
-  noteType: string;
-  source: string;
-  projectIds: string;
-  areaIds: string;
-  tagIds: string;
-  outgoingLinkIds: string;
-  incomingLinkIds: string;
-  linkCount: number;
-  summaryL3: string;
-  distillLevel: number;
-  aiTags: string;
-  aiSummary: string;
-  aiProcessed: boolean;
-  createdAt: number;
-  updatedAt: number;
-  lastViewedAt: number;
-  viewCount: number;
-  isFavorite: boolean;
-  isArchived: boolean;
-  // Sentinel `0` = no eliminada. `> 0` = timestamp ms del soft delete.
-  // TinyBase Cell types no soportan null, por eso 0; el dominio
-  // (`Note.deletedAt: number | null`) sí expone null.
-  deletedAt: number;
-  fsrsState: string;
-  fsrsDue: number;
-  fsrsLastReview: number;
-}
+import type { NoteRow } from '@/types/repoRows';
 
 const repo = createFirestoreRepo<NoteRow>({
   store: notesStore,
