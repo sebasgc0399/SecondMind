@@ -2,6 +2,7 @@ import { NavLink } from 'react-router';
 import { Settings, LogOut, Menu } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { usePendingInboxCount } from '@/hooks/useInbox';
+import PendingSyncIndicator from './PendingSyncIndicator';
 import { navItems } from './navItems';
 import type { User } from 'firebase/auth';
 
@@ -78,6 +79,12 @@ export function SidebarContent({ user, onSignOut, collapsed, onNavigate }: Sideb
           </NavLink>
         ))}
       </nav>
+
+      {!collapsed && (
+        <div className="px-2 pb-1">
+          <PendingSyncIndicator />
+        </div>
+      )}
 
       <div className="space-y-1 border-t border-sidebar-border p-2">
         <NavLink

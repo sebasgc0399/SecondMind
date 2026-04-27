@@ -307,7 +307,7 @@ async function acceptSuggestion(
   };
   // Cast: arrayUnion devuelve un FieldValue opaco al tipo Partial<NoteRow>
   // del queue (que solo lo pasa al executor sin inspeccionarlo).
-  saveNotesMetaQueue.enqueue(queueKey, docPayload as Partial<NoteRow>, async (p) => {
+  saveNotesMetaQueue.enqueue(queueKey, docPayload as unknown as Partial<NoteRow>, async (p) => {
     const currentUid = auth.currentUser?.uid;
     if (!currentUid || currentUid !== uid) {
       throw new Error('[notesRepo] uid changed mid-retry — aborting stale write');
@@ -333,7 +333,7 @@ async function dismissSuggestion(noteId: string, suggestionId: string): Promise<
     dismissedSuggestions: arrayUnion(suggestionId),
     updatedAt: Date.now(),
   };
-  saveNotesMetaQueue.enqueue(queueKey, docPayload as Partial<NoteRow>, async (p) => {
+  saveNotesMetaQueue.enqueue(queueKey, docPayload as unknown as Partial<NoteRow>, async (p) => {
     const currentUid = auth.currentUser?.uid;
     if (!currentUid || currentUid !== uid) {
       throw new Error('[notesRepo] uid changed mid-retry — aborting stale write');
