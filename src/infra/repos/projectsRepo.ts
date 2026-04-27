@@ -1,8 +1,10 @@
-import { createFirestoreRepo, type RepoRow } from '@/infra/repos/baseRepo';
+import { createFirestoreRepo } from '@/infra/repos/baseRepo';
+import { saveProjectsQueue } from '@/lib/saveQueue';
 import { projectsStore } from '@/stores/projectsStore';
 import { stringifyIds } from '@/lib/tinybase';
 import type { Priority } from '@/types/common';
 import type { Project } from '@/types/project';
+import type { ProjectRow } from '@/types/repoRows';
 
 export interface CreateProjectInput {
   name: string;
@@ -10,25 +12,11 @@ export interface CreateProjectInput {
   priority: Priority;
 }
 
-interface ProjectRow extends RepoRow {
-  name: string;
-  status: string;
-  priority: string;
-  areaId: string;
-  objectiveId: string;
-  taskIds: string;
-  noteIds: string;
-  startDate: number;
-  deadline: number;
-  isArchived: boolean;
-  createdAt: number;
-  updatedAt: number;
-}
-
 const repo = createFirestoreRepo<ProjectRow>({
   store: projectsStore,
   table: 'projects',
   pathFor: (uid, id) => `users/${uid}/projects/${id}`,
+  queue: saveProjectsQueue,
 });
 
 async function createProject({

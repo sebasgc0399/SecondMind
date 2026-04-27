@@ -1,5 +1,13 @@
 import { FirebaseError } from 'firebase/app';
 import type { SaveContentPayload } from '@/infra/repos/notesRepo';
+import type {
+  NoteRow,
+  TaskRow,
+  ProjectRow,
+  ObjectiveRow,
+  HabitRow,
+  InboxRow,
+} from '@/types/repoRows';
 
 export type QueueStatus = 'pending' | 'syncing' | 'retrying' | 'synced' | 'error';
 
@@ -24,6 +32,7 @@ export interface SaveQueue<T> {
   subscribe(cb: () => void): () => void;
   getEntry(id: string): QueueEntry<T> | undefined;
   getSnapshot(): ReadonlyMap<string, QueueEntry<T>>;
+  clear(): void;
   dispose(): void;
 }
 
@@ -305,6 +314,18 @@ export function createSaveQueue<T>(): SaveQueue<T> {
     return entries;
   }
 
+  // clear() vacía las entries pero deja el queue vivo para futuros enqueues.
+  // Diferente de dispose() que setea `disposed = true` y silencia enqueues
+  // posteriores. Casos de uso: limpieza entre tests + acción "Descartar
+  // todo" del PendingSyncIndicator.
+  function clear(): void {
+    for (const entry of entries.values()) {
+      if (entry.timerId != null) clearTimeout(entry.timerId);
+    }
+    entries.clear();
+    notify();
+  }
+
   function dispose(): void {
     disposed = true;
     for (const entry of entries.values()) {
@@ -322,8 +343,35 @@ export function createSaveQueue<T>(): SaveQueue<T> {
     subscribe,
     getEntry,
     getSnapshot,
+    clear,
     dispose,
   };
 }
 
 export const saveContentQueue: SaveQueue<SaveContentPayload> = createSaveQueue();
+
+// F29 — Singletons de retry queue por entidad. Cada queue es independiente;
+// el factory `createFirestoreRepo` (baseRepo.ts) inyecta el queue
+// correspondiente para que update/remove deleguen el setDoc/deleteDoc
+// retry-protected. Bypasses de notesRepo (acceptSuggestion, dismissSuggestion)
+// reusan saveNotesMetaQueue con keys compuestas.
+export const saveNotesMetaQueue: SaveQueue<Partial<NoteRow>> = createSaveQueue();
+export const saveTasksQueue: SaveQueue<Partial<TaskRow>> = createSaveQueue();
+export const saveProjectsQueue: SaveQueue<Partial<ProjectRow>> = createSaveQueue();
+export const saveObjectivesQueue: SaveQueue<Partial<ObjectiveRow>> = createSaveQueue();
+export const saveHabitsQueue: SaveQueue<Partial<HabitRow>> = createSaveQueue();
+export const saveInboxQueue: SaveQueue<Partial<InboxRow>> = createSaveQueue();
+
+// Iterables para hooks/UI.
+// metaQueues = los 6 nuevos de F29 (sin saveContentQueue).
+// allQueues = los 7 totales (saveContent + meta), para flush/aggregator.
+export const metaQueues = [
+  saveNotesMetaQueue,
+  saveTasksQueue,
+  saveProjectsQueue,
+  saveObjectivesQueue,
+  saveHabitsQueue,
+  saveInboxQueue,
+] as const;
+
+export const allQueues = [saveContentQueue, ...metaQueues] as const;

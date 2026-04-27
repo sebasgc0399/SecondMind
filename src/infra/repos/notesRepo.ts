@@ -1,49 +1,17 @@
 import { arrayUnion, doc, updateDoc } from 'firebase/firestore';
 import { auth, db } from '@/lib/firebase';
-import { createFirestoreRepo, type RepoRow } from '@/infra/repos/baseRepo';
+import { createFirestoreRepo } from '@/infra/repos/baseRepo';
+import { saveNotesMetaQueue } from '@/lib/saveQueue';
 import { notesStore } from '@/stores/notesStore';
 import { stringifyIds } from '@/lib/tinybase';
 import type { NoteType } from '@/types/common';
-
-// Schema TinyBase de notes — NO incluye `content` (el JSON TipTap solo
-// vive en Firestore, gotcha universal del proyecto). saveContent más
-// abajo usa updateDoc directo con `content` en el payload remoto.
-interface NoteRow extends RepoRow {
-  title: string;
-  contentPlain: string;
-  paraType: string;
-  noteType: string;
-  source: string;
-  projectIds: string;
-  areaIds: string;
-  tagIds: string;
-  outgoingLinkIds: string;
-  incomingLinkIds: string;
-  linkCount: number;
-  summaryL3: string;
-  distillLevel: number;
-  aiTags: string;
-  aiSummary: string;
-  aiProcessed: boolean;
-  createdAt: number;
-  updatedAt: number;
-  lastViewedAt: number;
-  viewCount: number;
-  isFavorite: boolean;
-  isArchived: boolean;
-  // Sentinel `0` = no eliminada. `> 0` = timestamp ms del soft delete.
-  // TinyBase Cell types no soportan null, por eso 0; el dominio
-  // (`Note.deletedAt: number | null`) sí expone null.
-  deletedAt: number;
-  fsrsState: string;
-  fsrsDue: number;
-  fsrsLastReview: number;
-}
+import type { NoteRow } from '@/types/repoRows';
 
 const repo = createFirestoreRepo<NoteRow>({
   store: notesStore,
   table: 'notes',
   pathFor: (uid, id) => `users/${uid}/notes/${id}`,
+  queue: saveNotesMetaQueue,
 });
 
 export interface NoteCreateOverrides {
@@ -290,7 +258,10 @@ async function purgeAll(ids: string[]): Promise<void> {
   if (ids.length === 0) return;
   for (let i = 0; i < ids.length; i += PURGE_CHUNK_SIZE) {
     const chunk = ids.slice(i, i + PURGE_CHUNK_SIZE);
-    const results = await Promise.allSettled(chunk.map((id) => repo.remove(id)));
+    // removeRaw bypassa el queue: bulk paralelo de 50 deleteDocs chocaria
+    // con el LRU cap (50). Acepta el trade-off "best-effort sin retry"
+    // porque purgeAll es low-frequency intencional (vaciar papelera).
+    const results = await Promise.allSettled(chunk.map((id) => repo.removeRaw(id)));
     const failures = results.filter((r) => r.status === 'rejected');
     if (failures.length > 0) {
       console.error('[notesRepo] purgeAll: fallaron deletes', {
@@ -320,11 +291,28 @@ async function acceptSuggestion(
   if (!uid) {
     throw new Error('[notesRepo] acceptSuggestion: no auth.currentUser.uid');
   }
+  // SYNC: TinyBase refleja el flip inmediato para que el banner UI desaparezca.
   notesStore.setPartialRow('notes', noteId, { noteType: payload.noteType });
-  await updateDoc(doc(db, `users/${uid}/notes/${noteId}`), {
+
+  // Composite key evita colisión con un updateMeta paralelo del mismo noteId.
+  // Trade-off (F29 plan, accept v1): el indicator cuenta entries por queue,
+  // no por noteId — si hay updateMeta + acceptSuggestion en flight a la vez,
+  // muestra "2 notas pendientes" cuando técnicamente es 1 nota con 2 writes.
+  // De-dupe per-id es deuda explícita.
+  const queueKey = `${noteId}:accept-${suggestionId}`;
+  const docPayload = {
     noteType: payload.noteType,
     dismissedSuggestions: arrayUnion(suggestionId),
     updatedAt: Date.now(),
+  };
+  // Cast: arrayUnion devuelve un FieldValue opaco al tipo Partial<NoteRow>
+  // del queue (que solo lo pasa al executor sin inspeccionarlo).
+  saveNotesMetaQueue.enqueue(queueKey, docPayload as unknown as Partial<NoteRow>, async (p) => {
+    const currentUid = auth.currentUser?.uid;
+    if (!currentUid || currentUid !== uid) {
+      throw new Error('[notesRepo] uid changed mid-retry — aborting stale write');
+    }
+    await updateDoc(doc(db, `users/${uid}/notes/${noteId}`), p);
   });
 }
 
@@ -337,9 +325,20 @@ async function dismissSuggestion(noteId: string, suggestionId: string): Promise<
   if (!uid) {
     throw new Error('[notesRepo] dismissSuggestion: no auth.currentUser.uid');
   }
-  await updateDoc(doc(db, `users/${uid}/notes/${noteId}`), {
+  // dismiss no muta TinyBase (suggestedNoteType vive solo en Firestore por
+  // gotcha CF-write-only). Solo encola el updateDoc con arrayUnion al queue
+  // de notes con composite key.
+  const queueKey = `${noteId}:dismiss-${suggestionId}`;
+  const docPayload = {
     dismissedSuggestions: arrayUnion(suggestionId),
     updatedAt: Date.now(),
+  };
+  saveNotesMetaQueue.enqueue(queueKey, docPayload as unknown as Partial<NoteRow>, async (p) => {
+    const currentUid = auth.currentUser?.uid;
+    if (!currentUid || currentUid !== uid) {
+      throw new Error('[notesRepo] uid changed mid-retry — aborting stale write');
+    }
+    await updateDoc(doc(db, `users/${uid}/notes/${noteId}`), p);
   });
 }
 

@@ -310,4 +310,31 @@ describe('saveQueue', () => {
 
     queue.dispose();
   });
+
+  it('15. clear() vacía entries y notifica, pero mantiene subscribers vivos', async () => {
+    const queue = createSaveQueue<TestPayload>();
+    const executor = vi.fn().mockRejectedValue(new Error('transient'));
+    const cb = vi.fn();
+    queue.subscribe(cb);
+
+    queue.enqueue('a', { data: 'a' }, executor);
+    queue.enqueue('b', { data: 'b' }, executor);
+    await vi.advanceTimersByTimeAsync(0);
+    expect(queue.getSnapshot().size).toBe(2);
+
+    const callsBeforeClear = cb.mock.calls.length;
+    queue.clear();
+
+    expect(queue.getSnapshot().size).toBe(0);
+    expect(cb.mock.calls.length).toBeGreaterThan(callsBeforeClear);
+
+    // Tras clear, queue sigue funcional (no setea `disposed = true`).
+    const okExecutor = vi.fn().mockResolvedValue(undefined);
+    queue.enqueue('c', { data: 'c' }, okExecutor);
+    await vi.advanceTimersByTimeAsync(FLUSH_GC_MS);
+    expect(okExecutor).toHaveBeenCalledTimes(1);
+    expect(queue.getEntry('c')).toBeUndefined();
+
+    queue.dispose();
+  });
 });

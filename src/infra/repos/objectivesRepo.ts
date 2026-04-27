@@ -1,7 +1,9 @@
-import { createFirestoreRepo, type RepoRow } from '@/infra/repos/baseRepo';
+import { createFirestoreRepo } from '@/infra/repos/baseRepo';
+import { saveObjectivesQueue } from '@/lib/saveQueue';
 import { objectivesStore } from '@/stores/objectivesStore';
 import { stringifyIds } from '@/lib/tinybase';
 import type { Objective } from '@/types/objective';
+import type { ObjectiveRow } from '@/types/repoRows';
 
 export interface CreateObjectiveInput {
   name: string;
@@ -9,22 +11,11 @@ export interface CreateObjectiveInput {
   deadline: number;
 }
 
-interface ObjectiveRow extends RepoRow {
-  name: string;
-  status: string;
-  deadline: number;
-  areaId: string;
-  projectIds: string;
-  taskIds: string;
-  isArchived: boolean;
-  createdAt: number;
-  updatedAt: number;
-}
-
 const repo = createFirestoreRepo<ObjectiveRow>({
   store: objectivesStore,
   table: 'objectives',
   pathFor: (uid, id) => `users/${uid}/objectives/${id}`,
+  queue: saveObjectivesQueue,
 });
 
 async function createObjective({

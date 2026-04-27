@@ -1,4 +1,5 @@
-import { createFirestoreRepo, type RepoRow } from '@/infra/repos/baseRepo';
+import { createFirestoreRepo } from '@/infra/repos/baseRepo';
+import { saveInboxQueue } from '@/lib/saveQueue';
 import { inboxStore } from '@/stores/inboxStore';
 import { notesRepo } from '@/infra/repos/notesRepo';
 import { tasksRepo } from '@/infra/repos/tasksRepo';
@@ -6,28 +7,13 @@ import { projectsRepo } from '@/infra/repos/projectsRepo';
 import type { AreaKey } from '@/types/area';
 import type { Priority } from '@/types/common';
 import type { ConvertOverrides } from '@/types/inbox';
-
-interface InboxRow extends RepoRow {
-  rawContent: string;
-  source: string;
-  sourceUrl: string;
-  status: string;
-  processedAs: string;
-  aiProcessed: boolean;
-  aiSuggestedTitle: string;
-  aiSuggestedType: string;
-  aiSuggestedTags: string;
-  aiSuggestedArea: string;
-  aiSummary: string;
-  aiPriority: string;
-  aiConfidence: number;
-  createdAt: number;
-}
+import type { InboxRow } from '@/types/repoRows';
 
 const repo = createFirestoreRepo<InboxRow>({
   store: inboxStore,
   table: 'inbox',
   pathFor: (uid, id) => `users/${uid}/inbox/${id}`,
+  queue: saveInboxQueue,
 });
 
 /**

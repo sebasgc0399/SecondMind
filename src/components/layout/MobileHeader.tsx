@@ -1,5 +1,6 @@
 import { Menu } from 'lucide-react';
 import { useLocation } from 'react-router';
+import PendingSyncIndicator from './PendingSyncIndicator';
 import { navItems } from './navItems';
 
 interface MobileHeaderProps {
@@ -34,6 +35,7 @@ export default function MobileHeader({ onMenuClick }: MobileHeaderProps) {
         <Menu className="h-5 w-5" />
       </button>
       <h1 className="flex-1 truncate text-base font-semibold">{title}</h1>
+      <PendingSyncIndicator />
     </header>
   );
 }
