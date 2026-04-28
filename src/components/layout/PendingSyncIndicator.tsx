@@ -1,6 +1,6 @@
 import { Popover } from '@base-ui/react/popover';
 import { CloudOff, RefreshCw, Trash2 } from 'lucide-react';
-import { allQueues } from '@/lib/saveQueue';
+import { allQueues, createsQueueBindings } from '@/lib/saveQueue';
 import usePendingSyncCount from '@/hooks/usePendingSyncCount';
 import { cn } from '@/lib/utils';
 
@@ -22,6 +22,15 @@ export default function PendingSyncIndicator() {
   }
 
   function handleDiscardAll() {
+    // F30 G4: para entries de createsQueues, hacer delRow ANTES de clear()
+    // porque el persister no auto-limpia rows huérfanas — el doc nunca llegó
+    // a Firestore, onSnapshot no emite delete, didChange no se llama, y la
+    // row local quedaría hasta refresh manual. Ver tinybase.ts:65-72.
+    // Para meta + content queues NO aplica: el doc existe en server, el
+    // persister auto-converge desde onSnapshot al reconectar.
+    for (const { queue, store, table } of createsQueueBindings) {
+      for (const [id] of queue.getSnapshot()) store.delRow(table, id);
+    }
     // clear() cancela timers + vacía entries; mantiene subscribers.
     allQueues.forEach((q) => q.clear());
   }

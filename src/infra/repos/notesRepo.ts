@@ -1,7 +1,7 @@
-import { arrayUnion, doc, updateDoc } from 'firebase/firestore';
+import { arrayUnion, doc, setDoc, updateDoc } from 'firebase/firestore';
 import { auth, db } from '@/lib/firebase';
 import { createFirestoreRepo } from '@/infra/repos/baseRepo';
-import { saveNotesMetaQueue } from '@/lib/saveQueue';
+import { saveNotesCreatesQueue, saveNotesMetaQueue, type SaveQueue } from '@/lib/saveQueue';
 import { notesStore } from '@/stores/notesStore';
 import { stringifyIds } from '@/lib/tinybase';
 import type { NoteType } from '@/types/common';
@@ -12,6 +12,12 @@ const repo = createFirestoreRepo<NoteRow>({
   table: 'notes',
   pathFor: (uid, id) => `users/${uid}/notes/${id}`,
   queue: saveNotesMetaQueue,
+  // F30: cast desde `SaveQueue<NoteRow & { content?: string }>` → `SaveQueue<NoteRow>`.
+  // Seguro porque `content` es opcional en el singleton: el executor acepta tanto
+  // payloads con content (createFromInbox) como sin él (createNote regular). El
+  // factory hace shallow copy a `dataForFirestore` antes del setRow, así que el
+  // payload llega intacto al executor incluso con campos extra-schema.
+  createsQueue: saveNotesCreatesQueue as SaveQueue<NoteRow>,
 });
 
 export interface NoteCreateOverrides {
@@ -96,11 +102,12 @@ export interface SaveContentPayload {
  * Particularidad: `content` (TipTap JSON) vive solo en Firestore, NO en
  * TinyBase (gotcha universal). Este método:
  * 1. setPartialRow sync a TinyBase con todos los campos EXCEPTO content.
- * 2. await updateDoc a Firestore con TODOS los campos incluyendo content.
+ * 2. await setDoc(merge:true) a Firestore con TODOS los campos incluyendo content.
  *
- * El persister auto-sync eventualmente convergería los campos del step 1,
- * pero el updateDoc explícito es un solo write atómico con content incluido
- * y provee awaitability.
+ * F30 D9: usa `setDoc(merge:true)` en lugar de `updateDoc` para tolerar el
+ * caso "create del doc aún en queue, doc no existe en server". `updateDoc`
+ * fallaría con not-found durante esa ventana; `setDoc(merge)` no exige doc
+ * existente y luego converge al CF write (autoTagNote, etc.) sin pisarlos.
  *
  * IMPORTANTE: `outgoingLinkIds` debe pasarse como array. Serialización
  * internamente con `stringifyIds` (no idempotente — no pasar pre-serialized).
@@ -113,7 +120,7 @@ async function saveContent(id: string, payload: SaveContentPayload): Promise<voi
 
   const outgoingLinkIdsStr = stringifyIds(payload.outgoingLinkIds);
 
-  // Sync TinyBase (sin content) ANTES del updateDoc async.
+  // Sync TinyBase (sin content) ANTES del setDoc async.
   notesStore.setPartialRow('notes', id, {
     title: payload.title,
     contentPlain: payload.contentPlain,
@@ -124,14 +131,18 @@ async function saveContent(id: string, payload: SaveContentPayload): Promise<voi
     distillLevel: payload.distillLevel,
   });
 
-  await updateDoc(doc(db, `users/${uid}/notes/${id}`), {
-    content: payload.content,
-    contentPlain: payload.contentPlain,
-    title: payload.title,
-    updatedAt: payload.updatedAt,
-    summaryL3: payload.summaryL3,
-    distillLevel: payload.distillLevel,
-  });
+  await setDoc(
+    doc(db, `users/${uid}/notes/${id}`),
+    {
+      content: payload.content,
+      contentPlain: payload.contentPlain,
+      title: payload.title,
+      updatedAt: payload.updatedAt,
+      summaryL3: payload.summaryL3,
+      distillLevel: payload.distillLevel,
+    },
+    { merge: true },
+  );
 }
 
 /**

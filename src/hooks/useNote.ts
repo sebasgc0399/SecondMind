@@ -1,7 +1,8 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState, useSyncExternalStore } from 'react';
 import { doc, getDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import useAuth from '@/hooks/useAuth';
+import { saveNotesCreatesQueue } from '@/lib/saveQueue';
 import type { JSONContent } from '@tiptap/core';
 
 interface UseNoteReturn {
@@ -12,6 +13,11 @@ interface UseNoteReturn {
   notFound: boolean;
 }
 
+// Estable a nivel módulo para useSyncExternalStore (evita re-suscripciones
+// por cambio de identidad entre renders).
+const subscribeToCreatesQueue = (cb: () => void): (() => void) =>
+  saveNotesCreatesQueue.subscribe(cb);
+
 // MVP: carga one-shot con getDoc, no onSnapshot. Evita loops save/load
 // donde nuestra propia escritura re-dispara el listener y resetea el
 // editor. Multi-tab concurrent editing no soportado en MVP (last write wins).
@@ -20,6 +26,13 @@ interface UseNoteReturn {
 // re-fetch sin cambiar noteId. Caso de uso: discard de cambios locales
 // post-error de save (F28) — el caller incrementa version, el effect re-corre,
 // getDoc trae el content server-side fresh.
+//
+// F30.4 G3': suscripción al saveNotesCreatesQueue para re-fetch automático.
+// Cuando un create transitiona pending → synced y la entry desaparece (GC),
+// el getDoc inicial pudo haber retornado notFound (doc aún no en server).
+// El effect deps incluye `createEntryStatus` para re-ejecutar el getDoc
+// cuando la entry cambia de status — así el editor se rehidrata con el doc
+// real post-flush sin requerir navegación manual.
 export default function useNote(noteId: string | undefined, version = 0): UseNoteReturn {
   const { user } = useAuth();
   const [state, setState] = useState<UseNoteReturn>({
@@ -29,6 +42,17 @@ export default function useNote(noteId: string | undefined, version = 0): UseNot
     error: null,
     notFound: false,
   });
+
+  // useSyncExternalStore retorna una nueva referencia del entry cuando el
+  // queue notifica (patchEntry crea un nuevo objeto). Para deps estables
+  // del effect, derivar un primitivo (status string) para no triggerear
+  // re-fetches por cambios irrelevantes en otras propiedades del entry.
+  const getCreateEntry = useCallback(
+    () => (noteId ? saveNotesCreatesQueue.getEntry(noteId) : undefined),
+    [noteId],
+  );
+  const createEntry = useSyncExternalStore(subscribeToCreatesQueue, getCreateEntry);
+  const createEntryStatus = createEntry?.status;
 
   useEffect(() => {
     if (!user || !noteId) {
@@ -106,7 +130,7 @@ export default function useNote(noteId: string | undefined, version = 0): UseNot
     return () => {
       ignore = true;
     };
-  }, [user, noteId, version]);
+  }, [user, noteId, version, createEntryStatus]);
 
   return state;
 }

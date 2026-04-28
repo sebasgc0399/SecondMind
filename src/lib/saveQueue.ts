@@ -1,4 +1,8 @@
 import { FirebaseError } from 'firebase/app';
+import { notesStore } from '@/stores/notesStore';
+import { tasksStore } from '@/stores/tasksStore';
+import { projectsStore } from '@/stores/projectsStore';
+import { objectivesStore } from '@/stores/objectivesStore';
 import type { SaveContentPayload } from '@/infra/repos/notesRepo';
 import type {
   NoteRow,
@@ -8,6 +12,7 @@ import type {
   HabitRow,
   InboxRow,
 } from '@/types/repoRows';
+import type { Store } from 'tinybase';
 
 export type QueueStatus = 'pending' | 'syncing' | 'retrying' | 'synced' | 'error';
 
@@ -362,9 +367,35 @@ export const saveObjectivesQueue: SaveQueue<Partial<ObjectiveRow>> = createSaveQ
 export const saveHabitsQueue: SaveQueue<Partial<HabitRow>> = createSaveQueue();
 export const saveInboxQueue: SaveQueue<Partial<InboxRow>> = createSaveQueue();
 
+// F30 — Singletons dedicados para creates. Separados de los meta queues por
+// la regla de upsert collision (saveQueue reemplaza payload entero al re-enqueue
+// con misma key). Si creates y updates compartieran queue, un update post-create
+// reemplazaría el payload completo del create con un partial → setDoc(merge)
+// dejaría el doc incompleto en server hasta que un flush futuro lo complete.
+//
+// Tipados como Row completo (no Partial<Row>) porque un create siempre carga
+// el row entero. saveNotesCreatesQueue acepta `content?: string` extra-schema
+// para createFromInbox (gotcha universal: TipTap JSON va a Firestore vía el
+// factory pero TinyBase lo descarta por schema-strict).
+//
+// G4: descartar un entry de createsQueues requiere `delRow` orquestado por el
+// caller ANTES de `clear()` — el persister no auto-limpia rows huérfanas si el
+// doc nunca llegó al server (`tinybase.ts:65-72`). Ver `createsQueueBindings`
+// (F30.5) para el patrón canónico usado por <PendingSyncIndicator />.
+//
+// G6: tras un create error + reconnect online, TinyBase puede borrar la row
+// local porque onSnapshot trae snapshot sin el doc nuevo. El cross-check del
+// useNote al queue previene redirect erróneo, UX muestra skeleton/empty hasta
+// que el usuario haga "Reintentar" exitoso. Aceptado v1, data-safe.
+export const saveNotesCreatesQueue: SaveQueue<NoteRow & { content?: string }> = createSaveQueue();
+export const saveTasksCreatesQueue: SaveQueue<TaskRow> = createSaveQueue();
+export const saveProjectsCreatesQueue: SaveQueue<ProjectRow> = createSaveQueue();
+export const saveObjectivesCreatesQueue: SaveQueue<ObjectiveRow> = createSaveQueue();
+
 // Iterables para hooks/UI.
-// metaQueues = los 6 nuevos de F29 (sin saveContentQueue).
-// allQueues = los 7 totales (saveContent + meta), para flush/aggregator.
+// metaQueues = los 6 de F29 (update/remove por entidad, sin saveContentQueue).
+// createsQueues = los 4 de F30 (create por entidad, dedicados).
+// allQueues = los 11 totales (saveContent + meta + creates), para flush/aggregator.
 export const metaQueues = [
   saveNotesMetaQueue,
   saveTasksQueue,
@@ -374,4 +405,42 @@ export const metaQueues = [
   saveInboxQueue,
 ] as const;
 
-export const allQueues = [saveContentQueue, ...metaQueues] as const;
+export const createsQueues = [
+  saveNotesCreatesQueue,
+  saveTasksCreatesQueue,
+  saveProjectsCreatesQueue,
+  saveObjectivesCreatesQueue,
+] as const;
+
+export const allQueues = [saveContentQueue, ...metaQueues, ...createsQueues] as const;
+
+// F30.5: bindings (queue + store + table) para los handlers que necesitan
+// orquestar `delRow` además de `clear()` (G4). Usado por el handler discard
+// del <PendingSyncIndicator />: para descartar un create pending, debemos
+// borrar la row local manualmente porque el persister no propaga deletes
+// para rows huérfanas (el doc nunca llegó al server, no hay onSnapshot
+// que dispare un delete; ver tinybase.ts:65-72).
+//
+// El tipo del queue se downcast a `SaveQueue<unknown>` porque los handlers
+// solo necesitan getSnapshot/clear (no enqueue tipado). Para enqueues
+// tipados, usar el singleton directo (`saveNotesCreatesQueue`, etc).
+export interface CreatesQueueBinding {
+  queue: SaveQueue<unknown>;
+  store: Store;
+  table: string;
+}
+
+export const createsQueueBindings: ReadonlyArray<CreatesQueueBinding> = [
+  { queue: saveNotesCreatesQueue as SaveQueue<unknown>, store: notesStore, table: 'notes' },
+  { queue: saveTasksCreatesQueue as SaveQueue<unknown>, store: tasksStore, table: 'tasks' },
+  {
+    queue: saveProjectsCreatesQueue as SaveQueue<unknown>,
+    store: projectsStore,
+    table: 'projects',
+  },
+  {
+    queue: saveObjectivesCreatesQueue as SaveQueue<unknown>,
+    store: objectivesStore,
+    table: 'objectives',
+  },
+];

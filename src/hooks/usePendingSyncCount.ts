@@ -16,7 +16,14 @@ export interface PendingSyncSummary {
 
 // Labels singular/plural en español. Index alineado con `allQueues`:
 // [saveContentQueue, saveNotesMetaQueue, saveTasksQueue, saveProjectsQueue,
-//  saveObjectivesQueue, saveHabitsQueue, saveInboxQueue].
+//  saveObjectivesQueue, saveHabitsQueue, saveInboxQueue,
+//  saveNotesCreatesQueue, saveTasksCreatesQueue, saveProjectsCreatesQueue,
+//  saveObjectivesCreatesQueue].
+//
+// F30 D8: distinción semántica entre "edición/nota" (meta updates pendientes)
+// y "nota nueva" (creates pendientes). El popover muestra ambos por separado
+// para que el usuario distinga "una nota recién creada sin sincronizar" de
+// "edición pendiente sobre una nota existente".
 const ENTITY_LABELS: ReadonlyArray<{ sing: string; plur: string }> = [
   { sing: 'edición de nota', plur: 'ediciones de nota' },
   { sing: 'nota', plur: 'notas' },
@@ -25,6 +32,10 @@ const ENTITY_LABELS: ReadonlyArray<{ sing: string; plur: string }> = [
   { sing: 'objetivo', plur: 'objetivos' },
   { sing: 'hábito', plur: 'hábitos' },
   { sing: 'item de inbox', plur: 'items de inbox' },
+  { sing: 'nota nueva', plur: 'notas nuevas' },
+  { sing: 'tarea nueva', plur: 'tareas nuevas' },
+  { sing: 'proyecto nuevo', plur: 'proyectos nuevos' },
+  { sing: 'objetivo nuevo', plur: 'objetivos nuevos' },
 ];
 
 // Module-level version primitive: cualquier notify de cualquier queue lo

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { useNavigate, useParams } from 'react-router';
 import { useRow } from 'tinybase/ui-react';
 import NoteEditor from '@/components/editor/NoteEditor';
@@ -8,6 +8,11 @@ import ReviewBanner from '@/components/editor/ReviewBanner';
 import SimilarNotesPanel from '@/components/editor/SimilarNotesPanel';
 import useNote from '@/hooks/useNote';
 import useBacklinks from '@/hooks/useBacklinks';
+import { saveNotesCreatesQueue } from '@/lib/saveQueue';
+
+// Estable a nivel módulo para useSyncExternalStore (evita re-suscripciones).
+const subscribeToCreatesQueue = (cb: () => void): (() => void) =>
+  saveNotesCreatesQueue.subscribe(cb);
 
 function getInitialPanelState(): boolean {
   if (typeof window === 'undefined') return true;
@@ -67,17 +72,29 @@ export default function NoteDetailPage() {
 
   const existsInStore = noteId && Object.keys(row).length > 0;
 
+  // F30.4 G3': cross-check con saveNotesCreatesQueue para tolerar la ventana
+  // entre createNote() retorna el id y el flush termina. Sin esto, getDoc
+  // (notFound) o un onSnapshot post-error (que borra la row local, G6)
+  // dispararían un redirect erróneo aunque el create esté pending o el
+  // usuario pueda reintentar desde el indicator.
+  const getCreateEntry = useCallback(
+    () => (noteId ? saveNotesCreatesQueue.getEntry(noteId) : undefined),
+    [noteId],
+  );
+  const createEntry = useSyncExternalStore(subscribeToCreatesQueue, getCreateEntry);
+  const isCreatePending = createEntry !== undefined && createEntry.status !== 'synced';
+
   useEffect(() => {
     if (!noteId) {
       navigate('/notes', { replace: true });
       return;
     }
-    if (!isLoading && (notFound || !existsInStore)) {
+    if (!isLoading && (notFound || !existsInStore) && !isCreatePending) {
       navigate('/notes', { replace: true });
     }
-  }, [noteId, isLoading, notFound, existsInStore, navigate]);
+  }, [noteId, isLoading, notFound, existsInStore, navigate, isCreatePending]);
 
-  if (!noteId || isLoading || notFound || !existsInStore) {
+  if (!noteId || isLoading || ((notFound || !existsInStore) && !isCreatePending)) {
     return <NoteEditorSkeleton />;
   }
 

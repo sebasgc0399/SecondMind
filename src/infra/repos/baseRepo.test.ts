@@ -308,5 +308,100 @@ describe('createFirestoreRepo', () => {
 
       queue.dispose();
     });
+
+    it('F30: create con createsQueue → retorna id sync, setDoc(merge:true) flushea después', async () => {
+      const store = makeStore();
+      // setDoc pendiente: el create no debe esperar a que resuelva.
+      let resolveSetDoc: () => void = () => {};
+      setDocMock.mockImplementation(() => new Promise<void>((r) => (resolveSetDoc = r)));
+      const createsQueue = createSaveQueue<TestRow>();
+
+      const repo = createFirestoreRepo<TestRow>({
+        store,
+        table: 'items',
+        pathFor: (uid, id) => `users/${uid}/items/${id}`,
+        createsQueue,
+      });
+
+      const id = await repo.create({ name: 'fresh', count: 7 }, { id: 'create-q1' });
+
+      // El id retorna inmediatamente aunque setDoc siga pending.
+      expect(id).toBe('create-q1');
+      // setRow ya aplicó sync.
+      expect(store.getRow('items', 'create-q1')).toEqual({ name: 'fresh', count: 7 });
+      // El executor del queue ya invocó setDoc — está awaiting su resolución.
+      expect(setDocMock).toHaveBeenCalledOnce();
+      expect(createsQueue.getEntry('create-q1')?.status).toBe('syncing');
+
+      // Resolución del setDoc → status synced → GC tras 100ms.
+      resolveSetDoc();
+      await vi.advanceTimersByTimeAsync(200);
+
+      expect(setDocMock).toHaveBeenCalledWith(
+        expect.objectContaining({ __path: 'users/test-uid/items/create-q1' }),
+        { name: 'fresh', count: 7 },
+        { merge: true },
+      );
+      expect(createsQueue.getEntry('create-q1')).toBeUndefined();
+
+      createsQueue.dispose();
+    });
+
+    it('F30: create con createsQueue + uid distinto en retry → executor throws stale-write', async () => {
+      const store = makeStore();
+      setDocMock.mockRejectedValue(new Error('transient'));
+      const createsQueue = createSaveQueue<TestRow>();
+
+      const repo = createFirestoreRepo<TestRow>({
+        store,
+        table: 'items',
+        pathFor: (uid, id) => `users/${uid}/items/${id}`,
+        createsQueue,
+      });
+
+      await repo.create({ name: 'staled', count: 1 }, { id: 'create-s1' });
+      await vi.advanceTimersByTimeAsync(0);
+      expect(setDocMock).toHaveBeenCalledTimes(1);
+      expect(createsQueue.getEntry('create-s1')?.status).toBe('retrying');
+
+      // Cambio de uid mid-retry.
+      const firebase = await import('@/lib/firebase');
+      (firebase.auth as { currentUser: { uid: string } | null }).currentUser = {
+        uid: 'other-uid',
+      };
+
+      await vi.advanceTimersByTimeAsync(1000);
+      await vi.advanceTimersByTimeAsync(2000);
+      await vi.advanceTimersByTimeAsync(4000);
+
+      // El executor abortó cada retry antes de tocar setDoc.
+      expect(setDocMock).toHaveBeenCalledTimes(1);
+      expect(createsQueue.getEntry('create-s1')?.status).toBe('error');
+      expect(createsQueue.getEntry('create-s1')?.lastError?.message).toMatch(/stale write/i);
+
+      createsQueue.dispose();
+    });
+
+    it('F30: create sin createsQueue → setDoc await directo (regresión retro-compat)', async () => {
+      const store = makeStore();
+      setDocMock.mockResolvedValue(undefined);
+      // Config sin createsQueue: comportamiento idéntico a pre-F30.
+      const repo = createFirestoreRepo<TestRow>({
+        store,
+        table: 'items',
+        pathFor: (uid, id) => `users/${uid}/items/${id}`,
+      });
+
+      const id = await repo.create({ name: 'plain', count: 1 }, { id: 'create-plain' });
+
+      expect(id).toBe('create-plain');
+      // setDoc llamado sync (sin needing advanceTimers).
+      expect(setDocMock).toHaveBeenCalledOnce();
+      expect(setDocMock).toHaveBeenCalledWith(
+        expect.objectContaining({ __path: 'users/test-uid/items/create-plain' }),
+        { name: 'plain', count: 1 },
+        { merge: true },
+      );
+    });
   });
 });
