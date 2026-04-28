@@ -331,4 +331,3 @@ Lista curada sin compromiso de orden ni scope. La próxima feature se decide con
 - **Visual regression baselines** con Playwright si se introduce screenshot testing.
 - **Decodificar HTML entities en share intent (Capacitor Android)** — Chrome Android envía títulos con `&#34;` en vez de `"`. Trivial: `DOMParser` o `textarea.innerHTML = title`. Pendiente hasta que moleste en uso real.
 - **Distribución:** code signing Windows para MSI, Play Store publish (AAB + $25 one-time + privacy policy).
-- **De-dupe per-noteId del `<PendingSyncIndicator />`** (deuda F29). Si una nota tiene `updateMeta` Y `acceptSuggestion` simultáneos en flight, el popover muestra "2 notas pendientes" cuando técnicamente es 1 nota con 2 writes. Requiere extra `Set<string>` por entidad — no vale para v1 (caso típico es 0-1 entry pendiente).
