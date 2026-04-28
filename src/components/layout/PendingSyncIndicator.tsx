@@ -7,6 +7,14 @@ import { cn } from '@/lib/utils';
 
 const COLLAPSE_DELAY_MS = 3000;
 
+interface PendingSyncIndicatorProps {
+  // Cuando true, el chip se mantiene siempre en estado compact (44x44 con dot)
+  // sin animación expand inicial ni re-expand en transición de severity.
+  // El label se expone vía title HTML nativo para hover-reveal en sidebar
+  // colapsado / tablet — mismo patrón que los nav items.
+  compact?: boolean;
+}
+
 // Wrapper que aísla el lifecycle del componente con animación. Sin esto, el
 // hook useExpandThenCollapse correría desde el primer render de la app
 // (cuando hasAny=false el componente sigue renderizando — solo retorna null
@@ -16,19 +24,23 @@ const COLLAPSE_DELAY_MS = 3000;
 // El wrapper monta/desmonta IndicatorBody según hasAny. Cada vez que un
 // nuevo set de pending aparece, IndicatorBody se monta fresh con
 // expanded=true y arranca el timer.
-export default function PendingSyncIndicator() {
+export default function PendingSyncIndicator({ compact = false }: PendingSyncIndicatorProps = {}) {
   const { hasAny } = usePendingSyncCount();
   if (!hasAny) return null;
-  return <IndicatorBody />;
+  return <IndicatorBody compact={compact} />;
 }
 
-function IndicatorBody() {
+function IndicatorBody({ compact }: { compact: boolean }) {
   const { total, errorCount, byEntity } = usePendingSyncCount();
   const isError = errorCount > 0;
   // triggerKey re-expande SOLO en transición a/desde error (callout por
   // cambio de severity). Cambios numéricos sin cambio de severity (1→2
   // pendientes, o 1→2 errores) NO re-expanden — evita ruido visual.
-  const expanded = useExpandThenCollapse(isError ? 'error' : 'normal', COLLAPSE_DELAY_MS);
+  const rawExpanded = useExpandThenCollapse(isError ? 'error' : 'normal', COLLAPSE_DELAY_MS);
+  // En modo compact el chip queda siempre 44x44 con dot. La info detallada se
+  // accede via tooltip on-hover (title) y popover on-click — sin overflow del
+  // expand de 180px que rompería el sidebar w-16.
+  const expanded = compact ? false : rawExpanded;
 
   const label = isError
     ? `${errorCount} sin guardar`
@@ -60,6 +72,7 @@ function IndicatorBody() {
     <Popover.Root>
       <Popover.Trigger
         aria-label={`${label}: abrir detalle`}
+        title={compact ? label : undefined}
         className={cn(
           'relative inline-flex h-11 min-w-11 items-center justify-center overflow-hidden rounded-md outline-none',
           'transition-[max-width,padding,column-gap,background-color] duration-300 ease-out',
