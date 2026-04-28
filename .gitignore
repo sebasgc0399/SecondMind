@@ -35,6 +35,7 @@ dist-ssr
 
 # Playwright MCP — artefactos de snapshots y console logs de tests
 .playwright-mcp/
+audit/
 
 # Tauri — build artifacts y mobile gen (dev only)
 src-tauri/target/
