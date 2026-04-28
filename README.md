@@ -16,7 +16,7 @@ Los principios de diseño, la teoría detrás (CODE de Tiago Forte, Zettelkasten
 
 - **UI:** React 19 + TypeScript strict + Vite + Tailwind CSS v4 + shadcn/ui (sobre Base UI)
 - **Estado:** TinyBase v8 con custom persister Firestore
-- **Editor:** TipTap (ProseMirror) con extensiones custom — wikilinks, slash commands, tags
+- **Editor:** TipTap (ProseMirror) con extensiones custom (wikilinks `@`, slash commands `/`)
 - **Búsqueda:** Orama (FTS client-side)
 - **Backend:** Firebase — Firestore + Cloud Functions v2 + Auth + Hosting
 - **AI:** Claude Haiku (inbox processing + auto-tagging notas) + OpenAI embeddings
@@ -76,7 +76,7 @@ La fuente primaria de estado y arquitectura vigente es [`Spec/ESTADO-ACTUAL.md`]
   - **F4 · Autostart + window-state:** toggle en el tray registra `HKCU\...\Run\SecondMind`. Main window persiste pos/size; capture siempre centrada (denylist)
   - **F5 · Single-instance + CSP Firebase:** plugin previene procesos duplicados (crítico con autostart). CSP explícito en `tauri.conf.json` permite auth + firestore en release
   - **F6 · OAuth Desktop flow (post-merge fix):** `signInWithPopup` no funciona en Tauri WebView2 (window.open va al browser del sistema, no puede postMessage back). Reemplazado por flow custom con `tauri-plugin-shell` + HTTP listener local en Rust (`src-tauri/src/oauth.rs`), PKCE S256, state CSRF, intercambio code→id_token, `signInWithCredential`. OAuth Client tipo "Desktop app" en Google Cloud Console. `useAuth` detecta `isTauri()` y ramifica
-  - Instaladores: `SecondMind_0.1.0_x64_en-US.msi` + `SecondMind_0.1.0_x64-setup.exe` (NSIS) en `src-tauri/target/release/bundle/`
+  - Instaladores: `SecondMind_0.2.0_x64_en-US.msi` + `SecondMind_0.2.0_x64-setup.exe` (NSIS) en `src-tauri/target/release/bundle/`
 
 - **Fase 5.2 — Capacitor Mobile (Android)** ✅ Wrapper nativo Android. 5 features:
   - **F1 · Scaffold:** Capacitor 8.3 integrado al proyecto (`android/` Gradle project). `appId com.secondmind.app`, minSdk 24, compileSdk 36, targetSdk 36. `server.androidScheme: 'https'` obligatorio para Firebase Auth en WebView. Scripts `cap:sync` / `cap:run` / `cap:build`
@@ -127,7 +127,7 @@ La fuente primaria de estado y arquitectura vigente es [`Spec/ESTADO-ACTUAL.md`]
 Requisitos:
 
 - Node.js 22 o superior (Capacitor Android lo requiere; Tauri funciona con 20)
-- Un proyecto Firebase propio con Auth (Google sign-in), Firestore y Storage habilitados
+- Un proyecto Firebase propio con Auth (Google sign-in) y Firestore habilitados
 - OAuth Clients configurados en Google Cloud Console: Web (Vite), Android (SHA-1 del keystore para Capacitor) y Desktop (para el flow custom de Tauri)
 - Opcional para el wrapper desktop: Rust 1.70+ (`rustup`) y MSVC Build Tools con workload "Desktop development with C++" en Windows
 - **Windows developers:** ver [`Docs/SETUP-WINDOWS.md`](Docs/SETUP-WINDOWS.md) para patches one-time de entorno (TS LSP, symlinks `ui-ux-pro-max`, Firebase MCP, Capacitor Android, Cargo)
