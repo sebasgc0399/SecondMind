@@ -80,11 +80,9 @@ export function SidebarContent({ user, onSignOut, collapsed, onNavigate }: Sideb
         ))}
       </nav>
 
-      {!collapsed && (
-        <div className="px-2 pb-1">
-          <PendingSyncIndicator />
-        </div>
-      )}
+      <div className={cn('pb-1', collapsed ? 'flex justify-center' : 'px-2')}>
+        <PendingSyncIndicator compact={collapsed} />
+      </div>
 
       <div className="space-y-1 border-t border-sidebar-border p-2">
         <NavLink
