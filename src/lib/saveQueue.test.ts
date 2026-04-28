@@ -337,4 +337,32 @@ describe('saveQueue', () => {
 
     queue.dispose();
   });
+
+  it('16. F30: queue de creates acepta payload con field extra-schema y status transitions normales', async () => {
+    interface CreatePayload {
+      title: string;
+      contentPlain: string;
+      content?: string;
+    }
+    const queue = createSaveQueue<CreatePayload>();
+    const executor = vi.fn().mockResolvedValue(undefined);
+
+    const payload: CreatePayload = {
+      title: 'Nota desde inbox',
+      contentPlain: 'línea 1',
+      content: '{"type":"doc","content":[]}',
+    };
+
+    queue.enqueue('note-1', payload, executor);
+    expect(queue.getEntry('note-1')?.status).toBe('syncing');
+
+    await vi.advanceTimersByTimeAsync(FLUSH_GC_MS);
+
+    expect(executor).toHaveBeenCalledTimes(1);
+    expect(executor).toHaveBeenCalledWith(payload);
+    expect(executor).toHaveBeenCalledWith(expect.objectContaining({ content: payload.content }));
+    expect(queue.getEntry('note-1')).toBeUndefined();
+
+    queue.dispose();
+  });
 });
