@@ -57,31 +57,43 @@ let cachedSummary: PendingSyncSummary = {
   hasAny: false,
 };
 
+// Composite keys en `saveNotesMetaQueue`: `${noteId}:accept-${suggestionId}` y
+// `${noteId}:dismiss-${suggestionId}` (notesRepo.ts:313, :342). Para el resto
+// de queues la key === entityId raw, por lo que extractEntityId es no-op
+// (`indexOf(':') === -1` → retorna la key entera).
+//
+// Asunción: entityIds (noteId/taskId/projectId/etc.) son UUIDs v4 generados
+// por crypto.randomUUID() que NO contienen ':'. Si una entidad futura adopta
+// IDs nativos con ':', escalar a un mapa explícito (queue → keyParser).
+function extractEntityId(queueKey: string): string {
+  const colonIdx = queueKey.indexOf(':');
+  return colonIdx === -1 ? queueKey : queueKey.slice(0, colonIdx);
+}
+
 function computeSummary(): PendingSyncSummary {
   const byEntity: PendingSyncEntity[] = [];
   let total = 0;
   let errorCount = 0;
   allQueues.forEach((q, idx) => {
     const snap = q.getSnapshot();
-    let count = 0;
-    let hasError = false;
-    for (const entry of snap.values()) {
+    const pendingIds = new Set<string>();
+    const errorIds = new Set<string>();
+    for (const [key, entry] of snap) {
       if (entry.status === 'synced') continue;
-      count += 1;
-      if (entry.status === 'error') {
-        hasError = true;
-        errorCount += 1;
-      }
+      const entityId = extractEntityId(key);
+      pendingIds.add(entityId);
+      if (entry.status === 'error') errorIds.add(entityId);
     }
+    const count = pendingIds.size;
+    if (count === 0) return;
     total += count;
-    if (count > 0) {
-      const labels = ENTITY_LABELS[idx]!;
-      byEntity.push({
-        entity: count === 1 ? labels.sing : labels.plur,
-        count,
-        hasError,
-      });
-    }
+    errorCount += errorIds.size;
+    const labels = ENTITY_LABELS[idx]!;
+    byEntity.push({
+      entity: count === 1 ? labels.sing : labels.plur,
+      count,
+      hasError: errorIds.size > 0,
+    });
   });
   return { total, errorCount, byEntity, hasAny: total > 0 };
 }
