@@ -1,5 +1,5 @@
 import { createFirestoreRepo } from '@/infra/repos/baseRepo';
-import { saveObjectivesQueue } from '@/lib/saveQueue';
+import { saveObjectivesCreatesQueue, saveObjectivesQueue } from '@/lib/saveQueue';
 import { objectivesStore } from '@/stores/objectivesStore';
 import { stringifyIds } from '@/lib/tinybase';
 import type { Objective } from '@/types/objective';
@@ -16,6 +16,7 @@ const repo = createFirestoreRepo<ObjectiveRow>({
   table: 'objectives',
   pathFor: (uid, id) => `users/${uid}/objectives/${id}`,
   queue: saveObjectivesQueue,
+  createsQueue: saveObjectivesCreatesQueue,
 });
 
 async function createObjective({

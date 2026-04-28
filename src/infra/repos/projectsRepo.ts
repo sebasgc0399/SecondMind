@@ -1,5 +1,5 @@
 import { createFirestoreRepo } from '@/infra/repos/baseRepo';
-import { saveProjectsQueue } from '@/lib/saveQueue';
+import { saveProjectsCreatesQueue, saveProjectsQueue } from '@/lib/saveQueue';
 import { projectsStore } from '@/stores/projectsStore';
 import { stringifyIds } from '@/lib/tinybase';
 import type { Priority } from '@/types/common';
@@ -17,6 +17,7 @@ const repo = createFirestoreRepo<ProjectRow>({
   table: 'projects',
   pathFor: (uid, id) => `users/${uid}/projects/${id}`,
   queue: saveProjectsQueue,
+  createsQueue: saveProjectsCreatesQueue,
 });
 
 async function createProject({

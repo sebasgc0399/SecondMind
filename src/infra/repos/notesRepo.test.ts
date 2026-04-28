@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { notesRepo } from '@/infra/repos/notesRepo';
-import { saveNotesMetaQueue } from '@/lib/saveQueue';
+import { saveNotesCreatesQueue, saveNotesMetaQueue } from '@/lib/saveQueue';
 import { notesStore } from '@/stores/notesStore';
 
 // vi.mock se hoistea al top por Vitest — el factory se evalúa ANTES que
@@ -54,6 +54,9 @@ describe('notesRepo', () => {
     // (acceptSuggestion / dismissSuggestion + updateMeta usan el mismo
     // saveNotesMetaQueue singleton). clear() preserva subscribers.
     saveNotesMetaQueue.clear();
+    // F30: createNote/createFromInbox encolan en saveNotesCreatesQueue.
+    // Limpiar entre tests evita contaminación de entries pending entre cases.
+    saveNotesCreatesQueue.clear();
     const firebase = await import('@/lib/firebase');
     (firebase.auth as { currentUser: { uid: string } | null }).currentUser = {
       uid: 'test-uid',
@@ -344,6 +347,27 @@ describe('notesRepo', () => {
 
       const payload = setDocMock.mock.calls[0]![1] as Record<string, unknown>;
       expect(payload.aiProcessed).toBe(false);
+    });
+
+    it('F30: encola en saveNotesCreatesQueue + setDoc(merge:true) recibe content extra-schema', async () => {
+      setDocMock.mockResolvedValue(undefined);
+
+      const noteId = await notesRepo.createFromInbox('alpha\nbeta', {
+        title: 'queued',
+        tagIds: ['t-1'],
+      });
+
+      expect(noteId).toBeTruthy();
+      // setDoc invocado por el executor del queue con merge:true (D4 + D9).
+      expect(setDocMock).toHaveBeenCalledOnce();
+      expect(setDocMock).toHaveBeenCalledWith(
+        expect.objectContaining({ __path: `users/test-uid/notes/${noteId}` }),
+        expect.objectContaining({
+          content: expect.stringContaining('"type":"doc"'),
+          title: 'queued',
+        }),
+        { merge: true },
+      );
     });
   });
 });

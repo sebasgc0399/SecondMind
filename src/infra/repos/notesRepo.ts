@@ -1,7 +1,7 @@
 import { arrayUnion, doc, setDoc, updateDoc } from 'firebase/firestore';
 import { auth, db } from '@/lib/firebase';
 import { createFirestoreRepo } from '@/infra/repos/baseRepo';
-import { saveNotesMetaQueue } from '@/lib/saveQueue';
+import { saveNotesCreatesQueue, saveNotesMetaQueue, type SaveQueue } from '@/lib/saveQueue';
 import { notesStore } from '@/stores/notesStore';
 import { stringifyIds } from '@/lib/tinybase';
 import type { NoteType } from '@/types/common';
@@ -12,6 +12,12 @@ const repo = createFirestoreRepo<NoteRow>({
   table: 'notes',
   pathFor: (uid, id) => `users/${uid}/notes/${id}`,
   queue: saveNotesMetaQueue,
+  // F30: cast desde `SaveQueue<NoteRow & { content?: string }>` → `SaveQueue<NoteRow>`.
+  // Seguro porque `content` es opcional en el singleton: el executor acepta tanto
+  // payloads con content (createFromInbox) como sin él (createNote regular). El
+  // factory hace shallow copy a `dataForFirestore` antes del setRow, así que el
+  // payload llega intacto al executor incluso con campos extra-schema.
+  createsQueue: saveNotesCreatesQueue as SaveQueue<NoteRow>,
 });
 
 export interface NoteCreateOverrides {
