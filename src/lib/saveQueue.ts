@@ -1,4 +1,8 @@
 import { FirebaseError } from 'firebase/app';
+import { notesStore } from '@/stores/notesStore';
+import { tasksStore } from '@/stores/tasksStore';
+import { projectsStore } from '@/stores/projectsStore';
+import { objectivesStore } from '@/stores/objectivesStore';
 import type { SaveContentPayload } from '@/infra/repos/notesRepo';
 import type {
   NoteRow,
@@ -8,6 +12,7 @@ import type {
   HabitRow,
   InboxRow,
 } from '@/types/repoRows';
+import type { Store } from 'tinybase';
 
 export type QueueStatus = 'pending' | 'syncing' | 'retrying' | 'synced' | 'error';
 
@@ -408,3 +413,34 @@ export const createsQueues = [
 ] as const;
 
 export const allQueues = [saveContentQueue, ...metaQueues, ...createsQueues] as const;
+
+// F30.5: bindings (queue + store + table) para los handlers que necesitan
+// orquestar `delRow` además de `clear()` (G4). Usado por el handler discard
+// del <PendingSyncIndicator />: para descartar un create pending, debemos
+// borrar la row local manualmente porque el persister no propaga deletes
+// para rows huérfanas (el doc nunca llegó al server, no hay onSnapshot
+// que dispare un delete; ver tinybase.ts:65-72).
+//
+// El tipo del queue se downcast a `SaveQueue<unknown>` porque los handlers
+// solo necesitan getSnapshot/clear (no enqueue tipado). Para enqueues
+// tipados, usar el singleton directo (`saveNotesCreatesQueue`, etc).
+export interface CreatesQueueBinding {
+  queue: SaveQueue<unknown>;
+  store: Store;
+  table: string;
+}
+
+export const createsQueueBindings: ReadonlyArray<CreatesQueueBinding> = [
+  { queue: saveNotesCreatesQueue as SaveQueue<unknown>, store: notesStore, table: 'notes' },
+  { queue: saveTasksCreatesQueue as SaveQueue<unknown>, store: tasksStore, table: 'tasks' },
+  {
+    queue: saveProjectsCreatesQueue as SaveQueue<unknown>,
+    store: projectsStore,
+    table: 'projects',
+  },
+  {
+    queue: saveObjectivesCreatesQueue as SaveQueue<unknown>,
+    store: objectivesStore,
+    table: 'objectives',
+  },
+];
