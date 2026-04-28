@@ -13,6 +13,13 @@ export interface RepoConfig<Row extends RepoRow> {
   // setDoc/deleteDoc encolado con backoff + uid recheck). Sin queue, el
   // factory mantiene el comportamiento pre-F29 (await directo).
   queue?: SaveQueue<Partial<Row>>;
+  // F30: si se pasa, create encola setDoc con backoff + uid recheck en
+  // lugar de await directo, retornando el id sync para preservar el
+  // contrato `Promise<string>` que asumen los callers (navigate-on-create).
+  // Queue dedicado por la regla de upsert collision: un update post-create
+  // con misma key reemplazaría el payload entero del create con un partial.
+  // Retro-compat: sin createsQueue, comportamiento idéntico a pre-F30.
+  createsQueue?: SaveQueue<Row>;
 }
 
 export interface Repo<Row extends RepoRow> {
@@ -33,7 +40,7 @@ function requireUid(): string {
 }
 
 export function createFirestoreRepo<Row extends RepoRow>(cfg: RepoConfig<Row>): Repo<Row> {
-  const { store, table, pathFor, queue } = cfg;
+  const { store, table, pathFor, queue, createsQueue } = cfg;
 
   return {
     async create(data, opts) {
@@ -46,6 +53,20 @@ export function createFirestoreRepo<Row extends RepoRow>(cfg: RepoConfig<Row>): 
       // campos extra nunca llegarían a Firestore.
       const dataForFirestore = { ...data };
       store.setRow(table, id, data);
+
+      if (createsQueue) {
+        // F30: encola el setDoc con backoff + uid recheck. Retorna el id
+        // sync para preservar el contrato Promise<string> de los callers.
+        // Sign-out guard idéntico al de update/remove (G1 paridad F29).
+        createsQueue.enqueue(id, dataForFirestore, async (p) => {
+          const currentUid = auth.currentUser?.uid;
+          if (!currentUid || currentUid !== uid) {
+            throw new Error('[repo] uid changed mid-retry — aborting stale write');
+          }
+          await setDoc(doc(db, pathFor(uid, id)), p, { merge: true });
+        });
+        return id;
+      }
       await setDoc(doc(db, pathFor(uid, id)), dataForFirestore, { merge: true });
       return id;
     },
