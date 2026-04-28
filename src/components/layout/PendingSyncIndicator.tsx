@@ -2,13 +2,34 @@ import { Popover } from '@base-ui/react/popover';
 import { CloudOff, RefreshCw, Trash2 } from 'lucide-react';
 import { allQueues, createsQueueBindings } from '@/lib/saveQueue';
 import usePendingSyncCount from '@/hooks/usePendingSyncCount';
+import useExpandThenCollapse from '@/hooks/useExpandThenCollapse';
 import { cn } from '@/lib/utils';
 
-export default function PendingSyncIndicator() {
-  const { total, errorCount, byEntity, hasAny } = usePendingSyncCount();
-  if (!hasAny) return null;
+const COLLAPSE_DELAY_MS = 3000;
 
+// Wrapper que aísla el lifecycle del componente con animación. Sin esto, el
+// hook useExpandThenCollapse correría desde el primer render de la app
+// (cuando hasAny=false el componente sigue renderizando — solo retorna null
+// post-hook), y el timer de collapse expiraría ANTES de que aparezca el
+// primer pending. Resultado: chip arranca colapsado.
+//
+// El wrapper monta/desmonta IndicatorBody según hasAny. Cada vez que un
+// nuevo set de pending aparece, IndicatorBody se monta fresh con
+// expanded=true y arranca el timer.
+export default function PendingSyncIndicator() {
+  const { hasAny } = usePendingSyncCount();
+  if (!hasAny) return null;
+  return <IndicatorBody />;
+}
+
+function IndicatorBody() {
+  const { total, errorCount, byEntity } = usePendingSyncCount();
   const isError = errorCount > 0;
+  // triggerKey re-expande SOLO en transición a/desde error (callout por
+  // cambio de severity). Cambios numéricos sin cambio de severity (1→2
+  // pendientes, o 1→2 errores) NO re-expanden — evita ruido visual.
+  const expanded = useExpandThenCollapse(isError ? 'error' : 'normal', COLLAPSE_DELAY_MS);
+
   const label = isError
     ? `${errorCount} sin guardar`
     : `${total} pendiente${total !== 1 ? 's' : ''}`;
@@ -40,14 +61,33 @@ export default function PendingSyncIndicator() {
       <Popover.Trigger
         aria-label={`${label}: abrir detalle`}
         className={cn(
-          'inline-flex h-11 min-w-11 items-center gap-1.5 rounded-md px-2 text-xs font-medium outline-none transition-colors',
+          'relative inline-flex h-11 min-w-11 items-center justify-center overflow-hidden rounded-md outline-none',
+          'transition-[max-width,padding,column-gap,background-color] duration-300 ease-out',
+          expanded ? 'max-w-[180px] gap-1.5 px-2' : 'max-w-11 gap-0 px-0',
           isError
             ? 'bg-destructive/15 text-destructive hover:bg-destructive/20'
             : 'bg-amber-500/15 text-amber-700 hover:bg-amber-500/20 dark:text-amber-400',
         )}
       >
-        <CloudOff className="h-3.5 w-3.5" />
-        <span>{label}</span>
+        <CloudOff className="h-3.5 w-3.5 shrink-0" />
+        <span
+          className={cn(
+            'overflow-hidden whitespace-nowrap text-xs font-medium',
+            'transition-[opacity,max-width] duration-300 ease-out',
+            expanded ? 'max-w-[140px] opacity-100' : 'max-w-0 opacity-0',
+          )}
+        >
+          {label}
+        </span>
+        <span
+          className={cn(
+            'pointer-events-none absolute right-1 top-1 h-2 w-2 rounded-full',
+            'transition-opacity duration-200',
+            expanded ? 'opacity-0' : 'opacity-100',
+            isError ? 'bg-destructive' : 'bg-amber-500',
+          )}
+          aria-hidden
+        />
       </Popover.Trigger>
       <Popover.Portal>
         <Popover.Positioner sideOffset={8} align="end">
