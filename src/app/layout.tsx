@@ -16,6 +16,7 @@ import useAuth from '@/hooks/useAuth';
 import { useBreakpoint } from '@/hooks/useMediaQuery';
 import usePreferences from '@/hooks/usePreferences';
 import useShareIntent from '@/hooks/useShareIntent';
+import useSidebarVisibilityShortcut from '@/hooks/useSidebarVisibilityShortcut';
 import AuthLoadingSkeleton from '@/components/layout/AuthLoadingSkeleton';
 import useStoreInit from '@/hooks/useStoreInit';
 import StoreHydrationProvider from '@/hooks/StoreHydrationProvider';
@@ -32,6 +33,7 @@ export default function Layout() {
   const [moreOpen, setMoreOpen] = useState(false);
   const { isHydrating } = useStoreInit(user?.uid ?? null);
   const { preferences, isLoaded: prefsLoaded } = usePreferences();
+  useSidebarVisibilityShortcut();
 
   if (isLoading) {
     return <AuthLoadingSkeleton />;
