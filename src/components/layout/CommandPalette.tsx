@@ -1,7 +1,17 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { useNavigate } from 'react-router';
 import { Dialog } from '@base-ui/react';
-import { FileText, Inbox, Layers, ListTodo, Search } from 'lucide-react';
+import {
+  CheckSquare,
+  FileText,
+  FolderKanban,
+  Inbox,
+  LayoutDashboard,
+  Repeat,
+  Search,
+  Settings,
+  Target,
+} from 'lucide-react';
 import { CommandPaletteContext, type CommandPaletteContextValue } from '@/hooks/useCommandPalette';
 // eslint-disable-next-line import/order -- false positive con type imports inline; auto-fix no resuelve
 import useGlobalSearch, { type SearchResult } from '@/hooks/useGlobalSearch';
@@ -47,10 +57,14 @@ interface QuickAction {
 }
 
 const QUICK_ACTIONS: QuickAction[] = [
+  { id: 'action-dashboard', label: 'Dashboard', icon: LayoutDashboard, url: '/' },
+  { id: 'action-inbox', label: 'Inbox', icon: Inbox, url: '/inbox' },
   { id: 'action-notes', label: 'Notas', icon: FileText, url: '/notes' },
-  { id: 'action-tasks', label: 'Tareas', icon: ListTodo, url: '/tasks' },
-  { id: 'action-projects', label: 'Proyectos', icon: Layers, url: '/projects' },
-  { id: 'action-inbox', label: 'Ir a Inbox', icon: Inbox, url: '/inbox' },
+  { id: 'action-tasks', label: 'Tareas', icon: CheckSquare, url: '/tasks' },
+  { id: 'action-projects', label: 'Proyectos', icon: FolderKanban, url: '/projects' },
+  { id: 'action-objectives', label: 'Objetivos', icon: Target, url: '/objectives' },
+  { id: 'action-habits', label: 'Hábitos', icon: Repeat, url: '/habits' },
+  { id: 'action-settings', label: 'Settings', icon: Settings, url: '/settings' },
 ];
 
 // --- Palette item type (unified for keyboard nav) ---
@@ -69,8 +83,8 @@ function getItemUrl(item: PaletteItem): string {
 
 const TYPE_ICONS: Record<string, typeof FileText> = {
   note: FileText,
-  task: ListTodo,
-  project: Layers,
+  task: CheckSquare,
+  project: FolderKanban,
 };
 
 // --- Dialog content ---
