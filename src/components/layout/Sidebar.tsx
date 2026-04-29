@@ -12,6 +12,7 @@ interface SidebarProps {
   collapsed?: boolean;
   onExpandClick?: () => void;
   animateEntry?: boolean;
+  animateExit?: boolean;
 }
 
 const baseItemClass = 'flex w-full items-center gap-3 rounded-md text-sm transition-colors';
@@ -117,6 +118,7 @@ export default function Sidebar({
   collapsed,
   onExpandClick,
   animateEntry,
+  animateExit,
 }: SidebarProps) {
   return (
     <aside
@@ -124,6 +126,7 @@ export default function Sidebar({
         'flex h-screen flex-col border-r border-sidebar-border bg-sidebar text-sidebar-foreground',
         collapsed ? 'w-16' : 'w-64',
         animateEntry && 'animate-in slide-in-from-left duration-200',
+        animateExit && 'animate-out slide-out-to-left fill-mode-forwards duration-200',
       )}
     >
       {collapsed && onExpandClick && (
