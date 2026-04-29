@@ -2,13 +2,23 @@ import { Link } from 'react-router';
 import { Search } from 'lucide-react';
 import QuickCaptureButton from '@/components/dashboard/QuickCaptureButton';
 import useCommandPalette from '@/hooks/useCommandPalette';
+import { cn } from '@/lib/utils';
 import PendingSyncIndicator from './PendingSyncIndicator';
 
-export default function TopBar() {
+interface TopBarProps {
+  animateEntry?: boolean;
+}
+
+export default function TopBar({ animateEntry }: TopBarProps) {
   const { open: openCommandPalette } = useCommandPalette();
 
   return (
-    <header className="flex h-12 shrink-0 items-center justify-between border-b border-sidebar-border bg-sidebar px-3 text-sidebar-foreground">
+    <header
+      className={cn(
+        'flex h-12 shrink-0 items-center justify-between border-b border-sidebar-border bg-sidebar px-3 text-sidebar-foreground',
+        animateEntry && 'animate-in slide-in-from-top duration-200',
+      )}
+    >
       <Link
         to="/"
         className="flex items-center gap-2 rounded-md px-2 py-1 transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"

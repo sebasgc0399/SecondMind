@@ -11,6 +11,7 @@ interface SidebarProps {
   onSignOut: () => Promise<void>;
   collapsed?: boolean;
   onExpandClick?: () => void;
+  animateEntry?: boolean;
 }
 
 const baseItemClass = 'flex w-full items-center gap-3 rounded-md text-sm transition-colors';
@@ -110,12 +111,19 @@ export function SidebarContent({ user, onSignOut, collapsed, onNavigate }: Sideb
   );
 }
 
-export default function Sidebar({ user, onSignOut, collapsed, onExpandClick }: SidebarProps) {
+export default function Sidebar({
+  user,
+  onSignOut,
+  collapsed,
+  onExpandClick,
+  animateEntry,
+}: SidebarProps) {
   return (
     <aside
       className={cn(
         'flex h-screen flex-col border-r border-sidebar-border bg-sidebar text-sidebar-foreground',
         collapsed ? 'w-16' : 'w-64',
+        animateEntry && 'animate-in slide-in-from-left duration-200',
       )}
     >
       {collapsed && onExpandClick && (
