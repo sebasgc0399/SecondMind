@@ -30,10 +30,14 @@ export function CommandPaletteProvider({ children }: CommandPaletteProviderProps
 
   useEffect(() => {
     function handleKeyDown(event: KeyboardEvent) {
-      if ((event.ctrlKey || event.metaKey) && event.key === 'k') {
-        event.preventDefault();
-        setIsOpen((current) => !current);
-      }
+      // event.code es independiente del layout físico (Dvorak/AZERTY siguen
+      // funcionando), a diferencia de event.key. Paridad con
+      // useSidebarVisibilityShortcut (F31.5).
+      if (!(event.ctrlKey || event.metaKey)) return;
+      if (event.code !== 'KeyK') return;
+      if (event.shiftKey || event.altKey) return;
+      event.preventDefault();
+      setIsOpen((current) => !current);
     }
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);

@@ -45,10 +45,13 @@ export default function QuickCaptureProvider({ children }: QuickCaptureProviderP
 
   useEffect(() => {
     function handleKeyDown(event: KeyboardEvent) {
+      // event.code es independiente del layout físico (Dvorak/AZERTY siguen
+      // funcionando), a diferencia de event.key. Paridad con
+      // useSidebarVisibilityShortcut (F31.5).
       if (!event.altKey || event.ctrlKey || event.shiftKey || event.metaKey) {
         return;
       }
-      if (event.key !== 'n' && event.key !== 'N') return;
+      if (event.code !== 'KeyN') return;
       event.preventDefault();
       setIsOpen((current) => (current ? current : true));
     }
