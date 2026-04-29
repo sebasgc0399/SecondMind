@@ -7,9 +7,10 @@ import PendingSyncIndicator from './PendingSyncIndicator';
 
 interface TopBarProps {
   animateEntry?: boolean;
+  animateExit?: boolean;
 }
 
-export default function TopBar({ animateEntry }: TopBarProps) {
+export default function TopBar({ animateEntry, animateExit }: TopBarProps) {
   const { open: openCommandPalette } = useCommandPalette();
 
   return (
@@ -17,6 +18,7 @@ export default function TopBar({ animateEntry }: TopBarProps) {
       className={cn(
         'flex h-12 shrink-0 items-center justify-between border-b border-sidebar-border bg-sidebar px-3 text-sidebar-foreground',
         animateEntry && 'animate-in slide-in-from-top duration-200',
+        animateExit && 'animate-out slide-out-to-top fill-mode-forwards duration-200',
       )}
     >
       <Link
