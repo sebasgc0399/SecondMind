@@ -32,7 +32,7 @@ export default function Layout() {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [moreOpen, setMoreOpen] = useState(false);
   const { isHydrating } = useStoreInit(user?.uid ?? null);
-  const { preferences, isLoaded: prefsLoaded } = usePreferences();
+  const { preferences } = usePreferences();
   useSidebarVisibilityShortcut();
 
   if (isLoading) {
@@ -45,9 +45,11 @@ export default function Layout() {
 
   const isMobile = breakpoint === 'mobile';
   const isTablet = breakpoint === 'tablet';
-  // Pre-snapshot tratamos sidebarHidden como false (D7): evita flash
-  // sidebar→TopBar al cargar. El AND-gate con prefsLoaded queda explícito.
-  const sidebarHiddenEffective = prefsLoaded && preferences.sidebarHidden;
+  // F32.4: el state arranca hidratado con el último valor persistido en
+  // localStorage para este uid (ver usePreferences), así que el AND-gate
+  // sobre prefsLoaded de F31 (D7) deja de ser necesario para sidebarHidden.
+  // Los demás campos siguen usando isLoaded gate dentro de sus consumers.
+  const sidebarHiddenEffective = preferences.sidebarHidden;
   const showSidebar = !isMobile && !(breakpoint === 'desktop' && sidebarHiddenEffective);
   const showTopBar = breakpoint === 'desktop' && sidebarHiddenEffective;
 

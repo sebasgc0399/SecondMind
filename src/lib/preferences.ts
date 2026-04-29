@@ -130,6 +130,41 @@ export async function markDistillBannerSeen(uid: string, level: 1 | 2 | 3): Prom
   }
 }
 
+// Anti-flash hint para sidebarHidden (F32.4): cachea el último valor
+// persistido en localStorage por uid. Permite que usePreferences hidrate
+// el state sincrónamente antes del primer onSnapshot (~100-300ms),
+// eliminando el flash sidebar→TopBar al cargar para usuarios con
+// hidden=true persistido. Solo afecta UI layout — los demás campos
+// (distillIntroSeen, distillBannersSeen, trashAutoPurgeDays) siguen
+// gobernados por el isLoaded gate de usePreferences porque dispararían
+// side-effects con hint stale.
+//
+// La key incluye uid para no contaminar entre cuentas en multi-account
+// browsers. Sign-out NO limpia el hint — el próximo login del mismo
+// uid hidrata correcto.
+const SIDEBAR_HIDDEN_HINT_KEY_PREFIX = 'secondmind:sidebarHidden:';
+
+export function readSidebarHiddenHint(uid: string): boolean | null {
+  try {
+    const raw = localStorage.getItem(SIDEBAR_HIDDEN_HINT_KEY_PREFIX + uid);
+    if (raw === 'true') return true;
+    if (raw === 'false') return false;
+    return null;
+  } catch {
+    // localStorage no disponible (private browsing iOS, storage deshabilitado).
+    // Fallback silencioso al comportamiento F31 (sin hint).
+    return null;
+  }
+}
+
+export function writeSidebarHiddenHint(uid: string, value: boolean): void {
+  try {
+    localStorage.setItem(SIDEBAR_HIDDEN_HINT_KEY_PREFIX + uid, value ? 'true' : 'false');
+  } catch {
+    // Silent: ver readSidebarHiddenHint.
+  }
+}
+
 // Útil en signOut para no filtrar prefs entre cuentas (mismo principio que
 // invalidateEmbeddingsCache en src/lib/embeddings.ts).
 export function invalidatePreferencesCache(uid?: string): void {
