@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { useLocation } from 'react-router';
 import AppInfoSection from '@/components/settings/AppInfoSection';
+import SidebarVisibilitySelector from '@/components/settings/SidebarVisibilitySelector';
 import ThemeSelector from '@/components/settings/ThemeSelector';
 import TrashAutoPurgeSelector from '@/components/settings/TrashAutoPurgeSelector';
 
@@ -32,6 +33,19 @@ export default function SettingsPage() {
           </p>
         </div>
         <ThemeSelector />
+      </section>
+
+      <section aria-labelledby="sidebar-visibility-heading" className="hidden lg:block">
+        <div className="mb-3">
+          <h2 id="sidebar-visibility-heading" className="text-sm font-semibold text-foreground">
+            Visibilidad del menú
+          </h2>
+          <p className="mt-0.5 text-xs text-muted-foreground">
+            Elegí si el menú lateral aparece o se oculta para maximizar espacio. Aplica solo a
+            pantallas grandes.
+          </p>
+        </div>
+        <SidebarVisibilitySelector />
       </section>
 
       <section id="trash" aria-labelledby="trash-heading" className="scroll-mt-14">
