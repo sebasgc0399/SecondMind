@@ -11,10 +11,15 @@ export interface UserPreferences {
   // Persistencia con dot-notation Firestore para evitar race de closure
   // stale al disparar dos banners contiguos.
   distillBannersSeen: { l1: boolean; l2: boolean; l3: boolean };
+  // Pref de visibilidad del sidebar en desktop. true = sidebar oculto,
+  // chrome se reemplaza por TopBar minimalista. Solo aplica a desktop
+  // (≥1024px); tablet/mobile ignoran este flag.
+  sidebarHidden: boolean;
 }
 
 export const DEFAULT_PREFERENCES: UserPreferences = {
   trashAutoPurgeDays: 30,
   distillIntroSeen: false,
   distillBannersSeen: { l1: false, l2: false, l3: false },
+  sidebarHidden: false,
 };

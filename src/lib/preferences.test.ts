@@ -63,7 +63,21 @@ describe('parsePrefs', () => {
       trashAutoPurgeDays: 7,
       distillIntroSeen: false,
       distillBannersSeen: { l1: false, l2: false, l3: false },
+      sidebarHidden: false,
     });
+  });
+
+  it('sidebarHidden no persistido → default false', () => {
+    expect(parsePrefs({}).sidebarHidden).toBe(false);
+  });
+
+  it('sidebarHidden true → expone true', () => {
+    expect(parsePrefs({ sidebarHidden: true }).sidebarHidden).toBe(true);
+  });
+
+  it('sidebarHidden truthy no-boolean (string, número) → false', () => {
+    expect(parsePrefs({ sidebarHidden: 'yes' }).sidebarHidden).toBe(false);
+    expect(parsePrefs({ sidebarHidden: 1 }).sidebarHidden).toBe(false);
   });
 });
 
