@@ -45,6 +45,7 @@ export function parsePrefs(data: Record<string, unknown> | undefined): UserPrefe
       l2: banners?.l2 === true,
       l3: banners?.l3 === true,
     },
+    sidebarHidden: data?.sidebarHidden === true,
   };
 }
 
