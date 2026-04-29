@@ -7,14 +7,20 @@ import {
   FolderKanban,
   Inbox,
   LayoutDashboard,
+  PanelLeftClose,
+  PanelLeftOpen,
   Repeat,
   Search,
   Settings,
   Target,
 } from 'lucide-react';
+import useAuth from '@/hooks/useAuth';
 import { CommandPaletteContext, type CommandPaletteContextValue } from '@/hooks/useCommandPalette';
-// eslint-disable-next-line import/order -- false positive con type imports inline; auto-fix no resuelve
 import useGlobalSearch, { type SearchResult } from '@/hooks/useGlobalSearch';
+import { useBreakpoint } from '@/hooks/useMediaQuery';
+import usePreferences from '@/hooks/usePreferences';
+// eslint-disable-next-line import/order -- false positive con type imports inline en @/hooks/* arriba; el grouping interno de la regla los reclasifica y dispara newlines-between phantom sobre el siguiente @/lib/*
+import { setPreferences } from '@/lib/preferences';
 
 // --- Provider ---
 
@@ -30,10 +36,14 @@ export function CommandPaletteProvider({ children }: CommandPaletteProviderProps
 
   useEffect(() => {
     function handleKeyDown(event: KeyboardEvent) {
-      if ((event.ctrlKey || event.metaKey) && event.key === 'k') {
-        event.preventDefault();
-        setIsOpen((current) => !current);
-      }
+      // event.code es independiente del layout físico (Dvorak/AZERTY siguen
+      // funcionando), a diferencia de event.key. Paridad con
+      // useSidebarVisibilityShortcut (F31.5).
+      if (!(event.ctrlKey || event.metaKey)) return;
+      if (event.code !== 'KeyK') return;
+      if (event.shiftKey || event.altKey) return;
+      event.preventDefault();
+      setIsOpen((current) => !current);
     }
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
@@ -49,31 +59,38 @@ export function CommandPaletteProvider({ children }: CommandPaletteProviderProps
 
 // --- Quick actions (static, shown when query is empty) ---
 
-interface QuickAction {
-  id: string;
-  label: string;
-  icon: typeof FileText;
-  url: string;
-}
+type QuickAction =
+  | { id: string; label: string; icon: typeof FileText; kind: 'navigate'; url: string }
+  | { id: string; label: string; icon: typeof FileText; kind: 'handler'; handler: () => void };
 
 const QUICK_ACTIONS: QuickAction[] = [
-  { id: 'action-dashboard', label: 'Dashboard', icon: LayoutDashboard, url: '/' },
-  { id: 'action-inbox', label: 'Inbox', icon: Inbox, url: '/inbox' },
-  { id: 'action-notes', label: 'Notas', icon: FileText, url: '/notes' },
-  { id: 'action-tasks', label: 'Tareas', icon: CheckSquare, url: '/tasks' },
-  { id: 'action-projects', label: 'Proyectos', icon: FolderKanban, url: '/projects' },
-  { id: 'action-objectives', label: 'Objetivos', icon: Target, url: '/objectives' },
-  { id: 'action-habits', label: 'Hábitos', icon: Repeat, url: '/habits' },
-  { id: 'action-settings', label: 'Settings', icon: Settings, url: '/settings' },
+  { id: 'action-dashboard', kind: 'navigate', label: 'Dashboard', icon: LayoutDashboard, url: '/' },
+  { id: 'action-inbox', kind: 'navigate', label: 'Inbox', icon: Inbox, url: '/inbox' },
+  { id: 'action-notes', kind: 'navigate', label: 'Notas', icon: FileText, url: '/notes' },
+  { id: 'action-tasks', kind: 'navigate', label: 'Tareas', icon: CheckSquare, url: '/tasks' },
+  {
+    id: 'action-projects',
+    kind: 'navigate',
+    label: 'Proyectos',
+    icon: FolderKanban,
+    url: '/projects',
+  },
+  {
+    id: 'action-objectives',
+    kind: 'navigate',
+    label: 'Objetivos',
+    icon: Target,
+    url: '/objectives',
+  },
+  { id: 'action-habits', kind: 'navigate', label: 'Hábitos', icon: Repeat, url: '/habits' },
+  { id: 'action-settings', kind: 'navigate', label: 'Settings', icon: Settings, url: '/settings' },
 ];
 
 // --- Palette item type (unified for keyboard nav) ---
 
 type PaletteItem = { kind: 'result'; data: SearchResult } | { kind: 'action'; data: QuickAction };
 
-function getItemUrl(item: PaletteItem): string {
-  if (item.kind === 'action') return item.data.url;
-  const r = item.data;
+function getResultUrl(r: SearchResult): string {
   if (r.type === 'note') return `/notes/${r.id}`;
   if (r.type === 'project') return `/projects/${r.id}`;
   return '/tasks';
@@ -95,12 +112,46 @@ interface CommandPaletteContentProps {
 
 function CommandPaletteContent({ onClose }: CommandPaletteContentProps) {
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const breakpoint = useBreakpoint();
+  const { preferences } = usePreferences();
   const [query, setQuery] = useState('');
   const results = useGlobalSearch(query);
   const [selectedIndex, setSelectedIndex] = useState(0);
   const listRef = useRef<HTMLDivElement>(null);
 
   const trimmed = query.trim();
+
+  // Toggle dinámico del sidebar (F32.1): solo desktop con sesión activa. La
+  // entry refleja el estado actual; click dispara setPreferences fire-and-
+  // forget. La memo se invalida cuando preferences.sidebarHidden cambia,
+  // así el label queda en sync si el toggle se dispara desde otro
+  // entrypoint (Cmd+B, /settings) mientras el palette está abierto.
+  const quickActions = useMemo<QuickAction[]>(() => {
+    if (breakpoint !== 'desktop' || !user) return QUICK_ACTIONS;
+    const uid = user.uid;
+    const sidebarHidden = preferences.sidebarHidden;
+    const toggle: QuickAction = sidebarHidden
+      ? {
+          id: 'action-show-sidebar',
+          kind: 'handler',
+          label: 'Mostrar sidebar',
+          icon: PanelLeftOpen,
+          handler: () => {
+            void setPreferences(uid, { sidebarHidden: false });
+          },
+        }
+      : {
+          id: 'action-hide-sidebar',
+          kind: 'handler',
+          label: 'Ocultar sidebar',
+          icon: PanelLeftClose,
+          handler: () => {
+            void setPreferences(uid, { sidebarHidden: true });
+          },
+        };
+    return [...QUICK_ACTIONS, toggle];
+  }, [breakpoint, user, preferences.sidebarHidden]);
 
   // Build flat items list for keyboard navigation
   const items = useMemo<PaletteItem[]>(() => {
@@ -109,9 +160,9 @@ function CommandPaletteContent({ onClose }: CommandPaletteContentProps) {
     }
     // No query: recentes + acciones rápidas
     const recents: PaletteItem[] = results.map((r) => ({ kind: 'result' as const, data: r }));
-    const actions: PaletteItem[] = QUICK_ACTIONS.map((a) => ({ kind: 'action' as const, data: a }));
+    const actions: PaletteItem[] = quickActions.map((a) => ({ kind: 'action' as const, data: a }));
     return [...recents, ...actions];
-  }, [results, trimmed]);
+  }, [results, trimmed, quickActions]);
 
   // Reset selection on query change
   useEffect(() => {
@@ -129,9 +180,17 @@ function CommandPaletteContent({ onClose }: CommandPaletteContentProps) {
 
   const navigateTo = useCallback(
     (item: PaletteItem) => {
-      const url = getItemUrl(item);
       onClose();
-      navigate(url);
+      if (item.kind === 'result') {
+        navigate(getResultUrl(item.data));
+        return;
+      }
+      if (item.data.kind === 'navigate') {
+        navigate(item.data.url);
+        return;
+      }
+      // handler: dispara fire-and-forget; el palette ya cerró.
+      item.data.handler();
     },
     [onClose, navigate],
   );
@@ -266,7 +325,7 @@ function CommandPaletteContent({ onClose }: CommandPaletteContentProps) {
               <p className="px-3 py-1 text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
                 Acciones
               </p>
-              {QUICK_ACTIONS.map((action, i) => {
+              {quickActions.map((action, i) => {
                 const globalIndex = results.length + i;
                 const Icon = action.icon;
                 return (
