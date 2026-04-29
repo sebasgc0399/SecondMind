@@ -1,5 +1,5 @@
 import { Link } from 'react-router';
-import { Brain, Search } from 'lucide-react';
+import { Search } from 'lucide-react';
 import QuickCaptureButton from '@/components/dashboard/QuickCaptureButton';
 import useCommandPalette from '@/hooks/useCommandPalette';
 import PendingSyncIndicator from './PendingSyncIndicator';
@@ -13,7 +13,7 @@ export default function TopBar() {
         to="/"
         className="flex items-center gap-2 rounded-md px-2 py-1 transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
       >
-        <Brain className="h-5 w-5 shrink-0" aria-hidden />
+        <img src="/favicon.svg" alt="" className="h-5 w-5 shrink-0" />
         <span className="text-sm font-semibold">SecondMind</span>
       </Link>
       <div className="flex items-center gap-2">
