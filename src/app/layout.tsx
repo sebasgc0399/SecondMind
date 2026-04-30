@@ -99,14 +99,14 @@ export default function Layout() {
                 onSignOut={signOut}
                 collapsed={isTablet}
                 onExpandClick={isTablet ? () => setDrawerOpen(true) : undefined}
-                animateEntry={animateLayoutSwap && !sidebarTransition.isExiting}
+                animateEntry={animateLayoutSwap && sidebarTransition.justMounted}
                 animateExit={sidebarTransition.isExiting}
               />
             )}
             <div className="flex flex-1 flex-col overflow-hidden">
               {topBarTransition.shouldRender && (
                 <TopBar
-                  animateEntry={animateLayoutSwap && !topBarTransition.isExiting}
+                  animateEntry={animateLayoutSwap && topBarTransition.justMounted}
                   animateExit={topBarTransition.isExiting}
                 />
               )}
