@@ -15,6 +15,13 @@ interface SidebarProps {
   onExpandClick?: () => void;
   animateEntry?: boolean;
   animateExit?: boolean;
+  /**
+   * Cuando true, el aside se renderiza como overlay (`position: absolute`)
+   * en lugar de inline en flex. Layout pasa true durante la ventana del
+   * swap (justMounted || isExiting) para que main no sufra shift/pop.
+   * Tablet y NavigationDrawer pasan false (sin overlay). Ver SPEC F35 D2.
+   */
+  floating?: boolean;
 }
 
 const baseItemClass = 'flex w-full items-center gap-3 rounded-md text-sm transition-colors';
@@ -200,12 +207,14 @@ export default function Sidebar({
   onExpandClick,
   animateEntry,
   animateExit,
+  floating,
 }: SidebarProps) {
   return (
     <aside
       className={cn(
         'flex h-screen flex-col border-r border-sidebar-border bg-sidebar text-sidebar-foreground',
         collapsed ? 'w-16' : 'w-64',
+        floating && 'absolute inset-y-0 left-0 z-30',
         animateEntry && 'animate-in slide-in-from-left duration-200',
         animateExit && 'animate-out slide-out-to-left fill-mode-forwards duration-200',
       )}
