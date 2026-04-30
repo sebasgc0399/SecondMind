@@ -92,7 +92,7 @@ export default function Layout() {
     <StoreHydrationProvider value={{ isHydrating }}>
       <CommandPaletteProvider>
         <QuickCaptureProvider>
-          <div className="flex h-screen bg-background text-foreground">
+          <div className="relative flex h-screen overflow-x-hidden bg-background text-foreground">
             {sidebarTransition.shouldRender && (
               <Sidebar
                 user={user}
@@ -101,9 +101,15 @@ export default function Layout() {
                 onExpandClick={isTablet ? () => setDrawerOpen(true) : undefined}
                 animateEntry={animateLayoutSwap && sidebarTransition.justMounted}
                 animateExit={sidebarTransition.isExiting}
+                floating={!isMobile && !isTablet}
               />
             )}
-            <div className="flex flex-1 flex-col overflow-hidden">
+            <div
+              className="flex flex-1 flex-col overflow-hidden transition-[padding-left] duration-200"
+              style={{
+                paddingLeft: !isMobile && !isTablet && showSidebar ? '16rem' : '0',
+              }}
+            >
               {topBarTransition.shouldRender && (
                 <TopBar
                   animateEntry={animateLayoutSwap && topBarTransition.justMounted}
