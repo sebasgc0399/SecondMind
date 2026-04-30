@@ -1,6 +1,6 @@
 import { Link } from 'react-router';
 import { PanelLeftOpen, Search } from 'lucide-react';
-import QuickCaptureButton from '@/components/dashboard/QuickCaptureButton';
+import QuickCaptureButton from '@/components/capture/QuickCaptureButton';
 import useAuth from '@/hooks/useAuth';
 import useCommandPalette from '@/hooks/useCommandPalette';
 import { setPreferences } from '@/lib/preferences';
