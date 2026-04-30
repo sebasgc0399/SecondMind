@@ -1,6 +1,7 @@
 import { NavLink } from 'react-router';
-import { Settings, LogOut, Menu } from 'lucide-react';
+import { Settings, LogOut, Menu, Search } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import useCommandPalette from '@/hooks/useCommandPalette';
 import { usePendingInboxCount } from '@/hooks/useInbox';
 import PendingSyncIndicator from './PendingSyncIndicator';
 import { navSections } from './navItems';
@@ -29,7 +30,16 @@ interface SidebarContentProps {
 
 export function SidebarContent({ user, onSignOut, collapsed, onNavigate }: SidebarContentProps) {
   const pendingInboxCount = usePendingInboxCount();
+  const { open: openCommandPalette } = useCommandPalette();
   const padding = collapsed ? 'justify-center px-2 py-2' : 'px-3 py-2';
+
+  // Cuando se invoca dentro del NavigationDrawer (mobile), cerramos el
+  // drawer ANTES de abrir el palette en rAF — evita conflict de
+  // z-index (drawer y palette ambos z-50, último portal abierto gana).
+  const handleSearchClick = () => {
+    onNavigate?.();
+    requestAnimationFrame(() => openCommandPalette());
+  };
 
   return (
     <>
@@ -53,6 +63,33 @@ export function SidebarContent({ user, onSignOut, collapsed, onNavigate }: Sideb
           <span className="truncate text-sm font-medium text-sidebar-foreground">
             {user.displayName ?? 'SecondMind'}
           </span>
+        )}
+      </div>
+
+      <div className={cn('px-2 pt-2', collapsed && 'flex justify-center')}>
+        {collapsed ? (
+          <button
+            type="button"
+            onClick={handleSearchClick}
+            title="Buscar"
+            aria-label="Buscar"
+            className="flex h-9 w-9 items-center justify-center rounded-md text-sidebar-foreground transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sidebar-ring/50"
+          >
+            <Search className="h-4 w-4" aria-hidden />
+          </button>
+        ) : (
+          <button
+            type="button"
+            onClick={handleSearchClick}
+            aria-label="Buscar"
+            className="flex min-h-11 w-full items-center gap-2 rounded-md border border-sidebar-border bg-sidebar-accent/30 px-3 py-1.5 text-sm text-sidebar-foreground/70 transition-colors hover:bg-sidebar-accent/50 hover:text-sidebar-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sidebar-ring/50"
+          >
+            <Search className="h-4 w-4 shrink-0" aria-hidden />
+            <span className="flex-1 text-left">Buscar…</span>
+            <kbd className="hidden rounded bg-sidebar-foreground/10 px-1.5 py-0.5 font-mono text-[10px] sm:inline">
+              ⌘K
+            </kbd>
+          </button>
         )}
       </div>
 
