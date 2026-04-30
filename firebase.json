@@ -16,6 +16,7 @@
     "public": "dist",
     "ignore": ["firebase.json", "**/.*", "**/node_modules/**"],
     "rewrites": [{ "source": "**", "destination": "/index.html" }],
+    "_comment_headers": "Firebase Hosting `headers` aplica last-match-wins (no first-match como redirects/rewrites). Reglas se evalúan en orden y cada matching sobrescribe los Cache-Control. Patrón canónico: globs primero, exactas al final. Validado empíricamente (firebase-tools #9467 documenta el gap en docs).",
     "headers": [
       {
         "source": "**/*.@(js|css|woff2|woff|ttf|otf)",
