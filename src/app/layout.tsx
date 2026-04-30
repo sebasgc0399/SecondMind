@@ -12,6 +12,7 @@ import NavigationDrawer from '@/components/layout/NavigationDrawer';
 import OfflineBadge from '@/components/layout/OfflineBadge';
 import Sidebar from '@/components/layout/Sidebar';
 import TopBar from '@/components/layout/TopBar';
+import UpdateBanner from '@/components/layout/UpdateBanner';
 import useAuth from '@/hooks/useAuth';
 import { useBreakpoint } from '@/hooks/useMediaQuery';
 import useMountedTransition from '@/hooks/useMountedTransition';
@@ -110,6 +111,7 @@ export default function Layout() {
                 paddingLeft: !isMobile && !isTablet && showSidebar ? '16rem' : '0',
               }}
             >
+              <UpdateBanner />
               {topBarTransition.shouldRender && (
                 <TopBar
                   animateEntry={animateLayoutSwap && topBarTransition.justMounted}

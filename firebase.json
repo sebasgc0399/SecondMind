@@ -15,6 +15,33 @@
     "site": "secondmind",
     "public": "dist",
     "ignore": ["firebase.json", "**/.*", "**/node_modules/**"],
-    "rewrites": [{ "source": "**", "destination": "/index.html" }]
+    "rewrites": [{ "source": "**", "destination": "/index.html" }],
+    "_comment_headers": "Firebase Hosting `headers` aplica last-match-wins (no first-match como redirects/rewrites). Reglas se evalúan en orden y cada matching sobrescribe los Cache-Control. Patrón canónico: globs primero, exactas al final. Validado empíricamente (firebase-tools #9467 documenta el gap en docs).",
+    "headers": [
+      {
+        "source": "**/*.@(js|css|woff2|woff|ttf|otf)",
+        "headers": [{ "key": "Cache-Control", "value": "public, max-age=31536000, immutable" }]
+      },
+      {
+        "source": "**/*.@(png|jpg|jpeg|svg|ico|webp)",
+        "headers": [{ "key": "Cache-Control", "value": "public, max-age=86400" }]
+      },
+      {
+        "source": "/index.html",
+        "headers": [{ "key": "Cache-Control", "value": "no-cache, no-store, must-revalidate" }]
+      },
+      {
+        "source": "/sw.js",
+        "headers": [{ "key": "Cache-Control", "value": "no-cache, no-store, must-revalidate" }]
+      },
+      {
+        "source": "/registerSW.js",
+        "headers": [{ "key": "Cache-Control", "value": "no-cache, no-store, must-revalidate" }]
+      },
+      {
+        "source": "/manifest.webmanifest",
+        "headers": [{ "key": "Cache-Control", "value": "no-cache" }]
+      }
+    ]
   }
 }

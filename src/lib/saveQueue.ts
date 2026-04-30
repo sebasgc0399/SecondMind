@@ -444,3 +444,19 @@ export const createsQueueBindings: ReadonlyArray<CreatesQueueBinding> = [
     table: 'objectives',
   },
 ];
+
+// Itera los 11 queues y dispara retryNow() en cada entry con status 'error'.
+// flushAll() por sí solo NO retientea errors (los marca 'failed' inmediato);
+// para un retry real hay que llamar retryNow() primero. Clonar el snapshot
+// con [...] antes de iterar es defensivo: getSnapshot() retorna un Map live
+// y retryNow() lo muta. Compartido por <PendingSyncIndicator /> (acción
+// "Reintentar todo") y useFlushThenUpdate (F4 retry pre-flush en
+// partial-failure).
+export function retryAllErrors(): void {
+  for (const queue of allQueues) {
+    const snapshot = [...queue.getSnapshot()];
+    for (const [id, entry] of snapshot) {
+      if (entry.status === 'error') queue.retryNow(id);
+    }
+  }
+}

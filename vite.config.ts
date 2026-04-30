@@ -14,7 +14,7 @@ export default defineConfig({
   plugins: [
     react(),
     VitePWA({
-      registerType: 'autoUpdate',
+      registerType: 'prompt',
       includeAssets: ['favicon.svg', 'apple-touch-icon.png'],
       manifest: {
         name: 'SecondMind',
@@ -48,6 +48,12 @@ export default defineConfig({
         maximumFileSizeToCacheInBytes: 4 * 1024 * 1024,
         navigateFallback: 'index.html',
         navigateFallbackDenylist: [/^\/api/, /^\/__\//],
+        // prompt mode requiere skipWaiting: false explícito — el SW nuevo
+        // queda en `waiting` hasta que el cliente llame updateSW(true).
+        // clientsClaim: false complementa: tabs abiertos no migran al SW
+        // nuevo automáticamente; esperan el reload disparado por el prompt.
+        skipWaiting: false,
+        clientsClaim: false,
         runtimeCaching: [
           {
             urlPattern: /^https:\/\/fonts\.googleapis\.com\/.*/i,
