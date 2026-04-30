@@ -1,5 +1,5 @@
 import Greeting from '@/components/dashboard/Greeting';
-import QuickCaptureButton from '@/components/dashboard/QuickCaptureButton';
+import QuickCaptureButton from '@/components/capture/QuickCaptureButton';
 import ReviewCard from '@/components/dashboard/ReviewCard';
 import TasksTodayCard from '@/components/dashboard/TasksTodayCard';
 import InboxCard from '@/components/dashboard/InboxCard';
