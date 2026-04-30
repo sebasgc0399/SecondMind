@@ -1,6 +1,6 @@
 import { Popover } from '@base-ui/react/popover';
 import { CloudOff, RefreshCw, Trash2 } from 'lucide-react';
-import { allQueues, createsQueueBindings } from '@/lib/saveQueue';
+import { allQueues, createsQueueBindings, retryAllErrors } from '@/lib/saveQueue';
 import usePendingSyncCount from '@/hooks/usePendingSyncCount';
 import useExpandThenCollapse from '@/hooks/useExpandThenCollapse';
 import { cn } from '@/lib/utils';
@@ -47,11 +47,7 @@ function IndicatorBody({ compact }: { compact: boolean }) {
     : `${total} pendiente${total !== 1 ? 's' : ''}`;
 
   function handleRetryAll() {
-    allQueues.forEach((q) => {
-      for (const [id, entry] of q.getSnapshot()) {
-        if (entry.status === 'error') q.retryNow(id);
-      }
-    });
+    retryAllErrors();
   }
 
   function handleDiscardAll() {
