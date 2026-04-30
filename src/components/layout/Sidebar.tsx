@@ -3,7 +3,7 @@ import { Settings, LogOut, Menu } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { usePendingInboxCount } from '@/hooks/useInbox';
 import PendingSyncIndicator from './PendingSyncIndicator';
-import { navItems } from './navItems';
+import { navSections } from './navItems';
 import type { User } from 'firebase/auth';
 
 interface SidebarProps {
@@ -56,29 +56,38 @@ export function SidebarContent({ user, onSignOut, collapsed, onNavigate }: Sideb
         )}
       </div>
 
-      <nav className="flex-1 space-y-1 p-2">
-        {navItems.map((item) => (
-          <NavLink
-            key={item.label}
-            to={item.to}
-            end={item.end}
-            onClick={onNavigate}
-            title={collapsed ? item.label : undefined}
-            className={({ isActive }) =>
-              cn(baseItemClass, padding, isActive ? activeClass : inactiveClass)
-            }
-          >
-            <item.icon className="h-4 w-4 shrink-0" />
-            {!collapsed && <span className="truncate">{item.label}</span>}
-            {!collapsed && item.to === '/inbox' && pendingInboxCount > 0 && (
-              <span className="ml-auto rounded-full bg-primary px-1.5 py-0.5 text-[10px] font-semibold text-primary-foreground">
-                {pendingInboxCount}
-              </span>
+      <nav className="flex-1 space-y-3 p-2">
+        {navSections.map((section) => (
+          <div key={section.label} className="space-y-1">
+            {!collapsed && (
+              <h3 className="px-3 pb-1 pt-1 text-[10px] font-medium uppercase tracking-wide text-sidebar-foreground/50">
+                {section.label}
+              </h3>
             )}
-            {collapsed && item.to === '/inbox' && pendingInboxCount > 0 && (
-              <span className="absolute right-1 top-1 h-2 w-2 rounded-full bg-primary" />
-            )}
-          </NavLink>
+            {section.items.map((item) => (
+              <NavLink
+                key={item.label}
+                to={item.to}
+                end={item.end}
+                onClick={onNavigate}
+                title={collapsed ? item.label : undefined}
+                className={({ isActive }) =>
+                  cn('relative', baseItemClass, padding, isActive ? activeClass : inactiveClass)
+                }
+              >
+                <item.icon className="h-4 w-4 shrink-0" />
+                {!collapsed && <span className="truncate">{item.label}</span>}
+                {!collapsed && item.to === '/inbox' && pendingInboxCount > 0 && (
+                  <span className="ml-auto rounded-full bg-primary px-1.5 py-0.5 text-[10px] font-semibold text-primary-foreground">
+                    {pendingInboxCount}
+                  </span>
+                )}
+                {collapsed && item.to === '/inbox' && pendingInboxCount > 0 && (
+                  <span className="absolute right-1 top-1 h-2 w-2 rounded-full bg-primary" />
+                )}
+              </NavLink>
+            ))}
+          </div>
         ))}
       </nav>
 
