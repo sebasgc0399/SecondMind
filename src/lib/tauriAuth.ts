@@ -61,6 +61,8 @@ export async function signInWithTauri(auth: Auth): Promise<void> {
       prompt: 'select_account',
     }).toString();
 
+  let cleanup = () => {};
+
   const codePromise = new Promise<string>((resolve, reject) => {
     const timeoutId = window.setTimeout(() => {
       unlistenPromise.then((fn) => fn());
@@ -88,9 +90,21 @@ export async function signInWithTauri(auth: Auth): Promise<void> {
         reject(err instanceof Error ? err : new Error(String(err)));
       }
     });
+
+    cleanup = () => {
+      window.clearTimeout(timeoutId);
+      unlistenPromise.then((fn) => fn());
+    };
   });
 
-  await open(authUrl);
+  try {
+    await open(authUrl);
+  } catch (err) {
+    cleanup();
+    throw new Error(
+      `No se pudo abrir el navegador para OAuth: ${err instanceof Error ? err.message : String(err)}`,
+    );
+  }
 
   const code = await codePromise;
 
