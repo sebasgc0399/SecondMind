@@ -67,6 +67,18 @@ pub fn run() {
                 app.global_shortcut().register(capture_shortcut)?;
             }
 
+            // DevTools auto-open en debug builds. La feature `devtools` está
+            // habilitada en Cargo.toml de forma incondicional (Cargo no soporta
+            // cfg(debug_assertions) en [dependencies]), pero la invocación está
+            // gated: en release builds este bloque no se compila, así que la
+            // API runtime nunca se llama y no hay shortcut que la dispare.
+            #[cfg(debug_assertions)]
+            {
+                if let Some(window) = app.get_webview_window("main") {
+                    window.open_devtools();
+                }
+            }
+
             Ok(())
         })
         .run(tauri::generate_context!())
