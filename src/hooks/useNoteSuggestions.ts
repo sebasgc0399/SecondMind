@@ -1,7 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useCell } from 'tinybase/ui-react';
-import { doc, onSnapshot } from 'firebase/firestore';
-import { auth, db } from '@/lib/firebase';
 import { parseIds } from '@/lib/tinybase';
 import { notesRepo } from '@/infra/repos/notesRepo';
 import type { NoteType } from '@/types/common';
@@ -35,13 +33,16 @@ export interface UseNoteSuggestionsResult {
 
 /**
  * Combina dos fuentes reactivas: TinyBase (vía useCell) para campos del
- * schema y onSnapshot directo para los 3 campos que viven SOLO en
- * Firestore (suggestedNoteType, noteTypeConfidence, dismissedSuggestions).
+ * schema y `notesRepo.subscribeSuggestions` para los 3 campos que viven
+ * SOLO en Firestore (suggestedNoteType, noteTypeConfidence,
+ * dismissedSuggestions). El doc-level snapshot dentro del repo (no
+ * proyectable en Firestore) puede causar re-renders por cambios en otros
+ * campos no-suggestion; aceptable hasta que la fricción se materialice.
  *
  * `localDismissed: Set` es la única fuente de verdad del optimistic state —
  * el componente que consume este hook no debe mantener un Set propio.
  * Se reset en remount key={noteId} del NoteEditor (aceptable: para
- * entonces el onSnapshot ya propagó el dismiss confirmado).
+ * entonces la suscripción ya propagó el dismiss confirmado).
  */
 export function useNoteSuggestions(noteId: string): UseNoteSuggestionsResult {
   const noteType = useCell('notes', noteId, 'noteType') as NoteType | undefined;
@@ -53,27 +54,8 @@ export function useNoteSuggestions(noteId: string): UseNoteSuggestionsResult {
   const [remote, setRemote] = useState<RemoteFields>({ dismissedSuggestions: [] });
 
   useEffect(() => {
-    const uid = auth.currentUser?.uid;
-    if (!uid || !noteId) return;
-    const ref = doc(db, `users/${uid}/notes/${noteId}`);
-    const unsubscribe = onSnapshot(
-      ref,
-      (snap) => {
-        const data = snap.data();
-        setRemote({
-          suggestedNoteType: data?.suggestedNoteType as NoteType | undefined,
-          noteTypeConfidence:
-            typeof data?.noteTypeConfidence === 'number' ? data.noteTypeConfidence : undefined,
-          dismissedSuggestions: Array.isArray(data?.dismissedSuggestions)
-            ? (data.dismissedSuggestions as string[])
-            : [],
-        });
-      },
-      (error) => {
-        console.error('[useNoteSuggestions] onSnapshot error', error);
-      },
-    );
-    return unsubscribe;
+    if (!noteId) return;
+    return notesRepo.subscribeSuggestions(noteId, setRemote);
   }, [noteId]);
 
   const [localDismissed, setLocalDismissed] = useState<Set<string>>(new Set());

@@ -17,24 +17,13 @@ vi.mock('@/stores/notesStore', async () => {
   return { notesStore: store };
 });
 
-vi.mock('@/lib/firebase', () => ({
-  auth: { currentUser: { uid: 'test-uid' } as { uid: string } | null },
-  db: {} as object,
-}));
+interface RemoteSnapshot {
+  suggestedNoteType?: string;
+  noteTypeConfidence?: number;
+  dismissedSuggestions: string[];
+}
 
-let onSnapshotEmit: (data: Record<string, unknown> | undefined) => void = () => {};
-
-vi.mock('firebase/firestore', () => ({
-  doc: vi.fn(),
-  onSnapshot: vi.fn(
-    (_ref, cb: (snap: { data: () => Record<string, unknown> | undefined }) => void) => {
-      onSnapshotEmit = (data) => cb({ data: () => data });
-      return () => {
-        onSnapshotEmit = () => {};
-      };
-    },
-  ),
-}));
+let subscribeCallback: (snapshot: RemoteSnapshot) => void = () => {};
 
 const acceptMock = vi.fn();
 const dismissMock = vi.fn();
@@ -43,6 +32,12 @@ vi.mock('@/infra/repos/notesRepo', () => ({
   notesRepo: {
     acceptSuggestion: (...args: unknown[]) => acceptMock(...args),
     dismissSuggestion: (...args: unknown[]) => dismissMock(...args),
+    subscribeSuggestions: vi.fn((_noteId: string, cb: (snapshot: RemoteSnapshot) => void) => {
+      subscribeCallback = cb;
+      return () => {
+        subscribeCallback = () => {};
+      };
+    }),
   },
 }));
 
@@ -53,9 +48,9 @@ function wrapper({ children }: { children: ReactNode }) {
   return <Provider store={notesStore}>{children}</Provider>;
 }
 
-function emitRemote(data: Record<string, unknown> | undefined) {
+function emitRemote(data: RemoteSnapshot) {
   act(() => {
-    onSnapshotEmit(data);
+    subscribeCallback(data);
   });
 }
 
@@ -64,7 +59,7 @@ describe('useNoteSuggestions', () => {
     notesStore.delTable('notes');
     acceptMock.mockReset();
     dismissMock.mockReset();
-    onSnapshotEmit = () => {};
+    subscribeCallback = () => {};
   });
 
   it('vacío: sin AI persistida y sin condiciones heurísticas → []', () => {
