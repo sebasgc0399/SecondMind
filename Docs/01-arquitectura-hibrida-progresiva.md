@@ -1013,7 +1013,7 @@ El sistema funciona si:
 Este doc es arquitectónico/teórico. Los gotchas operativos viven centralizados según la jerarquía del proyecto:
 
 - **Universales** (aplican a cualquier sesión sin importar dominio) → [`CLAUDE.md`](../CLAUDE.md) sección "Gotchas universales".
-- **Por dominio** (aplican a >1 feature del mismo dominio) → [`Spec/ESTADO-ACTUAL.md`](../Spec/ESTADO-ACTUAL.md) sección "Arquitectura y gotchas por dominio".
+- **Por dominio** (aplican a >1 feature del mismo dominio) → índice en [`Spec/ESTADO-ACTUAL.md`](../Spec/ESTADO-ACTUAL.md) sección "Gotchas por dominio (índice)"; canon en [`Spec/gotchas/<dominio>.md`](../Spec/gotchas/) (post-F37 split). Para búsqueda BM25, skill local `gotchas-search`.
 - **Por feature** (historia + decisiones específicas) → [`Spec/features/`](../Spec/features/) y [`Spec/SPEC-fase-*.md`](../Spec/).
 
 Ejemplos prácticos de dónde buscar:

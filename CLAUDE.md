@@ -53,6 +53,7 @@ npm run cap:build    # Build web + sync + gradlew assembleDebug → APK en andro
 - `react-best-practices` — rerender/memo/bundle optimization (reglas SSR-específicas no aplican a Vite)
 - `ui-ux-pro-max` — bases de datos buscables de 50+ estilos, 161 paletas, 57 combinaciones tipográficas, 161 tipos de producto, 99 guidelines UX, 25 tipos de gráfico. Se activa automáticamente en tareas UI/UX. Requiere Python 3 para los scripts internos (search.py usa BM25 + regex)
 - `subagent-orchestration` (user-level, global) — guía la decisión de cuándo delegar a subagentes y cómo. Ver "Delegación a subagentes" abajo para criterios de activación.
+- `gotchas-search` (user-level, CLI on-demand) — búsqueda BM25 sobre el corpus de gotchas técnicos en `Spec/gotchas/<dominio>.md`. Invocación: `python ~/.claude/skills/gotchas-search/search.py <query>`. Auto-reindex al editar gotchas vía PostToolUse hook (matcher separado en `.claude/settings.json`).
 
 ### Delegación a subagentes
 
@@ -109,15 +110,16 @@ Cada feature del proyecto sigue este ciclo. No improvisar: si algo no cuadra, aj
 
 Siete niveles de docs, cada uno con propósito único. **Fuente primaria para estado de features = `Spec/ESTADO-ACTUAL.md`** — siempre arrancar ahí, nunca duplicar su contenido en CLAUDE.md.
 
-| Archivo                              | Contenido                                                                    | Cuándo leer                                       |
-| ------------------------------------ | ---------------------------------------------------------------------------- | ------------------------------------------------- |
-| `CLAUDE.md` (este)                   | Stack, comandos, convenciones, gotchas **universales** (~200 líneas orient.) | Auto-cargado                                      |
-| `Spec/ESTADO-ACTUAL.md`              | Features (1-2 líneas + pointer SPEC), gotchas por dominio, decisiones, deps  | **Fuente primaria** para estado actual. On-demand |
-| `Spec/features/SPEC-feature-*.md`    | Canon histórico por feature. Los gotchas nacen acá                           | Solo si ESTADO-ACTUAL no cubre el detalle         |
-| `Spec/SPEC-fase-*.md`                | Canon histórico por fase                                                     | Solo si ESTADO-ACTUAL no cubre el detalle         |
-| `Spec/drafts/DRAFT-*.md`             | Discovery/brief pre-SPEC temporal. Se elimina al convertirse en SPEC formal  | Solo al convertir un DRAFT a SPEC. No es canon    |
-| `Docs/SETUP-WINDOWS.md`              | Patches one-time de entorno (TS LSP, symlinks, Cargo)                        | Solo onboarding/troubleshooting setup             |
-| `design-system/secondmind/MASTER.md` | Tokens de diseño, paleta, tipografía, anti-patterns                          | Al implementar UI                                 |
+| Archivo                              | Contenido                                                                                                       | Cuándo leer                                                  |
+| ------------------------------------ | --------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------ |
+| `CLAUDE.md` (este)                   | Stack, comandos, convenciones, gotchas **universales** (~200 líneas orient.)                                    | Auto-cargado                                                 |
+| `Spec/ESTADO-ACTUAL.md`              | Features (1-2 líneas + pointer SPEC), índice de gotchas (canon en `gotchas/<dominio>.md`), decisiones, deps     | **Fuente primaria** para estado actual. On-demand            |
+| `Spec/features/SPEC-feature-*.md`    | Canon histórico por feature. Los gotchas nacen acá                                                              | Solo si ESTADO-ACTUAL no cubre el detalle                    |
+| `Spec/gotchas/<dominio>.md`          | Canon de gotchas técnicos por dominio (15 archivos post-F37). Skill `gotchas-search` busca BM25 sobre el corpus | Cuando un anchor del índice apunta acá, o invocando la skill |
+| `Spec/SPEC-fase-*.md`                | Canon histórico por fase                                                                                        | Solo si ESTADO-ACTUAL no cubre el detalle                    |
+| `Spec/drafts/DRAFT-*.md`             | Discovery/brief pre-SPEC temporal. Se elimina al convertirse en SPEC formal                                     | Solo al convertir un DRAFT a SPEC. No es canon               |
+| `Docs/SETUP-WINDOWS.md`              | Patches one-time de entorno (TS LSP, symlinks, Cargo)                                                           | Solo onboarding/troubleshooting setup                        |
+| `design-system/secondmind/MASTER.md` | Tokens de diseño, paleta, tipografía, anti-patterns                                                             | Al implementar UI                                            |
 
 Docs teóricos en `Docs/00-04-*.md` — leer **solo el que aplique** a la tarea, nunca los 4 a la vez. **Antes de escribir código nuevo, siempre consultar `01` (schemas Firestore) y `03` (convenciones de código)**:
 
@@ -129,7 +131,7 @@ Docs teóricos en `Docs/00-04-*.md` — leer **solo el que aplique** a la tarea,
 | `Docs/03-convenciones-y-patrones.md`         | Naming, patrones TinyBase, TypeScript, Tailwind, errores, Git, Cloud Functions            |
 | `Docs/04-clean-architecture-frontend.md`     | Clean Architecture en 4 capas, factory repos F10, excepciones (auth, lectura MVP)         |
 
-**Escalación de gotchas al cerrar feature** (step 8 del SDD): nacen en SPEC → suben a ESTADO-ACTUAL si aplican a >1 feature → suben a CLAUDE.md si aplican a toda sesión sin importar dominio. **Nunca duplicar entre niveles** — al subir un gotcha, eliminarlo del nivel anterior. Techos (200 / 300 líneas) son orientativos: el criterio es "¿aplica a este nivel?", no `wc -l`.
+**Escalación de gotchas al cerrar feature** (step 8 del SDD): nacen en SPEC → suben a `Spec/gotchas/<dominio>.md` (canon; indexado en ESTADO-ACTUAL) si aplican a >1 feature → suben a CLAUDE.md si aplican a toda sesión sin importar dominio. **Nunca duplicar entre niveles** — al subir un gotcha, eliminarlo del nivel anterior. Techos (200 / 300 líneas) son orientativos: el criterio es "¿aplica a este nivel?", no `wc -l`.
 
 ### Handoff entre ventanas
 
@@ -243,7 +245,7 @@ src/
 
 ## Gotchas universales
 
-Aplican a cualquier sesión sin importar la feature. Gotchas de dominio específico → `Spec/ESTADO-ACTUAL.md`.
+Aplican a cualquier sesión sin importar la feature. Gotchas de dominio específico → índice en `Spec/ESTADO-ACTUAL.md` § "Gotchas por dominio (índice)", canon en `Spec/gotchas/<dominio>.md` (post-F37). Para búsqueda BM25 on-demand, skill `gotchas-search`.
 
 - **Tailwind v4 CSS-first.** No existe `tailwind.config.ts`. Agregar tokens o custom utilities directamente en `src/index.css` bajo `@theme inline { ... }`. Los docs de Tailwind v3 no aplican para la API de configuración.
 - **ESLint flat config.** El proyecto usa `eslint.config.js` (formato flat de ESLint 9), no `.eslintrc.cjs`. Plugins/reglas en sintaxis flat (`defineConfig([...])`, no `module.exports = { extends: [...] }`). `src/components/ui/` está excluido del linting (archivos auto-generados por shadcn).
