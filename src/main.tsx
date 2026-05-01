@@ -7,6 +7,7 @@ import router from '@/app/router';
 import TauriIntegration from '@/app/TauriIntegration';
 import { isCapacitor } from '@/lib/capacitor';
 import { initCapacitorAuth } from '@/lib/capacitorAuth';
+import { migrateTinyBaseSchemaIfNeeded } from '@/lib/tinybase';
 import { notesStore } from '@/stores/notesStore';
 import { linksStore } from '@/stores/linksStore';
 import { inboxStore } from '@/stores/inboxStore';
@@ -22,6 +23,19 @@ if (isCapacitor()) {
   });
   void SplashScreen.hide().catch(() => {});
 }
+
+// F36.F8: invalidar cache TinyBase si bumpeamos el schema en código.
+// Debe correr antes de createRoot/Provider/persisters porque delTables con
+// persister activo dispararía race con el snapshot in-flight (D-F8.2).
+migrateTinyBaseSchemaIfNeeded([
+  notesStore,
+  linksStore,
+  inboxStore,
+  tasksStore,
+  projectsStore,
+  objectivesStore,
+  habitsStore,
+]);
 
 // notesStore es el store default del Provider (acceso sin storeId).
 // Los demás stores se acceden con storeId en los hooks reactivos,
