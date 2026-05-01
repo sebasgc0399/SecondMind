@@ -1,5 +1,6 @@
 mod oauth;
 mod tray;
+mod version_check;
 
 use tauri::Manager;
 
@@ -28,13 +29,25 @@ pub fn run() {
         .plugin(tauri_plugin_dialog::init())
         .invoke_handler(tauri::generate_handler![oauth::start_oauth_listener])
         .setup(|app| {
-            if cfg!(debug_assertions) {
-                app.handle().plugin(
-                    tauri_plugin_log::Builder::default()
-                        .level(log::LevelFilter::Info)
-                        .build(),
-                )?;
-            }
+            // Logger registrado unconditional (F7.1 A2). En release usamos Warn
+            // para mantener el log file pequeño pero capturar eventos críticos
+            // como las decisiones de version_check (filesystem vs nuclear).
+            let log_level = if cfg!(debug_assertions) {
+                log::LevelFilter::Info
+            } else {
+                log::LevelFilter::Warn
+            };
+            app.handle().plugin(
+                tauri_plugin_log::Builder::default()
+                    .level(log_level)
+                    .build(),
+            )?;
+
+            // F7.1 — version check + cache purge ANTES de tray/shortcuts/devtools.
+            // Resuelve chicken-and-egg con SW residual interceptando tauri.localhost/.
+            // No-fallible: errores se loggean, la app arranca normalmente.
+            version_check::run(app.handle());
+
             tray::build(app.handle())?;
 
             // Global shortcut registrado Rust-side (movido desde JS en fix post-F7).
