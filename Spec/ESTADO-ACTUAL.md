@@ -109,6 +109,7 @@ Cada feature comprimida a 1 línea con pointer al SPEC archivado. Para detalles 
 - [Links bidireccionales con IDs determinísticos](gotchas/relaciones-entidades.md#links-bidireccionales-con-ids-determinísticos)
 - [ID determinístico `YYYY-MM-DD` para hábitos](gotchas/relaciones-entidades.md#id-determinístico-yyyy-mm-dd-para-hábitos)
 - [`useBacklinks` auto-refresca `sourceTitle`](gotchas/relaciones-entidades.md#usebacklinks-auto-refresca-sourcetitle)
+- [Orquestador cross-entity toca stores directo, no via repo (post-F38.1)](gotchas/relaciones-entidades.md#orquestador-cross-entity-toca-stores-directo-no-via-repo-post-f381)
 
 ### Editor (TipTap) — [`gotchas/editor-tiptap.md`](gotchas/editor-tiptap.md)
 

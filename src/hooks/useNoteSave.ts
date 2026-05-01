@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore
 import { notesRepo } from '@/infra/repos/notesRepo';
 import { extractLinks } from '@/lib/editor/extractLinks';
 import { computeDistillLevel } from '@/lib/editor/computeDistillLevel';
-import { syncLinks } from '@/lib/editor/syncLinks';
+import { syncLinksFromEditor } from '@/infra/syncLinksFromEditor';
 import { saveContentQueue } from '@/lib/saveQueue';
 import useAuth from '@/hooks/useAuth';
 import type { QueueStatus } from '@/lib/saveQueue';
@@ -125,7 +125,7 @@ export default function useNoteSave(
 
     try {
       const extracted = extractLinks(json);
-      const { outgoingLinkIds, linkCount } = await syncLinks({
+      const { outgoingLinkIds, linkCount } = await syncLinksFromEditor({
         sourceId: currentNoteId,
         sourceTitle: title,
         userId: currentUid,
