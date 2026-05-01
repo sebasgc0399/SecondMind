@@ -1,484 +1,65 @@
-# SPEC — Feature 36: Cache stale cross-platform + flujo de update sin intervención manual
+# SPEC — Feature 36: Cache stale + flujo de update sin intervención manual (Registro de implementación)
 
-> Alcance: Eliminar el ciclo "deploy → bundle viejo persistido → workaround manual (Ctrl+Shift+R / borrar datos)" en hosting web, Tauri desktop y Capacitor Android.
-> Dependencias: F8 (Tauri auto-updater), F9 (Capacitor auto-update), F28-F30 (retry queues in-memory).
-> Estimado: 2-3 sesiones.
-> Stack relevante: `vite-plugin-pwa@^1.2.0`, Firebase Hosting, Tauri@2 + WebView2, Capacitor@8 + Android WebView, Sentry, TinyBase persister, `preferences.ts`, `saveQueue.ts`.
-> DRAFT origen: `Spec/drafts/DRAFT-cache-stale-update-flow.md` (eliminar al merge).
-
----
+> Estado: Completada Mayo 2026 — release v0.2.6
+> Commits: F1 `78c9d4a` (cache headers `firebase.json`), F2 `06ff621` (PWA `registerType: 'prompt'`), F3 `41da49c` (`<UpdateBanner />` + `useSwUpdate`), F4 `439181a` (flush-before-reload), F7 `7067c56` (`useVersionCheck` JS hook), F7.1 `07155ee` (`version_check.rs` Rust nuclear) + `eafdddd` (tray Recargar), F8 `31653b6` (TinyBase schema version) + `73d8d4c` (preferences schema version), F9.A `2407e25` (cleanup filesystem purge), F9.B-hotfix `6217da6` (fix CI `VITE_GOOGLE_OAUTH_*`).
+> Releases asociados: v0.2.2 `f0ea2a6` (fase B), v0.2.3 `af5cf47` (F7), v0.2.4 `1d8851e` (F7.1), v0.2.5 `d7ded88` (F8 + F9.A), v0.2.6 `8b56353` (hotfix).
+> Gotchas operativos vigentes → `Spec/ESTADO-ACTUAL.md` (secciones Tauri Desktop, Auto-Updater + Releases, TinyBase + Firestore sync).
 
 ## Objetivo
 
-Tras un deploy a Hosting (sólo web) o un release nuevo de desktop/Android, las versiones instaladas hoy siguen sirviendo el bundle anterior hasta que el usuario fuerza hard-reload o borra datos del OS. Síntoma observado: "no me permite crear ideas" sin error visible. Esta feature ataca cinco capas independientes que se manifiestan como un único fallo: PWA SW mal configurado, CDN sin cache headers, WebView storage no purgado en native update, schema sin versionado, y cero observabilidad runtime en mobile/desktop instalado.
-
-Al cerrar F36, un deploy nuevo se propaga en menos de una hora a clientes web/PWA con prompt visible al usuario, y un release nativo (MSI/NSIS/APK) llega con SW limpio y storage compatible con el bundle nuevo. Cualquier error runtime en cliente — incluso en producción mobile — es diagnosticable sin reproducción local.
-
----
-
-## Disparador
-
-Sebastián reporta que tras cualquier update (a) Ctrl+Shift+R en desktop, (b) borrar caché y datos en celular son los pasos manuales para desbloquearse. Cuando no los hace, "no me permite crear ideas" — falla silencioso, sin mensaje. Sin observabilidad cliente la hipótesis no se confirma; lo más probable según mapeo del repo: el SW viejo sirve un bundle JS desactualizado contra un endpoint Cloud Function (probable `processInboxItem` post-F26 que cambió `aiConfidence`/`aiPriority` shape) cuyo schema input/output cambió. Confirmar requiere F5-F6 (observabilidad) implementadas primero.
-
----
-
-## Decisiones cerradas
-
-### D1 — Sentry-only en MVP
-
-`@sentry/react` cubre web + Tauri (renderer JS) + Capacitor (WebView JS) con un único SDK. Crashlytics for Web sigue en beta perpetua y aporta cobertura redundante para >80% de los crashes (que son JS, no nativos). Si post-deploy Crashlytics nativo se justifica para crashes del WebView Android que no llegan al SDK JS, agregar en feature posterior.
-
-**Tradeoff:** Free tier Sentry (5k events/mes) suficiente para single-user; SaaS implica que stack traces salen del entorno local. Aceptable.
-
-### D2 — Purge-on-mismatch en schema versioning
-
-Detectar mismatch entre `SCHEMA_VERSION` actual y persistido → descartar storage local → rehidratar desde Firestore. Migración real (función `migrate(oldData, oldV, newV)` por bump) escalable post-MVP si hay reporte de pérdida de datos.
-
-**Tradeoff:** Pierde estado offline en momento del bump. Mitigado parcialmente por F4 (flush queues antes de purge si online; si offline → diferir purga con banner "Datos en migración, conectate a internet").
-
-### D3 — Banner update web sin auto-aplicar
-
-`updateSW(true)` solo dispara con click explícito del usuario. Banner sticky no-dismissible hasta que el user accione. NO auto-aplicar tras N segundos: puede romper trabajo en progreso (typing, inbox-batch processing).
-
-### D4 — Un solo SPEC con cinco fases internas
-
-Las cinco capas comparten root cause ("deploy nuevo no se propaga") y dependencias bidireccionales (Sentry confirma hipótesis del schema; flush-before-reload conecta SW + saveQueue; useVersionCheck reusa `getVersion` de F8/F9). Splitear en SPECs separados pierde contexto inter-fase.
-
-### D5 — Numeración F36
-
-F35 cerrada (último entry de ESTADO-ACTUAL). F25 ausente del listado pero no impacta el siguiente número.
-
-### D6 — saveQueue NO requiere SCHEMA_VERSION
-
-Corrección al DRAFT §4.4: `saveQueue.ts` es un `Map<string, QueueEntry>` puramente in-memory sin persistencia a disco (verificado en `saveQueue.ts:63`). F28 mitiga pérdida con `beforeunload` flush + `online` recovery, pero entre versiones de app no hay rows persistidos que rompan hidratación. F8 schema versioning aplica solo a TinyBase persister + preferences.
-
-### D7 — Riesgo de schema mismatch es semántico, no syntactic
-
-TinyBase v8 muta rows al `setRow` quitando campos no-en-schema, y al hidratar inicializa con defaults del schema (`''`, `0`, `false`). Crashes runtime tipo `Cannot read property 'X' of undefined` son raros; lo común es **valor desconocido** (ej: F26 agregó `aiConfidence: number` y status nuevo `'high-confidence'` que cliente viejo no sabe interpretar). F8 sigue justificándose por consistencia semántica.
-
----
-
-## Features
-
-### Fase A — CDN cache headers
-
-#### F1: Headers explícitos en `firebase.json`
-
-**Qué:** Separar caching long-term de assets con hash (`assets/index-abc123.js`) del navegacional (`index.html`, `sw.js`, `manifest.webmanifest`) que siempre debe ser fresh.
-
-**Criterio de done:**
-
-- [ ] `curl -I https://secondmind.web.app/index.html` devuelve `Cache-Control: no-cache, no-store, must-revalidate`.
-- [ ] `curl -I https://secondmind.web.app/assets/<algun-hash>.js` devuelve `Cache-Control: public, max-age=31536000, immutable`.
-- [ ] `curl -I https://secondmind.web.app/sw.js` devuelve `Cache-Control: no-cache, no-store, must-revalidate`.
-- [ ] Deploy a hosting con `npm run deploy` exitoso, sin warnings.
-
-**Archivos:**
-
-- `firebase.json` — agregar sección `headers` dentro de `hosting` (entre `rewrites` y el cierre del bloque).
-
-**Snippet (estructura objetivo):**
-
-```json
-"hosting": {
-  "site": "secondmind",
-  "public": "dist",
-  "ignore": ["firebase.json", "**/.*", "**/node_modules/**"],
-  "rewrites": [{ "source": "**", "destination": "/index.html" }],
-  "headers": [
-    { "source": "**/*.@(js|css|woff2|woff|ttf|otf)", "headers": [{ "key": "Cache-Control", "value": "public, max-age=31536000, immutable" }] },
-    { "source": "**/*.@(png|jpg|jpeg|svg|ico|webp)", "headers": [{ "key": "Cache-Control", "value": "public, max-age=86400" }] },
-    { "source": "/index.html", "headers": [{ "key": "Cache-Control", "value": "no-cache, no-store, must-revalidate" }] },
-    { "source": "/sw.js", "headers": [{ "key": "Cache-Control", "value": "no-cache, no-store, must-revalidate" }] },
-    { "source": "/manifest.webmanifest", "headers": [{ "key": "Cache-Control", "value": "no-cache" }] }
-  ]
-}
-```
-
-**Notas:** Assets con hash son safe a cachear forever — el filename cambia cuando cambia el contenido. `index.html` es el único entry point que el browser pide siempre con el mismo nombre, así que tiene que ser fresh para descubrir nuevos hashes.
-
----
-
-### Fase B — PWA Service Worker con update prompt
-
-#### F2: `vite-plugin-pwa` `registerType: 'prompt'` + workbox sin `skipWaiting`
-
-**Qué:** Cambiar de `autoUpdate` (que registra el SW pero no expone UI) a `prompt` (expone callbacks `onNeedRefresh` / `onOfflineReady` para que el cliente decida cuándo aplicar).
-
-**Criterio de done:**
-
-- [ ] `vite.config.ts` con `registerType: 'prompt'`, `workbox.skipWaiting: false`, `workbox.clientsClaim: false` explícitos.
-- [ ] Build pasa (`npm run build` sin errores).
-- [ ] Inspector → Application → Service Workers muestra el SW en estado `waiting` tras un deploy nuevo (no `activated` automáticamente).
-
-**Archivos:**
-
-- `vite.config.ts` — modificar el block `VitePWA({ ... })`.
-
-**Snippet:**
-
-```ts
-VitePWA({
-  registerType: 'prompt', // antes: 'autoUpdate'
-  // ... manifest, includeAssets ...
-  workbox: {
-    globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
-    maximumFileSizeToCacheInBytes: 4 * 1024 * 1024,
-    navigateFallback: 'index.html',
-    navigateFallbackDenylist: [/^\/api/, /^\/__\//],
-    skipWaiting: false,
-    clientsClaim: false,
-    runtimeCaching: [
-      /* ... google fonts intacto ... */
-    ],
-  },
-});
-```
-
-#### F3: `registerSW()` en `main.tsx` + `<UpdateBanner />` + polling cada hora
-
-**Qué:** Suscribirse a los callbacks del plugin para detectar SW `waiting`, exponer un componente UI (banner sticky-top) que invita al user a actualizar, y disparar `r.update()` cada hora para apps que el user mantiene abiertas días.
-
-**Criterio de done:**
-
-- [ ] Tras deploy nuevo, banner aparece dentro de los 60s (tiempo del próximo polling tick) o al recargar la pestaña.
-- [ ] Click "Actualizar ahora" dispara `updateSW(true)` → SW promueve a `active` → reload automático.
-- [ ] Click NO dispara reload si hay writes pendientes en queues — bloqueado/diferido por F4.
-- [ ] Banner NO se cierra ni se oculta sin acción del user (sticky no-dismissible).
-
-**Archivos:**
-
-- `src/main.tsx` — agregar `registerSW({ onNeedRefresh, onOfflineReady, onRegisteredSW })` antes del `createRoot`.
-- `src/components/layout/UpdateBanner.tsx` — nuevo componente. Sigue patrón shell de `TopBar.tsx` (full-width fixed, theming via `bg-background border-border text-foreground`).
-- `src/hooks/useSwUpdate.ts` — nuevo hook que expone `{ needRefresh: boolean, applyUpdate: () => void }` para que `<UpdateBanner />` consuma estado reactivo (el plugin emite via callback, hay que adaptar a useSyncExternalStore o useState + setter).
-- `src/app/layout.tsx` — montar `<UpdateBanner />` en el shell global (sobre `<TopBar />` o como header del `<main>`).
-
-**Snippet `main.tsx`:**
-
-```ts
-import { registerSW } from 'virtual:pwa-register';
-import { setSwUpdateAvailable, setApplyUpdate } from '@/hooks/useSwUpdate';
-
-const updateSW = registerSW({
-  onNeedRefresh() {
-    setSwUpdateAvailable(true);
-  },
-  onOfflineReady() {
-    // toast "Listo para usar offline" — opcional MVP
-  },
-  onRegisteredSW(_url, r) {
-    if (!r) return;
-    setInterval(() => r.update(), 60 * 60 * 1000); // 1h
-  },
-});
-
-setApplyUpdate(() => updateSW(true));
-```
-
-**Notas:** El plugin emite callbacks, no observable. Patrón propuesto: hook `useSwUpdate` con un módulo-level `let updateAvailable = false; const subscribers = new Set()` (mismo patrón que `useOnlineStatus`). El `setApplyUpdate` permite que F4 envuelva la función con flush-before-reload.
-
-#### F4: Handshake flush-before-reload contra `saveQueue` (adición F36)
-
-**Qué:** Antes de que `updateSW(true)` dispare reload, ejecutar `flushAll()` sobre los 11 queues exportados en `saveQueue.ts:415` (`allQueues`). Sin esto, cualquier write pendiente in-memory se pierde silenciosamente al reload.
-
-**Criterio de done:**
-
-- [ ] Click "Actualizar ahora" con `usePendingSyncCount > 0` muestra estado "Sincronizando antes de actualizar…" en el banner y bloquea el botón hasta `flushAll` resuelva.
-- [ ] Si todos los flushes resuelven con `'synced'`, dispara reload automático.
-- [ ] Si algún flush resuelve con `'failed'`, banner cambia a "Algunos cambios no se sincronizaron — [Reintentar / Actualizar igual / Cancelar]".
-- [ ] Sin entries pendientes: comportamiento idéntico a F3 (reload directo).
-
-**Archivos:**
-
-- `src/components/layout/UpdateBanner.tsx` — extender estados de UI.
-- `src/hooks/useSwUpdate.ts` — `applyUpdate()` espera flush antes de invocar el `updateSW(true)` del plugin.
-- `src/lib/saveQueue.ts` — sin cambios (`allQueues` y `flushAll` ya están).
-
-**Notas:** `flushAll` retorna `Map<string, 'synced' | 'failed'>`. Iterar sobre `allQueues`, hacer `Promise.all(queue.flushAll())`, agregar resultados. UI distingue tres estados: `idle` → `flushing` → (`success` → reload | `partial-failure` → choice).
-
----
-
-### Fase E — Observabilidad
-
-#### F5: Sentry `@sentry/react` + `<ErrorBoundary>` global + DSN env
-
-**Qué:** Instalar `@sentry/react`, inicializar en `main.tsx` con DSN desde `import.meta.env.VITE_SENTRY_DSN`, montar `<Sentry.ErrorBoundary>` envolviendo `<RouterProvider>` con fallback UI mínimo. Tag `release` con la versión del bundle.
-
-**Criterio de done:**
-
-- [ ] Crear cuenta Sentry + proyecto "secondmind" + obtener DSN. Documentar en `.env.example` con comentario de cómo obtenerlo.
-- [ ] `main.tsx` inicializa Sentry antes del `createRoot`.
-- [ ] Throw artificial en una ruta de prueba dispara captura en Sentry dashboard dentro de 60s.
-- [ ] React errors atrapados por ErrorBoundary muestran fallback UI ("Algo salió mal — [Reintentar]") y reportan a Sentry con component stack.
-- [ ] Errores `unhandledrejection` y `window.onerror` capturados automáticamente por el SDK.
-
-**Archivos:**
-
-- `src/lib/sentry.ts` — config + `initSentry()` exportado.
-- `src/main.tsx` — llamar `initSentry()` antes del primer render. Envolver `<RouterProvider>` con `<Sentry.ErrorBoundary fallback={...}>`.
-- `src/components/layout/ErrorFallback.tsx` — UI minimalista para el fallback (botón "Reintentar" hace `window.location.reload()`).
-- `.env.example` — agregar `VITE_SENTRY_DSN=`.
-- Plataformas: el mismo init aplica a web, Tauri renderer y Capacitor WebView (todos cargan `main.tsx`).
-
-**Snippet `sentry.ts`:**
-
-```ts
-import * as Sentry from '@sentry/react';
-
-export function initSentry() {
-  const dsn = import.meta.env.VITE_SENTRY_DSN;
-  if (!dsn) return;
-  Sentry.init({
-    dsn,
-    release: import.meta.env.VITE_APP_VERSION ?? 'unknown',
-    environment: import.meta.env.DEV ? 'development' : 'production',
-    integrations: [Sentry.browserTracingIntegration()],
-    tracesSampleRate: 0, // perf desactivado en MVP
-  });
-}
-```
-
-**Notas:** `VITE_APP_VERSION` se inyecta via `vite.config.ts` desde `package.json:version` (patrón estándar). Verificar que el `release` matchea exactamente con el tag de source map upload (F6).
-
-#### F6: CI source maps upload + release tag
-
-**Qué:** Step en `.github/workflows/release.yml` (existente, agregado por F8) para subir source maps a Sentry usando `@sentry/cli` o `@sentry/wizard`. Sin esto los stack traces son ofuscados.
-
-**Criterio de done:**
-
-- [ ] Tag `release` en Sentry matchea con `tauri.conf.json:version` y `package.json:version`.
-- [ ] Errors de un build de producción muestran código fuente legible en Sentry dashboard (no minificado).
-- [ ] CI no falla si la upload falla (continue-on-error) — el deploy sigue, solo se pierde la legibilidad del trace.
-
-**Archivos:**
-
-- `.github/workflows/release.yml` — agregar step `Upload sourcemaps to Sentry` después del `npm run build`.
-- Secrets GitHub: `SENTRY_AUTH_TOKEN`, `SENTRY_ORG`, `SENTRY_PROJECT`. Documentar en `Spec/features/SPEC-feature-36-cache-stale-update-flow.md` mismo (cierre).
-
-**Snippet workflow:**
-
-```yaml
-- name: Upload sourcemaps to Sentry
-  if: env.SENTRY_AUTH_TOKEN != ''
-  continue-on-error: true
-  run: |
-    npx @sentry/cli releases new $VERSION
-    npx @sentry/cli releases files $VERSION upload-sourcemaps ./dist --rewrite
-    npx @sentry/cli releases finalize $VERSION
-  env:
-    SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
-    SENTRY_ORG: ${{ secrets.SENTRY_ORG }}
-    SENTRY_PROJECT: ${{ secrets.SENTRY_PROJECT }}
-    VERSION: ${{ github.ref_name }}
-```
-
----
-
-### Fase C — Purga WebView nativa
-
-#### F7: `useVersionCheck` hook + SW unregister en boot (Tauri + Capacitor)
-
-**Qué:** Hook que en el primer mount detecta version mismatch entre la version del bundle actual (`import.meta.env.VITE_APP_VERSION`) y la "última versión observada" guardada en storage que sobrevive a la purga (Tauri: `@tauri-apps/plugin-store`; Capacitor: `@capacitor/preferences`; web/PWA: skip — el SW prompt de F3 ya cubre). En mismatch: `navigator.serviceWorker.getRegistrations()` + `.unregister()` + reload una vez. Preserva IndexedDB y localStorage (donde vive saveQueue offline / preferences hint).
-
-**Criterio de done:**
-
-- [ ] Instalar v0.X.0 desktop. Cortar v0.X.1 con auto-update tag. Update se descarga, app reinicia. Boot detecta mismatch, unregistra SW, recarga, app arranca con bundle nuevo sin Ctrl+Shift+R.
-- [ ] Mismo escenario en Android (APK Firebase App Distribution).
-- [ ] PWA web: hook NO ejecuta (detección via `if (isCapacitor() || isTauri()) return`); banner de F3 maneja el flujo.
-- [ ] localStorage `secondmind:sidebarHidden:` (hint anti-flash F32.4) sobrevive el reload.
-- [ ] Si el user está offline en momento del mismatch: hook detecta y skip purga; banner global muestra "Datos en migración, conectate a internet".
-
-**Archivos:**
-
-- `src/hooks/useVersionCheck.ts` — nuevo hook, ejecuta una vez al mount del shell layout.
-- `src/lib/platformVersion.ts` — abstracción `getInstalledVersion()` y `setLastSeenVersion(v)` que delega a Tauri Store o Capacitor Preferences según `isTauri()` / `isCapacitor()`.
-- `src/app/layout.tsx` — invoke `useVersionCheck()` en el top-level del Layout (después de `useAuth`, antes de cualquier render que dependa de TinyBase).
-- `package.json` — `npm i @tauri-apps/plugin-store` (si no está) y verificar `@capacitor/preferences` (probablemente ya transitiva, validar).
-
-**Snippet `useVersionCheck.ts` (esqueleto):**
-
-```ts
-export function useVersionCheck() {
-  useEffect(() => {
-    void (async () => {
-      if (!isTauri() && !isCapacitor()) return;
-      const current = import.meta.env.VITE_APP_VERSION;
-      const lastSeen = await getInstalledVersion();
-      if (lastSeen === current) return;
-      // Mismatch: purga SW, marca version, reload
-      if (!navigator.onLine) {
-        showOfflineMigrationBanner();
-        return;
-      }
-      const regs = await navigator.serviceWorker.getRegistrations();
-      await Promise.all(regs.map((r) => r.unregister()));
-      await setLastSeenVersion(current);
-      window.location.reload();
-    })();
-  }, []);
-}
-```
-
-**Notas:** El check ocurre ANTES del init de TinyBase / Firebase para evitar que el SDK intente hidratar contra IndexedDB potencialmente incompat. Si llamamos al hook adentro de Layout y Layout es child del Provider en main.tsx, ya hubo init — pero la purga del SW no toca IndexedDB, solo SW registrations, así que no hay conflicto. Validar comportamiento con SW purgado mid-session.
-
-#### F7.1 (post-merge addendum): purga Rust-side ante chicken-and-egg
-
-**Bug post-F7 (v0.2.2 → v0.2.3 Tauri Desktop):** SW residual (workbox `skipWaiting: true` pre-F36 fase B) intercepta el navigate del WebView a `tauri.localhost/` y sirve `index.html` cacheado del bundle viejo. El hook JS de F7 queda inalcanzable porque vive en el bundle nuevo que el SW viejo no sirve. Detección + purga obligatoriamente Rust-side, antes del WebView load.
-
-**Implementación (commit 19b2b99, v0.2.4):** `src-tauri/src/version_check.rs` — Approach C+A fallback. (1) Filesystem purge sobre `EBWebView/Default/Service Worker/` (Windows-only, granular, preserva IndexedDB). (2) Fallback a `WebviewWindow::clear_all_browsing_data()` (nuclear, cross-platform) si el filesystem purge falla. Marca de version persistida en `app_local_data_dir()/version.txt` (no localStorage que vive dentro del WebView). Telemetría doble: framework `log::warn!` (a `logs/SecondMind.log`) + append a `purge.log` en `app_local_data_dir()` como defense in depth. Logger Tauri registrado unconditional (Warn release / Info debug) para visibilidad en producción.
-
-**D-F7.1.5:** tray item "Recargar app" (`src-tauri/src/tray.rs`) como escape manual permanente para cualquier futuro cache stale.
-
-**QA E2E (commit 19b2b99):** el filesystem purge SIEMPRE cae al fallback nuclear en producción — msedgewebview2 mantiene file locks activos durante el setup callback (`PermissionDenied (32)`), incluso tras `taskkill` previo. Bug resuelto vía nuclear con trade-off de re-login Firebase + resync TinyBase desde Firestore una vez por update.
-
-**Plan completo:** `~/.claude/plans/version-check-rust-clear-cache.md`.
-
----
-
-### Fase D — Schema versioning
-
-#### F8: `SCHEMA_VERSION` en TinyBase persister + preferences + purge-on-mismatch
-
-**Qué:** Constante `SCHEMA_VERSION = 1` en `tinybase.ts` y `preferences.ts`. Al hidratar, leer la versión guardada (en un campo del row del schema, o en localStorage como bandera global). Si mismatch con la del bundle: descartar el storage local de esa entidad y rehidratar desde Firestore. Versionado independiente por capa (TinyBase rows vs preferences) para que un bump en una no fuerce purga en la otra.
-
-**Criterio de done:**
-
-- [x] `tinybase.ts` exporta `TINYBASE_SCHEMA_VERSION = 1`. Versión persistida en localStorage `secondmind:tinybase:schemaVersion` (no sentinel TinyBase — Firestore es source of truth, no se le aplica versionado).
-- [x] `preferences.ts` exporta `PREFERENCES_SCHEMA_VERSION = 1`. `parsePrefs` rechaza prefs con `_schemaVersion` presente y distinto de current devolviendo `DEFAULT_PREFERENCES`. **Treatment de `_schemaVersion` ausente como compat V1** (D-F8.1) — divergencia consciente del literal del SPEC: cohorte v0.2.4 actual no tiene el campo, deploy F8 NO debe resetear sus prefs (zero data loss).
-- [ ] Bump artificial (cambiar a 2) en dev → app borra cache local TinyBase + re-hidrata desde Firestore → rows visibles tras 1-2s. **Pendiente QA manual.**
-- [ ] Bump artificial de prefs schema → preferencias vuelven a defaults sin error visible. **Pendiente QA manual.**
-- [x] Documentar en `Spec/ESTADO-ACTUAL.md` sección "TinyBase + Firestore sync" (contenido completo) + línea-pointer corta en `CLAUDE.md` "Gotchas universales" (D-F8.7).
-
-**Archivos:**
-
-- `src/lib/tinybase.ts` — `TINYBASE_SCHEMA_VERSION` + `migrateTinyBaseSchemaIfNeeded(stores)`.
-- `src/main.tsx` — invoca `migrateTinyBaseSchemaIfNeeded` con los 7 stores ANTES de `createRoot()` (D-F8.2).
-- `src/lib/preferences.ts` — `PREFERENCES_SCHEMA_VERSION` + guard en `parsePrefs` + inyección `_schemaVersion` en `setPreferences` y `markDistillBannerSeen` (ambas ramas: updateDoc + fallback setDoc).
-- `src/lib/tinybase.schemaVersion.test.ts` — **NUEVO** 5 tests con `// @vitest-environment jsdom` (env global es node).
-- `src/lib/preferences.test.ts` — extendido con 6 nuevos tests (parsePrefs schema versioning + setPreferences) + 3 modificados de markDistillBannerSeen para reflejar inyección.
-- `Spec/ESTADO-ACTUAL.md` — gotcha completo en sección "TinyBase + Firestore sync".
-- `CLAUDE.md` — línea-pointer en "Gotchas universales".
-
-**Notas:** Para TinyBase, el patrón canónico es guardar la versión en localStorage (no en Firestore) porque Firestore es la fuente de verdad — no se le aplica versionado, solo al cache local. La purga consiste en `store.delTables()` (vs el `delTable(name)` original — más conciso, una sola transacción interna) + `localStorage.setItem`. El persister naturalmente re-hidrata desde Firestore en el siguiente `startAutoLoad`.
-
-#### F8.1 (post-merge addendum): decisiones de implementación
-
-**Decisiones aprobadas (validadas con Plan agent F8):**
-
-| ID         | Decisión                                                                                                                             | Rationale                                                                                                                                                                         |
-| ---------- | ------------------------------------------------------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **D-F8.1** | Treatment asimétrico de "ausente": TinyBase localStorage `null` = mismatch (purge); preferences `_schemaVersion` ausente = compat V1 | TinyBase resyncea desde Firestore (zero data loss); preferences es la fuente de verdad — purgar = pérdida real de UX. Cohorte v0.2.4 actual no tiene `_schemaVersion`             |
-| **D-F8.2** | `migrateTinyBaseSchemaIfNeeded` invocado en `main.tsx` ANTES de `createRoot()`, NO en `useStoreInit`                                 | Garantiza correr antes de cualquier `startAutoLoad`. Evita race con persister activo (`delTables` mid-snapshot). Corre exactamente 1 vez por sesión sin guard module-level        |
-| **D-F8.3** | Versionado independiente TinyBase ↔ preferences                                                                                      | Bump en una NO fuerza purga de la otra. Bytes mínimos en preferences; semántica clara                                                                                             |
-| **D-F8.4** | `_schemaVersion` en preferences = marker del cliente que persistió, NO del shape                                                     | Se inyecta en cada `setPreferences`/`markDistillBannerSeen`. Multi-window race aceptada (F36.F2 + auto-update minimizan ventana). NO implementar transacción ni read-before-write |
-| **D-F8.5** | Naming `migrateTinyBaseSchemaIfNeeded(stores): boolean`                                                                              | `assert` sugiere throw; la función purga side-effecting. Boolean facilita logging futuro                                                                                          |
-| **D-F8.6** | Guard estricto `schemaV != null && schemaV !== current` en parsePrefs                                                                | Cubre `_schemaVersion: '1'` (string), `_schemaVersion: true`, etc. Cualquier valor presente DEBE matchear                                                                         |
-| **D-F8.7** | Doc primario en ESTADO-ACTUAL + línea-pointer en CLAUDE.md                                                                           | SPEC F8 lo pidió en CLAUDE.md; bumpear SCHEMA_VERSION es regla que Claude Code debe tener presente en cualquier feature futura que toque stores. NO duplicar contenido            |
-
-**Riesgos documentados (no críticos para v1):**
-
-1. TinyBase v8 muta rows al setRow — F8 introduce el trigger (delTables + reload). Para changes de tipo de cell, escribir job de migración ANTES del bump (no solo bumpear).
-2. Hint anti-flash `secondmind:sidebarHidden:{uid}` permanece tras bump prefs → flash 1-2 ticks pre-snapshot. Aceptado.
-3. Private mode: cada boot full resync (~1-2s extra). UX OK.
-4. F7.1 nuclear interaction: doble-purga inocua confirmada.
-
-**Plan completo:** `~/.claude/plans/valiant-percolating-chipmunk.md`.
-
----
-
-### Validación end-to-end
-
-#### F9: E2E full update cycle
-
-**Qué:** Test manual + scripted que valida el ciclo completo "deploy → user observa update banner → click → app actualizada sin pérdida de datos".
-
-**Criterio de done:**
-
-- [ ] **Web:** abrir `https://secondmind.web.app` con devtools, `Application > Service Workers > Update on reload` desactivado. Hacer un cambio dummy + deploy. En el browser viejo: dentro de 1h aparece banner "Hay versión nueva". Click → app actualizada. localStorage + IndexedDB intactos.
-- [ ] **Web con writes pendientes:** simular network offline (devtools), tipear en una nota nueva (entry queda en saveContentQueue), volver online, click "Actualizar ahora" → banner muestra "Sincronizando…" → al terminar reload → al recargar la nota está sincronizada.
-- [ ] **Tauri desktop:** instalar v0.X.0. Cortar v0.X.1 (`gh release create v0.X.1` con bundle). Abrir app v0.X.0, auto-updater detecta, descarga, app reinicia, boot detecta mismatch, unregister SW, segundo reload, app v0.X.1 funciona sin Ctrl+Shift+R.
-- [ ] **Android:** instalar APK v0.X.0 vía Firebase App Distribution. Subir v0.X.1. Abrir app vieja, prompt update, instalar, abrir, boot detecta mismatch, app v0.X.1 funciona sin "borrar datos".
-- [ ] **Sentry:** generar error artificial (botón en `/settings` debug, opcional) y verificar que aparece en dashboard con stack trace legible.
-- [x] **Cleanup F7.1:** dropear la rama filesystem de `version_check.rs` (Windows `remove_dir_all` sobre `Service Worker/`) que en QA empírica nunca gana al file lock de msedgewebview2 — simplificar a Opción A pura (`clear_all_browsing_data()` directo). Reduce ~30 líneas, elimina código muerto. Anotación post-mortem F7.1 (commit 19b2b99). Cerrado en commit 2407e25 (F36.F9.A): -42 líneas netas, `cargo check` clean. `purge_filesystem` y `perform_purge` wrapper eliminados; `run()` llama directo a `purge_nuclear`. Strings de log renombrados de "nuclear fallback" a "nuclear purge" (ya no es fallback — es la única estrategia).
-- [ ] Documentar resultados en cierre del SPEC.
-
-**Archivos:** ninguno nuevo. Documentar en este mismo SPEC al cerrar.
-
----
-
-## Orden de implementación
-
-Defendido en DRAFT §3 con E al medio para validar A+B antes de tocar capa nativa:
-
-1. **F1** (Fase A — cache headers) — 1 archivo, deploy directo. Resuelve ~30% del síntoma para usuarios web.
-2. **F2 → F3 → F4** (Fase B — PWA SW prompt) — depende de F1 estable. Resuelve ~70% acumulado para web/PWA.
-3. **F5 → F6** (Fase E — observabilidad) — antes de C/D para confirmar hipótesis del schema mismatch en runtime de cliente real, y para tener trace cuando F7/F8 introduzcan bugs.
-4. **F7** (Fase C — purga nativa) — depende de F1+F2 deployados (sin SW limpio el flow nativo no completa).
-5. **F8** (Fase D — schema versioning) — última. Con observabilidad ya activa, podemos confirmar si schema mismatch es realmente la fuente del "no me permite crear ideas" antes de invertir.
-6. **F9** — validación end-to-end. Punto de cierre.
-
-**Release "canario" entre F4 y F7:** deploy a hosting con A+B+E, instalar app desktop con versión vieja, validar que el banner aparece y el flow funciona ANTES de tocar la capa nativa. Documentar resultado.
-
----
-
-## Estructura de archivos
-
-```
-firebase.json                                             # F1
-vite.config.ts                                            # F2
-src/
-├── main.tsx                                              # F3 (registerSW + initSentry + ErrorBoundary)
-├── lib/
-│   ├── sentry.ts                                         # F5 nuevo
-│   ├── platformVersion.ts                                # F7 nuevo
-│   ├── tinybase.ts                                       # F8
-│   └── preferences.ts                                    # F8
-├── hooks/
-│   ├── useSwUpdate.ts                                    # F3 nuevo
-│   └── useVersionCheck.ts                                # F7 nuevo
-├── components/
-│   └── layout/
-│       ├── UpdateBanner.tsx                              # F3 + F4 nuevo
-│       └── ErrorFallback.tsx                             # F5 nuevo
-└── app/
-    └── layout.tsx                                        # F3 montar UpdateBanner, F7 useVersionCheck
-.github/
-└── workflows/
-    └── release.yml                                       # F6 step sourcemaps
-.env.example                                              # F5 VITE_SENTRY_DSN
-CLAUDE.md                                                 # F8 sección schema versioning
-package.json                                              # F5 @sentry/react, F7 @tauri-apps/plugin-store
-```
-
----
-
-## Checklist de completado
-
-Al cerrar F36, TODAS estas condiciones deben ser verdaderas:
-
-- [ ] `npm run build` y `npm run lint` pasan sin warnings.
-- [ ] `npm test` pasa (130+ tests existentes; agregar tests para `useSwUpdate`, `useVersionCheck`, schema purge).
-- [ ] `curl -I` sobre `index.html` y `sw.js` confirma headers no-cache.
-- [ ] Deploy a hosting + instalar app desktop con versión previa + verificar update flow sin Ctrl+Shift+R.
-- [ ] Deploy a Android (Firebase App Distribution) + instalar APK previo + update flow sin "borrar datos".
-- [ ] Sentry recibe al menos 1 error de prueba con stack trace legible.
-- [ ] DRAFT `Spec/drafts/DRAFT-cache-stale-update-flow.md` eliminado.
-- [ ] `Spec/ESTADO-ACTUAL.md` actualizado con entry F36 (siguiendo regla de escalación: gotchas que aplican a >1 dominio suben acá).
-- [ ] CLAUDE.md gotcha "Schema versioning bump cuando cambia shape de Row o Preferences" agregado.
-
----
-
-## Riesgos / fuera de scope
-
-- **NO** migra a `persistentLocalCache` de Firestore — el default `memoryLocalCache` sigue. Si offline-first robusto se necesita, decisión separada.
-- **NO** cubre conflict resolution cliente↔servidor (CRDT). Dos clientes editando la misma nota en paralelo siguen sin garantías.
-- **NO** garantiza zero-downtime para deploys con breaking API changes en Cloud Functions. Clientes viejos rompen hasta actualizar — F3+F5 mitigan haciendo el update inmediato y observable.
-- **NO** cubre rollback de deploy buggy (operations, no esta feature).
-- **NO** elimina auto-updater Tauri ni Firebase App Distribution. F7 los complementa con purga del SW post-update.
-- **NO** activa `@sentry/tracing` (perf monitoring). MVP es errores únicamente.
-
----
-
-## Siguiente fase
-
-Post-F36 el ecosistema queda con observabilidad cliente y propagación garantizada de updates. Siguiente fase candidata: enviar header `X-App-Version` en todas las requests a CFs y rechazar versiones mínimas con mensaje accionable (`{ error: 'OUTDATED_CLIENT', minVersion }`) para forzar update tras breaking change CF — ortogonal a F36, justificable solo si hay incidente cross-version observado en Sentry.
+Tras un deploy a Hosting (sólo web) o un release nuevo de desktop/Android, las versiones instaladas seguían sirviendo el bundle anterior hasta que el usuario forzaba hard-reload o borraba datos del OS. Síntoma observado por Sebastián: "no me permite crear ideas" sin error visible. Cinco capas independientes manifestándose como un único fallo: PWA SW mal configurado, CDN sin cache headers, WebView storage no purgado en native update, schema sin versionado, y cero observabilidad runtime en mobile/desktop instalado.
+
+Al cerrar F36, un deploy nuevo se propaga en menos de una hora a clientes web/PWA con prompt visible al usuario, y un release nativo (MSI/NSIS/APK) llega con SW limpio y storage compatible con el bundle nuevo.
+
+## Qué se implementó
+
+- **F1 — CDN cache headers:** separó caching long-term de assets con hash (`max-age=31536000, immutable`) del navegacional (`index.html`, `sw.js`, `manifest.webmanifest` con `no-cache, no-store, must-revalidate`). Archivos tocados: `firebase.json`.
+- **F2 — PWA `registerType: 'prompt'`:** cambió de `autoUpdate` (registra SW pero no expone UI) a `prompt` (callbacks `onNeedRefresh`/`onOfflineReady`). `skipWaiting: false` + `clientsClaim: false` explícitos. Archivos tocados: `vite.config.ts`.
+- **F3 — `<UpdateBanner />` + polling 1h:** banner shell sticky no-dismissible; click "Actualizar ahora" dispara `updateSW(true)` → SW promueve a `active` → reload. Hook `useSwUpdate` adapta los callbacks del plugin a `useSyncExternalStore`. Polling `r.update()` cada hora para apps abiertas días. Archivos tocados: `src/main.tsx`, `src/components/layout/UpdateBanner.tsx`, `src/hooks/useSwUpdate.ts`, `src/app/layout.tsx`.
+- **F4 — Handshake flush-before-reload:** antes de `updateSW(true)`, ejecuta `flushAll()` sobre los 11 queues de `saveQueue.ts`. UI distingue tres estados (`idle` → `flushing` → `success`/`partial-failure`). Sin entries pendientes: comportamiento idéntico a F3. Archivos tocados: `src/components/layout/UpdateBanner.tsx`, `src/hooks/useSwUpdate.ts`.
+- **F5/F6 — Sentry observabilidad: deferred del scope F36.** Single-user no justificó el costo (free tier 5k events/mes vs SaaS data egress). Trasladado a `Spec/ESTADO-ACTUAL.md` Candidatos próximos.
+- **F7 — `useVersionCheck` JS-side defense in depth:** hook que detecta version mismatch (`import.meta.env.VITE_APP_VERSION` vs storage que sobrevive a la purga) y unregistra todos los SWs + reload. Tauri usa `@tauri-apps/plugin-store`, Capacitor `@capacitor/preferences`. Hook NO ejecuta en web (banner F3 cubre). Archivos tocados: `src/hooks/useVersionCheck.ts`, `src/lib/platformVersion.ts`, `src/app/layout.tsx`.
+- **F7.1 — Purga Rust-side ANTES del WebView load (chicken-and-egg fix):** en producción Tauri Desktop el SW residual (workbox `skipWaiting: true` cohorte pre-fase B) interceptaba el navigate a `tauri.localhost/` y servía `index.html` cacheado, dejando el hook F7 inalcanzable. Solución obligatoriamente Rust-side: `version_check::run(app.handle())` corre en el setup callback antes de cualquier flow del WebView. Marca de version persistida en `app_local_data_dir()/version.txt`. Telemetría doble: `tauri-plugin-log` registrado unconditional + append a `purge.log` como defense in depth. Tray item "Recargar" como escape manual permanente (D-F7.1.5). Approach inicial era C+A fallback (filesystem-purge granular sobre `EBWebView/Default/Service Worker/` + nuclear si falla); QA empírica confirmó `PermissionDenied (32)` ratio 100% por file locks msedgewebview2 → cleanup en F9.A. Archivos tocados: `src-tauri/src/version_check.rs`, `src-tauri/src/tray.rs`, `src-tauri/src/lib.rs`.
+- **F8 — Schema versioning independiente TinyBase + preferences:** `TINYBASE_SCHEMA_VERSION` en localStorage (no sentinel TinyBase — Firestore es source of truth) + `PREFERENCES_SCHEMA_VERSION` inyectado en cada `setPreferences`/`markDistillBannerSeen` como marker del cliente que persistió. `migrateTinyBaseSchemaIfNeeded(stores): boolean` invocado en `main.tsx` ANTES de `createRoot()`. Treatment asimétrico de "ausente" (D-F8.1): TinyBase localStorage `null` = mismatch (purge zero-data-loss); preferences `_schemaVersion` ausente = compat V1 (no resetear cohorte v0.2.4 legacy). 14 tests nuevos. Archivos tocados: `src/lib/tinybase.ts`, `src/lib/preferences.ts`, `src/main.tsx`, `src/lib/tinybase.schemaVersion.test.ts`, `src/lib/preferences.test.ts`.
+- **F9.A — Cleanup filesystem purge:** drop de la rama Approach C en `version_check.rs` (Windows `remove_dir_all` sobre `Service Worker/`) que QA empírica confirmó nunca gana al file lock de msedgewebview2 durante setup callback. -42 líneas netas; `purge_filesystem` y wrapper `perform_purge` eliminados; `run()` llama directo a `purge_nuclear`. Strings de log renombrados de "nuclear fallback" a "nuclear purge" (ya no es fallback). Archivos tocados: `src-tauri/src/version_check.rs`.
+- **F9.B — Release v0.2.5 coordinado + hotfix v0.2.6:** release ecosystem completo (web hosting + Tauri MSI/NSIS firmados + APK Capacitor) embarcando F8 + F9.A. Bug latente CI expuesto: el job `release-tauri` no inyectaba `VITE_GOOGLE_OAUTH_CLIENT_ID/SECRET` al heredoc `.env.production`, y el bundle CI salía con esas vars `undefined`. `signInWithTauri` (`tauriAuth.ts:31-35`) chequea ambas al entrar y throwa "no están configurados". Bug oculto desde el primer release Tauri vía CI porque la sesión Firebase persistida del usuario nunca disparaba el sign-in screen tras updates — el nuclear purge de F7.1 borró IndexedDB, llevó al user al sign-in screen por primera vez con un bundle CI-built, y ahí se manifestó. Hotfix v0.2.6 con fix workflow + sign-in validado E2E con Sebastián post-update Tauri. Archivos tocados: `package.json`, `package-lock.json`, `src-tauri/tauri.conf.json`, `src-tauri/Cargo.toml`, `src-tauri/Cargo.lock`, `.github/workflows/release.yml`, `.env.example`.
+- **F9.C — Web E2E Playwright: deferred F9.E.** Single-user; flujo cubierto a nivel código por F28-F30 retry queues, validación E2E pospuesta a regresión real.
+- **F9.D — Android E2E: deferred F9.E.** APK v0.2.6 publicado a Firebase App Distribution grupo `owner` pero validación update→nuclear→re-login pospuesta. Single-user; on-demand.
+
+## Decisiones clave
+
+| ID           | Decisión                                                                                                                             | Rationale                                                                                                                                                                      |
+| ------------ | ------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **D1**       | Sentry-only en MVP (deferred — nunca implementado)                                                                                   | Cobertura web + Tauri + Capacitor con un único SDK. Single-user no justificó SaaS data egress en MVP.                                                                          |
+| **D2**       | Purge-on-mismatch en schema versioning (no `migrate(oldData, ...)`)                                                                  | Pierde estado offline en momento del bump pero zero engineering cost. Migración real escalable post-MVP si hay reporte de pérdida real.                                        |
+| **D3**       | Banner update web sin auto-aplicar tras N segundos                                                                                   | `updateSW(true)` solo dispara con click explícito; auto-aplicar puede romper trabajo en progreso (typing, inbox-batch).                                                        |
+| **D4**       | Un solo SPEC con cinco fases internas                                                                                                | Las 5 capas comparten root cause y dependencias bidireccionales. Splitear pierde contexto inter-fase.                                                                          |
+| **D6**       | `saveQueue` NO requiere `SCHEMA_VERSION`                                                                                             | `Map<string, QueueEntry>` puramente in-memory sin persistencia a disco; entre versiones no hay rows que rompan hidratación. F8 aplica solo a TinyBase persister + preferences. |
+| **D7**       | Riesgo de schema mismatch es semántico, no syntactic                                                                                 | TinyBase v8 muta rows al `setRow` quitando campos no-en-schema; lo común es **valor desconocido** (ej. F26 status nuevo `'high-confidence'`). F8 justifica por consistencia.   |
+| **D-F7.1.1** | Approach C+A fallback en F7.1 (filesystem + nuclear) — **revertida en F9.A**                                                         | C preservaba IndexedDB (mejor UX); A garantizaba purga si C fallaba. QA empírica confirmó file locks ratio 100% — solo nuclear sobrevive el cleanup.                           |
+| **D-F7.1.5** | Tray item "Recargar app" en `tray.rs`                                                                                                | Escape manual permanente para cualquier futuro cache stale. 5 líneas, low-cost defense in depth.                                                                               |
+| **D-F8.1**   | Treatment asimétrico de "ausente": TinyBase localStorage `null` = mismatch (purge); preferences `_schemaVersion` ausente = compat V1 | TinyBase resyncea desde Firestore (zero data loss); preferences es la fuente de verdad — purgar = pérdida real de UX. Cohorte v0.2.4 actual no tiene `_schemaVersion`.         |
+| **D-F8.2**   | `migrateTinyBaseSchemaIfNeeded` invocado en `main.tsx` ANTES de `createRoot()`, NO en `useStoreInit`                                 | Garantiza correr antes de cualquier `startAutoLoad`. Evita race con persister activo (`delTables` mid-snapshot). Corre exactamente 1 vez por sesión sin guard module-level.    |
+| **D-F8.3**   | Versionado independiente TinyBase ↔ preferences                                                                                      | Bump en una NO fuerza purga de la otra. Bytes mínimos en preferences; semántica clara.                                                                                         |
+| **D-F8.4**   | `_schemaVersion` en preferences = marker del cliente que persistió, NO del shape                                                     | Se inyecta en cada `setPreferences`/`markDistillBannerSeen`. Multi-window race aceptada (F36.F2 + auto-update minimizan ventana). NO transacción ni read-before-write.         |
+| **D-F8.6**   | Guard estricto `schemaV != null && schemaV !== current` en `parsePrefs`                                                              | Cubre `_schemaVersion: '1'` (string), `_schemaVersion: true`, etc. Cualquier valor presente DEBE matchear; sólo ausente = compat V1.                                           |
+
+## Rondas de fix
+
+**Round 1 — F7 chicken-and-egg con SW residual (v0.2.2 → v0.2.3):** F7 mergeó con `useVersionCheck` hook JS-side asumiendo que el bundle nuevo cargaría siempre. En producción Tauri Desktop con cohorte pre-F36 fase B (workbox `autoUpdate` + `skipWaiting: true`), el SW viejo interceptaba `tauri.localhost/` y servía `index.html` cacheado del bundle previo. El hook F7 quedaba inalcanzable porque vivía en el bundle nuevo que el SW viejo no servía. Detección + purga necesariamente Rust-side ANTES del WebView load. **Fix:** F7.1 (`07155ee`) con `version_check.rs` corriendo en setup callback de `lib.rs`, comparando `env!("CARGO_PKG_VERSION")` vs `version.txt` en `app_local_data_dir()`.
+
+**Round 2 — F7.1 file locks msedgewebview2 (v0.2.4 QA E2E):** Approach C+A fallback (filesystem-purge granular + nuclear) asumía que C tendría éxito al menos a veces. QA empírica de F7.1 sobre v0.2.3 → v0.2.4 confirmó `PermissionDenied (32)` ratio 100% — msedgewebview2.exe mantiene file locks activos durante el setup callback, incluso post-`taskkill /F /IM`. **Fix:** F9.A (`2407e25`) elimina la rama filesystem completa; `version_check.rs` queda con `clear_all_browsing_data()` puro como única estrategia. Trade-off aceptado: re-login Firebase + resync TinyBase desde Firestore una vez por update.
+
+**Round 3 — F9.B hotfix v0.2.5 → v0.2.6 (`VITE_GOOGLE_OAUTH_*` missing en CI):** release v0.2.5 coordinado embarcando F8 + F9.A salió a producción funcional para hosting web pero el bundle Tauri salía sin las env vars OAuth. El bug existía desde el primer release Tauri vía CI (job `release-tauri` solo inyectaba las 7 vars de Firebase al heredoc `.env.production`, omitiendo `VITE_GOOGLE_OAUTH_CLIENT_ID/SECRET` que `tauriAuth.ts:31-35` requiere). Estuvo oculto meses porque la sesión Firebase persistida del usuario nunca disparaba el sign-in screen tras updates — el nuclear purge de F7.1 borró IndexedDB y llevó al user al sign-in screen por primera vez con un bundle CI-built, exponiendo el gap. **Fix:** hotfix v0.2.6 (`6217da6`) agrega las 2 vars al heredoc de `release-tauri`. Sebastián validó sign-in end-to-end post-update Tauri.
+
+## Lecciones
+
+- **SW residual con `skipWaiting: true` puede atrapar generaciones de updates en chicken-and-egg.** El fix tiene que correr ANTES del WebView load — Rust-side, no JS-side. Cualquier feature que dependa del bundle nuevo para "fixear" el bundle viejo es trampa: la purga del SW viejo debe vivir fuera del WebView que el SW está sirviendo.
+- **`Tauri 2.10 clear_all_browsing_data()` es nuclear sin parámetros.** No existe `BrowsingDataKind` ni filtros granulares en la API. Para cualquier flow que necesite invalidar storage del WebView, partir directo con esta — no asumir granularidad oficial.
+- **msedgewebview2.exe mantiene file locks durante el setup callback** (`PermissionDenied (32)` ratio 100% incluso post-`taskkill`). Implicación: NO diseñar flows que asuman filesystem manipulation granular del profile WebView2 en setup; ir directo al fallback nuclear.
+- **`tauri-plugin-log` debe registrarse unconditional para visibilidad release.** Plugin gated en `if cfg!(debug_assertions) { ... }` deja `app_log_dir()/<ProductName>.log` vacío en MSI/NSIS instalado. Defense in depth: para eventos críticos cross-build, append explícito a archivo aparte (`purge.log`) por si el framework log falla.
+- **Schema versioning del cache local: tratar "ausente" según source of truth.** Cuando el storage local es cache de un origin remoto (TinyBase ↔ Firestore), missing schema version = mismatch = purge zero-data-loss. Cuando el storage local ES la fuente de verdad (preferences), missing schema version = compat con cohorte legacy (NO resetear). Treatment asimétrico evita pérdida real para los users que no tienen el campo todavía.
+- **Bug latente CI: env var nueva en frontend que no se inyecta al heredoc del job se manifiesta solo cuando el code path se ejecuta.** Puede esconderse meses si está detrás de un flow poco frecuente (ej. sign-in tras nuclear purge en F36.F9.B). Convención necesaria: cualquier PR que agregue `VITE_*` debe diff-checkear `.github/workflows/release.yml` para confirmar inclusión en cada job que la consume.
+- **MSI uninstaller borra `%LOCALAPPDATA%\<bundle_id>\` completo automáticamente.** Detalle observado durante QA F7.1: telemetría persistida (`version.txt`, `purge.log`, `logs/`) queda perdida al desinstalar. Si hace falta investigar bugs post-mortem, copiar el directorio ANTES de uninstall.
+- **`CLIENT_SECRET` inlineado en bundle JS distribuido es anti-pattern incluso para Desktop con PKCE.** Vite inlinea `import.meta.env.VITE_*` en build-time → cualquiera que descomprima el MSI/NSIS lo ve. Mover token exchange a Rust-side reduce superficie pero no la elimina. Alternativa más correcta: migrar el OAuth client GCP de tipo "Web app" a "Desktop app" puro y usar solo PKCE sin secret.
+- **Updater Tauri trata HTTP 404 como error**, no como "sin update disponible". Pre-primer-release el endpoint de `latest.json` devuelve 404 y el hook cae al catch — el error dialog solo aparece en check manual (startup silent traga el error). Inocuo en prod post-bootstrap.
