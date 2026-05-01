@@ -1,8 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { Check, Loader2 } from 'lucide-react';
 import useAuth from '@/hooks/useAuth';
-import { db } from '@/lib/firebase';
+import { inboxRepo } from '@/infra/repos/inboxRepo';
 import { hideCurrentWindow, showMainWindow } from '@/lib/tauri';
 
 type Status = 'editing' | 'saving' | 'saved' | 'closing';
@@ -59,19 +58,10 @@ export default function CapturePage() {
     const trimmed = rawContent.trim();
     if (!trimmed || !user) return;
     setStatus('saving');
-    const itemId = crypto.randomUUID();
-    try {
-      await setDoc(doc(db, 'users', user.uid, 'inbox', itemId), {
-        id: itemId,
-        rawContent: trimmed,
-        source: 'desktop-capture',
-        status: 'pending',
-        aiProcessed: false,
-        createdAt: serverTimestamp(),
-      });
+    const itemId = await inboxRepo.createFromCapture(trimmed, 'desktop-capture');
+    if (itemId) {
       setStatus('saved');
-    } catch (error) {
-      console.error('capture save failed', error);
+    } else {
       setStatus('editing');
     }
   }
