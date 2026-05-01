@@ -22,6 +22,7 @@ pub fn build(app: &AppHandle) -> tauri::Result<()> {
         .build(app)?;
     let check_updates_item =
         MenuItemBuilder::with_id("check_updates", "Buscar actualizaciones").build(app)?;
+    let reload_item = MenuItemBuilder::with_id("reload", "Recargar app").build(app)?;
     let separator_2 = PredefinedMenuItem::separator(app)?;
     let quit_item = MenuItemBuilder::with_id("quit", "Salir").build(app)?;
 
@@ -32,6 +33,7 @@ pub fn build(app: &AppHandle) -> tauri::Result<()> {
             &separator_1,
             &autostart_item,
             &check_updates_item,
+            &reload_item,
             &separator_2,
             &quit_item,
         ])
@@ -51,6 +53,7 @@ pub fn build(app: &AppHandle) -> tauri::Result<()> {
             "capture" => show_capture(app),
             "autostart" => toggle_autostart(app, &autostart_item),
             "check_updates" => emit_check_updates(app),
+            "reload" => reload_main(app),
             "quit" => app.exit(0),
             _ => (),
         })
@@ -90,6 +93,22 @@ fn toggle_main(app: &AppHandle) {
             let _ = window.show();
             let _ = window.set_focus();
         }
+    }
+}
+
+fn reload_main(app: &AppHandle) {
+    // F7.1 D-F7.1.5 — escape manual permanente. Útil cuando un usuario
+    // de cohorte v0.2.3 actualiza a v0.2.4 sin destrabar el SW residual,
+    // o ante cualquier futuro cache stale donde el WebView quede en
+    // estado desactualizado. Forzar reload(true) ignora caches HTTP.
+    let Some(window) = app.get_webview_window("main") else {
+        return;
+    };
+    let _ = window.unminimize();
+    let _ = window.show();
+    let _ = window.set_focus();
+    if let Err(err) = window.eval("location.reload(true)") {
+        log::error!("tray reload failed: {err}");
     }
 }
 
