@@ -5,6 +5,8 @@
 > **Redactado en:** PC personal (sesión Claude Code), 2026-04-29
 > **Disparador:** `Spec/ESTADO-ACTUAL.md` mide hoy 340 líneas con 17 secciones de gotchas por dominio bajo `## Arquitectura y gotchas por dominio` ([ESTADO-ACTUAL.md:60-277](../ESTADO-ACTUAL.md#L60-L277)). El paso 8 del SDD escala gotchas a este archivo cada vez que se cierra una feature, y el paso 2 SDD (plan mode) requiere consultar gotchas relevantes antes de codear. Hoy ambos flujos son manuales (Sebastián / agente principal carga el archivo entero), y el costo escala monotónicamente con cada feature cerrada.
 
+> **Estado post-F37 (Mayo 2026):** Fase A (split en 15 archivos `Spec/gotchas/<dominio>.md`) + Fase B (skill local `gotchas-search` con BM25) + F7 acotado (5 pointers en `CLAUDE.md`) implementadas. **Fase C diferida** (subagentes `gotchas-researcher` + `gotcha-classifier` + reescritura completa de pasos 2/8 SDD en `CLAUDE.md`) hasta evidencia de fricción manual al consultar la skill directamente — re-evaluar tras 5+ features post-cierre. DRAFT preservado para reactivar Fase C si surgen señales (ver SPEC F37 § Validación post-cierre).
+
 ---
 
 ## 1. Objetivo
