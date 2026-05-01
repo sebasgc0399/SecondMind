@@ -1,5 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { markDistillBannerSeen, parsePrefs } from '@/lib/preferences';
+import {
+  PREFERENCES_SCHEMA_VERSION,
+  markDistillBannerSeen,
+  parsePrefs,
+  setPreferences,
+} from '@/lib/preferences';
 import { DEFAULT_PREFERENCES } from '@/types/preferences';
 
 // Mocks de Firebase imitando el patrón de baseRepo.test.ts. parsePrefs es
@@ -95,7 +100,7 @@ describe('markDistillBannerSeen', () => {
     expect(docMock).toHaveBeenCalledWith({}, 'users/user-x/settings/preferences');
     expect(updateDocMock).toHaveBeenCalledWith(
       { __path: 'users/user-x/settings/preferences' },
-      { 'distillBannersSeen.l1': true },
+      { 'distillBannersSeen.l1': true, _schemaVersion: 1 },
     );
     expect(setDocMock).not.toHaveBeenCalled();
   });
@@ -104,6 +109,7 @@ describe('markDistillBannerSeen', () => {
     await markDistillBannerSeen('user-y', 3);
     expect(updateDocMock).toHaveBeenCalledWith(expect.anything(), {
       'distillBannersSeen.l3': true,
+      _schemaVersion: 1,
     });
   });
 
@@ -116,7 +122,7 @@ describe('markDistillBannerSeen', () => {
     expect(updateDocMock).toHaveBeenCalledOnce();
     expect(setDocMock).toHaveBeenCalledWith(
       expect.anything(),
-      { distillBannersSeen: { l2: true } },
+      { distillBannersSeen: { l2: true }, _schemaVersion: 1 },
       { merge: true },
     );
   });
@@ -127,5 +133,58 @@ describe('markDistillBannerSeen', () => {
 
     await expect(markDistillBannerSeen('user-w', 1)).rejects.toThrow(/no perms/);
     expect(setDocMock).not.toHaveBeenCalled();
+  });
+});
+
+describe('parsePrefs schema versioning (F36.F8)', () => {
+  it('PREFERENCES_SCHEMA_VERSION exportada = 1 (sentinel para detectar bumps no intencionales)', () => {
+    expect(PREFERENCES_SCHEMA_VERSION).toBe(1);
+  });
+
+  it('doc con _schemaVersion=1 + prefs válidas → parse normal (D-F8.1)', () => {
+    expect(parsePrefs({ _schemaVersion: 1, distillIntroSeen: true, sidebarHidden: true })).toEqual({
+      trashAutoPurgeDays: 30,
+      distillIntroSeen: true,
+      distillBannersSeen: { l1: false, l2: false, l3: false },
+      sidebarHidden: true,
+    });
+  });
+
+  it('doc con _schemaVersion=99 (mismatch) → DEFAULT_PREFERENCES descartando contenido', () => {
+    expect(parsePrefs({ _schemaVersion: 99, distillIntroSeen: true, sidebarHidden: true })).toEqual(
+      DEFAULT_PREFERENCES,
+    );
+  });
+
+  it('doc con _schemaVersion="1" string presente → DEFAULT (guard estricto D-F8.6)', () => {
+    expect(parsePrefs({ _schemaVersion: '1', distillIntroSeen: true })).toEqual(
+      DEFAULT_PREFERENCES,
+    );
+  });
+
+  it('doc legacy sin _schemaVersion → parse compat V1 (cohorte pre-F8 D-F8.1)', () => {
+    expect(parsePrefs({ distillIntroSeen: true, sidebarHidden: true })).toEqual({
+      trashAutoPurgeDays: 30,
+      distillIntroSeen: true,
+      distillBannersSeen: { l1: false, l2: false, l3: false },
+      sidebarHidden: true,
+    });
+  });
+});
+
+describe('setPreferences schema versioning (F36.F8)', () => {
+  beforeEach(() => {
+    setDocMock.mockReset();
+    docMock.mockClear();
+    setDocMock.mockResolvedValue(undefined);
+  });
+
+  it('inyecta _schemaVersion=1 en cada write (marker del cliente que persistió, D-F8.4)', async () => {
+    await setPreferences('user-a', { sidebarHidden: true });
+    expect(setDocMock).toHaveBeenCalledWith(
+      { __path: 'users/user-a/settings/preferences' },
+      { sidebarHidden: true, _schemaVersion: 1 },
+      { merge: true },
+    );
   });
 });
