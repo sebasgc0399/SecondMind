@@ -126,7 +126,10 @@
       "Bash(firebase firestore:get \"users/gYPP7NIo5JanxIbPqMe6nC3SQfE3/notes/12c98cd6-ec4e-4439-a3c6-9dbc215d20a3\")",
       "Bash(gcloud firestore *)",
       "Bash(curl -s \"https://firestore.googleapis.com/v1/projects/secondmindv1/databases/\\(default\\)/documents/users/gYPP7NIo5JanxIbPqMe6nC3SQfE3/embeddings/12c98cd6-ec4e-4439-a3c6-9dbc215d20a3\")",
-      "Bash(firebase functions:log --only onNoteDeleted -n 5)"
+      "Bash(firebase functions:log --only onNoteDeleted -n 5)",
+      "Bash(python \"$USERPROFILE/.claude/skills/gotchas-search/reindex.py\")",
+      "Bash(python \"C:/Users/sebas/.claude/skills/gotchas-search/reindex.py\")",
+      "Bash(python \"C:/Users/sebas/.claude/skills/gotchas-search/search.py\":*)"
     ],
     "additionalDirectories": [
       "C:\\Users\\sebas\\.claude",
@@ -147,6 +150,15 @@
           {
             "type": "command",
             "command": "npx eslint --fix \"$CLAUDE_TOOL_INPUT_FILE_PATH\" 2>/dev/null || true"
+          }
+        ]
+      },
+      {
+        "matcher": "Write|Edit|MultiEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "case \"$CLAUDE_TOOL_INPUT_FILE_PATH\" in *\"Spec/gotchas/\"*\".md\"|*\"Spec\\\\gotchas\\\\\"*\".md\") python \"$USERPROFILE/.claude/skills/gotchas-search/reindex.py\" >/dev/null 2>&1 || true ;; esac"
           }
         ]
       }
