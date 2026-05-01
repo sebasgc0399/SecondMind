@@ -343,19 +343,46 @@ export function useVersionCheck() {
 
 **Criterio de done:**
 
-- [ ] `tinybase.ts` exporta `SCHEMA_VERSION = 1`. Persister lee la metadata de versión de un sentinel `__schemaVersion` en una tabla auxiliar o en localStorage `secondmind:tinybase:schemaVersion`.
-- [ ] `preferences.ts` exporta `PREFERENCES_SCHEMA_VERSION = 1`. `parsePrefs` rechaza prefs con versión distinta y devuelve `DEFAULT_PREFERENCES`.
-- [ ] Bump artificial (cambiar a 2) en dev → app borra cache local TinyBase + re-hidrata desde Firestore → rows visibles tras 1-2s.
-- [ ] Bump artificial de prefs schema → preferencias vuelven a defaults sin error visible.
-- [ ] Documentar en CLAUDE.md: "Bumpear `SCHEMA_VERSION` cuando se cambia el shape de un Row o de UserPreferences".
+- [x] `tinybase.ts` exporta `TINYBASE_SCHEMA_VERSION = 1`. Versión persistida en localStorage `secondmind:tinybase:schemaVersion` (no sentinel TinyBase — Firestore es source of truth, no se le aplica versionado).
+- [x] `preferences.ts` exporta `PREFERENCES_SCHEMA_VERSION = 1`. `parsePrefs` rechaza prefs con `_schemaVersion` presente y distinto de current devolviendo `DEFAULT_PREFERENCES`. **Treatment de `_schemaVersion` ausente como compat V1** (D-F8.1) — divergencia consciente del literal del SPEC: cohorte v0.2.4 actual no tiene el campo, deploy F8 NO debe resetear sus prefs (zero data loss).
+- [ ] Bump artificial (cambiar a 2) en dev → app borra cache local TinyBase + re-hidrata desde Firestore → rows visibles tras 1-2s. **Pendiente QA manual.**
+- [ ] Bump artificial de prefs schema → preferencias vuelven a defaults sin error visible. **Pendiente QA manual.**
+- [x] Documentar en `Spec/ESTADO-ACTUAL.md` sección "TinyBase + Firestore sync" (contenido completo) + línea-pointer corta en `CLAUDE.md` "Gotchas universales" (D-F8.7).
 
 **Archivos:**
 
-- `src/lib/tinybase.ts` — agregar `SCHEMA_VERSION` + lógica purge-on-mismatch en `getPersisted` (primer arg de `createCustomPersister`).
-- `src/lib/preferences.ts` — agregar `PREFERENCES_SCHEMA_VERSION` + chequeo en `parsePrefs`.
-- `CLAUDE.md` — sección nueva "Schema versioning" en gotchas universales (1-2 líneas + pointer a este SPEC).
+- `src/lib/tinybase.ts` — `TINYBASE_SCHEMA_VERSION` + `migrateTinyBaseSchemaIfNeeded(stores)`.
+- `src/main.tsx` — invoca `migrateTinyBaseSchemaIfNeeded` con los 7 stores ANTES de `createRoot()` (D-F8.2).
+- `src/lib/preferences.ts` — `PREFERENCES_SCHEMA_VERSION` + guard en `parsePrefs` + inyección `_schemaVersion` en `setPreferences` y `markDistillBannerSeen` (ambas ramas: updateDoc + fallback setDoc).
+- `src/lib/tinybase.schemaVersion.test.ts` — **NUEVO** 5 tests con `// @vitest-environment jsdom` (env global es node).
+- `src/lib/preferences.test.ts` — extendido con 6 nuevos tests (parsePrefs schema versioning + setPreferences) + 3 modificados de markDistillBannerSeen para reflejar inyección.
+- `Spec/ESTADO-ACTUAL.md` — gotcha completo en sección "TinyBase + Firestore sync".
+- `CLAUDE.md` — línea-pointer en "Gotchas universales".
 
-**Notas:** Para TinyBase, el patrón canónico es guardar la versión en localStorage (no en Firestore) porque Firestore es la fuente de verdad — no se le aplica versionado, solo al cache local. La purga consiste en `store.delTable(name)` para todas las tablas + `localStorage.setItem('secondmind:tinybase:schemaVersion', String(SCHEMA_VERSION))`. El persister naturalmente re-hidrata desde Firestore en el siguiente `startAutoLoad`.
+**Notas:** Para TinyBase, el patrón canónico es guardar la versión en localStorage (no en Firestore) porque Firestore es la fuente de verdad — no se le aplica versionado, solo al cache local. La purga consiste en `store.delTables()` (vs el `delTable(name)` original — más conciso, una sola transacción interna) + `localStorage.setItem`. El persister naturalmente re-hidrata desde Firestore en el siguiente `startAutoLoad`.
+
+#### F8.1 (post-merge addendum): decisiones de implementación
+
+**Decisiones aprobadas (validadas con Plan agent F8):**
+
+| ID         | Decisión                                                                                                                             | Rationale                                                                                                                                                                         |
+| ---------- | ------------------------------------------------------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **D-F8.1** | Treatment asimétrico de "ausente": TinyBase localStorage `null` = mismatch (purge); preferences `_schemaVersion` ausente = compat V1 | TinyBase resyncea desde Firestore (zero data loss); preferences es la fuente de verdad — purgar = pérdida real de UX. Cohorte v0.2.4 actual no tiene `_schemaVersion`             |
+| **D-F8.2** | `migrateTinyBaseSchemaIfNeeded` invocado en `main.tsx` ANTES de `createRoot()`, NO en `useStoreInit`                                 | Garantiza correr antes de cualquier `startAutoLoad`. Evita race con persister activo (`delTables` mid-snapshot). Corre exactamente 1 vez por sesión sin guard module-level        |
+| **D-F8.3** | Versionado independiente TinyBase ↔ preferences                                                                                      | Bump en una NO fuerza purga de la otra. Bytes mínimos en preferences; semántica clara                                                                                             |
+| **D-F8.4** | `_schemaVersion` en preferences = marker del cliente que persistió, NO del shape                                                     | Se inyecta en cada `setPreferences`/`markDistillBannerSeen`. Multi-window race aceptada (F36.F2 + auto-update minimizan ventana). NO implementar transacción ni read-before-write |
+| **D-F8.5** | Naming `migrateTinyBaseSchemaIfNeeded(stores): boolean`                                                                              | `assert` sugiere throw; la función purga side-effecting. Boolean facilita logging futuro                                                                                          |
+| **D-F8.6** | Guard estricto `schemaV != null && schemaV !== current` en parsePrefs                                                                | Cubre `_schemaVersion: '1'` (string), `_schemaVersion: true`, etc. Cualquier valor presente DEBE matchear                                                                         |
+| **D-F8.7** | Doc primario en ESTADO-ACTUAL + línea-pointer en CLAUDE.md                                                                           | SPEC F8 lo pidió en CLAUDE.md; bumpear SCHEMA_VERSION es regla que Claude Code debe tener presente en cualquier feature futura que toque stores. NO duplicar contenido            |
+
+**Riesgos documentados (no críticos para v1):**
+
+1. TinyBase v8 muta rows al setRow — F8 introduce el trigger (delTables + reload). Para changes de tipo de cell, escribir job de migración ANTES del bump (no solo bumpear).
+2. Hint anti-flash `secondmind:sidebarHidden:{uid}` permanece tras bump prefs → flash 1-2 ticks pre-snapshot. Aceptado.
+3. Private mode: cada boot full resync (~1-2s extra). UX OK.
+4. F7.1 nuclear interaction: doble-purga inocua confirmada.
+
+**Plan completo:** `~/.claude/plans/valiant-percolating-chipmunk.md`.
 
 ---
 
