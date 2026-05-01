@@ -19,6 +19,7 @@ import useMountedTransition from '@/hooks/useMountedTransition';
 import usePreferences from '@/hooks/usePreferences';
 import useShareIntent from '@/hooks/useShareIntent';
 import useSidebarVisibilityShortcut from '@/hooks/useSidebarVisibilityShortcut';
+import useVersionCheck from '@/hooks/useVersionCheck';
 import AuthLoadingSkeleton from '@/components/layout/AuthLoadingSkeleton';
 import useStoreInit from '@/hooks/useStoreInit';
 import StoreHydrationProvider from '@/hooks/StoreHydrationProvider';
@@ -36,6 +37,7 @@ export default function Layout() {
   const { isHydrating } = useStoreInit(user?.uid ?? null);
   const { preferences } = usePreferences();
   useSidebarVisibilityShortcut();
+  useVersionCheck();
 
   const isMobile = breakpoint === 'mobile';
   const isTablet = breakpoint === 'tablet';
