@@ -321,6 +321,18 @@ export function useVersionCheck() {
 
 **Notas:** El check ocurre ANTES del init de TinyBase / Firebase para evitar que el SDK intente hidratar contra IndexedDB potencialmente incompat. Si llamamos al hook adentro de Layout y Layout es child del Provider en main.tsx, ya hubo init — pero la purga del SW no toca IndexedDB, solo SW registrations, así que no hay conflicto. Validar comportamiento con SW purgado mid-session.
 
+#### F7.1 (post-merge addendum): purga Rust-side ante chicken-and-egg
+
+**Bug post-F7 (v0.2.2 → v0.2.3 Tauri Desktop):** SW residual (workbox `skipWaiting: true` pre-F36 fase B) intercepta el navigate del WebView a `tauri.localhost/` y sirve `index.html` cacheado del bundle viejo. El hook JS de F7 queda inalcanzable porque vive en el bundle nuevo que el SW viejo no sirve. Detección + purga obligatoriamente Rust-side, antes del WebView load.
+
+**Implementación (commit 19b2b99, v0.2.4):** `src-tauri/src/version_check.rs` — Approach C+A fallback. (1) Filesystem purge sobre `EBWebView/Default/Service Worker/` (Windows-only, granular, preserva IndexedDB). (2) Fallback a `WebviewWindow::clear_all_browsing_data()` (nuclear, cross-platform) si el filesystem purge falla. Marca de version persistida en `app_local_data_dir()/version.txt` (no localStorage que vive dentro del WebView). Telemetría doble: framework `log::warn!` (a `logs/SecondMind.log`) + append a `purge.log` en `app_local_data_dir()` como defense in depth. Logger Tauri registrado unconditional (Warn release / Info debug) para visibilidad en producción.
+
+**D-F7.1.5:** tray item "Recargar app" (`src-tauri/src/tray.rs`) como escape manual permanente para cualquier futuro cache stale.
+
+**QA E2E (commit 19b2b99):** el filesystem purge SIEMPRE cae al fallback nuclear en producción — msedgewebview2 mantiene file locks activos durante el setup callback (`PermissionDenied (32)`), incluso tras `taskkill` previo. Bug resuelto vía nuclear con trade-off de re-login Firebase + resync TinyBase desde Firestore una vez por update.
+
+**Plan completo:** `~/.claude/plans/version-check-rust-clear-cache.md`.
+
 ---
 
 ### Fase D — Schema versioning
@@ -360,6 +372,7 @@ export function useVersionCheck() {
 - [ ] **Tauri desktop:** instalar v0.X.0. Cortar v0.X.1 (`gh release create v0.X.1` con bundle). Abrir app v0.X.0, auto-updater detecta, descarga, app reinicia, boot detecta mismatch, unregister SW, segundo reload, app v0.X.1 funciona sin Ctrl+Shift+R.
 - [ ] **Android:** instalar APK v0.X.0 vía Firebase App Distribution. Subir v0.X.1. Abrir app vieja, prompt update, instalar, abrir, boot detecta mismatch, app v0.X.1 funciona sin "borrar datos".
 - [ ] **Sentry:** generar error artificial (botón en `/settings` debug, opcional) y verificar que aparece en dashboard con stack trace legible.
+- [ ] **Cleanup F7.1:** dropear la rama filesystem de `version_check.rs` (Windows `remove_dir_all` sobre `Service Worker/`) que en QA empírica nunca gana al file lock de msedgewebview2 — simplificar a Opción A pura (`clear_all_browsing_data()` directo). Reduce ~30 líneas, elimina código muerto. Anotación post-mortem F7.1 (commit 19b2b99).
 - [ ] Documentar resultados en cierre del SPEC.
 
 **Archivos:** ninguno nuevo. Documentar en este mismo SPEC al cerrar.
