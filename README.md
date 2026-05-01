@@ -118,9 +118,27 @@ La fuente primaria de estado y arquitectura vigente es [`Spec/ESTADO-ACTUAL.md`]
   - **F29 — Retry Queue al Factory Entero:** `RepoConfig<Row>` parametrizado con `queue?: SaveQueue<Partial<Row>>`, 7 singletons (`saveContentQueue` + 6 metas por entidad), `<PendingSyncIndicator />` global en sidebar/header con popover per-entity counts, sign-out mid-retry guard, `clear()` separado de `dispose()` para test isolation
   - **F30 — Retry Queue en los Creates:** 4 singletons dedicados (`saveNotesCreatesQueue`, `saveTasksCreatesQueue`, `saveProjectsCreatesQueue`, `saveObjectivesCreatesQueue`), `RepoConfig.createsQueue?` opcional, `useNote` via `useSyncExternalStore` + `setDoc(merge:true)` en `saveContent` (D9) para tolerar `not-found` durante create-pending
 
+- **Features 31-37 (mayo-junio 2026)** ✅ Hidden sidebar mode + sidebar reorg + flujo de update sin intervención manual + corpus de gotchas indexado. 7 features completadas:
+  - **F31 — Hidden Sidebar Mode (desktop):** preferencia `sidebarHidden` con `<TopBar />` alterno (logo + `<PendingSyncIndicator compact />` + Buscar ⌘K + QuickCapture). Shortcut `Cmd+B` layout-independent vía `event.code === 'KeyB'` con guards (foco editable / auth / breakpoint desktop). `QUICK_ACTIONS` del CommandPalette pasa de 4 a 8 entries con iconos armonizados a `navItems.ts`
+  - **F32 — Hidden Sidebar Improvements:** Cmd+K y Alt+N migrados a `event.code` (paridad universal con F31). localStorage hint per-uid (`secondmind:sidebarHidden:${uid}`) en `usePreferences` para hidratación síncrona pre-subscribe (anti-flash sin AND-gate). 9ª entry dinámica en CommandPalette ("Ocultar/Mostrar sidebar") con `useMemo` reactivo. Animación entrada del componente swappeado solo en cambios subsecuentes — `useLayoutEffect` pre-paint para que el primer frame visible ya tenga la clase `slide-in-from-X`
+  - **F33 — Hidden Sidebar Polish:** hook reutilizable `useMountedTransition(visible, durationMs): { shouldRender, isExiting }` con patrón `setState durante render` (skip-initial gratis sin `useRef`). `animate-out fill-mode-forwards` obligatorio para que el componente no revierta 1 frame pre-unmount. Botón "Mostrar menú" (`PanelLeftOpen`) a la izquierda del logo en TopBar
+  - **F34 — Sidebar reorg + dashboard cleanup:** nav agrupado en 3 secciones (Ejecución / Captura / Conocimiento) en `navItems.ts` con `navSections` + `navItems` derivado por `flatMap`. Buscar como input-shaped trigger embebido al tope abriendo CommandPalette. Capturar como botón primary full-width abriendo QuickCapture. Dashboard header simplificado al solo Greeting (eliminado botón redundante con la prop del sidebar). Gotcha drawer + modal nested resuelto con `onClose() + requestAnimationFrame(open)` handshake
+  - **F35 — Polish swap chrome (sidebar↔TopBar):** `useMountedTransition` extendido con `justMounted: boolean` state-based + `setTimeout(durationMs)` — flags de animación deben sobrevivir re-renders mid-animación (no `useRef + 1-render-only`). Sidebar always-floating overlay en desktop (`absolute inset-y-0 left-0 z-30`) con `transition-[padding-left] duration-200` en main column. Cierra los escenarios visible→hidden pop y hidden→visible shift
+  - **F36 — Cache stale + flujo de update sin intervención manual:** ataque a 5 capas que se manifestaba como "no me permite crear ideas" tras update. F1 headers `no-cache` + `immutable` en `firebase.json`. F2-F4 PWA `registerType: 'prompt'` + `<UpdateBanner>` + `flushAll()` antes del reload. F7.1 purga Rust-side ANTES del WebView load para SW residual (cohorte pre-F36 con `skipWaiting: true`). F8 schema versioning independiente — `TINYBASE_SCHEMA_VERSION` y `PREFERENCES_SCHEMA_VERSION` con purge-on-mismatch asimétrico (TinyBase null=mismatch=purge zero data loss; preferences `_schemaVersion` ausente=compat V1). Release **v0.2.6** (hotfix sobre v0.2.5 que expuso bug latente CI con `VITE_GOOGLE_OAUTH_*` faltantes en `release-tauri` heredoc)
+  - **F37 — Split corpus de gotchas + skill BM25:** `Spec/gotchas/<dominio>.md` (15 archivos por dominio: editor, ui-componentes, tinybase-firestore, capacitor-mobile, tauri-desktop, etc.) extraídos del monolito `ESTADO-ACTUAL.md` que cargaba 351 líneas para cualquier consulta de gotcha. Skill local `gotchas-search` con BM25 stdlib Python (k1=1.5, b=0.75, peso 2× título), tokenización Unicode-aware (`\w` matchea ñ/á/é). Reindex automático via PostToolUse hook (matcher separado al editar `Spec/gotchas/*.md`). 197 gotchas indexados al cierre
+
   Detalle técnico, decisiones y gotchas: [`Spec/ESTADO-ACTUAL.md`](Spec/ESTADO-ACTUAL.md) y [`Spec/features/SPEC-feature-*.md`](Spec/features/).
 
 **Ya se puede usar a diario:** capturar ideas desde cualquier app con `Ctrl+Shift+Space` (desktop) o `Alt+N` (web/in-app), web clip desde Chrome via extensión, share intent desde cualquier app Android al Quick Capture, procesar inbox con sugerencias AI agrupadas por confianza (`Aceptar N` para los items ≥0.85), buscar globalmente con `Ctrl+K`, escribir notas con wikilinks + backlinks + auto-tags + resumen AI + sugerencias contextuales accept/dismiss en el editor, marcar favoritos y mandar a papelera con auto-purga configurable, explorar el grafo de conocimiento, ver notas similares por embeddings, agendar revisiones con FSRS, organizar tareas/proyectos/objetivos/hábitos, y todo offline gracias a TinyBase + PWA + retry queue end-to-end (creates + updates + saveContent) con `<PendingSyncIndicator />` global cuando hay writes pendientes.
+
+**Backend AI:** 6 Cloud Functions v2 desplegadas en `us-central1` (Node.js 22, `retry: false`):
+
+- `processInboxItem` — `onDocumentCreated` en inbox, Claude Haiku con tool use + schema enforcement, escribe 6 campos flat `aiSuggested*`
+- `autoTagNote` — `onDocumentWritten` en notes, Claude Haiku con prompt caching `ephemeral`, escribe `aiTags` + `aiSummary`
+- `generateEmbedding` — `onDocumentWritten` en notes, OpenAI `text-embedding-3-small` (1536 dims), guard por `contentHash` SHA-256
+- `embedQuery` — `onCall` v2 callable para búsqueda híbrida client-side (input ≤500 chars)
+- `onNoteDeleted` — cleanup cascada (embeddings + links bidireccionales) con `WriteBatch` chunked
+- `autoPurgeTrash` — `onSchedule('0 3 * * *', UTC)` hard-delete diario tras `trashAutoPurgeDays`
 
 ## Setup local
 
@@ -193,7 +211,8 @@ Documentación técnica y de diseño:
 
 Las SPECs viven en [`Spec/`](Spec/):
 
-- [`Spec/ESTADO-ACTUAL.md`](Spec/ESTADO-ACTUAL.md) — snapshot consolidado (fuente primaria de estado y arquitectura vigente)
+- [`Spec/ESTADO-ACTUAL.md`](Spec/ESTADO-ACTUAL.md) — snapshot consolidado (fuente primaria de estado y arquitectura vigente) + índice de gotchas por dominio
 - [`Spec/SPEC-fase-*.md`](Spec/) — canon histórico por fase (0 a 5.2)
-- [`Spec/features/SPEC-feature-*.md`](Spec/features/) — canon histórico por feature (1 a 15)
+- [`Spec/features/SPEC-feature-*.md`](Spec/features/) — canon histórico por feature (1 a 37)
+- [`Spec/gotchas/<dominio>.md`](Spec/gotchas/) — canon de gotchas técnicos por dominio (15 archivos: editor, ui-componentes, tinybase-firestore, capacitor-mobile, tauri-desktop, cloud-functions-\*, etc.)
 - [`Spec/drafts/DRAFT-*.md`](Spec/drafts/) — discovery pre-SPEC temporal (se eliminan al convertirse en SPEC formal)
