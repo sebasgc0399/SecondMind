@@ -10,7 +10,7 @@ Sistema de productividad y conocimiento personal construido desde código. Combi
 - **Editor:** TipTap (ProseMirror) con extensiones custom (wikilinks, slash commands, tags)
 - **State:** TinyBase (13KB, store reactivo con persister Firestore)
 - **Search:** Orama (FTS client-side, TypeScript-native)
-- **Graph:** Reagraph (MVP) → Sigma.js + Graphology (v2)
+- **Graph:** Reagraph 4.x (MVP) — Sigma.js + Graphology en roadmap v2
 - **Backend:** Firebase (Firestore + Cloud Functions v2 + Auth + Storage)
 - **AI:** Claude Haiku (inbox processing + auto-tagging notas) + OpenAI embeddings (v1.1)
 - **Deploy:** Firebase Hosting
@@ -34,7 +34,7 @@ npm run cap:run      # cap run android (Capacitor CLI, puede fallar en Windows p
 npm run cap:build    # Build web + sync + gradlew assembleDebug → APK en android/app/build/outputs/apk/debug/
 ```
 
-> Capacitor en Windows: si `cap:run` falla con `"gradlew" no se reconoce`, correr manualmente `cd android && ./gradlew.bat assembleDebug` + `adb install -r app/build/outputs/apk/debug/app-debug.apk` + `adb shell am start -n com.secondmind.app/.MainActivity`. Requiere `JAVA_HOME` y `ANDROID_HOME` en env (usar el JBR de Android Studio: `/c/Program Files/Android/Android Studio/jbr`).
+> Capacitor en Windows: `cap run android` falla; usar `./gradlew.bat assembleDebug` directo (ya integrado en `npm run cap:build`). Tras la build: `adb install -r app/build/outputs/apk/debug/app-debug.apk` + `adb shell am start -n com.secondmind.app/.MainActivity`. Requiere `JAVA_HOME` y `ANDROID_HOME` en env (usar el JBR de Android Studio: `/c/Program Files/Android/Android Studio/jbr`).
 
 ## Toolkit Claude Code (Fase 0.1)
 
@@ -121,7 +121,7 @@ Siete niveles de docs, cada uno con propósito único. **Fuente primaria para es
 | `Docs/SETUP-WINDOWS.md`              | Patches one-time de entorno (TS LSP, symlinks, Cargo)                                                           | Solo onboarding/troubleshooting setup                        |
 | `design-system/secondmind/MASTER.md` | Tokens de diseño, paleta, tipografía, anti-patterns                                                             | Al implementar UI                                            |
 
-Docs teóricos en `Docs/00-04-*.md` — leer **solo el que aplique** a la tarea, nunca los 4 a la vez. **Antes de escribir código nuevo, siempre consultar `01` (schemas Firestore) y `03` (convenciones de código)**:
+Docs teóricos en `Docs/00-04-*.md` — leer **solo el que aplique** a la tarea, nunca los 5 a la vez. **Antes de escribir código nuevo, siempre consultar `01` (schemas Firestore) y `03` (convenciones de código)**:
 
 | Archivo                                      | Contenido                                                                                 |
 | -------------------------------------------- | ----------------------------------------------------------------------------------------- |
@@ -191,7 +191,7 @@ src/
 - **Tailwind v4 CSS-first**: no existe `tailwind.config.ts`. La configuración (tokens, variables CSS, custom variants) está en `src/index.css` con `@theme inline { ... }`
 - Mobile-first siempre: estilos base son mobile, breakpoints agregan
 - Usar variables semánticas de shadcn/ui: `text-foreground`, `bg-background`, `border-border`
-- NO usar `@apply`. Si se repite un patrón → extraer a componente
+- NO usar `@apply` en componentes. Excepción: `src/index.css` `@layer base` para resets globales (patrón shadcn). Si se repite un patrón en componentes → extraer a componente
 
 ### Imports
 
@@ -210,7 +210,7 @@ src/
 
 - Paths: `users/{userId}/[collection]/{docId}`
 - IDs auto-generados por Firestore (excepto embeddings que usa noteId)
-- Timestamps: siempre `serverTimestamp()` para createdAt/updatedAt
+- Timestamps: `serverTimestamp()` en escrituras desde Cloud Functions; `Date.now()` numérico para optimistic writes desde el cliente vía repos TinyBase
 - Security rules: solo el dueño lee/escribe sus datos
 
 ### Cloud Functions v2
@@ -220,7 +220,7 @@ src/
 - Timeout y retry configurados explícitamente, nunca defaults
 - Secret management: `defineSecret('ANTHROPIC_API_KEY')` + declarar en `secrets: [...]` del trigger. El valor se accede con `secret.value()` dentro del handler, no en top-level
 - Tool use con schema enforcement: ambas CFs usan `tools` + `tool_choice: { type: 'tool' }` para forzar JSON válido. Schemas compartidos en `src/functions/src/lib/schemas.ts`
-- Cloud Functions desplegadas: `processInboxItem` (`onDocumentCreated` inbox) + `autoTagNote` (`onDocumentWritten` notes) + `generateEmbedding` (`onDocumentWritten` notes → OpenAI embedding)
+- Cloud Functions desplegadas (6): `processInboxItem`, `autoTagNote`, `generateEmbedding`, `embedQuery` (callable), `onNoteDeleted` (cleanup cascada), `autoPurgeTrash` (scheduled). Detalle de triggers + timeouts en `Spec/ESTADO-ACTUAL.md` § "Cloud Functions"
 
 ### Git
 
