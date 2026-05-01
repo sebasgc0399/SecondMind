@@ -8,17 +8,16 @@
 //!
 //! Approach: comparar la version actual contra una marca persistida en
 //! disco (no localStorage que vive dentro del WebView), y si hay mismatch
-//! purgar Service Worker + CacheStorage. Dos estrategias en orden:
+//! invocar `WebviewWindow::clear_all_browsing_data()` — nuclear,
+//! cross-platform. Borra TODO incluido IndexedDB → user re-loguea Firebase
+//! y TinyBase rehidrata desde Firestore una vez por update.
 //!
-//! 1. Filesystem (Windows-only, granular): `remove_dir_all` sobre
-//!    `EBWebView/Default/Service Worker/` del profile WebView2. Preserva
-//!    IndexedDB (Firebase auth + TinyBase persistence) intacto. Puede
-//!    fallar con PermissionDenied si msedgewebview2.exe ya tiene file
-//!    handles abiertos en el momento del setup callback.
-//!
-//! 2. Nuclear (cross-platform, fallback): `WebviewWindow::clear_all_browsing_data`.
-//!    Borra TODO incluido IndexedDB → user re-loguea Firebase + TinyBase
-//!    rehidrata desde Firestore. Garantizado pero molesto.
+//! Un approach previo (filesystem-purge granular sobre
+//! `EBWebView/Default/Service Worker/`, Windows-only) preservaba IndexedDB
+//! pero la QA empírica de F7.1 confirmó que msedgewebview2.exe mantiene
+//! file locks activos durante el setup callback (PermissionDenied 32),
+//! cayendo SIEMPRE al fallback nuclear. Cleanup del approach muerto en
+//! F36.F9.A.
 //!
 //! Toda la telemetría va a `purge.log` en `app_local_data_dir()` (append,
 //! UNIX epoch ts) además del framework `log::*`. El `purge.log` crudo es
@@ -58,7 +57,7 @@ pub fn run(app: &AppHandle) {
         ),
     );
 
-    perform_purge(app);
+    purge_nuclear(app);
     write_current_version(app);
 }
 
@@ -101,61 +100,20 @@ fn write_current_version(app: &AppHandle) {
     }
 }
 
-fn perform_purge(app: &AppHandle) {
-    #[cfg(target_os = "windows")]
-    {
-        match purge_filesystem(app) {
-            Ok(()) => {
-                append_purge_log(app, "filesystem purge ok (or NotFound)");
-                log::warn!("F7.1: filesystem purge succeeded");
-                return;
-            }
-            Err(err) => {
-                append_purge_log(
-                    app,
-                    &format!("filesystem purge failed: {err} — falling back to nuclear"),
-                );
-                log::warn!("F7.1: filesystem purge failed: {err}");
-            }
-        }
-    }
-    purge_nuclear(app);
-}
-
-#[cfg(target_os = "windows")]
-fn purge_filesystem(app: &AppHandle) -> std::io::Result<()> {
-    let data_dir = app.path().app_local_data_dir().map_err(|err| {
-        std::io::Error::new(
-            std::io::ErrorKind::NotFound,
-            format!("app_local_data_dir not resolvable: {err}"),
-        )
-    })?;
-    let sw_dir = data_dir
-        .join("EBWebView")
-        .join("Default")
-        .join("Service Worker");
-
-    match fs::remove_dir_all(&sw_dir) {
-        Ok(()) => Ok(()),
-        Err(err) if err.kind() == std::io::ErrorKind::NotFound => Ok(()),
-        Err(err) => Err(err),
-    }
-}
-
 fn purge_nuclear(app: &AppHandle) {
     let Some(window) = app.get_webview_window("main") else {
-        append_purge_log(app, "nuclear fallback failed: main window not found");
-        log::error!("F7.1: nuclear fallback — main window not found");
+        append_purge_log(app, "nuclear purge failed: main window not found");
+        log::error!("F7.1: nuclear purge — main window not found");
         return;
     };
     match window.clear_all_browsing_data() {
         Ok(()) => {
-            append_purge_log(app, "nuclear fallback ok (clear_all_browsing_data)");
-            log::warn!("F7.1: nuclear fallback succeeded");
+            append_purge_log(app, "nuclear purge ok (clear_all_browsing_data)");
+            log::warn!("F7.1: nuclear purge succeeded");
         }
         Err(err) => {
-            append_purge_log(app, &format!("nuclear fallback failed: {err}"));
-            log::error!("F7.1: nuclear fallback failed: {err}");
+            append_purge_log(app, &format!("nuclear purge failed: {err}"));
+            log::error!("F7.1: nuclear purge failed: {err}");
         }
     }
 }
