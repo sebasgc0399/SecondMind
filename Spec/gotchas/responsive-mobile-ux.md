@@ -34,3 +34,11 @@ Main tiene `padding-bottom: calc(80px + var(--sai-bottom))` para que el content 
 ## Cache del SW persiste entre reinstalaciones del APK en Capacitor
 
 WebView retiene bundle viejo al `adb install -r`. `registerType: 'autoUpdate'` resuelve en reloads subsiguientes; para E2E confiable, desinstalación completa + install fresh.
+
+## Grid mobile-first con `grid-cols-1` explícito
+
+`grid` en Tailwind sin `grid-cols-1` explícito deja children crecer. Un `<div class="grid gap-4 lg:grid-cols-2">` con hijos de content largo estira la implicit column auto hasta miles de px en mobile. Siempre empezar con `grid-cols-1`: `grid grid-cols-1 gap-4 lg:grid-cols-2`.
+
+## `@media (hover: hover)` se evalúa por input device, NO por viewport
+
+En navegadores headless con mouse simulator (Playwright, Puppeteer) y en mobile real con teclado/mouse externo, el query reporta `true` sin importar el ancho de pantalla — los iconos hover-revealed quedan invisibles aunque el viewport sea de 375px. Para hover-reveal "solo en pantallas grandes", usar breakpoint Tailwind (`md:opacity-0 md:group-hover:opacity-100`). Patrón vivo en [src/components/editor/NoteCard.tsx](../../src/components/editor/NoteCard.tsx).

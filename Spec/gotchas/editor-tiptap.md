@@ -118,3 +118,7 @@ Spacer CSS invisible que permite que el scroll del `<main>` corra aunque el cont
 ## Tokens de popup styling unificados
 
 Todos los menus flotantes del editor (WikilinkMenu, SlashMenu, BubbleToolbar, LinkInput, LinkHoverView) usan `rounded-lg border border-border bg-popover text-popover-foreground shadow-xl` + `p-1`.
+
+## Marks viven en text nodes, no en containers
+
+Cualquier traversal que inspeccione `node.marks` debe recurrir hasta `node.type === 'text'` — containers como paragraph/heading/listItem nunca tienen marks directamente. Walk recursivo sobre `node.content` con early return en text nodes. Patrón consolidado en `extractLinks` y `computeDistillLevel`.
