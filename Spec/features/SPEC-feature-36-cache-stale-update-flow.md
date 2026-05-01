@@ -399,7 +399,7 @@ export function useVersionCheck() {
 - [ ] **Tauri desktop:** instalar v0.X.0. Cortar v0.X.1 (`gh release create v0.X.1` con bundle). Abrir app v0.X.0, auto-updater detecta, descarga, app reinicia, boot detecta mismatch, unregister SW, segundo reload, app v0.X.1 funciona sin Ctrl+Shift+R.
 - [ ] **Android:** instalar APK v0.X.0 vía Firebase App Distribution. Subir v0.X.1. Abrir app vieja, prompt update, instalar, abrir, boot detecta mismatch, app v0.X.1 funciona sin "borrar datos".
 - [ ] **Sentry:** generar error artificial (botón en `/settings` debug, opcional) y verificar que aparece en dashboard con stack trace legible.
-- [ ] **Cleanup F7.1:** dropear la rama filesystem de `version_check.rs` (Windows `remove_dir_all` sobre `Service Worker/`) que en QA empírica nunca gana al file lock de msedgewebview2 — simplificar a Opción A pura (`clear_all_browsing_data()` directo). Reduce ~30 líneas, elimina código muerto. Anotación post-mortem F7.1 (commit 19b2b99).
+- [x] **Cleanup F7.1:** dropear la rama filesystem de `version_check.rs` (Windows `remove_dir_all` sobre `Service Worker/`) que en QA empírica nunca gana al file lock de msedgewebview2 — simplificar a Opción A pura (`clear_all_browsing_data()` directo). Reduce ~30 líneas, elimina código muerto. Anotación post-mortem F7.1 (commit 19b2b99). Cerrado en commit 2407e25 (F36.F9.A): -42 líneas netas, `cargo check` clean. `purge_filesystem` y `perform_purge` wrapper eliminados; `run()` llama directo a `purge_nuclear`. Strings de log renombrados de "nuclear fallback" a "nuclear purge" (ya no es fallback — es la única estrategia).
 - [ ] Documentar resultados en cierre del SPEC.
 
 **Archivos:** ninguno nuevo. Documentar en este mismo SPEC al cerrar.
