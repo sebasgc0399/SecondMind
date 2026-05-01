@@ -45,4 +45,37 @@ export default defineConfig([
       ],
     },
   },
+  {
+    // F38.4 — guard rail Clean Arch: capa 2 (components/hooks) no debe
+    // importar Firestore/Auth directo. Excepciones documentadas en
+    // Docs/04 § Excepciones reconocidas. `allowTypeImports: true` cubre
+    // la excepción #3 (type imports externos en capa 2).
+    files: ['src/components/**/*.{ts,tsx}', 'src/hooks/**/*.{ts,tsx}'],
+    ignores: [
+      '**/useNote.ts', // Excepción #2 — lectura one-shot MVP
+      '**/useAuth.ts', // Excepción #1 — auth multi-plataforma
+      '**/*.test.{ts,tsx}', // Tests pueden mockear firebase/* directo
+    ],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          paths: [
+            {
+              name: 'firebase/firestore',
+              message:
+                'Capa 2 (components/hooks) no debe importar Firestore directo. Usar un repo en src/infra/repos/. Ver Docs/04-clean-architecture-frontend.md § Excepciones reconocidas.',
+              allowTypeImports: true,
+            },
+            {
+              name: 'firebase/auth',
+              message:
+                'Capa 2 no debe importar firebase/auth (values). Usar useAuth o un repo. Type imports OK por excepción #3 Docs/04.',
+              allowTypeImports: true,
+            },
+          ],
+        },
+      ],
+    },
+  },
 ]);
