@@ -141,6 +141,7 @@ Cada feature comprimida a 1 línea con pointer al SPEC archivado. Para detalles 
 - [`padding-bottom: 50vh` en `.note-editor .ProseMirror` para breathing room al final de notas largas](gotchas/editor-tiptap.md#padding-bottom-50vh-en-note-editor-prosemirror-para-breathing-room-al-final-de-notas-largas)
 - [Popup wikilinks sin `tippy.js`](gotchas/editor-tiptap.md#popup-wikilinks-sin-tippyjs)
 - [Tokens de popup styling unificados](gotchas/editor-tiptap.md#tokens-de-popup-styling-unificados)
+- [Marks viven en text nodes, no en containers](gotchas/editor-tiptap.md#marks-viven-en-text-nodes-no-en-containers)
 
 ### UI y componentes — [`gotchas/ui-componentes.md`](gotchas/ui-componentes.md)
 
@@ -184,6 +185,8 @@ Cada feature comprimida a 1 línea con pointer al SPEC archivado. Para detalles 
 - [`<table>` + sticky `th/td:first-child` para HabitGrid](gotchas/responsive-mobile-ux.md#table-sticky-thtdfirst-child-para-habitgrid)
 - [BottomNav fixed + `calc(80px + var(--sai-bottom))` height](gotchas/responsive-mobile-ux.md#bottomnav-fixed-calc80px-var--sai-bottom-height)
 - [Cache del SW persiste entre reinstalaciones del APK en Capacitor](gotchas/responsive-mobile-ux.md#cache-del-sw-persiste-entre-reinstalaciones-del-apk-en-capacitor)
+- [Grid mobile-first con `grid-cols-1` explícito](gotchas/responsive-mobile-ux.md#grid-mobile-first-con-grid-cols-1-explícito)
+- [`@media (hover: hover)` se evalúa por input device, NO por viewport](gotchas/responsive-mobile-ux.md#media-hover-hover-se-evalúa-por-input-device-no-por-viewport)
 
 ### Knowledge Graph y WebGL — [`gotchas/graph-webgl.md`](gotchas/graph-webgl.md)
 
