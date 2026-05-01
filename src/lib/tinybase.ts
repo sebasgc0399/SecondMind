@@ -175,3 +175,58 @@ export function parseIds(value: string | undefined): string[] {
 export function stringifyIds(ids: string[]): string {
   return JSON.stringify(ids);
 }
+
+/**
+ * Versión del schema TinyBase (rows + tables) para los stores del proyecto.
+ * Bumpear cuando se cambia el shape de una Row en cualquier `src/stores/*.ts`
+ * — agregar/eliminar/renombrar cell, o cambiar el `default` de una cell
+ * existente. Cliente con localStorage distinto verá mismatch en boot
+ * post-deploy y reseteará sus tablas locales, forzando rehidratación desde
+ * Firestore. Versionado independiente de `PREFERENCES_SCHEMA_VERSION` (F36 D3).
+ *
+ * F8 NO migra datos: TinyBase v8 al setRow silently quita valores no-en-schema
+ * → para changes de tipo de cell (no solo agregar nuevos), escribir job de
+ * migración (Cloud Function o script client-side) ANTES del bump.
+ */
+export const TINYBASE_SCHEMA_VERSION = 1;
+
+const SCHEMA_VERSION_STORAGE_KEY = 'secondmind:tinybase:schemaVersion';
+
+/**
+ * Compara TINYBASE_SCHEMA_VERSION (bundle) contra la persistida en localStorage.
+ * Si difieren (incluye `null`/missing en boot inicial post-deploy F8 — D-F8.1):
+ * llama `delTables()` en cada store recibido y graba la nueva versión.
+ *
+ * Las stores quedan vacías al volver. El `startAutoLoad` posterior del persister
+ * las repuebla desde Firestore. Si el shape cambió, TinyBase v8 muta entrantes
+ * al schema declarado (drops campos extra, defaults para missing).
+ *
+ * Resiliente a localStorage no disponible (private mode iOS, storage
+ * deshabilitado): silent no-op. Retorna true si purgó, false si match o skip.
+ *
+ * IMPORTANTE: invocar ANTES de cualquier `createFirestorePersister` /
+ * `startAutoLoad` — `delTables()` con persister activo dispararía race con el
+ * snapshot in-flight. En SecondMind la llamada vive en `src/main.tsx` antes de
+ * `createRoot()` (D-F8.2).
+ */
+export function migrateTinyBaseSchemaIfNeeded(stores: Store[]): boolean {
+  const current = String(TINYBASE_SCHEMA_VERSION);
+  let stored: string | null = null;
+  try {
+    stored = localStorage.getItem(SCHEMA_VERSION_STORAGE_KEY);
+  } catch {
+    return false;
+  }
+  if (stored === current) return false;
+  stores.forEach((store) => store.delTables());
+  try {
+    localStorage.setItem(SCHEMA_VERSION_STORAGE_KEY, current);
+  } catch {
+    // Idempotente: el próximo boot reintentará. Si nunca funciona,
+    // cada boot hace full resync (UX OK, costo ~1-2s extra por private mode).
+  }
+  if (import.meta.env.DEV) {
+    console.info(`[tinybase:schemaVersion] migrated ${stored ?? 'null'} → ${current}`);
+  }
+  return true;
+}

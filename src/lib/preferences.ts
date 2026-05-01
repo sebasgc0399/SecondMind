@@ -3,6 +3,19 @@ import { FirebaseError } from 'firebase/app';
 import { db } from '@/lib/firebase';
 import { DEFAULT_PREFERENCES, type UserPreferences } from '@/types/preferences';
 
+/**
+ * Versión del shape de UserPreferences. Bumpear cuando cambia el type en
+ * `src/types/preferences.ts` (agregar/eliminar/renombrar campo, cambiar tipo
+ * o meaning de un campo existente). Versionado independiente de
+ * `TINYBASE_SCHEMA_VERSION` (F36 D3).
+ *
+ * Treatment de docs sin `_schemaVersion` (legacy pre-F8): tratados como compat
+ * con V1 (D-F8.1). Solo se rechazan docs con `_schemaVersion` explícitamente
+ * distinto. El campo se inyecta en cada write desde F8 — actúa como marker
+ * del cliente que persistió, no del shape persistido (D-F8.4).
+ */
+export const PREFERENCES_SCHEMA_VERSION = 1;
+
 // Primer doc-único onSnapshot del proyecto. Cuando se acumulen N>3 prefs,
 // considerar migrar a tabla TinyBase via persister para unificar con F11/F12
 // (cleanup cross-user) y evitar fragmentar consistencia.
@@ -32,6 +45,12 @@ function pathFor(uid: string) {
 }
 
 export function parsePrefs(data: Record<string, unknown> | undefined): UserPreferences {
+  // F36.F8: rechazar prefs con _schemaVersion presente y distinto de current.
+  // Ausente (null/undefined) = compat V1 (docs legacy pre-F8). D-F8.1, D-F8.6.
+  const schemaV = data?._schemaVersion;
+  if (schemaV != null && schemaV !== PREFERENCES_SCHEMA_VERSION) {
+    return DEFAULT_PREFERENCES;
+  }
   const days = data?.trashAutoPurgeDays;
   const banners = data?.distillBannersSeen as Record<string, unknown> | undefined;
   return {
@@ -103,7 +122,14 @@ export async function setPreferences(
   uid: string,
   partial: Partial<UserPreferences>,
 ): Promise<void> {
-  await setDoc(pathFor(uid), partial, { merge: true });
+  // F36.F8: inyectar _schemaVersion en cada write. Marker del cliente que
+  // persistió (D-F8.4). UserPreferences type no incluye el campo —
+  // metadata de persistencia, no de dominio.
+  await setDoc(
+    pathFor(uid),
+    { ...partial, _schemaVersion: PREFERENCES_SCHEMA_VERSION },
+    { merge: true },
+  );
 }
 
 // Helper específico para marcar que el banner de transición a un nivel
@@ -120,10 +146,22 @@ export async function setPreferences(
 export async function markDistillBannerSeen(uid: string, level: 1 | 2 | 3): Promise<void> {
   const ref = pathFor(uid);
   try {
-    await updateDoc(ref, { [`distillBannersSeen.l${level}`]: true });
+    // F36.F8: inyectar _schemaVersion junto al path nested (updateDoc soporta
+    // multiple keys atómicamente).
+    await updateDoc(ref, {
+      [`distillBannersSeen.l${level}`]: true,
+      _schemaVersion: PREFERENCES_SCHEMA_VERSION,
+    });
   } catch (error) {
     if (error instanceof FirebaseError && error.code === 'not-found') {
-      await setDoc(ref, { distillBannersSeen: { [`l${level}`]: true } }, { merge: true });
+      await setDoc(
+        ref,
+        {
+          distillBannersSeen: { [`l${level}`]: true },
+          _schemaVersion: PREFERENCES_SCHEMA_VERSION,
+        },
+        { merge: true },
+      );
       return;
     }
     throw error;
