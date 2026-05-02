@@ -6,7 +6,7 @@ import { tasksRepo } from '@/infra/repos/tasksRepo';
 import { projectsRepo } from '@/infra/repos/projectsRepo';
 import type { AreaKey } from '@/types/area';
 import type { Priority } from '@/types/common';
-import type { ConvertOverrides } from '@/types/inbox';
+import type { ConvertOverrides, InboxSource } from '@/types/inbox';
 import type { InboxRow } from '@/types/repoRows';
 
 const repo = createFirestoreRepo<InboxRow>({
@@ -15,6 +15,41 @@ const repo = createFirestoreRepo<InboxRow>({
   pathFor: (uid, id) => `users/${uid}/inbox/${id}`,
   queue: saveInboxQueue,
 });
+
+/**
+ * Crea un inbox item desde un entrypoint de captura (capture page Tauri,
+ * web-clip extension, share-intent Capacitor, etc.). Construye el row con
+ * defaults explícitos del schema y delega al factory — gana retry F30 via
+ * `saveInboxQueue` para entries que toman setDoc tras red flaky.
+ *
+ * `Date.now()` por consistencia con resto de optimistic writes; el persister
+ * F12 espera `number` en createdAt, no FieldValue.
+ */
+async function createFromCapture(rawContent: string, source: InboxSource): Promise<string | null> {
+  const row: InboxRow = {
+    rawContent,
+    source,
+    sourceUrl: '',
+    status: 'pending',
+    processedAs: '',
+    aiProcessed: false,
+    aiSuggestedTitle: '',
+    aiSuggestedType: '',
+    aiSuggestedTags: '[]',
+    aiSuggestedArea: '',
+    aiSummary: '',
+    aiPriority: '',
+    aiConfidence: 0,
+    createdAt: Date.now(),
+  };
+
+  try {
+    return await repo.create(row);
+  } catch (error) {
+    console.error('[inboxRepo] createFromCapture failed', error);
+    return null;
+  }
+}
 
 /**
  * Marca un inbox item como procesado — NO lo borra físicamente.
@@ -122,6 +157,7 @@ async function convertToProject(
 }
 
 export const inboxRepo = {
+  createFromCapture,
   convertToNote,
   convertToTask,
   convertToProject,

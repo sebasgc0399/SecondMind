@@ -421,7 +421,7 @@ src/
 
 **Reglas a setear desde el principio:**
 
-1. **ESLint rule "no-restricted-imports"** que prohíba importar desde capa 4 en componentes. Ejemplo: bloquear `firebase/firestore` desde `src/components/**` y `src/hooks/**`.
+1. **ESLint rule "no-restricted-imports"** que prohíba importar desde capa 4 en componentes. Ejemplo: bloquear `firebase/firestore` desde `src/components/**` y `src/hooks/**`. **✅ Implementada en F38.4** ([eslint.config.js](../eslint.config.js)) — bloquea `firebase/firestore` y `firebase/auth` con `allowTypeImports: true`; excepciones por glob `**/useNote.ts` y `**/useAuth.ts`.
 2. **Convenciones de naming:** `use[Entidad][Acción]` para hooks, `[entidad]Repo` para repos (singular, const con **named export**: `export const tasksRepo = { createTask, updateTask, ... }` — nunca clases ni default exports), `[Entidad]` para modelos.
 3. **Serialización de arrays:** si tu store (TinyBase, o similar) solo acepta primitivos, estandarizá helpers `stringifyIds`/`parseIds` desde el día 1. Los repos serializan al escribir, los hooks deserializan al leer con `useMemo`. Crítico: `stringifyIds` NO debe ser idempotente — pasar una string ya serializada produce escaped nesting; hacelo explícito en el contrato.
 4. **Tests unitarios del repo layer desde el primer repo** — valida que el patrón optimistic update funciona antes de multiplicarlo.

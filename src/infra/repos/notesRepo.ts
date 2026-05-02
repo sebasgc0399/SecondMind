@@ -1,4 +1,4 @@
-import { arrayUnion, doc, setDoc, updateDoc } from 'firebase/firestore';
+import { arrayUnion, doc, onSnapshot, setDoc, updateDoc } from 'firebase/firestore';
 import { auth, db } from '@/lib/firebase';
 import { createFirestoreRepo } from '@/infra/repos/baseRepo';
 import { saveNotesCreatesQueue, saveNotesMetaQueue, type SaveQueue } from '@/lib/saveQueue';
@@ -327,6 +327,50 @@ async function acceptSuggestion(
   });
 }
 
+export interface NoteSuggestionsSnapshot {
+  suggestedNoteType?: NoteType;
+  noteTypeConfidence?: number;
+  dismissedSuggestions: string[];
+}
+
+/**
+ * Suscripción reactiva a los 3 campos solo-en-Firestore que alimentan el
+ * banner de sugerencias del editor (suggestedNoteType, noteTypeConfidence,
+ * dismissedSuggestions). Usa onSnapshot sobre el doc completo de la nota
+ * porque Firestore no permite proyectar campos en una suscripción.
+ *
+ * Captura `auth.currentUser?.uid` al invocarse (no en parámetro): paridad
+ * con el pre-F38.2 hook — si auth está null, retorna unsubscribe noop.
+ *
+ * Errores se loggean y se pasan al callback con el último snapshot conocido
+ * neutro (`{ dismissedSuggestions: [] }`) — el caller mantiene su state.
+ */
+function subscribeSuggestions(
+  noteId: string,
+  callback: (snapshot: NoteSuggestionsSnapshot) => void,
+): () => void {
+  const uid = auth.currentUser?.uid;
+  if (!uid || !noteId) return () => {};
+  const ref = doc(db, `users/${uid}/notes/${noteId}`);
+  return onSnapshot(
+    ref,
+    (snap) => {
+      const data = snap.data();
+      callback({
+        suggestedNoteType: data?.suggestedNoteType as NoteType | undefined,
+        noteTypeConfidence:
+          typeof data?.noteTypeConfidence === 'number' ? data.noteTypeConfidence : undefined,
+        dismissedSuggestions: Array.isArray(data?.dismissedSuggestions)
+          ? (data.dismissedSuggestions as string[])
+          : [],
+      });
+    },
+    (error) => {
+      console.error('[notesRepo] subscribeSuggestions onSnapshot error', error);
+    },
+  );
+}
+
 /**
  * Descarta una sugerencia. Persiste el dismiss vía `arrayUnion` para que
  * dos clicks rápidos (o cross-device) no se pisen entre sí.
@@ -365,4 +409,5 @@ export const notesRepo = {
   purgeAll,
   acceptSuggestion,
   dismissSuggestion,
+  subscribeSuggestions,
 };

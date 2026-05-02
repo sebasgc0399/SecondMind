@@ -120,3 +120,20 @@ export interface InboxRow extends RepoRow {
   aiConfidence: number;
   createdAt: number;
 }
+
+// Schema TinyBase de links (paridad con linksStore.ts). Todos primitivos
+// requeridos: el dominio `NoteLink` en src/types/link.ts mantiene `id`
+// composite + opcionales (`strength?`, `context?`) para callers UI; el row
+// es el shape literal de TinyBase. linkType degrada a string por la misma
+// razón que noteType en NoteRow (RepoRow no soporta union types).
+export interface LinkRow extends RepoRow {
+  sourceId: string;
+  targetId: string;
+  sourceTitle: string;
+  targetTitle: string;
+  context: string;
+  linkType: string;
+  strength: number;
+  accepted: boolean;
+  createdAt: number;
+}
