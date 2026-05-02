@@ -40,7 +40,7 @@ export const navSections: NavSection[] = [
   {
     label: 'Conocimiento',
     items: [
-      { label: 'Notas', icon: FileText, to: '/notes' },
+      { label: 'Notas', icon: FileText, to: '/notes', end: true },
       { label: 'Grafo', icon: Network, to: '/notes/graph' },
     ],
   },

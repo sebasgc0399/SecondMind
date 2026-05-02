@@ -1,0 +1,45 @@
+# SPEC — SecondMind · Feature 39: Fix grafo en Tauri (CSP) (Registro de implementación)
+
+> Estado: Completada Mayo 2026
+> Commits: `592d8b1` worker-src + blob: en script-src (canales 1-2) + bump v0.2.7, `4cd5e41` sidebar active state (NavLink end:true), `9c7a363` connect-src cdn.jsdelivr.net (canal 3 — troika fonts).
+> Gotchas operativos vigentes → `Spec/ESTADO-ACTUAL.md`.
+
+## Objetivo
+
+El usuario abre `/notes/graph` en la app de escritorio y ve el grafo renderizado igual que en https://secondmind.web.app. El bug original: canvas vacío en Tauri con header "N notas · M conexiones" + errores de CSP en consola. Web (Firebase Hosting sin `<meta CSP>`) y Capacitor Android (sin policy) no aplican CSP custom — bug 100% Tauri-only. La feature también capturó un bug ortogonal del sidebar (Notas + Grafo activos simultáneo en `/notes/graph`) que el usuario detectó durante la validación.
+
+## Qué se implementó
+
+- **F1 — CSP de 3 canales para Reagraph en Tauri:** Reagraph 4.30.8 acopla 3 mecanismos que el CSP de Tauri bloqueaba: (canal 1) `graphology-layout-forceatlas2/helpers.js:251-261` crea Web Workers vía `URL.createObjectURL(new Blob([code]))` → fix `worker-src 'self' blob:`; (canal 2) Troika-three-text usa `importScripts()` heredado del worker context → fix `blob:` en `script-src`; (canal 3) Troika fetchea fonts Unicode fallback de `cdn.jsdelivr.net/gh/lojjic/unicode-font-resolver` para typesetting (acentos en español, símbolos) → fix `https://cdn.jsdelivr.net` en `connect-src`. Bump version 0.2.7 en `package.json`, `src-tauri/tauri.conf.json`, `src-tauri/Cargo.toml` (Cargo.lock regenerado). Archivos tocados: `src-tauri/tauri.conf.json`, `package.json`, `src-tauri/Cargo.toml`, `src-tauri/Cargo.lock`.
+- **F2 — Sidebar active state (scope expansion):** detectado durante validación E2E. Items "Notas" (`to: '/notes'`) y "Grafo" (`to: '/notes/graph'`) quedaban activos simultáneo en `/notes/graph` por prefix matching default de NavLink. Fix: `end: true` en item "Notas" alineando con patrón ya usado en Dashboard. Trade-off aceptado: en `/notes/<noteId>` (editor) ya no activa "Notas" — el breadcrumb interno marca el contexto. Aplica a NavigationDrawer mobile (reusa `SidebarContent`). Archivos tocados: `src/components/layout/navItems.ts:43`.
+
+## Decisiones clave
+
+| ID  | Decisión                                                                          | Razón                                                                                                                                                                                                                                                                                                                   |
+| --- | --------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| D1  | `blob:` en `script-src` Y `worker-src 'self' blob:` (no solo worker-src)          | Troika hace `importScripts()` desde dentro del worker para cargar módulos JS; eso hereda `script-src` del worker context. Es **requisito**, no defensivo (corrección vs SPEC original que lo presentaba como opcional).                                                                                                 |
+| D2  | Aceptar `'unsafe-inline'` + `blob:` sin review de seguridad adicional             | App ya tiene `'unsafe-inline'` (heredado F3 Fase 5.1, requerido por Vite + base-UI); XSS daría RCE igual. `blob:` URIs solo creables por código ya cargado, no abre superficie nueva.                                                                                                                                   |
+| D3  | Permitir `cdn.jsdelivr.net` en `connect-src` vs self-host fonts Unicode           | Self-host pesa ~300 MB (corpus completo). jsdelivr es CDN público confiable. Solo `connect-src` (fetch/XHR), no `script-src` ni `frame-src`. Fonts se cachean en WebView2 storage tras primera carga (offline después).                                                                                                 |
+| D4  | Release Tauri-only via tag `v0.2.7`, web manual omitida                           | Workflow CI (`.github/workflows/release.yml`) trigger es `v*` y dispara `release-tauri` + `release-capacitor` automáticos; web hosting es siempre manual (no hay job CI). Para release Tauri-only: bump 3 archivos versión, tag, omitir `npm run deploy`. Skill `release-ecosystem` NO aplica para hotfixes Tauri-only. |
+| D5  | Sidebar `end: true` en item "Notas" (Opción A simple) vs lógica custom `isActive` | UX consistente con Dashboard. Editor de nota tiene breadcrumb propio "← Notas / título" que marca contexto. Lógica custom era overkill para 1 caso edge.                                                                                                                                                                |
+
+## Rondas de fix
+
+El fix CSP no fue lineal — 4 iteraciones de validación expusieron canales adicionales y trampas de cache:
+
+1. **Iter 1 — fix CSP canales 1+2** (`592d8b1`): worker-src + blob: en script-src. Validado en `tauri:dev` exitoso. Pero fail latente: dev reusó cache de fonts Unicode del MSI v0.2.6 previamente abierto, enmascarando el canal 3.
+2. **Iter 2 — release reveló canal 3** (`9c7a363`): primer build release sin cache fresh disparó fetch a jsdelivr → CSP `connect-src` bloqueó → `THREE.WebGLRenderer: Context Lost`. Fix: agregar `cdn.jsdelivr.net` a `connect-src`.
+3. **Iter 3 — Cargo no detectó cambio en `tauri.conf.json`**: `npm run tauri:build` tras iter 2 tomó solo 30s (vs 3 min esperados) — Cargo solo relinkeó el binario, sin re-ejecutar `tauri-build` que procesa el config. Binario nuevo con CSP viejo embebido. Workaround: `cargo clean -p secondmind` para forzar rerun de `tauri-build`. Rebuild full en 1m45s.
+4. **Iter 4 — WebView2 cacheaba el meta CSP entre lanzamientos**: el binario tenía el CSP nuevo (verificado por `[System.IO.File]::ReadAllBytes(...)` + grep `cdn.jsdelivr`), pero al lanzar el `.exe`, WebView2 cargaba el CSP viejo desde el cache de `%LOCALAPPDATA%\com.secondmind.app\`. Workaround: `Remove-Item -Recurse -Force` ese path antes de relanzar. Fix definitivo: grafo cargó sin errores CSP.
+
+Bug ortogonal del sidebar (`4cd5e41`) emergió durante iter 1 cuando el grafo cargó por primera vez. Root cause aislado en código (NavLink + `to="/notes"` sin `end`), fix de 1 línea, mismo branch (decisión del usuario: scope expansion ok dado contexto compartido).
+
+## Lecciones
+
+- **Validar Tauri release (no solo dev) ante cualquier cambio de CSP.** Tauri inyecta nonces y aplica CSP estricto solo en build release; dev cachea fonts entre sesiones; dev y release pueden divergir significativamente. Si no hay manera de testear release antes del tag, asumir que el CSP fallará en release y planear iteración rápida.
+- **`tauri-build` no marca dirty al cambiar solo `tauri.conf.json`** (sin cambios en `src/` Rust). El binario se relinkea pero el config compilado queda con el snapshot viejo. Workaround: `cargo clean -p <package_name>` para invalidar tauri-build y forzar reprocesamiento del config en el próximo build.
+- **WebView2 cachea el meta CSP inyectado por Tauri entre lanzamientos.** Aplicar un fix CSP requiere limpiar `%LOCALAPPDATA%\<bundle_id>\` antes de relanzar el binario. Gotcha emparentado con F36 (que era cache de bundle JS); aquí es cache del meta tag aplicado al HTML.
+- **Reagraph 4.x acopla deps transitivas que crean recursos `blob:` y fetch externos aunque el `layoutType` activo no las use** — el bundle Vite las incluye igual y algún code path al montar `<GraphCanvas>` las invoca. Auditar 3 canales CSP (workers, script-src para importScripts, connect-src para fonts) ante upgrade o swap de lib WebGL (Sigma.js, deck.gl, regl).
+- **Skill `release-ecosystem` NO aplica para hotfixes Tauri-only.** Workflow CI con `tags: v*` dispara `release-tauri` + `release-capacitor` automáticos. Para release Tauri-only: bumpear `package.json`, `src-tauri/tauri.conf.json`, `src-tauri/Cargo.toml` (3 archivos), tag `v0.2.7`, omitir `npm run deploy`. APK Android sale igual con `versionName=0.2.7` (functionalmente idéntico, solo trazabilidad de versión).
+- **Sidebar NavLink: items con rutas hijas que tienen sus propios entries deben usar `end: true`.** Patrón ya canónico en Dashboard (`to: '/', end: true`). Sin `end`, el prefix matching default activa el item parent en cualquier ruta hija. Aplica a futuros items que hereden este patrón.
+- **`single-instance` plugin de Tauri redirige el binario dev al release ya abierto si ambos comparten `identifier`.** Al validar `tauri:dev` con un MSI release instalado y abierto, `cargo run` arranca el binario dev pero la ventana visible sigue siendo la del MSI viejo. Matar TODOS los `secondmind.exe` con `Stop-Process -Name secondmind -Force` antes de validar dev tras release instalado.
