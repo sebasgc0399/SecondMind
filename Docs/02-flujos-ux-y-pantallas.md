@@ -485,13 +485,13 @@ El modal NO tiene selector de tipo (nota/tarea/proyecto), NO tiene tags, NO tien
 │  │  Fogg demuestra que los     │  ◇ Sistemas de       │  │
 │  │  hábitos fallan no por      │    productividad     │  │
 │  │  motivación, sino por       │  ◇ Lecciones del SC  │  │
-│  │  [[diseño de entorno]].     │    en Notion         │  │
+│  │  @diseño de entorno.        │    en Notion         │  │
 │  │                             │                      │  │
 │  │  La clave es hacer el       │  ── Info ────────── │  │
 │  │  comportamiento deseado     │                      │  │
 │  │  lo más fácil posible.      │  Tipo: permanent     │  │
-│  │  Ver también [[atomic       │  Área: 🧠 Conocim.   │  │
-│  │  habits loop]].             │  Tags: #hábitos      │  │
+│  │  Ver también @atomic        │  Área: 🧠 Conocim.   │  │
+│  │  habits loop.               │  Tags: #hábitos      │  │
 │  │                             │        #productivid. │  │
 │  │                             │  Creada: 10/04/26    │  │
 │  │  #hábitos #productividad    │  Links: 4 ↔ 2       │  │
@@ -511,27 +511,27 @@ El modal NO tiene selector de tipo (nota/tarea/proyecto), NO tiene tags, NO tien
 | PARA select          | Dropdown           | project / area / resource / archive                               |
 | Menú "⋮ Más"         | Dropdown menu      | Archivar, Eliminar, Exportar MD, Ver historial                    |
 | Editor TipTap        | Rich text editor   | Título es la primera línea (H1 auto). Body con Markdown shortcuts |
-| `[[wikilink]]`       | Custom node TipTap | Al escribir `[[` aparece autocompletado de notas existentes       |
+| `@mención`           | Custom node TipTap | Al escribir `@` aparece autocompletado de notas existentes        |
 | `#tag`               | Custom mark TipTap | Al escribir `#` aparece autocompletado de tags existentes         |
 | Sidebar - Backlinks  | Lista de links     | Notas que apuntan a esta nota. Click → navega a esa nota          |
 | Sidebar - Info       | Metadata panel     | Tipo, área, tags, fechas, conteo de links, nivel de destilación   |
 
 #### Estados
 
-| Estado           | Qué se muestra                                                                             |
-| ---------------- | ------------------------------------------------------------------------------------------ |
-| Nota nueva       | Editor vacío con placeholder "Escribe una idea..." Cursor en título                        |
-| Editando         | Editor con contenido. Auto-save cada 2s de inactividad                                     |
-| Guardando        | Indicador sutil "Guardando..." en header (desaparece en 500ms)                             |
-| Guardado         | Indicador "✓ Guardado" (desaparece en 1s)                                                  |
-| Error al guardar | Banner rojo "No se pudo guardar" + retry. Datos NO se pierden (TinyBase local)             |
-| Offline          | Edición normal. Badge "Offline — se sincronizará". Guardar funciona local                  |
-| Sin backlinks    | Sidebar muestra "Sin backlinks aún" + tip: "Linkea esta nota desde otra usando [[título]]" |
+| Estado           | Qué se muestra                                                                          |
+| ---------------- | --------------------------------------------------------------------------------------- |
+| Nota nueva       | Editor vacío con placeholder "Escribe una idea..." Cursor en título                     |
+| Editando         | Editor con contenido. Auto-save cada 2s de inactividad                                  |
+| Guardando        | Indicador sutil "Guardando..." en header (desaparece en 500ms)                          |
+| Guardado         | Indicador "✓ Guardado" (desaparece en 1s)                                               |
+| Error al guardar | Banner rojo "No se pudo guardar" + retry. Datos NO se pierden (TinyBase local)          |
+| Offline          | Edición normal. Badge "Offline — se sincronizará". Guardar funciona local               |
+| Sin backlinks    | Sidebar muestra "Sin backlinks aún" + tip: "Linkea esta nota desde otra usando @título" |
 
 #### Interacciones
 
 - Escribir → Auto-save con debounce (2s sin cambios → guarda)
-- Escribir `[[` → Popup de autocompletado con notas existentes, filtrado por texto
+- Escribir `@` → Popup de autocompletado con notas existentes, filtrado por texto
 - Seleccionar nota en popup → Inserta wikilink como nodo clickeable
 - Click en wikilink → Navega a esa nota
 - Escribir `#` → Popup de autocompletado con tags existentes
@@ -543,7 +543,7 @@ El modal NO tiene selector de tipo (nota/tarea/proyecto), NO tiene tags, NO tien
 #### Autocompletado de wikilinks (detalle)
 
 ```
-Escribo: La captura debe ser [[rá
+Escribo: La captura debe ser @rá
 
 ┌─────────────────────────────┐
 │ 🔍 rá                       │
@@ -1096,14 +1096,14 @@ Tab → body del editor
 Escribe contenido libre con Markdown
     │
     ▼
-Escribe [[  →  popup de autocompletado
+Escribe @  →  popup de autocompletado
     │
     ├── Escribe para filtrar
     ├── ↑↓ para navegar
     └── Enter para seleccionar
          │
          ▼
-    [[diseño de entorno]] insertado como nodo
+    @diseño de entorno insertado como nodo
     │
     ▼
 Continúa escribiendo... agrega #tags inline
@@ -1116,7 +1116,7 @@ Auto-save (cada 2s de inactividad)
     └────┬────┘
          │
     ┌────┴─────┐
-    │ LINKS    │ extractLinks() detecta nuevos [[wikilinks]]
+    │ LINKS    │ extractLinks() detecta nuevas menciones @
     └────┬─────┘
          │
     ┌────┴─────────┐
@@ -1195,7 +1195,7 @@ Graph View
     │   └── "Abrir nota →" → navega al editor
     │       │
     │       ├── Leer nota → refinar
-    │       ├── Agregar [[wikilink]] a otra nota
+    │       ├── Agregar mención @ a otra nota
     │       └── ← volver al grafo
     │
     └── Filtrar por área/tipo → subgrafo
@@ -1325,7 +1325,7 @@ Cada sección tiene su propio copy. Nunca mostrar una lista vacía sin contexto.
 | ⌘+S      | Forzar guardado          | Editor de nota |
 | ⌘+Enter  | Guardar y cerrar         | Modales        |
 | Escape   | Cerrar modal/palette     | Modales        |
-| `[[`     | Autocompletado wikilinks | Editor de nota |
+| `@`      | Autocompletado wikilinks | Editor de nota |
 | `/`      | Slash commands           | Editor de nota |
 | `#`      | Autocompletado tags      | Editor de nota |
 

@@ -178,7 +178,7 @@ interface NoteLink {
   targetId: string; // Nota destino
 
   // Contexto del link
-  context?: string; // Texto alrededor del [[wikilink]] en la nota origen
+  context?: string; // Texto alrededor de la mención @ en la nota origen
   linkType: 'explicit' | 'ai-suggested'; // ¿Lo creó el usuario o la AI?
 
   // Metadata
@@ -356,7 +356,7 @@ src/
 │   │   ├── SimilarNotesPanel.tsx  # Top 5 notas por cosine similarity (Fase 4)
 │   │   ├── ReviewBanner.tsx       # FSRS: activar/revisar/próxima fecha (Fase 4)
 │   │   └── extensions/
-│   │       └── wikilink.ts      # [[wikilinks]] con autocompletado
+│   │       └── wikilink.ts      # @menciones a notas con autocompletado
 │   ├── graph/                   # Visualización de grafo (Fase 4)
 │   │   ├── KnowledgeGraph.tsx   # Canvas Reagraph + hover/click/dblclick
 │   │   ├── GraphNodePanel.tsx   # Panel flotante al click en nodo
@@ -456,7 +456,7 @@ src/
 │   ├── capacitorAuth.ts         # initCapacitorAuth + signInWithCapacitor: SocialLogin → signInWithCredential (Fase 5.2)
 │   └── editor/
 │       ├── syncLinks.ts         # Diff + write links bidireccionales client-side
-│       ├── extractLinks.ts      # Parser de [[wikilinks]] del contenido
+│       ├── extractLinks.ts      # Parser de menciones @ del contenido
 │       └── serialize.ts         # TipTap JSON ↔ Markdown
 │
 ├── types/
@@ -563,11 +563,11 @@ useNote carga content desde Firestore (getDoc one-shot, no onSnapshot)
 Escribe contenido en TipTap
     │
     ▼
-Escribe [[ → autocompletado muestra notas existentes
+Escribe @ → autocompletado muestra notas existentes
     (via @tiptap/suggestion, popup con createPortal + virtual anchor, sin tippy.js)
     │
     ▼
-Selecciona nota → se crea un [[wikilink]]
+Selecciona nota → se crea una mención @
     │
     ▼
 Al guardar (debounce 2s via useNoteSave → notesRepo.saveContent desde F10):
@@ -750,8 +750,8 @@ Extensiones base (implementadas):
 └── Placeholder ("Escribe una idea...")
 
 Extensión custom (implementada):
-└── WikiLink → [[nota]] con autocompletado
-    ├── @tiptap/suggestion con char: '[[' (TipTap v3 acepta strings multi-char nativamente)
+└── WikiLink → @nota con autocompletado
+    ├── @tiptap/suggestion con char: '@' (trigger migrado de `[[` a `@` en F2 Editor Polish)
     ├── Popup: createPortal + virtual anchor del clientRect() (sin tippy.js)
     ├── Node schema: { type: 'wikilink', attrs: { noteId, noteTitle } }
     └── Click: event delegation con data-note-id → navigate

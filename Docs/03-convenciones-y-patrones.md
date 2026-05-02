@@ -729,8 +729,8 @@ const newNote = {
 
 ```
 extensions/
-├── wikilink.ts                 # [[wikilinks]] — Node type con attrs { noteId, noteTitle }
-├── wikilink-suggestion.ts      # Suggestion plugin de wikilinks (autocompletado [[ + portal)
+├── wikilink.ts                 # Menciones @ — Node type con attrs { noteId, noteTitle }
+├── wikilink-suggestion.ts      # Suggestion plugin de wikilinks (autocompletado @ + portal)
 ├── slash-command.ts            # / commands — comandos para insertar bloques
 └── slash-command-suggestion.ts # Suggestion plugin del menú slash
 ```

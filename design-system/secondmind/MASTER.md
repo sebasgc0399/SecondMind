@@ -254,10 +254,11 @@ En dark mode, la elevación se logra con **backgrounds progresivamente más clar
 ### Wikilinks en el editor
 
 ```tsx
-// Inline wikilink node (TipTap extension)
-<span className="text-primary hover:underline decoration-primary/40 underline-offset-2 cursor-pointer font-medium">
-  [[Nombre de nota]]
-</span>
+// Inline wikilink node renderizado por TipTap (extensión wikilink.ts)
+// Trigger UI: '@'. El '@' visible se agrega vía CSS pseudo-elemento .wikilink::before
+<a className="wikilink" data-note-id="..." data-wikilink="true">
+  Nombre de nota
+</a>
 ```
 
 ### Tags

@@ -16,7 +16,7 @@ export default function HubsCard() {
         <CardSkeleton />
       ) : items.length === 0 ? (
         <p className="text-sm text-muted-foreground">
-          Conecta tus notas con [[wikilinks]] — los hubs aparecerán acá.
+          Linkea notas escribiendo @ — los hubs aparecerán acá.
         </p>
       ) : (
         <ul className="flex flex-col gap-1">
