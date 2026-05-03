@@ -1,5 +1,6 @@
-import { FileText, Loader2, Trash2 } from 'lucide-react';
+import { CloudOff, FileText, Loader2, Trash2 } from 'lucide-react';
 import AiSuggestionCard from '@/components/capture/AiSuggestionCard';
+import useOnlineStatus from '@/hooks/useOnlineStatus';
 import type { InboxAiResult, InboxItem } from '@/types/inbox';
 import { formatRelative } from '@/lib/formatDate';
 
@@ -24,16 +25,24 @@ export default function InboxItemCard({
   onDismiss,
   onAcceptSuggestion,
 }: InboxItemCardProps) {
+  const isOnline = useOnlineStatus();
+
   return (
     <div className="rounded-lg border border-border bg-card p-4">
       <p className="text-sm whitespace-pre-wrap text-foreground">{item.rawContent}</p>
 
-      {!item.aiProcessed && (
-        <div className="mt-2 flex items-center gap-1.5 text-xs text-muted-foreground">
-          <Loader2 className="h-3 w-3 animate-spin" />
-          <span>Procesando con AI...</span>
-        </div>
-      )}
+      {!item.aiProcessed &&
+        (isOnline ? (
+          <div className="mt-2 flex items-center gap-1.5 text-xs text-muted-foreground">
+            <Loader2 className="h-3 w-3 animate-spin" />
+            <span>Procesando con AI...</span>
+          </div>
+        ) : (
+          <div className="mt-2 flex items-center gap-1.5 text-xs text-muted-foreground">
+            <CloudOff className="h-3 w-3" />
+            <span>En cola — se procesará al reconectar</span>
+          </div>
+        ))}
 
       {item.aiProcessed && item.aiResult && (
         <AiSuggestionCard
