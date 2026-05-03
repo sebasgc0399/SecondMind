@@ -1,7 +1,6 @@
 # DRAFT — Privatizar repo GitHub + Migrar endpoint Tauri updater a host público
 
-> **Estado:** DRAFT / discovery — **NO es un SPEC formal**
-> **Vida útil:** temporal. Eliminar este archivo al convertirlo en un `SPEC-feature-N-*.md` desde el PC personal.
+> **Estado:** DRAFT / discovery — **NO es un SPEC formal** > **Vida útil:** temporal. Eliminar este archivo al convertirlo en un `SPEC-feature-N-*.md` desde el PC personal.
 > **Redactado en:** PC empresa (sesión Claude Code), 2026-04-23
 > **Limitación de contexto:** esta máquina no tiene el `.env.local` real del proyecto ni corre builds Tauri. Cualquier verificación que requiera env vars de Firebase/OAuth se pospuso para el PC personal.
 

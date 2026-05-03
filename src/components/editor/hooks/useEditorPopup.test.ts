@@ -35,7 +35,7 @@ function mockSuggestionProps(query: string, items: TestItem[] = ITEMS): Suggesti
         x: 100,
         y: 100,
         toJSON: () => ({}),
-      }) as DOMRect,
+      } as DOMRect),
   };
 }
 

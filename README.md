@@ -28,6 +28,7 @@ La fuente primaria de estado y arquitectura vigente es [`Spec/ESTADO-ACTUAL.md`]
 - **Fase 0 — Setup** ✅ Proyecto compilando, auth con Google, sync TinyBase ↔ Firestore, deploy a Firebase Hosting
 - **Fase 0.1 — Toolkit** ✅ MCPs (Firebase, Context7, Playwright, Brave Search), skills de frontend/UX, hooks de formato automático (Prettier + ESLint en PostToolUse), protección de la rama main
 - **Fase 1 — MVP** ✅ Primera versión usable diariamente. 9 features completas:
+
   - **F1 · Router:** React Router con layout (sidebar + outlet) y rutas `/`, `/inbox`, `/notes`, `/notes/:noteId`, `/settings`
   - **F2 · Stores:** TinyBase v8 con schemas de notes/links/inbox y custom persister Firestore con `merge: true`
   - **F3 · Quick Capture:** modal global con shortcut `Alt+N`, animación de confirmación, escribe al `inboxStore` sin clasificar
@@ -39,6 +40,7 @@ La fuente primaria de estado y arquitectura vigente es [`Spec/ESTADO-ACTUAL.md`]
   - **F9 · Dashboard:** `/` con saludo contextual (mañana/tarde/noche), botón de captura rápida, card de inbox con los 3 items más recientes y card de notas recientes con las 5 últimas actualizaciones
 
 - **Fase 2 — Ejecución** ✅ La capa de acción. 8 features completas:
+
   - **F1 · Stores y types:** `tasksStore`, `projectsStore`, `objectivesStore`, `habitsStore` con schemas TinyBase + persister Firestore. Types para las 4 entidades + `HABITS` const con los 14 hábitos hardcoded + `AREAS` map con las 6 áreas PARA. Alinea `TaskStatus` y agrega `ObjectiveStatus` a `common.ts`
   - **F2 · Rutas y sidebar activo:** 5 rutas nuevas (`/tasks`, `/projects`, `/projects/:projectId`, `/objectives`, `/habits`) y activación de los 4 items del sidebar que antes estaban disabled. Active state por prefix match de NavLink
   - **F3 · Tareas:** `/tasks` con tabs Hoy/Pronto/Completadas, creación inline con `Enter`, `TaskCard` con priority badge color-coded (verde/amarillo/naranja/rojo), expand inline para editar descripción/prioridad/proyecto/fecha, y checkbox optimistic vía TinyBase. Tab "Hoy" incluye vencidas en sección separada; tab "Pronto" agrupa por día con `Intl.DateTimeFormat`
@@ -49,6 +51,7 @@ La fuente primaria de estado y arquitectura vigente es [`Spec/ESTADO-ACTUAL.md`]
   - **F8 · Dashboard expandido:** reestructura `/` con 5 cards en grid 2×2 + hábitos full-width — `TasksTodayCard` (top 5 tareas de hoy con checkbox funcional), `InboxCard` existente, `ProjectsActiveCard` (proyectos in-progress con count reactivo), `RecentNotesCard` existente, y `HabitsTodayCard` (14 pills toggleables con barra de progreso)
 
 - **Fase 3 — AI Pipeline** ✅ Inteligencia que reduce la friccion de organizar. 6 features completas:
+
   - **F1 · Cloud Function processInboxItem:** `onDocumentCreated` en `inbox/{itemId}` llama a Claude Haiku (`claude-haiku-4-5-20251001`) con tool use y schema enforcement, escribe campos flat `aiSuggested*` (titulo, tipo, tags, area, resumen, prioridad) al doc. Secret via `defineSecret`. Retry false, timeout 60s, us-central1
   - **F2 · Schema aiResult flat:** reemplaza el placeholder `aiResult: string` del `inboxStore` por 6 campos flat. El hook `useInbox` construye el objeto `aiResult` con gate `aiProcessed && aiSuggestedTitle`. Cadena completa CF -> Firestore -> persister -> store -> mapper verificada
   - **F3 · InboxItem card con sugerencias:** `AiSuggestionCard` con display + edit modes. Muestra tipo/titulo/area/tags/prioridad/resumen sugeridos. Botones Aceptar (crea entidad con overrides) y Editar (expand form inline con selects + input tags comma-separated, parseo al submit). Indicator "Procesando con AI..." para items en flight. Botones fallback "Nota"/"Descartar" siempre visibles. `useInbox` compone `useTasks`/`useProjects` para `convertToTask`/`convertToProject` con `createTask` extendido (acepta `{priority, areaId}` en 1 write)
@@ -59,6 +62,7 @@ La fuente primaria de estado y arquitectura vigente es [`Spec/ESTADO-ACTUAL.md`]
 - **Fase 3.1 — Schema Enforcement** ✅ Refactoring de las 2 Cloud Functions de AI para usar tool use de Anthropic (`tool_choice: { type: 'tool' }`) con JSON Schema enforcement en vez de "Responde SOLO JSON" en el prompt. Elimina nulls en campos, `stripJsonFence`, fallbacks manuales, y ~120 lineas de codigo defensivo. Schemas compartidos en `schemas.ts`. Cero cambios en frontend — las CFs siguen escribiendo los mismos campos flat a Firestore.
 
 - **Fase 4 — Grafo + Resurfacing** ✅ El conocimiento vuelve a aparecer. 5 features:
+
   - **F1 · Knowledge graph:** `/notes/graph` con Reagraph (WebGL sobre Three.js). Nodos = notas, aristas = wikilinks. Filtros por tag/area, zoom, select para navegar al detalle
   - **F2 · Embeddings (CF generateEmbedding):** `onDocumentWritten` en `notes/{noteId}` genera vector 1536 dims con OpenAI `text-embedding-3-small`. Guard por `contentHash` SHA-256 para evitar regeneraciones innecesarias. Persistidos en `users/{uid}/embeddings/{noteId}`
   - **F3 · Notas similares:** panel lateral en el editor con cosine similarity sobre los embeddings cacheados en `useRef` (embeddings NO van a TinyBase por tamaño)
@@ -66,10 +70,12 @@ La fuente primaria de estado y arquitectura vigente es [`Spec/ESTADO-ACTUAL.md`]
   - **F5 · Daily Digest:** cards en el dashboard agrupando notas por hubs (tags con más incoming links) + orden determinístico del día via hash `noteId+date`
 
 - **Fase 5 — PWA + Chrome Extension** ✅ Acceso desde donde sea. 2 features:
+
   - **F1 · PWA instalable:** `vite-plugin-pwa` con `generateSW` + `autoUpdate`, manifest completo, navigateFallback para SPA routing offline, runtimeCaching de Google Fonts, install prompt en el Layout. `useOnlineStatus` (useSyncExternalStore) + `OfflineBadge`. Guards offline solo en features AI (procesar inbox, notas similares); el resto funciona via TinyBase
   - **F2 · Chrome Extension MV3 (`extension/`):** CRXJS 2.4.0 + Vite 8, popup React con captura de selección del tab activo, auth Google via `chrome.identity.getAuthToken` + `signInWithCredential`, SDK lite (`firebase/auth/web-extension` + `firebase/firestore/lite` = 342KB / 105KB gzip), `source: 'web-clip'` con `sourceUrl` limpiado de tracking params
 
 - **Fase 5.1 — Tauri Desktop** ✅ Wrapper nativo Windows. 6 features:
+
   - **F1 · Scaffold:** Tauri v2.10 integrado al proyecto existente (`src-tauri/`). Consume `dist/` del build Vite. Scripts `tauri:dev` / `tauri:build`. Iconos generados desde `public/pwa-512x512.png`
   - **F2 · System tray + close-to-tray:** icono en la bandeja con menú (Abrir / Captura rápida / Iniciar con Windows / Salir). Click izq toggle main window. Botón X oculta en vez de terminar proceso
   - **F3 · Global shortcut `Ctrl+Shift+Space`:** desde cualquier app abre una ventana frameless `/capture` (480×220 frameless alwaysOnTop) con textarea enfocado. Enter escribe directo a Firestore con `source: 'desktop-capture'`, Escape cierra. No colisiona con `Alt+N` local
@@ -79,6 +85,7 @@ La fuente primaria de estado y arquitectura vigente es [`Spec/ESTADO-ACTUAL.md`]
   - Instaladores: `SecondMind_0.2.0_x64_en-US.msi` + `SecondMind_0.2.0_x64-setup.exe` (NSIS) en `src-tauri/target/release/bundle/`
 
 - **Fase 5.2 — Capacitor Mobile (Android)** ✅ Wrapper nativo Android. 5 features:
+
   - **F1 · Scaffold:** Capacitor 8.3 integrado al proyecto (`android/` Gradle project). `appId com.secondmind.app`, minSdk 24, compileSdk 36, targetSdk 36. `server.androidScheme: 'https'` obligatorio para Firebase Auth en WebView. Scripts `cap:sync` / `cap:run` / `cap:build`
   - **F2 · Auth nativa Google Sign-In:** `@capgo/capacitor-social-login` con bottom sheet nativo de Android. Patrón universal `SocialLogin.login → idToken → GoogleAuthProvider.credential → signInWithCredential`. `MainActivity.java implements ModifiedMainActivityForSocialLoginPlugin` con `onActivityResult` forwarding. `webClientId` = Web Client ID de GCP (compartido con Tauri)
   - **F3 · Share Intent:** `@capgo/capacitor-share-target` recibe texto/URL desde el menú "Compartir" de cualquier app Android. `AndroidManifest.xml` con intent-filter `ACTION_SEND text/*`. `useShareIntent` extrae texto/URL del evento, detecta URLs con regex, llama `quickCapture.open(content, { source: 'share-intent', sourceUrl })`. Reusa el `QuickCaptureProvider` ya montado en el Layout (a diferencia de Tauri `/capture` que es ventana efímera)
@@ -86,6 +93,7 @@ La fuente primaria de estado y arquitectura vigente es [`Spec/ESTADO-ACTUAL.md`]
   - **F5 · APK debug:** `./gradlew.bat assembleDebug` genera `app-debug.apk` (10.6MB) instalable en device físico via `adb install`. SHA-1 del debug keystore registrado en Google Cloud Console para el Android OAuth Client
 
 - **Features 1-15 (marzo-abril 2026)** ✅ Mejoras post-MVP sobre mobile, editor, búsqueda, infra y polish. 15 features completadas:
+
   - **F1 — Responsive & Mobile UX:** shell con BottomNav + FAB + breakpoints mobile/tablet/desktop
   - **F2 — Editor Polish:** `@` para menciones, slash commands `/` (12 items en 5 categorías), templates Zettelkasten
   - **F3 — Búsqueda Híbrida:** keyword (Orama BM25) + semántica (embeddings cosine), CF callable `embedQuery`
@@ -103,6 +111,7 @@ La fuente primaria de estado y arquitectura vigente es [`Spec/ESTADO-ACTUAL.md`]
   - **F15 — UI Polish Post-Dogfooding:** scrollbar fantasma, `AuthLoadingSkeleton`, imperativo neutro + tildes
 
 - **Features 16-30 (abril 2026)** ✅ Polish post-dogfooding, AI suggestions persistentes y retry queue end-to-end. 14 features completadas (F25 absorbida en F23):
+
   - **F16 — Code Block Scroll:** `white-space: pre` + `max-width: 100%` en `<pre>` para evitar que Tailwind v4 Preflight envuelva líneas largas; scroll horizontal preserva indentación en 375px
   - **F17 — Editor Popup Hook Unificado:** `useEditorPopup<TItem>` encapsula slash + wikilink menus con Floating UI (`flip`, `shift`), close-on-scroll document capture deferred y keyboard nav
   - **F18 — Notas Favoritas + Soft Delete:** `isFavorite` + `deletedAt` sentinel `0` (TinyBase no soporta null), cluster top-right en `NoteCard` + `ConfirmDialog`, favoritas anclan al tope sin query
@@ -119,6 +128,7 @@ La fuente primaria de estado y arquitectura vigente es [`Spec/ESTADO-ACTUAL.md`]
   - **F30 — Retry Queue en los Creates:** 4 singletons dedicados (`saveNotesCreatesQueue`, `saveTasksCreatesQueue`, `saveProjectsCreatesQueue`, `saveObjectivesCreatesQueue`), `RepoConfig.createsQueue?` opcional, `useNote` via `useSyncExternalStore` + `setDoc(merge:true)` en `saveContent` (D9) para tolerar `not-found` durante create-pending
 
 - **Features 31-37 (mayo-junio 2026)** ✅ Hidden sidebar mode + sidebar reorg + flujo de update sin intervención manual + corpus de gotchas indexado. 7 features completadas:
+
   - **F31 — Hidden Sidebar Mode (desktop):** preferencia `sidebarHidden` con `<TopBar />` alterno (logo + `<PendingSyncIndicator compact />` + Buscar ⌘K + QuickCapture). Shortcut `Cmd+B` layout-independent vía `event.code === 'KeyB'` con guards (foco editable / auth / breakpoint desktop). `QUICK_ACTIONS` del CommandPalette pasa de 4 a 8 entries con iconos armonizados a `navItems.ts`
   - **F32 — Hidden Sidebar Improvements:** Cmd+K y Alt+N migrados a `event.code` (paridad universal con F31). localStorage hint per-uid (`secondmind:sidebarHidden:${uid}`) en `usePreferences` para hidratación síncrona pre-subscribe (anti-flash sin AND-gate). 9ª entry dinámica en CommandPalette ("Ocultar/Mostrar sidebar") con `useMemo` reactivo. Animación entrada del componente swappeado solo en cambios subsecuentes — `useLayoutEffect` pre-paint para que el primer frame visible ya tenga la clase `slide-in-from-X`
   - **F33 — Hidden Sidebar Polish:** hook reutilizable `useMountedTransition(visible, durationMs): { shouldRender, isExiting }` con patrón `setState durante render` (skip-initial gratis sin `useRef`). `animate-out fill-mode-forwards` obligatorio para que el componente no revierta 1 frame pre-unmount. Botón "Mostrar menú" (`PanelLeftOpen`) a la izquierda del logo en TopBar

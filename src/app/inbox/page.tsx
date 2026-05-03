@@ -89,10 +89,10 @@ export default function InboxPage() {
     batchStatus.kind === 'processing'
       ? 'Procesando...'
       : batchStatus.kind === 'done'
-        ? `✓ ${batchStatus.ok} aceptados${
-            batchStatus.failed ? ` · ⚠ ${batchStatus.failed} fallaron` : ''
-          }`
-        : `Aceptar ${high.length} ${high.length === 1 ? 'item' : 'items'}`;
+      ? `✓ ${batchStatus.ok} aceptados${
+          batchStatus.failed ? ` · ⚠ ${batchStatus.failed} fallaron` : ''
+        }`
+      : `Aceptar ${high.length} ${high.length === 1 ? 'item' : 'items'}`;
 
   const batchDisabled = batchStatus.kind === 'processing' || high.length === 0;
 

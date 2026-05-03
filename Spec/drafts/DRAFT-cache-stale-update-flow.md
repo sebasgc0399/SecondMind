@@ -1,7 +1,6 @@
 # DRAFT — Cache stale cross-platform + flujo de update sin intervención manual
 
-> **Estado:** DRAFT / discovery — **NO es un SPEC formal**
-> **Vida útil:** temporal. Eliminar este archivo al convertirlo en un `SPEC-feature-N-*.md`.
+> **Estado:** DRAFT / discovery — **NO es un SPEC formal** > **Vida útil:** temporal. Eliminar este archivo al convertirlo en un `SPEC-feature-N-*.md`.
 > **Redactado en:** PC personal (sesión Claude Code), 2026-04-29
 > **Disparador:** Sebastián reporta que tras cualquier deploy (web-only o release nuevo de desktop/Android), las versiones instaladas siguen sirviendo el bundle viejo. Workaround actual: **Ctrl+Shift+R** en desktop, **"borrar datos"** en Android. Síntoma concreto observado: "no me permite crear ideas" desde la app vieja, sin error visible.
 

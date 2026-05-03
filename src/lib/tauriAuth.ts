@@ -102,7 +102,9 @@ export async function signInWithTauri(auth: Auth): Promise<void> {
   } catch (err) {
     cleanup();
     throw new Error(
-      `No se pudo abrir el navegador para OAuth: ${err instanceof Error ? err.message : String(err)}`,
+      `No se pudo abrir el navegador para OAuth: ${
+        err instanceof Error ? err.message : String(err)
+      }`,
     );
   }
 
