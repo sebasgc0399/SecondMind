@@ -48,7 +48,9 @@ export default function ProjectCard({ project, pendingTaskCount }: ProjectCardPr
         )}
         <span>
           {pendingTaskCount > 0
-            ? `${pendingTaskCount} ${pendingTaskCount === 1 ? 'tarea pendiente' : 'tareas pendientes'}`
+            ? `${pendingTaskCount} ${
+                pendingTaskCount === 1 ? 'tarea pendiente' : 'tareas pendientes'
+              }`
             : 'Sin tareas pendientes'}
         </span>
       </div>

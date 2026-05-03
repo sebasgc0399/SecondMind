@@ -28,10 +28,7 @@
 }
 
 body {
-  font-family:
-    system-ui,
-    -apple-system,
-    sans-serif;
+  font-family: system-ui, -apple-system, sans-serif;
   font-size: 14px;
   line-height: 1.5;
   color: var(--fg);
@@ -120,9 +117,7 @@ body {
   font-size: 13px;
   font-weight: 500;
   cursor: pointer;
-  transition:
-    opacity 0.15s,
-    background 0.15s;
+  transition: opacity 0.15s, background 0.15s;
 }
 
 .popup-btn:active:not(:disabled) {

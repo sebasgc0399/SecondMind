@@ -212,15 +212,15 @@ export default function NotesListPage() {
               isTrashView
                 ? setTrashQuery(event.target.value)
                 : isReviewView
-                  ? setReviewQuery(event.target.value)
-                  : setQuery(event.target.value)
+                ? setReviewQuery(event.target.value)
+                : setQuery(event.target.value)
             }
             placeholder={
               isTrashView
                 ? 'Buscar en papelera...'
                 : isReviewView
-                  ? 'Buscar en notas por revisar...'
-                  : 'Buscar notas...'
+                ? 'Buscar en notas por revisar...'
+                : 'Buscar notas...'
             }
             className="w-full rounded-md border border-border bg-card py-2 pr-3 pl-9 text-sm text-foreground outline-none placeholder:text-muted-foreground focus:border-border/80"
           />

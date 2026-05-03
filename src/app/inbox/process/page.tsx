@@ -238,8 +238,8 @@ function ProgressDots({ total, current, processedIds, batch, onSelect }: Progres
         const className = isCurrent
           ? 'h-2 w-2 rounded-full bg-primary'
           : isProcessed
-            ? 'h-2 w-2 rounded-full bg-primary/40'
-            : 'h-2 w-2 rounded-full bg-muted';
+          ? 'h-2 w-2 rounded-full bg-primary/40'
+          : 'h-2 w-2 rounded-full bg-muted';
         return (
           <button
             key={i}

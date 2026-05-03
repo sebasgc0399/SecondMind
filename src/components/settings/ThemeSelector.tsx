@@ -43,7 +43,9 @@ function Preview({ variant }: { variant: 'light' | 'dark' | 'auto' }) {
       }`}
     >
       <div
-        className={`mx-2 mt-2 h-1.5 w-8 rounded-full ${isDark ? 'bg-neutral-600' : 'bg-neutral-300'}`}
+        className={`mx-2 mt-2 h-1.5 w-8 rounded-full ${
+          isDark ? 'bg-neutral-600' : 'bg-neutral-300'
+        }`}
       />
       <div
         className={`mx-2 mt-1.5 h-1 w-12 rounded-full ${

@@ -79,7 +79,9 @@ export function useNoteSuggestions(noteId: string): UseNoteSuggestionsResult {
         result.push({
           id,
           label: `Promover a ${NOTE_TYPE_LABEL[remote.suggestedNoteType]}`,
-          description: `La AI detectó que esta nota encaja mejor como ${NOTE_TYPE_LABEL[remote.suggestedNoteType].toLowerCase()}.`,
+          description: `La AI detectó que esta nota encaja mejor como ${NOTE_TYPE_LABEL[
+            remote.suggestedNoteType
+          ].toLowerCase()}.`,
           action: 'promote-to',
           payload: { noteType: remote.suggestedNoteType },
         });

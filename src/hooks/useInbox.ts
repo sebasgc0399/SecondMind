@@ -134,8 +134,8 @@ export default function useInbox(): UseInboxReturn {
             type === 'task'
               ? await inboxRepo.convertToTask(item.id)
               : type === 'project'
-                ? await inboxRepo.convertToProject(item.id)
-                : await inboxRepo.convertToNote(item.id);
+              ? await inboxRepo.convertToProject(item.id)
+              : await inboxRepo.convertToNote(item.id);
           if (!result) failed += 1;
           else ok += 1;
         }

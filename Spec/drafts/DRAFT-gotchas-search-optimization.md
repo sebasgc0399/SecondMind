@@ -1,7 +1,6 @@
 # DRAFT — Optimizar búsqueda de gotchas (split por dominio + skill BM25 + flujo SDD con subagente)
 
-> **Estado:** DRAFT / discovery — **NO es un SPEC formal**
-> **Vida útil:** temporal. Eliminar este archivo al convertirlo en un `SPEC-feature-N-*.md` (o, si las fases se ejecutan como housekeeping sin SPEC formal, al merge del último PR de la serie).
+> **Estado:** DRAFT / discovery — **NO es un SPEC formal** > **Vida útil:** temporal. Eliminar este archivo al convertirlo en un `SPEC-feature-N-*.md` (o, si las fases se ejecutan como housekeeping sin SPEC formal, al merge del último PR de la serie).
 > **Redactado en:** PC personal (sesión Claude Code), 2026-04-29
 > **Disparador:** `Spec/ESTADO-ACTUAL.md` mide hoy 340 líneas con 17 secciones de gotchas por dominio bajo `## Arquitectura y gotchas por dominio` ([ESTADO-ACTUAL.md:60-277](../ESTADO-ACTUAL.md#L60-L277)). El paso 8 del SDD escala gotchas a este archivo cada vez que se cierra una feature, y el paso 2 SDD (plan mode) requiere consultar gotchas relevantes antes de codear. Hoy ambos flujos son manuales (Sebastián / agente principal carga el archivo entero), y el costo escala monotónicamente con cada feature cerrada.
 
