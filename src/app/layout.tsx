@@ -14,6 +14,7 @@ import Sidebar from '@/components/layout/Sidebar';
 import TopBar from '@/components/layout/TopBar';
 import UpdateBanner from '@/components/layout/UpdateBanner';
 import useAuth from '@/hooks/useAuth';
+import useHideSplashWhenReady from '@/hooks/useHideSplashWhenReady';
 import { useBreakpoint } from '@/hooks/useMediaQuery';
 import useMountedTransition from '@/hooks/useMountedTransition';
 import usePreferences from '@/hooks/usePreferences';
@@ -36,6 +37,7 @@ export default function Layout() {
   const [moreOpen, setMoreOpen] = useState(false);
   const { isHydrating } = useStoreInit(user?.uid ?? null);
   const { preferences } = usePreferences();
+  useHideSplashWhenReady({ isLoading, user, isHydrating });
   useSidebarVisibilityShortcut();
   useVersionCheck();
 
