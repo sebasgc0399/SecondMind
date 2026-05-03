@@ -1,0 +1,11 @@
+node_modules
+dist
+build
+src-tauri/target
+android/app/build
+android/build
+android/.gradle
+extension/dist
+src/components/ui
+*.lock
+package-lock.json
