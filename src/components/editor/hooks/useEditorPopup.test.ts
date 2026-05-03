@@ -216,6 +216,44 @@ describe('useEditorPopup', () => {
       expect(result.current.isOpen).toBe(true);
     });
 
+    it('Enter re-queries items from latest props when state has not flushed (race fix)', () => {
+      // Reproduces the bug where typing the final character of a multi-word
+      // query and pressing Enter immediately would leave the trigger as
+      // literal text instead of inserting a wikilink. Cause: stateRef.current
+      // is updated via useEffect post-paint; within a single act() batch,
+      // onUpdate schedules setState and onKeyDown reads stateRef.current,
+      // which still points to the prior state with stale items / selectedIndex
+      // out of range. Fix: re-query items synchronously from propsRef.current
+      // inside the Enter branch.
+      const setListener = vi.fn();
+      const queryItems = vi.fn((q: string) =>
+        q === '' ? ITEMS : ITEMS.filter((i) => i.label === 'Foo'),
+      );
+      const executeCommand = vi.fn();
+      const { result } = renderHook(() =>
+        useEditorPopup<TestItem>({ setListener, queryItems, executeCommand }),
+      );
+
+      const listener = setListener.mock.calls[0]![0] as PopupListener<TestItem>;
+      const initialProps = mockSuggestionProps('', ITEMS);
+      const updatedProps = mockSuggestionProps(
+        'Foo',
+        ITEMS.filter((i) => i.label === 'Foo'),
+      );
+
+      act(() => listener.onStart(initialProps));
+      act(() => result.current.setSelectedIndex(2)); // Baz selected (index out of range after narrow)
+
+      // Race: onUpdate + onKeyDown in the same act batch, before stateRef syncs.
+      act(() => {
+        listener.onUpdate(updatedProps);
+        listener.onKeyDown(keydownProps('Enter'));
+      });
+
+      expect(executeCommand).toHaveBeenCalledTimes(1);
+      expect(executeCommand).toHaveBeenCalledWith(ITEMS[0], updatedProps);
+    });
+
     it('Escape closes the menu', () => {
       const { result, listener } = setup();
       expect(result.current.isOpen).toBe(true);

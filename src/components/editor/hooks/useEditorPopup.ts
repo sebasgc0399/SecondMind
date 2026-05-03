@@ -88,7 +88,6 @@ export function useEditorPopup<TItem>(
 
   useEffect(() => {
     function syncFromProps(props: SuggestionProps<TItem>): PopupState<TItem> {
-      propsRef.current = props;
       const items = queryItemsRef.current(props.query);
       const referenceRect = props.clientRect ? () => props.clientRect!() ?? new DOMRect() : null;
       return {
@@ -102,9 +101,11 @@ export function useEditorPopup<TItem>(
 
     setListener({
       onStart: (props) => {
+        propsRef.current = props;
         setState(syncFromProps(props));
       },
       onUpdate: (props) => {
+        propsRef.current = props;
         setState((prev) => {
           const next = syncFromProps(props);
           const preservedIndex = prev.selectedIndex < next.items.length ? prev.selectedIndex : 0;
@@ -132,11 +133,17 @@ export function useEditorPopup<TItem>(
           return true;
         }
         if (event.key === 'Enter') {
-          const item = current.items[current.selectedIndex];
           const props = propsRef.current;
-          if (item && props) {
-            executeCommandRef.current(item, props);
-          }
+          if (!props) return false;
+          // Re-query from latest props.query — stateRef.current.items can be
+          // stale within an act batch (setState in onUpdate hasn't committed
+          // yet, useEffect that syncs stateRef runs post-paint). Prevents the
+          // race where typing the final char of a multi-word query and
+          // pressing Enter immediately leaves the trigger as literal text.
+          const items = queryItemsRef.current(props.query);
+          const idx = current.selectedIndex < items.length ? current.selectedIndex : 0;
+          const item = items[idx];
+          if (item) executeCommandRef.current(item, props);
           return true;
         }
         if (event.key === 'Escape') {
