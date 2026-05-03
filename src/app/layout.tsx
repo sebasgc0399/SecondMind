@@ -1,4 +1,4 @@
-import { useLayoutEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { Navigate, Outlet } from 'react-router';
 import QuickCapture from '@/components/capture/QuickCapture';
 import QuickCaptureProvider from '@/components/capture/QuickCaptureProvider';
@@ -14,13 +14,14 @@ import Sidebar from '@/components/layout/Sidebar';
 import TopBar from '@/components/layout/TopBar';
 import UpdateBanner from '@/components/layout/UpdateBanner';
 import useAuth from '@/hooks/useAuth';
+import useHideSplashWhenReady from '@/hooks/useHideSplashWhenReady';
 import { useBreakpoint } from '@/hooks/useMediaQuery';
 import useMountedTransition from '@/hooks/useMountedTransition';
 import usePreferences from '@/hooks/usePreferences';
 import useShareIntent from '@/hooks/useShareIntent';
 import useSidebarVisibilityShortcut from '@/hooks/useSidebarVisibilityShortcut';
 import useVersionCheck from '@/hooks/useVersionCheck';
-import AuthLoadingSkeleton from '@/components/layout/AuthLoadingSkeleton';
+import AppBootSplash from '@/components/layout/AppBootSplash';
 import useStoreInit from '@/hooks/useStoreInit';
 import StoreHydrationProvider from '@/hooks/StoreHydrationProvider';
 
@@ -36,8 +37,18 @@ export default function Layout() {
   const [moreOpen, setMoreOpen] = useState(false);
   const { isHydrating } = useStoreInit(user?.uid ?? null);
   const { preferences } = usePreferences();
+  useHideSplashWhenReady();
   useSidebarVisibilityShortcut();
   useVersionCheck();
+
+  // Mantiene AppBootSplash en pantalla al menos 800ms aunque el bootstrap
+  // termine antes (sesión persistida + stores rápidos). Sin esto, en cold
+  // starts rápidos el branded splash se ve un solo frame imperceptible.
+  const [bootSplashMinElapsed, setBootSplashMinElapsed] = useState(false);
+  useEffect(() => {
+    const timer = window.setTimeout(() => setBootSplashMinElapsed(true), 800);
+    return () => window.clearTimeout(timer);
+  }, []);
 
   const isMobile = breakpoint === 'mobile';
   const isTablet = breakpoint === 'tablet';
@@ -83,8 +94,8 @@ export default function Layout() {
     return () => window.clearTimeout(timer);
   }, [preferences.sidebarHidden]);
 
-  if (isLoading) {
-    return <AuthLoadingSkeleton />;
+  if (isLoading || (user && isHydrating) || !bootSplashMinElapsed) {
+    return <AppBootSplash />;
   }
 
   if (!user) {

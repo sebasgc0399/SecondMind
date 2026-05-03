@@ -2,11 +2,11 @@ import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { RouterProvider } from 'react-router';
 import { Provider } from 'tinybase/ui-react';
-import { SplashScreen } from '@capacitor/splash-screen';
 import router from '@/app/router';
 import TauriIntegration from '@/app/TauriIntegration';
 import { isCapacitor } from '@/lib/capacitor';
 import { initCapacitorAuth } from '@/lib/capacitorAuth';
+import { hideSplash } from '@/lib/splash';
 import { migrateTinyBaseSchemaIfNeeded } from '@/lib/tinybase';
 import { notesStore } from '@/stores/notesStore';
 import { linksStore } from '@/stores/linksStore';
@@ -21,7 +21,12 @@ if (isCapacitor()) {
   void initCapacitorAuth().catch((error) => {
     console.error('Failed to initialize Capacitor SocialLogin:', error);
   });
-  void SplashScreen.hide().catch(() => {});
+  // Safety: si auth+hydration no completan en 5s, ocultamos el splash igual
+  // para no dejar la app colgada en redes lentas o errores. hideSplash() es
+  // idempotente; si Layout llama antes vía useHideSplashWhenReady, este es no-op.
+  window.setTimeout(() => {
+    void hideSplash();
+  }, 5000);
 }
 
 // F36.F8: invalidar cache TinyBase si bumpeamos el schema en código.
