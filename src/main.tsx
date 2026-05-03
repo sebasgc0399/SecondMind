@@ -7,6 +7,7 @@ import TauriIntegration from '@/app/TauriIntegration';
 import { isCapacitor } from '@/lib/capacitor';
 import { initCapacitorAuth } from '@/lib/capacitorAuth';
 import { hideSplash } from '@/lib/splash';
+import { isTauri, showMainWindow } from '@/lib/tauri';
 import { migrateTinyBaseSchemaIfNeeded } from '@/lib/tinybase';
 import { notesStore } from '@/stores/notesStore';
 import { linksStore } from '@/stores/linksStore';
@@ -26,6 +27,16 @@ if (isCapacitor()) {
   // idempotente; si Layout llama antes vía useHideSplashWhenReady, este es no-op.
   window.setTimeout(() => {
     void hideSplash();
+  }, 5000);
+}
+
+if (isTauri()) {
+  // Safety: si Layout no monta en 5s (crash pre-mount, bootstrap colgado),
+  // mostramos la window igual para no dejar al usuario con un .exe invisible.
+  // showMainWindow() es idempotente; el call desde useHideSplashWhenReady
+  // cuando Layout monta antes hace que este sea no-op.
+  window.setTimeout(() => {
+    void showMainWindow();
   }, 5000);
 }
 
