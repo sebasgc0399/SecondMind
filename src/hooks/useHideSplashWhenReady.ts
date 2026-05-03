@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
-import type { User } from 'firebase/auth';
 import { hideSplash } from '@/lib/splash';
+import type { User } from 'firebase/auth';
 
 interface Args {
   isLoading: boolean;
