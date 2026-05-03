@@ -1,4 +1,4 @@
-import { useLayoutEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { Navigate, Outlet } from 'react-router';
 import QuickCapture from '@/components/capture/QuickCapture';
 import QuickCaptureProvider from '@/components/capture/QuickCaptureProvider';
@@ -37,9 +37,18 @@ export default function Layout() {
   const [moreOpen, setMoreOpen] = useState(false);
   const { isHydrating } = useStoreInit(user?.uid ?? null);
   const { preferences } = usePreferences();
-  useHideSplashWhenReady({ isLoading, user, isHydrating });
+  useHideSplashWhenReady();
   useSidebarVisibilityShortcut();
   useVersionCheck();
+
+  // Mantiene AppBootSplash en pantalla al menos 800ms aunque el bootstrap
+  // termine antes (sesión persistida + stores rápidos). Sin esto, en cold
+  // starts rápidos el branded splash se ve un solo frame imperceptible.
+  const [bootSplashMinElapsed, setBootSplashMinElapsed] = useState(false);
+  useEffect(() => {
+    const timer = window.setTimeout(() => setBootSplashMinElapsed(true), 800);
+    return () => window.clearTimeout(timer);
+  }, []);
 
   const isMobile = breakpoint === 'mobile';
   const isTablet = breakpoint === 'tablet';
@@ -85,7 +94,7 @@ export default function Layout() {
     return () => window.clearTimeout(timer);
   }, [preferences.sidebarHidden]);
 
-  if (isLoading || (user && isHydrating)) {
+  if (isLoading || (user && isHydrating) || !bootSplashMinElapsed) {
     return <AppBootSplash />;
   }
 

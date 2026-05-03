@@ -1,20 +1,13 @@
 import { useEffect } from 'react';
 import { hideSplash } from '@/lib/splash';
-import type { User } from 'firebase/auth';
 
-interface Args {
-  isLoading: boolean;
-  user: User | null;
-  isHydrating: boolean;
-}
-
-// useStoreInit(null) deja isHydrating en true permanente, por eso el OR
-// con !user es necesario: cubre el caso de usuario no logueado (va a /login,
-// el primer pixel no depende de hidratación de stores).
-export default function useHideSplashWhenReady({ isLoading, user, isHydrating }: Args): void {
+// El system splash se oculta apenas Layout monta, NO al final del bootstrap.
+// Si esperáramos a !isLoading + stores hidratados, el system splash taparía
+// el AppBootSplash branded durante todo el boot y el handoff se vería como
+// un solo frame imperceptible. El timeout 5s en main.tsx cubre el caso de
+// crash pre-mount.
+export default function useHideSplashWhenReady(): void {
   useEffect(() => {
-    if (!isLoading && (!user || !isHydrating)) {
-      void hideSplash();
-    }
-  }, [isLoading, user, isHydrating]);
+    void hideSplash();
+  }, []);
 }
