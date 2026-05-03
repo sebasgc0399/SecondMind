@@ -21,7 +21,7 @@ import usePreferences from '@/hooks/usePreferences';
 import useShareIntent from '@/hooks/useShareIntent';
 import useSidebarVisibilityShortcut from '@/hooks/useSidebarVisibilityShortcut';
 import useVersionCheck from '@/hooks/useVersionCheck';
-import AuthLoadingSkeleton from '@/components/layout/AuthLoadingSkeleton';
+import AppBootSplash from '@/components/layout/AppBootSplash';
 import useStoreInit from '@/hooks/useStoreInit';
 import StoreHydrationProvider from '@/hooks/StoreHydrationProvider';
 
@@ -85,8 +85,8 @@ export default function Layout() {
     return () => window.clearTimeout(timer);
   }, [preferences.sidebarHidden]);
 
-  if (isLoading) {
-    return <AuthLoadingSkeleton />;
+  if (isLoading || (user && isHydrating)) {
+    return <AppBootSplash />;
   }
 
   if (!user) {
