@@ -1,4 +1,5 @@
 import { useCallback, useSyncExternalStore } from 'react';
+import { isTauri } from '@/lib/tauri';
 import {
   applyTheme,
   readStoredTheme,
@@ -44,13 +45,29 @@ export default function useTheme() {
     getServerResolvedSnapshot,
   );
 
-  const setTheme = useCallback((next: Theme) => {
+  const setTheme = useCallback(async (next: Theme) => {
     try {
       localStorage.setItem(THEME_STORAGE_KEY, next);
     } catch {
       // localStorage puede fallar en contextos privados o WebViews restringidas;
       // el DOM class sigue siendo la fuente de verdad runtime.
     }
+
+    // En Tauri, liberar/aplicar el theme de la window ANTES de applyTheme.
+    // El WebView2 sincroniza matchMedia('prefers-color-scheme') con el theme
+    // forzado de la window — si applyTheme corre antes del setTauriTheme,
+    // systemPrefersDark() lee un valor stale del lock anterior y resuelve
+    // 'auto' al theme equivocado.
+    if (isTauri()) {
+      try {
+        const { setTheme: setTauriTheme } = await import('@tauri-apps/api/app');
+        await setTauriTheme(next === 'auto' ? null : next);
+      } catch {
+        // Tauri puede fallar en escenarios atípicos (versión, permisos).
+        // Degradamos silenciosamente: el chrome nativo queda en su default.
+      }
+    }
+
     applyTheme(next);
     window.dispatchEvent(new Event(THEME_CHANGE_EVENT));
   }, []);
