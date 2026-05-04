@@ -1,5 +1,6 @@
 import { Link } from 'react-router';
 import { AREAS, type AreaKey } from '@/types/area';
+import PendingSyncDot from '@/components/layout/PendingSyncDot';
 import type { Project } from '@/types/project';
 import type { Priority } from '@/types/common';
 
@@ -28,8 +29,9 @@ export default function ProjectCard({ project, pendingTaskCount }: ProjectCardPr
   return (
     <Link
       to={`/projects/${project.id}`}
-      className="group block rounded-lg border border-border bg-card p-4 transition-colors hover:border-border/80 hover:bg-accent/40"
+      className="group relative block rounded-lg border border-border bg-card p-4 transition-colors hover:border-border/80 hover:bg-accent/40"
     >
+      <PendingSyncDot entityType="project" id={project.id} />
       <div className="flex items-start justify-between gap-3">
         <h3 className="text-sm font-semibold text-foreground">{project.name}</h3>
         <span

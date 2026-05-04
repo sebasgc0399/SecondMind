@@ -1,5 +1,6 @@
 import { CloudOff, FileText, Loader2, Trash2 } from 'lucide-react';
 import AiSuggestionCard from '@/components/capture/AiSuggestionCard';
+import PendingSyncDot from '@/components/layout/PendingSyncDot';
 import useOnlineStatus from '@/hooks/useOnlineStatus';
 import type { InboxAiResult, InboxItem } from '@/types/inbox';
 import { formatRelative } from '@/lib/formatDate';
@@ -28,7 +29,8 @@ export default function InboxItemCard({
   const isOnline = useOnlineStatus();
 
   return (
-    <div className="rounded-lg border border-border bg-card p-4">
+    <div className="relative rounded-lg border border-border bg-card p-4">
+      <PendingSyncDot entityType="inboxItem" id={item.id} />
       <p className="text-sm whitespace-pre-wrap text-foreground">{item.rawContent}</p>
 
       {!item.aiProcessed &&
