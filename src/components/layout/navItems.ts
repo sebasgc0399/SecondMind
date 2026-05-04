@@ -27,15 +27,12 @@ export const navSections: NavSection[] = [
     label: 'Ejecución',
     items: [
       { label: 'Dashboard', icon: LayoutDashboard, to: '/', end: true },
+      { label: 'Inbox', icon: Inbox, to: '/inbox' },
       { label: 'Tareas', icon: CheckSquare, to: '/tasks' },
       { label: 'Proyectos', icon: FolderKanban, to: '/projects' },
       { label: 'Objetivos', icon: Target, to: '/objectives' },
       { label: 'Hábitos', icon: Repeat, to: '/habits' },
     ],
-  },
-  {
-    label: 'Captura',
-    items: [{ label: 'Inbox', icon: Inbox, to: '/inbox' }],
   },
   {
     label: 'Conocimiento',
