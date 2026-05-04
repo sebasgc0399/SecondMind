@@ -5,6 +5,7 @@ import type { NoteOramaDoc } from '@/lib/orama';
 import { formatRelative } from '@/lib/formatDate';
 import { notesRepo } from '@/infra/repos/notesRepo';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
+import PendingSyncDot from '@/components/layout/PendingSyncDot';
 
 interface NoteCardProps {
   note: NoteOramaDoc;
@@ -100,8 +101,9 @@ export default function NoteCard({
     <>
       <Link
         to={`/notes/${note.id}`}
-        className="group block rounded-lg border border-border bg-card p-4 transition-colors hover:border-border/80 hover:bg-accent/40"
+        className="group relative block rounded-lg border border-border bg-card p-4 transition-colors hover:border-border/80 hover:bg-accent/40"
       >
+        <PendingSyncDot entityType="note" id={note.id} />
         <div className="flex items-start justify-between gap-3">
           <h2 className="min-w-0 flex-1 truncate text-base font-semibold text-foreground">
             {note.title}

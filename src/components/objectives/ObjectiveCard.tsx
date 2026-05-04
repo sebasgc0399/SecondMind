@@ -1,6 +1,7 @@
 import { useState, type ChangeEvent } from 'react';
 import { Link } from 'react-router';
 import { MoreHorizontal, ChevronUp, X } from 'lucide-react';
+import PendingSyncDot from '@/components/layout/PendingSyncDot';
 import type { Objective } from '@/types/objective';
 import type { ObjectiveStatus } from '@/types/common';
 
@@ -66,7 +67,8 @@ export default function ObjectiveCard({
   };
 
   return (
-    <div className="rounded-lg border border-border bg-card p-4">
+    <div className="relative rounded-lg border border-border bg-card p-4">
+      <PendingSyncDot entityType="objective" id={objective.id} />
       <div className="flex items-start gap-3">
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2">

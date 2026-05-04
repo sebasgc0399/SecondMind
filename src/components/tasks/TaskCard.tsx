@@ -2,6 +2,7 @@ import { useState, type ChangeEvent } from 'react';
 import { Link } from 'react-router';
 import { MoreHorizontal, ChevronUp } from 'lucide-react';
 import { formatRelative } from '@/lib/formatDate';
+import PendingSyncDot from '@/components/layout/PendingSyncDot';
 import type { Task } from '@/types/task';
 import type { Priority } from '@/types/common';
 
@@ -82,7 +83,8 @@ export default function TaskCard({
   };
 
   return (
-    <div className="rounded-lg border border-border bg-card p-4 transition-colors hover:border-border/80">
+    <div className="relative rounded-lg border border-border bg-card p-4 transition-colors hover:border-border/80">
+      <PendingSyncDot entityType="task" id={task.id} className="right-12 top-1" />
       <div className="flex items-start gap-2">
         <label
           className="-my-2 -ml-2 flex h-11 w-11 shrink-0 cursor-pointer items-center justify-center"

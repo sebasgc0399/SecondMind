@@ -9,7 +9,6 @@ import InstallPrompt from '@/components/layout/InstallPrompt';
 import MobileHeader from '@/components/layout/MobileHeader';
 import MoreDrawer from '@/components/layout/MoreDrawer';
 import NavigationDrawer from '@/components/layout/NavigationDrawer';
-import OfflineBadge from '@/components/layout/OfflineBadge';
 import Sidebar from '@/components/layout/Sidebar';
 import TopBar from '@/components/layout/TopBar';
 import UpdateBanner from '@/components/layout/UpdateBanner';
@@ -154,7 +153,6 @@ export default function Layout() {
             <ShareIntentMount />
             <CommandPalette />
             <InstallPrompt />
-            <OfflineBadge />
           </div>
         </QuickCaptureProvider>
       </CommandPaletteProvider>
