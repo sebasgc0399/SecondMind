@@ -1,12 +1,8 @@
 import { NavLink } from 'react-router';
-import { LayoutDashboard, FileText, CheckSquare, Inbox, MoreHorizontal } from 'lucide-react';
+import { LayoutDashboard, FileText, CheckSquare, Inbox } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { usePendingInboxCount } from '@/hooks/useInbox';
 import type { LucideIcon } from 'lucide-react';
-
-interface BottomNavProps {
-  onMoreClick: () => void;
-}
 
 interface BottomNavItem {
   label: string;
@@ -26,7 +22,7 @@ const items: BottomNavItem[] = [
 const baseClass =
   'relative flex h-full flex-1 flex-col items-center justify-center gap-0.5 text-[10px] font-medium transition-colors';
 
-export default function BottomNav({ onMoreClick }: BottomNavProps) {
+export default function BottomNav() {
   const pendingInboxCount = usePendingInboxCount();
 
   return (
@@ -53,15 +49,6 @@ export default function BottomNav({ onMoreClick }: BottomNavProps) {
           )}
         </NavLink>
       ))}
-      <button
-        type="button"
-        onClick={onMoreClick}
-        aria-label="Más"
-        className={cn(baseClass, 'text-muted-foreground hover:text-foreground')}
-      >
-        <MoreHorizontal className="h-5 w-5" />
-        <span>Más</span>
-      </button>
     </nav>
   );
 }
