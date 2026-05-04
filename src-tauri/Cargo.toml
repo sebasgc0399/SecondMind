@@ -1,6 +1,6 @@
 [package]
 name = "secondmind"
-version = "0.2.8"
+version = "0.2.9"
 description = "SecondMind desktop wrapper"
 authors = ["Sebastian"]
 license = ""
