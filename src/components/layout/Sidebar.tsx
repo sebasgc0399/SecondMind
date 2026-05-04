@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react';
 import { NavLink } from 'react-router';
 import { Settings, LogOut, Menu, Search, Plus } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -42,6 +43,16 @@ export function SidebarContent({ user, onSignOut, collapsed, onNavigate }: Sideb
   const { open: openQuickCapture } = useQuickCapture();
   const padding = collapsed ? 'justify-center px-2 py-2' : 'px-3 py-2';
 
+  // Capacitor WebView puede fallar a cargar el photoURL de Google con
+  // referrerPolicy="no-referrer" (CORS / redirect). Sin onError, el browser
+  // pinta el broken-image placeholder con el alt text adentro del círculo
+  // h-8 w-8, generando layout shift visible (ver F42.5). Defensivo: state
+  // local + render condicional + reset al cambiar photoURL.
+  const [imgError, setImgError] = useState(false);
+  useEffect(() => {
+    setImgError(false);
+  }, [user.photoURL]);
+
   // Cuando se invoca dentro del NavigationDrawer (mobile), cerramos el
   // drawer ANTES de abrir el palette/QuickCapture en rAF — evita
   // conflict de z-index (drawer y modales ambos z-50, último portal
@@ -64,12 +75,13 @@ export function SidebarContent({ user, onSignOut, collapsed, onNavigate }: Sideb
           collapsed && 'justify-center p-3',
         )}
       >
-        {user.photoURL ? (
+        {user.photoURL && !imgError ? (
           <img
             src={user.photoURL}
             alt={user.displayName ?? 'Avatar'}
             className="h-8 w-8 rounded-full"
             referrerPolicy="no-referrer"
+            onError={() => setImgError(true)}
           />
         ) : (
           <div className="h-8 w-8 rounded-full bg-sidebar-primary" />
