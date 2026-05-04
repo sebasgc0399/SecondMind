@@ -7,7 +7,6 @@ import CommandPalette, { CommandPaletteProvider } from '@/components/layout/Comm
 import FAB from '@/components/layout/FAB';
 import InstallPrompt from '@/components/layout/InstallPrompt';
 import MobileHeader from '@/components/layout/MobileHeader';
-import MoreDrawer from '@/components/layout/MoreDrawer';
 import NavigationDrawer from '@/components/layout/NavigationDrawer';
 import Sidebar from '@/components/layout/Sidebar';
 import TopBar from '@/components/layout/TopBar';
@@ -33,7 +32,6 @@ export default function Layout() {
   const { user, isLoading, signOut } = useAuth();
   const breakpoint = useBreakpoint();
   const [drawerOpen, setDrawerOpen] = useState(false);
-  const [moreOpen, setMoreOpen] = useState(false);
   const { isHydrating } = useStoreInit(user?.uid ?? null);
   const { preferences } = usePreferences();
   useHideSplashWhenReady();
@@ -138,9 +136,8 @@ export default function Layout() {
                 <Outlet />
               </main>
             </div>
-            {isMobile && <BottomNav onMoreClick={() => setMoreOpen(true)} />}
+            {isMobile && <BottomNav />}
             {isMobile && <FAB />}
-            {isMobile && <MoreDrawer open={moreOpen} onOpenChange={setMoreOpen} />}
             {(isMobile || isTablet) && (
               <NavigationDrawer
                 open={drawerOpen}
