@@ -46,7 +46,7 @@ Schema `gen/schemas/desktop-schema.json` se regenera solo en `cargo check/build`
 
 ## CSP Firebase explícito en `tauri.conf.json`
 
-`connect-src` debe enumerar hostnames Firebase completos (`*.googleapis.com`, `*.firebaseio.com`, `wss://*.firebaseio.com`, `identitytoolkit.googleapis.com`, `securetoken.googleapis.com`). `frame-src`: `*.firebaseapp.com accounts.google.com` para el popup de Google signIn en release. Lista canónica vive en [tauri.conf.json](../../src-tauri/tauri.conf.json) — copiar de ahí, no de este gotcha.
+`connect-src` debe enumerar hostnames Firebase completos (`*.googleapis.com`, `*.firebaseio.com`, `wss://*.firebaseio.com`, `identitytoolkit.googleapis.com`, `securetoken.googleapis.com`, `us-central1-secondmindv1.cloudfunctions.net`). El último es obligatorio para CFs callables invocadas vía `httpsCallable` desde el cliente (post-F44 — `embedQuery` de búsqueda híbrida fue la primera y única callable hasta esa feature; el bug quedó latente desde F3 porque ninguna otra plataforma aplica CSP custom). Triggers Firestore/scheduled NO requieren entry porque corren server-side y no salen del WebView. Cualquier nueva callable o región adicional → agregar hostname explícito (no usar wildcard). `frame-src`: `*.firebaseapp.com accounts.google.com` para el popup de Google signIn en release. Lista canónica vive en [tauri.conf.json](../../src-tauri/tauri.conf.json) — copiar de ahí, no de este gotcha.
 
 ## Auth en Tauri NO usa `signInWithPopup`
 
