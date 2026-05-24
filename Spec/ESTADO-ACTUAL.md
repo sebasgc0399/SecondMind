@@ -315,6 +315,7 @@ Cada feature comprimida a 1 línea con pointer al SPEC archivado. Para detalles 
 - [Firebase MCP: `node` directo al CLI local, no `npx`](gotchas/tooling-local.md#firebase-mcp-node-directo-al-cli-local-no-npx)
 - [Brave Search: `BRAVE_API_KEY` como variable de sistema Windows](gotchas/tooling-local.md#brave-search-brave_api_key-como-variable-de-sistema-windows)
 - [ui-ux-pro-max symlinks rotos en Windows](gotchas/tooling-local.md#ui-ux-pro-max-symlinks-rotos-en-windows)
+- [Vite no rebasa `url()` relativos en CSS importado vía `@import 'pkg'` desde otro CSS](gotchas/tooling-local.md#vite-no-rebasa-url-relativos-en-css-importado-vía-import-pkg-desde-otro-css)
 
 ### Cloud Functions — Tool use con schema enforcement — [`gotchas/cloud-functions-schema.md`](gotchas/cloud-functions-schema.md)
 

@@ -16,6 +16,7 @@ import { tasksStore } from '@/stores/tasksStore';
 import { projectsStore } from '@/stores/projectsStore';
 import { objectivesStore } from '@/stores/objectivesStore';
 import { habitsStore } from '@/stores/habitsStore';
+import '@fontsource-variable/geist/index.css';
 import './index.css';
 
 if (isCapacitor()) {
