@@ -59,6 +59,7 @@ export default function useSplitPanes(currentNoteId: string): UseSplitPanesRetur
   const [graceExpired, setGraceExpired] = useState(false);
   useEffect(() => {
     if (!isOpen || rightExistsInStore) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- reset del grace flag al salir del split o cuando la row aparece; sin esto un flag stale del estado anterior persistiría y causaría rightStatus='not-found' false-positive en el próximo open. setState en effect body es el patrón idiomático para resetear state derivado de lifecycle externo (apertura/cierre del split + hidratación de TinyBase).
       setGraceExpired(false);
       return;
     }
