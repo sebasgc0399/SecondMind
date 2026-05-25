@@ -15,6 +15,11 @@ export interface UserPreferences {
   // chrome se reemplaza por TopBar minimalista. Solo aplica a desktop
   // (≥1024px); tablet/mobile ignoran este flag.
   sidebarHidden: boolean;
+  // Layout del split-pane horizontal (F46) en porcentajes flex-grow.
+  // Default { left: 50, right: 50 } = handle al centro. Solo aplica cuando
+  // hay split activo en desktop ≥1024px. Campo aditivo F46 — NO bumpear
+  // PREFERENCES_SCHEMA_VERSION (D7 del SPEC).
+  splitPaneLayout: { left: number; right: number };
 }
 
 export const DEFAULT_PREFERENCES: UserPreferences = {
@@ -22,4 +27,5 @@ export const DEFAULT_PREFERENCES: UserPreferences = {
   distillIntroSeen: false,
   distillBannersSeen: { l1: false, l2: false, l3: false },
   sidebarHidden: false,
+  splitPaneLayout: { left: 50, right: 50 },
 };
