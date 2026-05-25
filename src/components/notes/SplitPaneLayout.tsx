@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   Group,
   Panel,
@@ -67,6 +67,18 @@ export default function SplitPaneLayout({ currentNoteId }: SplitPaneLayoutProps)
       }
     },
   });
+
+  // F46.5: escucha el evento custom emitido por TopBar al click del botón
+  // Split (cuando no hay split activo). TopBar maneja el cierre del split
+  // directo via URL (no necesita pasar por SplitPaneLayout), pero abrir el
+  // picker requiere el state local pickerOpen — de ahí el evento.
+  useEffect(() => {
+    function handler() {
+      setPickerOpen(true);
+    }
+    window.addEventListener('secondmind:split-open-picker', handler);
+    return () => window.removeEventListener('secondmind:split-open-picker', handler);
+  }, []);
 
   // LayoutStorage adapter custom — getItem sync read desde preferences,
   // setItem fire-and-forget al async setPreferences (Firestore). El
