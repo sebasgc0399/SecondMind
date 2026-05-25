@@ -131,6 +131,7 @@ export default function SplitPaneLayout({ currentNoteId }: SplitPaneLayoutProps)
                 key={currentNoteId}
                 noteId={currentNoteId}
                 showSidePanel={!isSplitActive}
+                showSplitButton
               />
             </div>
           </div>
@@ -153,6 +154,7 @@ export default function SplitPaneLayout({ currentNoteId }: SplitPaneLayoutProps)
                       key={rightNoteId}
                       noteId={rightNoteId}
                       showSidePanel={false}
+                      showSplitButton={false}
                     />
                   )}
                 </div>

@@ -1,9 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { useSearchParams } from 'react-router';
+import { PanelRightClose, PanelRightOpen } from 'lucide-react';
 import NoteEditor from '@/components/editor/NoteEditor';
 import BacklinksPanel, { BacklinksToggle } from '@/components/editor/BacklinksPanel';
 import DistillIndicator from '@/components/editor/DistillIndicator';
 import ReviewBanner from '@/components/editor/ReviewBanner';
 import SimilarNotesPanel from '@/components/editor/SimilarNotesPanel';
+import { useBreakpoint } from '@/hooks/useMediaQuery';
 import useNote from '@/hooks/useNote';
 import useBacklinks from '@/hooks/useBacklinks';
 
@@ -14,6 +17,13 @@ interface NoteEditorContainerProps {
   // evitar que el layout colapse a <250px por bloque (2 editores + handle
   // + panel lateral no caben en <1024px).
   showSidePanel: boolean;
+  // F46.6 fix discovery UX: cuando true, renderiza el botón Split en el
+  // headerSlot del NoteEditor (junto a DistillIndicator/BacklinksToggle).
+  // SplitPaneLayout pasa true al pane LEFT (single mode o split mode) y
+  // false al pane RIGHT (que ya tiene su X en SplitPaneHeader). Cierra el
+  // gap de discovery cuando el user tiene la sidebar visible (caso donde
+  // el botón del TopBar NO es visible).
+  showSplitButton: boolean;
 }
 
 function getInitialPanelState(): boolean {
@@ -21,7 +31,11 @@ function getInitialPanelState(): boolean {
   return window.matchMedia('(min-width: 1024px)').matches;
 }
 
-export default function NoteEditorContainer({ noteId, showSidePanel }: NoteEditorContainerProps) {
+export default function NoteEditorContainer({
+  noteId,
+  showSidePanel,
+  showSplitButton,
+}: NoteEditorContainerProps) {
   const [discardCount, setDiscardCount] = useState(0);
   const { initialContent, initialSummaryL3, isLoading, error, notFound } = useNote(
     noteId,
@@ -34,9 +48,27 @@ export default function NoteEditorContainer({ noteId, showSidePanel }: NoteEdito
   );
   const summaryTextareaRef = useRef<HTMLTextAreaElement | null>(null);
 
+  // F46.6: detección de split activo + toggle handler. Mismo patrón que
+  // TopBar.tsx (dispatch event para abrir picker, URL manipulation para
+  // cerrar). 3 callers ahora (TopBar + este + CommandPalette) — si emerge
+  // un cuarto, extraer a `useSplitToggle` hook.
+  const [searchParams, setSearchParams] = useSearchParams();
+  const breakpoint = useBreakpoint();
+  const splitOpen = searchParams.has('split');
+
   const handleDiscardSaveError = useCallback(() => {
     setDiscardCount((prev) => prev + 1);
   }, []);
+
+  const handleSplitToggle = useCallback(() => {
+    if (splitOpen) {
+      const next = new URLSearchParams(searchParams);
+      next.delete('split');
+      setSearchParams(next, { replace: true });
+    } else {
+      window.dispatchEvent(new CustomEvent('secondmind:split-open-picker'));
+    }
+  }, [splitOpen, searchParams, setSearchParams]);
 
   // Auto-open summary cuando llega initialSummaryL3 post-getDoc (caso de nota
   // pre-existente con summaryL3 ya guardado). setState dentro de setTimeout
@@ -67,6 +99,7 @@ export default function NoteEditorContainer({ noteId, showSidePanel }: NoteEdito
   // estado del user se restaura intacto.
   const renderSidePanel = showSidePanel && isPanelOpen;
   const renderBacklinksToggle = showSidePanel && !isPanelOpen;
+  const renderSplitButton = showSplitButton && breakpoint === 'desktop';
 
   if (isLoading) {
     return (
@@ -113,6 +146,21 @@ export default function NoteEditorContainer({ noteId, showSidePanel }: NoteEdito
               <DistillIndicator noteId={noteId} onOpenSummary={handleOpenSummary} />
               {renderBacklinksToggle && (
                 <BacklinksToggle count={backlinks.length} onClick={() => setIsPanelOpen(true)} />
+              )}
+              {renderSplitButton && (
+                <button
+                  type="button"
+                  onClick={handleSplitToggle}
+                  aria-label={splitOpen ? 'Cerrar panel derecho' : 'Abrir nota lado a lado'}
+                  title={splitOpen ? 'Cerrar panel derecho (⌘\\)' : 'Abrir nota lado a lado (⌘\\)'}
+                  className="inline-flex items-center justify-center rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+                >
+                  {splitOpen ? (
+                    <PanelRightClose className="h-4 w-4" aria-hidden />
+                  ) : (
+                    <PanelRightOpen className="h-4 w-4" aria-hidden />
+                  )}
+                </button>
               )}
             </>
           }
