@@ -8,6 +8,7 @@ import TaskItem from '@tiptap/extension-task-item';
 import Highlight from '@tiptap/extension-highlight';
 import Wikilink from '@/components/editor/extensions/wikilink';
 import SlashCommand from '@/components/editor/extensions/slash-command';
+import CodeBlockLowlight from '@/components/editor/extensions/code-block-lowlight';
 import WikilinkMenu from '@/components/editor/menus/WikilinkMenu';
 import SlashMenu from '@/components/editor/menus/SlashMenu';
 import BubbleToolbar from '@/components/editor/menus/BubbleToolbar';
@@ -43,6 +44,7 @@ export default function NoteEditor({
   const editor = useEditor({
     extensions: [
       StarterKit.configure({
+        codeBlock: false,
         link: {
           openOnClick: false,
           autolink: true,
@@ -59,6 +61,7 @@ export default function NoteEditor({
       TaskList,
       TaskItem.configure({ nested: true }),
       Highlight,
+      CodeBlockLowlight,
       Placeholder.configure({ placeholder: 'Escribe una idea...' }),
       Wikilink.configure({ noteId }),
       SlashCommand.configure({ noteId }),
