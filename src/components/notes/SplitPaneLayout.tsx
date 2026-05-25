@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import {
   Group,
   Panel,
@@ -8,10 +8,12 @@ import {
 } from 'react-resizable-panels';
 import NoteEditorContainer from '@/components/notes/NoteEditorContainer';
 import SplitPaneHeader from '@/components/notes/SplitPaneHeader';
+import SplitPanePicker from '@/components/notes/SplitPanePicker';
 import useAuth from '@/hooks/useAuth';
 import { useBreakpoint } from '@/hooks/useMediaQuery';
 import usePreferences from '@/hooks/usePreferences';
 import useSplitPanes from '@/hooks/useSplitPanes';
+import useSplitPaneShortcut from '@/hooks/useSplitPaneShortcut';
 import { setPreferences } from '@/lib/preferences';
 
 interface SplitPaneLayoutProps {
@@ -50,8 +52,21 @@ export default function SplitPaneLayout({ currentNoteId }: SplitPaneLayoutProps)
   const breakpoint = useBreakpoint();
   const { user } = useAuth();
   const { preferences } = usePreferences();
-  const { rightNoteId, isOpen, rightStatus, closeSplit } = useSplitPanes(currentNoteId);
+  const { rightNoteId, isOpen, rightStatus, openSplit, closeSplit } = useSplitPanes(currentNoteId);
   const isSplitActive = isOpen && breakpoint === 'desktop';
+  const [pickerOpen, setPickerOpen] = useState(false);
+
+  // Atajo Cmd/Ctrl+\: si hay split activo → cerrar pane derecho. Sino →
+  // abrir el picker. Solo desktop (gate interno del shortcut hook).
+  useSplitPaneShortcut({
+    onToggle: () => {
+      if (isSplitActive) {
+        closeSplit('right');
+      } else {
+        setPickerOpen(true);
+      }
+    },
+  });
 
   // LayoutStorage adapter custom — getItem sync read desde preferences,
   // setItem fire-and-forget al async setPreferences (Firestore). El
@@ -86,52 +101,60 @@ export default function SplitPaneLayout({ currentNoteId }: SplitPaneLayoutProps)
   });
 
   return (
-    <Group
-      id="split-pane-notes"
-      orientation="horizontal"
-      defaultLayout={defaultLayout}
-      onLayoutChanged={onLayoutChanged}
-      style={{ height: '100%', width: '100%' }}
-    >
-      <Panel id="left" minSize="30%">
-        <div className="flex h-full flex-col">
-          {isSplitActive && (
-            <SplitPaneHeader noteId={currentNoteId} onClose={() => closeSplit('left')} />
-          )}
-          <div className="min-h-0 flex-1 overflow-auto">
-            <NoteEditorContainer
-              key={currentNoteId}
-              noteId={currentNoteId}
-              showSidePanel={!isSplitActive}
-            />
-          </div>
-        </div>
-      </Panel>
-      {isSplitActive && (
-        <>
-          <Separator className="w-1 cursor-col-resize bg-border transition-colors hover:bg-primary/30" />
-          <Panel id="right" minSize="30%">
-            <div className="flex h-full flex-col">
-              {rightStatus === 'ready' && rightNoteId !== null && (
-                <SplitPaneHeader noteId={rightNoteId} onClose={() => closeSplit('right')} />
-              )}
-              <div className="min-h-0 flex-1 overflow-auto">
-                {rightStatus === 'loading' && <PaneSkeleton />}
-                {rightStatus === 'not-found' && (
-                  <PaneNotFound onClose={() => closeSplit('right')} />
-                )}
-                {rightStatus === 'ready' && rightNoteId !== null && (
-                  <NoteEditorContainer
-                    key={rightNoteId}
-                    noteId={rightNoteId}
-                    showSidePanel={false}
-                  />
-                )}
-              </div>
+    <>
+      <Group
+        id="split-pane-notes"
+        orientation="horizontal"
+        defaultLayout={defaultLayout}
+        onLayoutChanged={onLayoutChanged}
+        style={{ height: '100%', width: '100%' }}
+      >
+        <Panel id="left" minSize="30%">
+          <div className="flex h-full flex-col">
+            {isSplitActive && (
+              <SplitPaneHeader noteId={currentNoteId} onClose={() => closeSplit('left')} />
+            )}
+            <div className="min-h-0 flex-1 overflow-auto">
+              <NoteEditorContainer
+                key={currentNoteId}
+                noteId={currentNoteId}
+                showSidePanel={!isSplitActive}
+              />
             </div>
-          </Panel>
-        </>
-      )}
-    </Group>
+          </div>
+        </Panel>
+        {isSplitActive && (
+          <>
+            <Separator className="w-1 cursor-col-resize bg-border transition-colors hover:bg-primary/30" />
+            <Panel id="right" minSize="30%">
+              <div className="flex h-full flex-col">
+                {rightStatus === 'ready' && rightNoteId !== null && (
+                  <SplitPaneHeader noteId={rightNoteId} onClose={() => closeSplit('right')} />
+                )}
+                <div className="min-h-0 flex-1 overflow-auto">
+                  {rightStatus === 'loading' && <PaneSkeleton />}
+                  {rightStatus === 'not-found' && (
+                    <PaneNotFound onClose={() => closeSplit('right')} />
+                  )}
+                  {rightStatus === 'ready' && rightNoteId !== null && (
+                    <NoteEditorContainer
+                      key={rightNoteId}
+                      noteId={rightNoteId}
+                      showSidePanel={false}
+                    />
+                  )}
+                </div>
+              </div>
+            </Panel>
+          </>
+        )}
+      </Group>
+      <SplitPanePicker
+        open={pickerOpen}
+        onOpenChange={setPickerOpen}
+        currentNoteId={currentNoteId}
+        onSelect={openSplit}
+      />
+    </>
   );
 }
