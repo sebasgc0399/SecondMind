@@ -56,7 +56,7 @@ Hasta F46 el editor de notas ocupa todo el viewport — comparar dos notas, escr
 
 **Criterio de done:**
 
-- [ ] Sin split o en tablet/mobile: layout idéntico al actual (single pane), sin overhead de mount de `react-resizable-panels`
+- [ ] Sin split o en tablet/mobile: layout funcional como single pane (Separator y Panel right NO montados). `Group` montado siempre — decisión F46.2 vs SPEC original: un fast path con/sin Group causaría re-mount del editor izquierdo al toggle del split (perdiendo keystrokes pre-flush del autosave 2s); overhead del `Group` con un solo Panel ~5-10 kB gz es aceptable
 - [ ] Con split en desktop ≥1024px: dos `<NoteEditor>` montados en paralelo, handle vertical drag-friendly entre ellos
 - [ ] Drag del handle ajusta el ancho relativo en tiempo real (sin lag perceptible)
 - [ ] Al soltar el handle, el nuevo layout se persiste vía `LayoutStorage` adapter custom hacia `preferences.splitPaneLayout` (debounce nativo del hook v4, default 100ms)
