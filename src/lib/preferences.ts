@@ -44,6 +44,26 @@ function pathFor(uid: string) {
   return doc(db, `users/${uid}/settings/preferences`);
 }
 
+// F46.1: parse defensivo del splitPaneLayout. Acepta solo objetos con
+// `left` y `right` numéricos; cualquier shape inválido cae al default
+// { left: 50, right: 50 }. Es campo aditivo, no requiere bump de schema.
+function parseSplitPaneLayout(value: unknown): { left: number; right: number } {
+  if (
+    typeof value === 'object' &&
+    value !== null &&
+    'left' in value &&
+    'right' in value &&
+    typeof (value as { left: unknown }).left === 'number' &&
+    typeof (value as { right: unknown }).right === 'number'
+  ) {
+    return {
+      left: (value as { left: number }).left,
+      right: (value as { right: number }).right,
+    };
+  }
+  return DEFAULT_PREFERENCES.splitPaneLayout;
+}
+
 export function parsePrefs(data: Record<string, unknown> | undefined): UserPreferences {
   // F36.F8: rechazar prefs con _schemaVersion presente y distinto de current.
   // Ausente (null/undefined) = compat V1 (docs legacy pre-F8). D-F8.1, D-F8.6.
@@ -65,6 +85,7 @@ export function parsePrefs(data: Record<string, unknown> | undefined): UserPrefe
       l3: banners?.l3 === true,
     },
     sidebarHidden: data?.sidebarHidden === true,
+    splitPaneLayout: parseSplitPaneLayout(data?.splitPaneLayout),
   };
 }
 

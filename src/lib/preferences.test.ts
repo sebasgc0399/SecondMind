@@ -69,6 +69,7 @@ describe('parsePrefs', () => {
       distillIntroSeen: false,
       distillBannersSeen: { l1: false, l2: false, l3: false },
       sidebarHidden: false,
+      splitPaneLayout: { left: 50, right: 50 },
     });
   });
 
@@ -83,6 +84,46 @@ describe('parsePrefs', () => {
   it('sidebarHidden truthy no-boolean (string, número) → false', () => {
     expect(parsePrefs({ sidebarHidden: 'yes' }).sidebarHidden).toBe(false);
     expect(parsePrefs({ sidebarHidden: 1 }).sidebarHidden).toBe(false);
+  });
+
+  // F46.1: splitPaneLayout — campo aditivo con shape { left: number; right: number }.
+  // Validación defensiva en parseSplitPaneLayout: cualquier shape inválido cae
+  // al default { left: 50, right: 50 } (handle al centro).
+
+  it('splitPaneLayout no persistido → default { left: 50, right: 50 } (F46)', () => {
+    expect(parsePrefs({}).splitPaneLayout).toEqual({ left: 50, right: 50 });
+  });
+
+  it('splitPaneLayout shape válido → expone tal cual', () => {
+    expect(parsePrefs({ splitPaneLayout: { left: 35, right: 65 } }).splitPaneLayout).toEqual({
+      left: 35,
+      right: 65,
+    });
+  });
+
+  it('splitPaneLayout shape inválido (left no numérico) → fallback al default', () => {
+    expect(parsePrefs({ splitPaneLayout: { left: 'wide', right: 50 } }).splitPaneLayout).toEqual({
+      left: 50,
+      right: 50,
+    });
+  });
+
+  it('splitPaneLayout shape parcial (sin right) → fallback al default', () => {
+    expect(parsePrefs({ splitPaneLayout: { left: 60 } }).splitPaneLayout).toEqual({
+      left: 50,
+      right: 50,
+    });
+  });
+
+  it('splitPaneLayout no objeto (string, null) → fallback al default', () => {
+    expect(parsePrefs({ splitPaneLayout: 'horizontal' }).splitPaneLayout).toEqual({
+      left: 50,
+      right: 50,
+    });
+    expect(parsePrefs({ splitPaneLayout: null }).splitPaneLayout).toEqual({
+      left: 50,
+      right: 50,
+    });
   });
 });
 
@@ -147,6 +188,7 @@ describe('parsePrefs schema versioning (F36.F8)', () => {
       distillIntroSeen: true,
       distillBannersSeen: { l1: false, l2: false, l3: false },
       sidebarHidden: true,
+      splitPaneLayout: { left: 50, right: 50 },
     });
   });
 
@@ -168,6 +210,7 @@ describe('parsePrefs schema versioning (F36.F8)', () => {
       distillIntroSeen: true,
       distillBannersSeen: { l1: false, l2: false, l3: false },
       sidebarHidden: true,
+      splitPaneLayout: { left: 50, right: 50 },
     });
   });
 });

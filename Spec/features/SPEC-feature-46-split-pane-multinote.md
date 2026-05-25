@@ -34,18 +34,18 @@ Hasta F46 el editor de notas ocupa todo el viewport — comparar dos notas, escr
 - [ ] `openSplit(Y)` actualiza URL a `/notes/X?split=Y` vía `setSearchParams`
 - [ ] `closeSplit('right')` elimina `?split=` de la URL
 - [ ] `closeSplit('left')` navega a `/notes/Y` (right se promueve a principal)
-- [ ] Intentar `openSplit(X)` cuando `currentNoteId === X` retorna sin efecto + emite toast "Esta nota ya está abierta"
+- [ ] Intentar `openSplit(X)` cuando `currentNoteId === X` retorna sin efecto + emite `console.warn` (el picker F46.4 ya filtra la nota actual de la lista; este caso solo aplica a URL manipulada manualmente). Si el state se hidrata desde `?split={currentNoteId}` directo, el hook strip silencioso del query param (URL se "auto-corrige")
 - [ ] Hook tolerante a `?split=` con noteId inexistente: expone `rightStatus: 'loading' | 'ready' | 'not-found'` para que el consumidor renderice feedback (skeleton mientras valida, mensaje de error si no existe). Auto-cierre tras 5s si `not-found` persiste sin acción del usuario
 
 **Archivos:**
 
 - `src/hooks/useSplitPanes.ts` — nuevo
-- `src/types/preferences.ts` — agregar `splitPaneLayout?: { left: number; right: number }` opcional al interface `UserPreferences`
-- `src/lib/preferences.ts` — agregar default getter `splitPaneLayout: persisted?.splitPaneLayout ?? { left: 50, right: 50 }` con validación de shape (`typeof left === 'number' && typeof right === 'number'`) o fallback (sin bumpear `PREFERENCES_SCHEMA_VERSION`, ver D7)
+- `src/types/preferences.ts` — agregar `splitPaneLayout: { left: number; right: number }` (required, sigue patrón `trashAutoPurgeDays`) al interface `UserPreferences` + entry en `DEFAULT_PREFERENCES = { left: 50, right: 50 }`
+- `src/lib/preferences.ts` — helper `parseSplitPaneLayout(unknown)` con validación de shape (`typeof left === 'number' && typeof right === 'number'`) o fallback al default; integrado en `parsePrefs` (sin bumpear `PREFERENCES_SCHEMA_VERSION`, ver D7)
 
 **Notas:**
 
-- Toast vía `sonner` (ya en uso). Mensaje consistente con tono UX del resto del proyecto ("Esta nota ya está abierta en el otro panel").
+- **Decisión tomada en F46.1:** sin toast library (sonner NO está en el proyecto, agregarla sería overkill para 1 edge case). El picker F46.4 filtra la nota actual de la lista de selección; el único caso restante es URL manipulada manualmente — para eso un `console.warn` + strip silencioso del query param es suficiente (el user no nota nada raro, la URL se auto-corrige).
 - Validación de noteId inexistente: leer del store TinyBase `notesStore.getRow('notes', noteId)`. Durante los primeros 500ms post-mount, `rightStatus === 'loading'` (TinyBase puede estar hidratando — evita falso positivo). Después, si la fila sigue vacía → `rightStatus === 'not-found'`. El consumidor (`SplitPaneLayout`) decide qué render mostrar — el hook no toca DOM ni cierra por sí solo el split inmediatamente; solo dispara auto-cierre con timer de 5s si el user no actúa.
 
 ---
