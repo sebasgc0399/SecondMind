@@ -99,7 +99,7 @@ export default function CodeBlockNodeView({ node, updateAttributes }: ReactNodeV
           )}
         </button>
       </div>
-      <pre className="hljs">
+      <pre className="hljs" spellCheck={false}>
         <NodeViewContent<'code'> as="code" className="font-mono" />
       </pre>
     </NodeViewWrapper>
