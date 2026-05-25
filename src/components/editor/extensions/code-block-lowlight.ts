@@ -1,5 +1,7 @@
 import CodeBlockLowlight from '@tiptap/extension-code-block-lowlight';
+import { ReactNodeViewRenderer } from '@tiptap/react';
 import { createLowlight } from 'lowlight';
+import CodeBlockNodeView from '@/components/editor/nodeviews/CodeBlockNodeView';
 import bash from 'highlight.js/lib/languages/bash';
 import c from 'highlight.js/lib/languages/c';
 import cpp from 'highlight.js/lib/languages/cpp';
@@ -58,7 +60,11 @@ lowlight.register('sql', sql);
 lowlight.register('swift', swift);
 lowlight.register('typescript', typescript);
 
-export default CodeBlockLowlight.configure({
+export default CodeBlockLowlight.extend({
+  addNodeView() {
+    return ReactNodeViewRenderer(CodeBlockNodeView);
+  },
+}).configure({
   lowlight,
   defaultLanguage: null,
 });

@@ -233,6 +233,19 @@
   white-space: pre;
 }
 
+.note-editor .ProseMirror .code-block-wrapper pre {
+  margin: 0;
+  padding: 0;
+  background: transparent;
+  border-radius: 0;
+  max-width: none;
+}
+.note-editor .ProseMirror .code-block-wrapper code {
+  display: block;
+  padding: 0.875rem 1rem;
+  font-size: 0.875rem;
+}
+
 .note-editor .ProseMirror .hljs-keyword,
 .note-editor .ProseMirror .hljs-selector-tag,
 .note-editor .ProseMirror .hljs-literal,
