@@ -233,6 +233,77 @@
   white-space: pre;
 }
 
+.note-editor .ProseMirror .hljs-keyword,
+.note-editor .ProseMirror .hljs-selector-tag,
+.note-editor .ProseMirror .hljs-literal,
+.note-editor .ProseMirror .hljs-tag {
+  color: oklch(0.5 0.12 285);
+}
+.note-editor .ProseMirror .hljs-string,
+.note-editor .ProseMirror .hljs-attr,
+.note-editor .ProseMirror .hljs-selector-attr {
+  color: oklch(0.45 0.12 155);
+}
+.note-editor .ProseMirror .hljs-number,
+.note-editor .ProseMirror .hljs-built_in,
+.note-editor .ProseMirror .hljs-symbol {
+  color: oklch(0.55 0.14 50);
+}
+.note-editor .ProseMirror .hljs-comment,
+.note-editor .ProseMirror .hljs-quote {
+  color: oklch(0.5 0.025 285);
+  font-style: italic;
+}
+.note-editor .ProseMirror .hljs-type,
+.note-editor .ProseMirror .hljs-title,
+.note-editor .ProseMirror .hljs-class .hljs-title,
+.note-editor .ProseMirror .hljs-name {
+  color: oklch(0.5 0.14 260);
+}
+.note-editor .ProseMirror .hljs-function .hljs-title,
+.note-editor .ProseMirror .hljs-meta {
+  color: oklch(0.5 0.12 285);
+}
+.note-editor .ProseMirror .hljs-variable,
+.note-editor .ProseMirror .hljs-params {
+  color: oklch(0.4 0.05 285);
+}
+
+.dark .note-editor .ProseMirror .hljs-keyword,
+.dark .note-editor .ProseMirror .hljs-selector-tag,
+.dark .note-editor .ProseMirror .hljs-literal,
+.dark .note-editor .ProseMirror .hljs-tag {
+  color: oklch(0.78 0.13 285);
+}
+.dark .note-editor .ProseMirror .hljs-string,
+.dark .note-editor .ProseMirror .hljs-attr,
+.dark .note-editor .ProseMirror .hljs-selector-attr {
+  color: oklch(0.72 0.13 155);
+}
+.dark .note-editor .ProseMirror .hljs-number,
+.dark .note-editor .ProseMirror .hljs-built_in,
+.dark .note-editor .ProseMirror .hljs-symbol {
+  color: oklch(0.72 0.14 50);
+}
+.dark .note-editor .ProseMirror .hljs-comment,
+.dark .note-editor .ProseMirror .hljs-quote {
+  color: oklch(0.6 0.02 285);
+}
+.dark .note-editor .ProseMirror .hljs-type,
+.dark .note-editor .ProseMirror .hljs-title,
+.dark .note-editor .ProseMirror .hljs-class .hljs-title,
+.dark .note-editor .ProseMirror .hljs-name {
+  color: oklch(0.72 0.14 260);
+}
+.dark .note-editor .ProseMirror .hljs-function .hljs-title,
+.dark .note-editor .ProseMirror .hljs-meta {
+  color: oklch(0.78 0.13 285);
+}
+.dark .note-editor .ProseMirror .hljs-variable,
+.dark .note-editor .ProseMirror .hljs-params {
+  color: oklch(0.78 0.02 285);
+}
+
 .note-editor .ProseMirror mark {
   background: oklch(0.9 0.15 85 / 0.35);
   color: inherit;
