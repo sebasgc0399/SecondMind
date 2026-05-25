@@ -1,7 +1,6 @@
 import CodeBlockLowlight from '@tiptap/extension-code-block-lowlight';
 import { ReactNodeViewRenderer } from '@tiptap/react';
 import { createLowlight } from 'lowlight';
-import CodeBlockNodeView from '@/components/editor/nodeviews/CodeBlockNodeView';
 import bash from 'highlight.js/lib/languages/bash';
 import c from 'highlight.js/lib/languages/c';
 import cpp from 'highlight.js/lib/languages/cpp';
@@ -27,6 +26,7 @@ import scala from 'highlight.js/lib/languages/scala';
 import sql from 'highlight.js/lib/languages/sql';
 import swift from 'highlight.js/lib/languages/swift';
 import typescript from 'highlight.js/lib/languages/typescript';
+import CodeBlockNodeView from '@/components/editor/nodeviews/CodeBlockNodeView';
 
 const lowlight = createLowlight();
 
