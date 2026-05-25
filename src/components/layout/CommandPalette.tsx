@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
-import { useNavigate } from 'react-router';
+import { useLocation, useNavigate, useSearchParams } from 'react-router';
 import { Dialog } from '@base-ui/react';
 import {
   CheckSquare,
@@ -9,6 +9,8 @@ import {
   LayoutDashboard,
   PanelLeftClose,
   PanelLeftOpen,
+  PanelRightClose,
+  PanelRightOpen,
   Repeat,
   Search,
   Settings,
@@ -55,6 +57,16 @@ export function CommandPaletteProvider({ children }: CommandPaletteProviderProps
   );
 
   return <CommandPaletteContext.Provider value={value}>{children}</CommandPaletteContext.Provider>;
+}
+
+// F46.6: detecta si estamos en una página de detalle de nota
+// (/notes/:noteId) excluyendo /notes (lista) y /notes/graph (grafo).
+// Duplicado de TopBar.tsx con el mismo guard — 2 callers ahora, si emerge
+// un tercero, extraer a `src/lib/router.ts` o similar.
+function isInNoteDetailPage(pathname: string): boolean {
+  if (!pathname.startsWith('/notes/')) return false;
+  if (pathname === '/notes/graph' || pathname.startsWith('/notes/graph/')) return false;
+  return true;
 }
 
 // --- Quick actions (static, shown when query is empty) ---
@@ -112,6 +124,8 @@ interface CommandPaletteContentProps {
 
 function CommandPaletteContent({ onClose }: CommandPaletteContentProps) {
   const navigate = useNavigate();
+  const location = useLocation();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { user } = useAuth();
   const breakpoint = useBreakpoint();
   const { preferences } = usePreferences();
@@ -127,11 +141,16 @@ function CommandPaletteContent({ onClose }: CommandPaletteContentProps) {
   // forget. La memo se invalida cuando preferences.sidebarHidden cambia,
   // así el label queda en sync si el toggle se dispara desde otro
   // entrypoint (Cmd+B, /settings) mientras el palette está abierto.
+  //
+  // F46.6: toggle del split-pane condicional. Solo si breakpoint desktop Y
+  // location en /notes/:noteId. Label/icon cambian según ?split= en URL.
+  // Handler para "abrir" delega al SplitPaneLayout via CustomEvent
+  // (mismo patrón que TopBar y el botón del header del NoteEditor).
   const quickActions = useMemo<QuickAction[]>(() => {
     if (breakpoint !== 'desktop' || !user) return QUICK_ACTIONS;
     const uid = user.uid;
     const sidebarHidden = preferences.sidebarHidden;
-    const toggle: QuickAction = sidebarHidden
+    const sidebarToggle: QuickAction = sidebarHidden
       ? {
           id: 'action-show-sidebar',
           kind: 'handler',
@@ -150,8 +169,43 @@ function CommandPaletteContent({ onClose }: CommandPaletteContentProps) {
             void setPreferences(uid, { sidebarHidden: true });
           },
         };
-    return [...QUICK_ACTIONS, toggle];
-  }, [breakpoint, user, preferences.sidebarHidden]);
+
+    if (!isInNoteDetailPage(location.pathname)) {
+      return [...QUICK_ACTIONS, sidebarToggle];
+    }
+
+    const splitOpen = searchParams.has('split');
+    const splitToggle: QuickAction = splitOpen
+      ? {
+          id: 'action-close-split',
+          kind: 'handler',
+          label: 'Cerrar panel derecho',
+          icon: PanelRightClose,
+          handler: () => {
+            const next = new URLSearchParams(searchParams);
+            next.delete('split');
+            setSearchParams(next, { replace: true });
+          },
+        }
+      : {
+          id: 'action-open-split',
+          kind: 'handler',
+          label: 'Abrir nota lado a lado',
+          icon: PanelRightOpen,
+          handler: () => {
+            window.dispatchEvent(new CustomEvent('secondmind:split-open-picker'));
+          },
+        };
+
+    return [...QUICK_ACTIONS, sidebarToggle, splitToggle];
+  }, [
+    breakpoint,
+    user,
+    preferences.sidebarHidden,
+    location.pathname,
+    searchParams,
+    setSearchParams,
+  ]);
 
   // Build flat items list for keyboard navigation
   const items = useMemo<PaletteItem[]>(() => {
