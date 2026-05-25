@@ -1,6 +1,7 @@
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { NodeViewContent, NodeViewWrapper, type ReactNodeViewProps } from '@tiptap/react';
 import { Select } from '@base-ui/react/select';
-import { ChevronDown } from 'lucide-react';
+import { Check, ChevronDown, Copy } from 'lucide-react';
 import {
   CODE_LANGUAGES,
   findLanguageLabel,
@@ -17,6 +18,38 @@ export default function CodeBlockNodeView({ node, updateAttributes }: ReactNodeV
     if (next === null) return;
     updateAttributes({ language: next === AUTO_VALUE ? null : next });
   };
+
+  const [copyState, setCopyState] = useState<'idle' | 'copied'>('idle');
+  const copyTimerRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (copyTimerRef.current !== null) {
+        window.clearTimeout(copyTimerRef.current);
+      }
+    };
+  }, []);
+
+  const handleCopy = useCallback(() => {
+    const text = node.textContent;
+    if (!navigator.clipboard?.writeText) return;
+    void navigator.clipboard
+      .writeText(text)
+      .then(() => {
+        setCopyState('copied');
+        if (copyTimerRef.current !== null) {
+          window.clearTimeout(copyTimerRef.current);
+        }
+        copyTimerRef.current = window.setTimeout(() => {
+          setCopyState('idle');
+          copyTimerRef.current = null;
+        }, 1500);
+      })
+      .catch(() => {
+        // Silencioso: contextos privados / WebViews restringidas pueden bloquear
+        // el clipboard API. El user puede reintentar; no rompemos el editor.
+      });
+  }, [node]);
 
   return (
     <NodeViewWrapper className="code-block-wrapper not-prose my-3 overflow-hidden rounded-lg border border-border bg-muted">
@@ -53,7 +86,18 @@ export default function CodeBlockNodeView({ node, updateAttributes }: ReactNodeV
             </Select.Positioner>
           </Select.Portal>
         </Select.Root>
-        <div className="w-6" />
+        <button
+          type="button"
+          onClick={handleCopy}
+          aria-label={copyState === 'copied' ? 'Código copiado' : 'Copiar código'}
+          className="inline-flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground outline-none transition-colors hover:bg-accent/40"
+        >
+          {copyState === 'copied' ? (
+            <Check className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
+          ) : (
+            <Copy className="h-3.5 w-3.5" />
+          )}
+        </button>
       </div>
       <pre className="hljs">
         <NodeViewContent<'code'> as="code" className="font-mono" />
