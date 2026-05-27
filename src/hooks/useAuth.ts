@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import {
   onAuthStateChanged,
   signInWithPopup,
+  signInWithEmailAndPassword,
   signOut as firebaseSignOut,
   GoogleAuthProvider,
 } from 'firebase/auth';
@@ -19,6 +20,7 @@ interface UseAuthReturn {
   user: User | null;
   isLoading: boolean;
   signIn: () => Promise<void>;
+  signInWithEmail: (email: string, password: string) => Promise<void>;
   signOut: () => Promise<void>;
 }
 
@@ -45,10 +47,14 @@ export default function useAuth(): UseAuthReturn {
     }
   }, []);
 
+  const signInWithEmail = useCallback(async (email: string, password: string) => {
+    await signInWithEmailAndPassword(auth, email, password);
+  }, []);
+
   const signOut = useCallback(async () => {
     invalidateEmbeddingsCache();
     await firebaseSignOut(auth);
   }, []);
 
-  return { user, isLoading, signIn, signOut };
+  return { user, isLoading, signIn, signInWithEmail, signOut };
 }
