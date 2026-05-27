@@ -10,6 +10,7 @@ import {
   GoogleAuthProvider,
 } from 'firebase/auth';
 import { auth } from '@/lib/firebase';
+import { readSignupCapacity } from '@/hooks/useSignupCapacity';
 import { invalidateEmbeddingsCache } from '@/lib/embeddings';
 import { isCapacitor } from '@/lib/capacitor';
 import { signInWithCapacitor } from '@/lib/capacitorAuth';
@@ -59,6 +60,23 @@ export default function useAuth(): UseAuthReturn {
   }, []);
 
   const signUpWithEmail = useCallback(async (email: string, password: string) => {
+    // Defense in depth (F6): re-check capacity ANTES del create. La UI de
+    // SignupCapacityGate ya bloquea pero la ventana entre check inicial y
+    // submit del form puede dejar pasar un signup invalido si el counter
+    // cambió mid-session. Fail-closed (G8) si doc no existe o lectura falla.
+    let capacity;
+    try {
+      capacity = await readSignupCapacity();
+    } catch {
+      throw { code: 'capacity-unavailable' };
+    }
+    if (!capacity) {
+      throw { code: 'capacity-unavailable' };
+    }
+    if (!capacity.canSignUp) {
+      throw { code: 'capacity-full' };
+    }
+
     const credential = await createUserWithEmailAndPassword(auth, email, password);
     // Auto-send verification email post-create. Si el envío falla (rate limit,
     // network), no rompemos el flow — el banner F4 ofrecerá reenviar.

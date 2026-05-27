@@ -31,6 +31,10 @@ export function mapAuthError(
     case 'auth/popup-closed-by-user':
     case 'auth/cancelled-popup-request':
       return '';
+    case 'capacity-full':
+      return 'Beta llena. No podemos crear cuentas nuevas ahora.';
+    case 'capacity-unavailable':
+      return 'No se pudo verificar disponibilidad. Reintentá.';
     default:
       return 'Algo salió mal. Intentá de nuevo.';
   }
