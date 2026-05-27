@@ -1,9 +1,8 @@
-import { Link, useLocation, useSearchParams } from 'react-router';
-import { PanelLeftOpen, PanelRightClose, PanelRightOpen, Search } from 'lucide-react';
+import { Link } from 'react-router';
+import { PanelLeftOpen, Search } from 'lucide-react';
 import QuickCaptureButton from '@/components/capture/QuickCaptureButton';
 import useAuth from '@/hooks/useAuth';
 import useCommandPalette from '@/hooks/useCommandPalette';
-import { useBreakpoint } from '@/hooks/useMediaQuery';
 import { setPreferences } from '@/lib/preferences';
 import { cn } from '@/lib/utils';
 import PendingSyncIndicator from './PendingSyncIndicator';
@@ -13,46 +12,14 @@ interface TopBarProps {
   animateExit?: boolean;
 }
 
-// F46.5: detecta si estamos en una página de detalle de nota (/notes/:noteId)
-// excluyendo /notes (lista) y /notes/graph (grafo) — únicos sub-paths donde
-// el botón Split NO aplica.
-function isInNoteDetailPage(pathname: string): boolean {
-  if (!pathname.startsWith('/notes/')) return false;
-  if (pathname === '/notes/graph' || pathname.startsWith('/notes/graph/')) return false;
-  return true;
-}
-
 export default function TopBar({ animateEntry, animateExit }: TopBarProps) {
   const { user } = useAuth();
   const { open: openCommandPalette } = useCommandPalette();
-  const location = useLocation();
-  const [searchParams, setSearchParams] = useSearchParams();
-  const breakpoint = useBreakpoint();
 
   const handleShowSidebar = () => {
     if (!user) return;
     void setPreferences(user.uid, { sidebarHidden: false });
   };
-
-  // F46.5: botón Split visible solo en /notes/:noteId + desktop ≥1024px.
-  // Limitación heredada (documentada en SPEC): TopBar solo aparece con
-  // sidebar oculta, así que el botón NO se ve si el user tiene la sidebar
-  // abierta — el atajo Cmd+\ sigue siendo el trigger universal.
-  const showSplitButton = isInNoteDetailPage(location.pathname) && breakpoint === 'desktop';
-  const splitOpen = searchParams.has('split');
-
-  function handleSplitToggle() {
-    if (splitOpen) {
-      const next = new URLSearchParams(searchParams);
-      next.delete('split');
-      setSearchParams(next, { replace: true });
-    } else {
-      // SplitPaneLayout escucha este evento (siempre montado en /notes/:noteId)
-      // para abrir el picker. Evento custom evita pasar context a través de
-      // Layout → Outlet → page → SplitPaneLayout.
-      window.dispatchEvent(new CustomEvent('secondmind:split-open-picker'));
-    }
-  }
 
   return (
     <header
@@ -82,21 +49,6 @@ export default function TopBar({ animateEntry, animateExit }: TopBarProps) {
       </div>
       <div className="flex items-center gap-2">
         <PendingSyncIndicator compact />
-        {showSplitButton && (
-          <button
-            type="button"
-            onClick={handleSplitToggle}
-            aria-label={splitOpen ? 'Cerrar panel derecho' : 'Abrir nota lado a lado'}
-            title={splitOpen ? 'Cerrar panel derecho (⌘\\)' : 'Abrir nota lado a lado (⌘\\)'}
-            className="inline-flex items-center justify-center rounded-md p-1.5 transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
-          >
-            {splitOpen ? (
-              <PanelRightClose className="h-4 w-4" aria-hidden />
-            ) : (
-              <PanelRightOpen className="h-4 w-4" aria-hidden />
-            )}
-          </button>
-        )}
         <button
           type="button"
           onClick={openCommandPalette}
