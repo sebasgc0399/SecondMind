@@ -5,6 +5,7 @@ import {
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
   sendEmailVerification,
+  sendPasswordResetEmail,
   signOut as firebaseSignOut,
   GoogleAuthProvider,
 } from 'firebase/auth';
@@ -24,6 +25,7 @@ interface UseAuthReturn {
   signIn: () => Promise<void>;
   signInWithEmail: (email: string, password: string) => Promise<void>;
   signUpWithEmail: (email: string, password: string) => Promise<void>;
+  resetPassword: (email: string) => Promise<void>;
   signOut: () => Promise<void>;
 }
 
@@ -65,10 +67,31 @@ export default function useAuth(): UseAuthReturn {
     }
   }, []);
 
+  const resetPassword = useCallback(async (email: string) => {
+    try {
+      await sendPasswordResetEmail(auth, email);
+    } catch (err) {
+      // user-not-found silenciado: anti-enumeration. El form muestra
+      // "Si la cuenta existe, recibirás un enlace" siempre que no haya
+      // otros errores (invalid-email, too-many-requests, network-failed).
+      const code = (err as { code?: string } | null)?.code;
+      if (code === 'auth/user-not-found') return;
+      throw err;
+    }
+  }, []);
+
   const signOut = useCallback(async () => {
     invalidateEmbeddingsCache();
     await firebaseSignOut(auth);
   }, []);
 
-  return { user, isLoading, signIn, signInWithEmail, signUpWithEmail, signOut };
+  return {
+    user,
+    isLoading,
+    signIn,
+    signInWithEmail,
+    signUpWithEmail,
+    resetPassword,
+    signOut,
+  };
 }

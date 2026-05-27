@@ -7,9 +7,10 @@ import { mapAuthError } from '@/lib/authErrors';
 
 interface SignInFormProps {
   onError: (message: string) => void;
+  onForgotPassword: () => void;
 }
 
-export default function SignInForm({ onError }: SignInFormProps) {
+export default function SignInForm({ onError, onForgotPassword }: SignInFormProps) {
   const { signInWithEmail } = useAuth();
   const navigate = useNavigate();
   const [email, setEmail] = useState('');
@@ -47,9 +48,18 @@ export default function SignInForm({ onError }: SignInFormProps) {
         />
       </div>
       <div className="flex flex-col gap-1.5">
-        <label htmlFor="signin-password" className="text-sm font-medium">
-          Contraseña
-        </label>
+        <div className="flex items-center justify-between">
+          <label htmlFor="signin-password" className="text-sm font-medium">
+            Contraseña
+          </label>
+          <button
+            type="button"
+            onClick={onForgotPassword}
+            className="text-xs text-primary hover:underline"
+          >
+            ¿Olvidaste tu contraseña?
+          </button>
+        </div>
         <input
           id="signin-password"
           type="password"
