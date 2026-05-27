@@ -4,5 +4,13 @@ service cloud.firestore {
     match /users/{userId}/{document=**} {
       allow read, write: if request.auth != null && request.auth.uid == userId;
     }
+
+    // F47.F6 — config/app: read público (LoginPage no tiene user
+    // al verificar capacity). Writes solo via Admin SDK (triggers
+    // onUserCreated/onUserDeleted) — client-side deny.
+    match /config/{configId} {
+      allow read: if true;
+      allow write: if false;
+    }
   }
 }

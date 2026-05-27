@@ -11,6 +11,7 @@ import NavigationDrawer from '@/components/layout/NavigationDrawer';
 import Sidebar from '@/components/layout/Sidebar';
 import TopBar from '@/components/layout/TopBar';
 import UpdateBanner from '@/components/layout/UpdateBanner';
+import EmailVerificationBanner from '@/components/auth/EmailVerificationBanner';
 import useAuth from '@/hooks/useAuth';
 import useHideSplashWhenReady from '@/hooks/useHideSplashWhenReady';
 import { useBreakpoint } from '@/hooks/useMediaQuery';
@@ -122,6 +123,7 @@ export default function Layout() {
               }}
             >
               <UpdateBanner />
+              {!user.emailVerified && <EmailVerificationBanner />}
               {topBarTransition.shouldRender && (
                 <TopBar
                   animateEntry={animateLayoutSwap && topBarTransition.justMounted}
