@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Tabs } from '@base-ui/react/tabs';
 import SignInForm from './SignInForm';
+import SignUpForm from './SignUpForm';
 import GoogleSignInButton from './GoogleSignInButton';
 
 type TabValue = 'signin' | 'signup';
@@ -34,9 +35,7 @@ export default function LoginCard() {
           </Tabs.Panel>
 
           <Tabs.Panel value="signup" className="outline-none">
-            <div className="py-8 text-center text-sm text-muted-foreground">
-              Disponible próximamente.
-            </div>
+            <SignUpForm onError={setError} />
           </Tabs.Panel>
         </Tabs.Root>
 

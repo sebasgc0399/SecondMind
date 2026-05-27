@@ -3,6 +3,8 @@ import {
   onAuthStateChanged,
   signInWithPopup,
   signInWithEmailAndPassword,
+  createUserWithEmailAndPassword,
+  sendEmailVerification,
   signOut as firebaseSignOut,
   GoogleAuthProvider,
 } from 'firebase/auth';
@@ -21,6 +23,7 @@ interface UseAuthReturn {
   isLoading: boolean;
   signIn: () => Promise<void>;
   signInWithEmail: (email: string, password: string) => Promise<void>;
+  signUpWithEmail: (email: string, password: string) => Promise<void>;
   signOut: () => Promise<void>;
 }
 
@@ -51,10 +54,21 @@ export default function useAuth(): UseAuthReturn {
     await signInWithEmailAndPassword(auth, email, password);
   }, []);
 
+  const signUpWithEmail = useCallback(async (email: string, password: string) => {
+    const credential = await createUserWithEmailAndPassword(auth, email, password);
+    // Auto-send verification email post-create. Si el envío falla (rate limit,
+    // network), no rompemos el flow — el banner F4 ofrecerá reenviar.
+    try {
+      await sendEmailVerification(credential.user);
+    } catch {
+      // no-op intencional
+    }
+  }, []);
+
   const signOut = useCallback(async () => {
     invalidateEmbeddingsCache();
     await firebaseSignOut(auth);
   }, []);
 
-  return { user, isLoading, signIn, signInWithEmail, signOut };
+  return { user, isLoading, signIn, signInWithEmail, signUpWithEmail, signOut };
 }
