@@ -26,6 +26,8 @@ interface UseAuthReturn {
   signInWithEmail: (email: string, password: string) => Promise<void>;
   signUpWithEmail: (email: string, password: string) => Promise<void>;
   resetPassword: (email: string) => Promise<void>;
+  resendVerification: () => Promise<void>;
+  refreshUser: () => Promise<void>;
   signOut: () => Promise<void>;
 }
 
@@ -80,6 +82,24 @@ export default function useAuth(): UseAuthReturn {
     }
   }, []);
 
+  const resendVerification = useCallback(async () => {
+    if (!auth.currentUser) throw new Error('No user logged in');
+    await sendEmailVerification(auth.currentUser);
+  }, []);
+
+  // user.reload() refresca el objeto User de Firebase pero NO dispara
+  // onAuthStateChanged. Necesitamos setUser(auth.currentUser) explícito
+  // para forzar re-render del consumer del hook (G9 plan F47).
+  const refreshUser = useCallback(async () => {
+    if (!auth.currentUser) return;
+    try {
+      await auth.currentUser.reload();
+      setUser(auth.currentUser);
+    } catch {
+      // Network failed o similar: silent. El banner sigue mostrando.
+    }
+  }, []);
+
   const signOut = useCallback(async () => {
     invalidateEmbeddingsCache();
     await firebaseSignOut(auth);
@@ -92,6 +112,8 @@ export default function useAuth(): UseAuthReturn {
     signInWithEmail,
     signUpWithEmail,
     resetPassword,
+    resendVerification,
+    refreshUser,
     signOut,
   };
 }
