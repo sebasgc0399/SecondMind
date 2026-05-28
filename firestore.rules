@@ -8,7 +8,11 @@ service cloud.firestore {
     // F47.F6 — config/app: read público (LoginPage no tiene user
     // al verificar capacity). Writes solo via Admin SDK (triggers
     // onUserCreated/onUserDeleted) — client-side deny.
-    match /config/{configId} {
+    //
+    // Path explícito (no wildcard {configId}): si se agregan más docs
+    // bajo /config/ (config/secrets, config/featureFlags, etc.), cada
+    // uno requiere su propia regla en lugar de heredar read:true.
+    match /config/app {
       allow read: if true;
       allow write: if false;
     }

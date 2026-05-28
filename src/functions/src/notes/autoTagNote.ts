@@ -4,11 +4,13 @@ import { onDocumentWritten } from 'firebase-functions/v2/firestore';
 import { defineSecret } from 'firebase-functions/params';
 import { logger } from 'firebase-functions';
 import { NOTE_TAGGING_SCHEMA, NoteTagging } from '../lib/schemas';
+import { sanitizeError } from '../lib/sanitizeError';
 
 const anthropicApiKey = defineSecret('ANTHROPIC_API_KEY');
 
 const MODEL = 'claude-haiku-4-5-20251001';
 const MAX_TOKENS = 256;
+const MAX_CONTENT_CHARS = 10_000;
 
 const SYSTEM_PROMPT = `Eres un asistente que analiza notas personales para un sistema Zettelkasten.
 
@@ -42,6 +44,15 @@ export const autoTagNote = onDocumentWritten(
 
     const contentPlain = typeof after.contentPlain === 'string' ? after.contentPlain.trim() : '';
     if (!contentPlain) return;
+
+    if (contentPlain.length > MAX_CONTENT_CHARS) {
+      logger.warn('autoTagNote: contentPlain too long, skip', {
+        userId,
+        noteId,
+        length: contentPlain.length,
+      });
+      return;
+    }
 
     const docRef = admin.firestore().doc(`users/${userId}/notes/${noteId}`);
 
@@ -103,8 +114,8 @@ export const autoTagNote = onDocumentWritten(
         noteTypeConfidence: confidence,
       });
     } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
-      logger.error('autoTagNote: failed', { userId, noteId, error: message });
+      const { code, message } = sanitizeError(error);
+      logger.error('autoTagNote: failed', { userId, noteId, code, message });
     }
   },
 );

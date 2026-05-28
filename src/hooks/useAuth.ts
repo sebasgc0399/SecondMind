@@ -12,6 +12,7 @@ import {
 import { auth } from '@/lib/firebase';
 import { readSignupCapacity } from '@/hooks/useSignupCapacity';
 import { invalidateEmbeddingsCache } from '@/lib/embeddings';
+import { invalidatePreferencesCache } from '@/lib/preferences';
 import { isCapacitor } from '@/lib/capacitor';
 import { signInWithCapacitor } from '@/lib/capacitorAuth';
 import { isTauri } from '@/lib/tauri';
@@ -120,6 +121,7 @@ export default function useAuth(): UseAuthReturn {
 
   const signOut = useCallback(async () => {
     invalidateEmbeddingsCache();
+    invalidatePreferencesCache();
     await firebaseSignOut(auth);
   }, []);
 

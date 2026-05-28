@@ -4,11 +4,13 @@ import { onDocumentCreated } from 'firebase-functions/v2/firestore';
 import { defineSecret } from 'firebase-functions/params';
 import { logger } from 'firebase-functions';
 import { INBOX_CLASSIFICATION_SCHEMA, InboxClassification } from '../lib/schemas';
+import { sanitizeError } from '../lib/sanitizeError';
 
 const anthropicApiKey = defineSecret('ANTHROPIC_API_KEY');
 
 const MODEL = 'claude-haiku-4-5-20251001';
 const MAX_TOKENS = 512;
+const MAX_CONTENT_CHARS = 10_000;
 
 const SYSTEM_PROMPT = `Eres un asistente de productividad personal. Analizas capturas rapidas del usuario y sugieres como clasificarlas. El usuario tiene estas areas: Proyectos, Conocimiento, Finanzas, Salud y Ejercicio, Pareja, Habitos.
 
@@ -37,6 +39,15 @@ export const processInboxItem = onDocumentCreated(
       logger.warn('processInboxItem: rawContent vacio, skip', {
         userId,
         itemId,
+      });
+      return;
+    }
+
+    if (rawContent.length > MAX_CONTENT_CHARS) {
+      logger.warn('processInboxItem: rawContent too long, skip', {
+        userId,
+        itemId,
+        length: rawContent.length,
       });
       return;
     }
@@ -94,11 +105,12 @@ export const processInboxItem = onDocumentCreated(
         suggestedType: result.suggestedType,
       });
     } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
+      const { code, message } = sanitizeError(error);
       logger.error('processInboxItem: failed', {
         userId,
         itemId,
-        error: message,
+        code,
+        message,
       });
     }
   },

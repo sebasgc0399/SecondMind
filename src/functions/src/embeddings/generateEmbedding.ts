@@ -4,6 +4,7 @@ import { onDocumentWritten } from 'firebase-functions/v2/firestore';
 import { defineSecret } from 'firebase-functions/params';
 import { logger } from 'firebase-functions';
 import OpenAI from 'openai';
+import { sanitizeError } from '../lib/sanitizeError';
 
 const openaiApiKey = defineSecret('OPENAI_API_KEY');
 
@@ -30,10 +31,12 @@ export const generateEmbedding = onDocumentWritten(
     if (!contentPlain) {
       if (existingDoc.exists) {
         await embeddingRef.delete().catch((err) => {
+          const { code, message } = sanitizeError(err);
           logger.warn('generateEmbedding: delete stale embedding failed', {
             userId,
             noteId,
-            error: err instanceof Error ? err.message : String(err),
+            code,
+            message,
           });
         });
         logger.info('generateEmbedding: empty content, deleted stale embedding', {
@@ -74,11 +77,12 @@ export const generateEmbedding = onDocumentWritten(
         dimensions: vector.length,
       });
     } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
+      const { code, message } = sanitizeError(error);
       logger.error('generateEmbedding: failed', {
         userId,
         noteId,
-        error: message,
+        code,
+        message,
       });
     }
   },
