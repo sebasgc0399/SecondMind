@@ -14,6 +14,7 @@ import HabitsPage from '@/app/habits/page';
 import SettingsPage from '@/app/settings/page';
 import NotFoundPage from '@/app/not-found';
 import LoginPage from '@/app/login/page';
+import VerifyEmailPage from '@/app/verify-email/page';
 import CapturePage from '@/app/capture/page';
 
 const router = createBrowserRouter([
@@ -38,6 +39,7 @@ const router = createBrowserRouter([
   },
   { path: '/capture', Component: CapturePage },
   { path: '/login', Component: LoginPage },
+  { path: '/verify-email', Component: VerifyEmailPage },
 ]);
 
 export default router;
