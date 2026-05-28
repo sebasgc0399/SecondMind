@@ -9,6 +9,7 @@ const anthropicApiKey = defineSecret('ANTHROPIC_API_KEY');
 
 const MODEL = 'claude-haiku-4-5-20251001';
 const MAX_TOKENS = 512;
+const MAX_CONTENT_CHARS = 10_000;
 
 const SYSTEM_PROMPT = `Eres un asistente de productividad personal. Analizas capturas rapidas del usuario y sugieres como clasificarlas. El usuario tiene estas areas: Proyectos, Conocimiento, Finanzas, Salud y Ejercicio, Pareja, Habitos.
 
@@ -37,6 +38,15 @@ export const processInboxItem = onDocumentCreated(
       logger.warn('processInboxItem: rawContent vacio, skip', {
         userId,
         itemId,
+      });
+      return;
+    }
+
+    if (rawContent.length > MAX_CONTENT_CHARS) {
+      logger.warn('processInboxItem: rawContent too long, skip', {
+        userId,
+        itemId,
+        length: rawContent.length,
       });
       return;
     }
