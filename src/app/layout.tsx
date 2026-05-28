@@ -100,6 +100,18 @@ export default function Layout() {
     return <Navigate to="/login" replace />;
   }
 
+  // Gate post-C1 audit 2026-05: users email/password no verificados
+  // quedan bloqueados por la rule server-side (rules requieren
+  // email_verified == true). Sin esta guarda entran al Layout vacio
+  // sin saber por que nada funciona — solo el banner amarillo dice
+  // "verificá". El gate redirige a /verify-email donde el copy
+  // explicita el bloqueo. Google sign-in marca emailVerified
+  // automaticamente (D8 F47), asi que solo aplica al provider password.
+  const isPasswordProvider = user.providerData.some((p) => p.providerId === 'password');
+  if (isPasswordProvider && !user.emailVerified) {
+    return <Navigate to="/verify-email" replace />;
+  }
+
   return (
     <StoreHydrationProvider value={{ isHydrating }}>
       <CommandPaletteProvider>

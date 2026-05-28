@@ -1,13 +1,13 @@
 import { useEffect, useState } from 'react';
 import { Mail, X } from 'lucide-react';
 import useAuth from '@/hooks/useAuth';
+import useEmailVerificationResend from '@/hooks/useEmailVerificationResend';
 
 const DISMISS_KEY = 'secondmind:em-banner-dismissed';
-const COOLDOWN_KEY = 'secondmind:em-resend-cooldown';
-const COOLDOWN_MS = 60_000;
 
 export default function EmailVerificationBanner() {
-  const { resendVerification, refreshUser } = useAuth();
+  const { refreshUser } = useAuth();
+  const { remainingSeconds, sending, handleResend } = useEmailVerificationResend();
 
   const [dismissed, setDismissed] = useState<boolean>(() => {
     try {
@@ -16,37 +16,6 @@ export default function EmailVerificationBanner() {
       return false;
     }
   });
-
-  const [cooldownEndsAt, setCooldownEndsAt] = useState<number>(() => {
-    try {
-      const raw = sessionStorage.getItem(COOLDOWN_KEY);
-      const value = raw ? Number(raw) : 0;
-      return Number.isFinite(value) && value > Date.now() ? value : 0;
-    } catch {
-      return 0;
-    }
-  });
-
-  const [remainingSeconds, setRemainingSeconds] = useState(() =>
-    Math.max(0, Math.ceil((cooldownEndsAt - Date.now()) / 1000)),
-  );
-
-  const [sending, setSending] = useState(false);
-
-  // Decrement segundo a segundo mientras hay cooldown activo
-  useEffect(() => {
-    if (cooldownEndsAt <= Date.now()) {
-      setRemainingSeconds(0);
-      return;
-    }
-    function tick() {
-      const remaining = Math.max(0, Math.ceil((cooldownEndsAt - Date.now()) / 1000));
-      setRemainingSeconds(remaining);
-    }
-    tick();
-    const id = window.setInterval(tick, 1000);
-    return () => window.clearInterval(id);
-  }, [cooldownEndsAt]);
 
   // Refresh user vía focus + visibilitychange (override SPEC: NO polling 30s).
   // Trigger natural: user vuelve a SecondMind tras click email → focus event
@@ -74,25 +43,6 @@ export default function EmailVerificationBanner() {
       sessionStorage.setItem(DISMISS_KEY, '1');
     } catch {
       // sessionStorage no disponible (modo privado strict, etc.) — no-op
-    }
-  }
-
-  async function handleResend() {
-    if (remainingSeconds > 0 || sending) return;
-    setSending(true);
-    try {
-      await resendVerification();
-      const ends = Date.now() + COOLDOWN_MS;
-      setCooldownEndsAt(ends);
-      try {
-        sessionStorage.setItem(COOLDOWN_KEY, String(ends));
-      } catch {
-        // no-op
-      }
-    } catch {
-      // No throw — el button queda habilitado, user puede reintentar
-    } finally {
-      setSending(false);
     }
   }
 
