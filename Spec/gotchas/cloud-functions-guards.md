@@ -64,6 +64,20 @@ Import: `firebase-functions/v2/scheduler`. Schedule cron tradicional `'0 3 * * *
 
 Cubre cualquier sub-colección nueva sin cambios en rules (post-F19, confirmado al agregar `users/{uid}/settings/preferences`). El catch-all funciona también para queries `collectionGroup` desde el client SDK — Firestore enforce la rule por doc-path; un cliente autenticado como uidA solo puede leer sus propias notas en una collection group query. Cualquier PR futuro que toque `firestore.rules` debe re-correr test cross-user (auth como uidA + intentar leer `users/uidB/...` → permission-denied) antes de mergear. Vivo en [firestore.rules](../../firestore.rules).
 
+## Enforce `email_verified` server-side en rules cuando el provider Email/Password está habilitado (post-audit-2026-05)
+
+Banners de verificación client-side (F47.F4) son solo UI nudge — un user puede dismissarlos y operar Firestore normalmente si las rules solo chequean `request.auth.uid == userId`. Para enforcement real, las rules deben exigir `request.auth.token.email_verified == true`. Excepción: providers federados como Google marcan el flag automáticamente al sign-in (D8 F47), por lo cual incluir `request.auth.token.firebase.sign_in_provider == 'google.com'` en un OR evita romper users existentes pre-fix. Patrón canónico de la rule:
+
+```
+allow read, write: if
+  request.auth != null
+  && request.auth.uid == userId
+  && (request.auth.token.firebase.sign_in_provider == 'google.com'
+      || request.auth.token.email_verified == true);
+```
+
+**Grace period requerido si hay users email/password pre-existentes** sin verificar — sin grace period quedan permission-denied de inmediato post-deploy y deben verificar email para recuperar acceso. Decisión de scope: <10 users afectados → comunicación manual + verificación obligatoria; >10 → banner intensificado UX + ventana de 7-14 días con doble check (client + server queries reportando UID si pasa client pero falla server). C1 audit 2026-05 deployó sin grace period (zero users email/password no verificados en prod). Aplica a cualquier proyecto Firebase con Email/Password habilitado + datos user-scoped. Vivo en [firestore.rules](../../firestore.rules).
+
 ## Firestore RECHAZA single-field indexes en `firestore.indexes.json` (post-F19)
 
 Con `"this index is not necessary, configure using single field index controls"`. Los single-field indexes están auto-habilitados en COLLECTION + COLLECTION_GROUP scope por default. Solo se declaran composite indexes (multi-field) en JSON. La query `collectionGroup('notes').where('deletedAt', '>', 0)` funciona con el implícito sin declaración. Si se necesita un single-field exemption (ej. desactivar índice para campos grandes), usar `fieldOverrides` con `indexes: []`. La entry `"indexes": "firestore.indexes.json"` en `firebase.json` sigue siendo necesaria para que `firebase deploy --only firestore:indexes` encuentre el archivo (sino falla silencioso, no es opcional).
