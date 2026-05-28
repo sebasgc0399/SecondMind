@@ -1,6 +1,7 @@
 import * as admin from 'firebase-admin';
 import { onSchedule } from 'firebase-functions/v2/scheduler';
 import { logger } from 'firebase-functions';
+import { sanitizeError } from '../lib/sanitizeError';
 
 // Grace period para notas pre-F19. F18 dejó en producción notas con
 // `deletedAt > 0` desde antes de que la papelera existiera; el default
@@ -107,9 +108,11 @@ export const autoPurgeTrash = onSchedule(
           const userId = chunk[idx]!.userId;
           perUser[userId] = (perUser[userId] ?? 0) + 1;
         } else {
+          const { code, message } = sanitizeError(r.reason);
           logger.error('autoPurgeTrash: delete failed', {
             path: chunk[idx]!.ref.path,
-            error: r.reason instanceof Error ? r.reason.message : String(r.reason),
+            code,
+            message,
           });
         }
       });

@@ -4,6 +4,7 @@ import { onDocumentWritten } from 'firebase-functions/v2/firestore';
 import { defineSecret } from 'firebase-functions/params';
 import { logger } from 'firebase-functions';
 import { NOTE_TAGGING_SCHEMA, NoteTagging } from '../lib/schemas';
+import { sanitizeError } from '../lib/sanitizeError';
 
 const anthropicApiKey = defineSecret('ANTHROPIC_API_KEY');
 
@@ -113,8 +114,8 @@ export const autoTagNote = onDocumentWritten(
         noteTypeConfidence: confidence,
       });
     } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
-      logger.error('autoTagNote: failed', { userId, noteId, error: message });
+      const { code, message } = sanitizeError(error);
+      logger.error('autoTagNote: failed', { userId, noteId, code, message });
     }
   },
 );

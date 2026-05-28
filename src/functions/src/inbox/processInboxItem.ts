@@ -4,6 +4,7 @@ import { onDocumentCreated } from 'firebase-functions/v2/firestore';
 import { defineSecret } from 'firebase-functions/params';
 import { logger } from 'firebase-functions';
 import { INBOX_CLASSIFICATION_SCHEMA, InboxClassification } from '../lib/schemas';
+import { sanitizeError } from '../lib/sanitizeError';
 
 const anthropicApiKey = defineSecret('ANTHROPIC_API_KEY');
 
@@ -104,11 +105,12 @@ export const processInboxItem = onDocumentCreated(
         suggestedType: result.suggestedType,
       });
     } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
+      const { code, message } = sanitizeError(error);
       logger.error('processInboxItem: failed', {
         userId,
         itemId,
-        error: message,
+        code,
+        message,
       });
     }
   },

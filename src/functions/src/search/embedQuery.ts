@@ -2,6 +2,7 @@ import { onCall, HttpsError } from 'firebase-functions/v2/https';
 import { defineSecret } from 'firebase-functions/params';
 import { logger } from 'firebase-functions';
 import OpenAI from 'openai';
+import { sanitizeError } from '../lib/sanitizeError';
 
 const openaiApiKey = defineSecret('OPENAI_API_KEY');
 
@@ -62,8 +63,8 @@ export const embedQuery = onCall<EmbedQueryRequest, Promise<EmbedQueryResponse>>
 
       return { vector };
     } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
-      logger.error('embedQuery: failed', { userId, error: message });
+      const { code, message } = sanitizeError(error);
+      logger.error('embedQuery: failed', { userId, code, message });
       throw new HttpsError('internal', 'Failed to generate embedding');
     }
   },
