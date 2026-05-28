@@ -360,6 +360,8 @@ Cada feature comprimida a 1 línea con pointer al SPEC archivado. Para detalles 
 - [`firebase-functions@7.x` mantiene namespace v1 para Auth triggers (post-F47)](gotchas/cloud-functions-guards.md#firebase-functions7x-mantiene-namespace-v1-para-auth-triggers-post-f47)
 - [Counter mantenido por Auth triggers vs `listUsers()` paginado en cada check (post-F47)](gotchas/cloud-functions-guards.md#counter-mantenido-por-auth-triggers-vs-listusers-paginado-en-cada-check-post-f47)
 - [Seed inicial obligatorio para counters mantenidos por triggers (post-F47)](gotchas/cloud-functions-guards.md#seed-inicial-obligatorio-para-counters-mantenidos-por-triggers-post-f47)
+- [Logs de error en CFs nunca raw — helper `sanitizeError` obligatorio (post-audit-2026-05)](gotchas/cloud-functions-guards.md#logs-de-error-en-cfs-nunca-raw--helper-sanitizeerror-obligatorio-post-audit-2026-05)
+- [`MAX_CONTENT_CHARS` cap antes de llamadas LLM en CFs con input user (post-audit-2026-05)](gotchas/cloud-functions-guards.md#max_content_chars-cap-antes-de-llamadas-llm-en-cfs-con-input-user-post-audit-2026-05)
 
 ---
 
