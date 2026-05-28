@@ -355,6 +355,7 @@ Cada feature comprimida a 1 línea con pointer al SPEC archivado. Para detalles 
 - [Cleanup en cascada de deletes via CF `onDocumentDeleted` + WriteBatch chunked (post-F19)](gotchas/cloud-functions-guards.md#cleanup-en-cascada-de-deletes-via-cf-ondocumentdeleted-writebatch-chunked-post-f19)
 - [CFs scheduled con `onSchedule` v2 (post-F19, primer uso)](gotchas/cloud-functions-guards.md#cfs-scheduled-con-onschedule-v2-post-f19-primer-uso)
 - [Firestore `firestore.rules` catch-all `match /users/{userId}/{document=**}`](gotchas/cloud-functions-guards.md#firestore-firestorerules-catch-all-match-usersuseriddocument)
+- [Enforce `email_verified` server-side en rules cuando el provider Email/Password está habilitado (post-audit-2026-05)](gotchas/cloud-functions-guards.md#enforce-email_verified-server-side-en-rules-cuando-el-provider-emailpassword-está-habilitado-post-audit-2026-05)
 - [Firestore RECHAZA single-field indexes en `firestore.indexes.json` (post-F19)](gotchas/cloud-functions-guards.md#firestore-rechaza-single-field-indexes-en-firestoreindexesjson-post-f19)
 - [Bulk delete masivo: chunkear de 50; sleep 200ms entre chunks SOLO en CFs scheduled (post-F19)](gotchas/cloud-functions-guards.md#bulk-delete-masivo-chunkear-de-50-sleep-200ms-entre-chunks-solo-en-cfs-scheduled-post-f19)
 - [`firebase-functions@7.x` mantiene namespace v1 para Auth triggers (post-F47)](gotchas/cloud-functions-guards.md#firebase-functions7x-mantiene-namespace-v1-para-auth-triggers-post-f47)
