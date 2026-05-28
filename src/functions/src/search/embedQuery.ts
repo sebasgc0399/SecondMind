@@ -31,8 +31,8 @@ export const embedQuery = onCall<EmbedQueryRequest, Promise<EmbedQueryResponse>>
     const userId = request.auth.uid;
     const rawText = request.data?.text;
 
-    if (typeof rawText !== 'string') {
-      throw new HttpsError('invalid-argument', 'text must be a string');
+    if (rawText === null || rawText === undefined || typeof rawText !== 'string') {
+      throw new HttpsError('invalid-argument', 'text is required and must be a string');
     }
 
     const text = rawText.trim();
