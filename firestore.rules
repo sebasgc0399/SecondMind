@@ -2,7 +2,16 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
     match /users/{userId}/{document=**} {
-      allow read, write: if request.auth != null && request.auth.uid == userId;
+      // C1 audit 2026-05 — enforce email_verified server-side. Google
+      // sign-in marca email_verified=true automaticamente (D8 F47); para
+      // email/password el banner client-side era solo UI nudge antes de
+      // este fix. Sin grace period: zero users email/password no
+      // verificados en prod al deploy (confirmado por user).
+      allow read, write: if
+        request.auth != null
+        && request.auth.uid == userId
+        && (request.auth.token.firebase.sign_in_provider == 'google.com'
+            || request.auth.token.email_verified == true);
     }
 
     // F47.F6 — config/app: read público (LoginPage no tiene user
