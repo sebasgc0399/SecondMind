@@ -25,5 +25,15 @@ service cloud.firestore {
       allow read: if true;
       allow write: if false;
     }
+
+    // F48 BYOK — userSecrets/: API keys cifradas del usuario. Deny-all
+    // client-side; solo el Admin SDK (Cloud Functions) accede. Las rules
+    // son aditivas (OR): si esto colgara de users/{userId}/{document=**}
+    // (read/write owner), el cliente podría leer el ciphertext. Por eso
+    // vive en colección top-level con regla propia. La metadata legible
+    // (configured/last4) va en users/{uid}/settings/aiKeys.
+    match /userSecrets/{userId}/{document=**} {
+      allow read, write: if false;
+    }
   }
 }
