@@ -29,6 +29,12 @@ export default function InboxItemCard({
   onAcceptSuggestion,
 }: InboxItemCardProps) {
   const isOnline = useOnlineStatus();
+  // El trigger processInboxItem (onDocumentCreated) solo corre al crear el
+  // item y NO se re-dispara al configurar la key después (D7: sin reproceso
+  // retroactivo). Para items viejos sin procesar el spinner sería perpetuo;
+  // lo mostramos solo en la ventana donde el trigger aún podría estar
+  // corriendo. Pasado eso, el item se muestra normal y se clasifica a mano.
+  const isRecent = Date.now() - item.createdAt < 30_000;
 
   return (
     <div className="relative rounded-lg border border-border bg-card p-4">
@@ -37,6 +43,7 @@ export default function InboxItemCard({
 
       {!item.aiProcessed &&
         aiEnabled &&
+        isRecent &&
         (isOnline ? (
           <div className="mt-2 flex items-center gap-1.5 text-xs text-muted-foreground">
             <Loader2 className="h-3 w-3 animate-spin" />
