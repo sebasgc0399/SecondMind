@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
 import { useLocation } from 'react-router';
+import ApiKeysSection from '@/components/settings/ApiKeysSection';
 import AppInfoSection from '@/components/settings/AppInfoSection';
 import SidebarVisibilitySelector from '@/components/settings/SidebarVisibilitySelector';
 import ThemeSelector from '@/components/settings/ThemeSelector';
@@ -59,6 +60,19 @@ export default function SettingsPage() {
           </p>
         </div>
         <TrashAutoPurgeSelector />
+      </section>
+
+      <section id="api-keys" aria-labelledby="api-keys-heading" className="scroll-mt-14">
+        <div className="mb-3">
+          <h2 id="api-keys-heading" className="text-sm font-semibold text-foreground">
+            Proveedores de IA
+          </h2>
+          <p className="mt-0.5 text-xs text-muted-foreground">
+            Configurá tu propia API key para habilitar la clasificación del inbox y el auto-tagging
+            con IA. Se guarda cifrada y solo la usan tus Cloud Functions.
+          </p>
+        </div>
+        <ApiKeysSection />
       </section>
 
       <AppInfoSection />
