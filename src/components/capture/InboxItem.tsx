@@ -7,6 +7,7 @@ import { formatRelative } from '@/lib/formatDate';
 
 interface InboxItemCardProps {
   item: InboxItem;
+  aiEnabled: boolean;
   onConvert: () => void;
   onDismiss: () => void;
   onAcceptSuggestion: (edited: InboxAiResult) => void;
@@ -22,6 +23,7 @@ const SOURCE_LABELS: Record<string, string> = {
 
 export default function InboxItemCard({
   item,
+  aiEnabled,
   onConvert,
   onDismiss,
   onAcceptSuggestion,
@@ -34,6 +36,7 @@ export default function InboxItemCard({
       <p className="text-sm whitespace-pre-wrap text-foreground">{item.rawContent}</p>
 
       {!item.aiProcessed &&
+        aiEnabled &&
         (isOnline ? (
           <div className="mt-2 flex items-center gap-1.5 text-xs text-muted-foreground">
             <Loader2 className="h-3 w-3 animate-spin" />

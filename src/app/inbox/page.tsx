@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router';
-import { Play, Sparkles } from 'lucide-react';
+import { KeyRound, Play, Sparkles } from 'lucide-react';
 import useInbox, { HIGH_CONFIDENCE_THRESHOLD } from '@/hooks/useInbox';
 import useOnlineStatus from '@/hooks/useOnlineStatus';
+import useApiKeys from '@/hooks/useApiKeys';
 import InboxItemCard from '@/components/capture/InboxItem';
 import type { ConvertOverrides, InboxAiResult, InboxItem } from '@/types/inbox';
 
@@ -22,6 +23,8 @@ export default function InboxPage() {
     acceptHighConfidence,
   } = useInbox();
   const isOnline = useOnlineStatus();
+  const { apiKeys, isLoaded: aiKeysLoaded } = useApiKeys();
+  const aiEnabled = apiKeys.anthropic.configured;
 
   const showSkeleton = isInitializing && items.length === 0;
   const showEmpty = !isInitializing && items.length === 0;
@@ -127,6 +130,24 @@ export default function InboxPage() {
         )}
       </header>
 
+      {aiKeysLoaded && !aiEnabled && (
+        <div className="mb-6 flex flex-col gap-2 rounded-lg border border-dashed border-border bg-muted/20 p-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-start gap-2">
+            <KeyRound className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" aria-hidden />
+            <p className="text-sm text-muted-foreground">
+              La clasificación con IA está desactivada. Configurá tu API key de Anthropic para que
+              el inbox sugiera título, tipo y área automáticamente.
+            </p>
+          </div>
+          <Link
+            to="/settings#api-keys"
+            className="inline-flex shrink-0 items-center gap-1.5 rounded-md border border-border bg-card px-3 py-1.5 text-xs font-medium text-foreground transition-colors hover:bg-accent/40"
+          >
+            Configurar
+          </Link>
+        </div>
+      )}
+
       {showSkeleton && <InboxSkeleton />}
 
       {showEmpty && <EmptyInboxState />}
@@ -154,6 +175,7 @@ export default function InboxPage() {
                   <li key={item.id}>
                     <InboxItemCard
                       item={item}
+                      aiEnabled={aiEnabled}
                       onConvert={() => {
                         void convertToNote(item.id);
                       }}
@@ -178,6 +200,7 @@ export default function InboxPage() {
                   <li key={item.id}>
                     <InboxItemCard
                       item={item}
+                      aiEnabled={aiEnabled}
                       onConvert={() => {
                         void convertToNote(item.id);
                       }}
