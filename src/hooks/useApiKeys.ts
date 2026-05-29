@@ -29,7 +29,6 @@ export default function useApiKeys(): UseApiKeysReturn {
   useEffect(() => {
     userIdRef.current = user?.uid ?? null;
     if (!user) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect -- subscription stream lifecycle: reset a defaults al sign-out antes del cleanup del onSnapshot
       setApiKeys(DEFAULT_AI_KEYS);
       setIsLoaded(false);
       return;
