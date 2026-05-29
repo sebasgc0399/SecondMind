@@ -331,6 +331,7 @@ Cada feature comprimida a 1 línea con pointer al SPEC archivado. Para detalles 
 - [`highlight.js` peerDep mismatch silencioso post-`npm install` con `lowlight@^3`](gotchas/tooling-local.md#highlightjs-peerdep-mismatch-silencioso-post-npm-install-con-lowlight3)
 - [Vite cachea `node_modules/.vite/deps/` aunque cambies versiones de deps transitivas](gotchas/tooling-local.md#vite-cachea-node_modulesvitedeps-aunque-cambies-versiones-de-deps-transitivas)
 - [`react-resizable-panels` v4 rompe compat con v2 (Group/Separator + useDefaultLayout)](gotchas/tooling-local.md#react-resizable-panels-v4-rompe-compat-con-v2-groupseparator-usedefaultlayout)
+- [Tests en `src/functions/` deben excluirse del tsconfig de functions (post-F48)](gotchas/tooling-local.md#tests-en-srcfunctions-deben-excluirse-del-tsconfig-de-functions-post-f48)
 
 ### Cloud Functions — Tool use con schema enforcement — [`gotchas/cloud-functions-schema.md`](gotchas/cloud-functions-schema.md)
 
@@ -363,6 +364,8 @@ Cada feature comprimida a 1 línea con pointer al SPEC archivado. Para detalles 
 - [Seed inicial obligatorio para counters mantenidos por triggers (post-F47)](gotchas/cloud-functions-guards.md#seed-inicial-obligatorio-para-counters-mantenidos-por-triggers-post-f47)
 - [Logs de error en CFs nunca raw — helper `sanitizeError` obligatorio (post-audit-2026-05)](gotchas/cloud-functions-guards.md#logs-de-error-en-cfs-nunca-raw--helper-sanitizeerror-obligatorio-post-audit-2026-05)
 - [`MAX_CONTENT_CHARS` cap antes de llamadas LLM en CFs con input user (post-audit-2026-05)](gotchas/cloud-functions-guards.md#max_content_chars-cap-antes-de-llamadas-llm-en-cfs-con-input-user-post-audit-2026-05)
+- [Datos privados del cliente: colección top-level deny-all, no sub-path bajo el catch-all (post-F48)](gotchas/cloud-functions-guards.md#datos-privados-del-cliente-colección-top-level-deny-all-no-sub-path-bajo-el-catch-all-post-f48)
+- [API keys per-user (BYOK): cifrado en Firestore con factory en runtime, no defineSecret (post-F48)](gotchas/cloud-functions-guards.md#api-keys-per-user-byok-cifrado-en-firestore-con-factory-en-runtime-no-definesecret-post-f48)
 
 ---
 

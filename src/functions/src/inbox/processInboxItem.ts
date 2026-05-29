@@ -5,8 +5,9 @@ import { defineSecret } from 'firebase-functions/params';
 import { logger } from 'firebase-functions';
 import { INBOX_CLASSIFICATION_SCHEMA, InboxClassification } from '../lib/schemas';
 import { sanitizeError } from '../lib/sanitizeError';
+import { getUserAnthropicKey, invalidateUserAnthropicKey } from '../lib/getUserAnthropicKey';
 
-const anthropicApiKey = defineSecret('ANTHROPIC_API_KEY');
+const byokMasterKey = defineSecret('BYOK_MASTER_KEY');
 
 const MODEL = 'claude-haiku-4-5-20251001';
 const MAX_TOKENS = 512;
@@ -19,7 +20,7 @@ Devuelve confidence entre 0 y 1: que tan seguro estas de la clasificacion comple
 export const processInboxItem = onDocumentCreated(
   {
     document: 'users/{userId}/inbox/{itemId}',
-    secrets: [anthropicApiKey],
+    secrets: [byokMasterKey],
     timeoutSeconds: 60,
     retry: false,
     region: 'us-central1',
@@ -55,7 +56,12 @@ export const processInboxItem = onDocumentCreated(
     const docRef = admin.firestore().doc(`users/${userId}/inbox/${itemId}`);
 
     try {
-      const client = new Anthropic({ apiKey: anthropicApiKey.value() });
+      const key = await getUserAnthropicKey(userId, byokMasterKey.value());
+      if (!key) {
+        logger.info('processInboxItem: skip, sin BYOK key', { userId, itemId });
+        return;
+      }
+      const client = new Anthropic({ apiKey: key });
 
       const response = await client.messages.create({
         model: MODEL,
@@ -105,6 +111,12 @@ export const processInboxItem = onDocumentCreated(
         suggestedType: result.suggestedType,
       });
     } catch (error) {
+      const status = (error as { status?: number } | null)?.status;
+      if (status === 401 || status === 403) {
+        // D9 (G2): key revocada/inválida en uso → invalidar para cortar
+        // reintentos y reflejarlo en la UI (settings/aiKeys).
+        await invalidateUserAnthropicKey(userId);
+      }
       const { code, message } = sanitizeError(error);
       logger.error('processInboxItem: failed', {
         userId,
