@@ -5,8 +5,9 @@ import { defineSecret } from 'firebase-functions/params';
 import { logger } from 'firebase-functions';
 import { NOTE_TAGGING_SCHEMA, NoteTagging } from '../lib/schemas';
 import { sanitizeError } from '../lib/sanitizeError';
+import { getUserAnthropicKey, invalidateUserAnthropicKey } from '../lib/getUserAnthropicKey';
 
-const anthropicApiKey = defineSecret('ANTHROPIC_API_KEY');
+const byokMasterKey = defineSecret('BYOK_MASTER_KEY');
 
 const MODEL = 'claude-haiku-4-5-20251001';
 const MAX_TOKENS = 256;
@@ -30,7 +31,7 @@ Si dudas, prefiere fleeting con confianza baja antes que forzar otra categoría.
 export const autoTagNote = onDocumentWritten(
   {
     document: 'users/{userId}/notes/{noteId}',
-    secrets: [anthropicApiKey],
+    secrets: [byokMasterKey],
     timeoutSeconds: 60,
     retry: false,
     region: 'us-central1',
@@ -57,7 +58,12 @@ export const autoTagNote = onDocumentWritten(
     const docRef = admin.firestore().doc(`users/${userId}/notes/${noteId}`);
 
     try {
-      const client = new Anthropic({ apiKey: anthropicApiKey.value() });
+      const key = await getUserAnthropicKey(userId, byokMasterKey.value());
+      if (!key) {
+        logger.info('autoTagNote: skip, sin BYOK key', { userId, noteId });
+        return;
+      }
+      const client = new Anthropic({ apiKey: key });
 
       const response = await client.messages.create({
         model: MODEL,
@@ -114,6 +120,12 @@ export const autoTagNote = onDocumentWritten(
         noteTypeConfidence: confidence,
       });
     } catch (error) {
+      const status = (error as { status?: number } | null)?.status;
+      if (status === 401 || status === 403) {
+        // D9 (G2): key revocada/inválida en uso → invalidar para cortar
+        // reintentos (autoTagNote se dispara en cada edición) y reflejarlo en UI.
+        await invalidateUserAnthropicKey(userId);
+      }
       const { code, message } = sanitizeError(error);
       logger.error('autoTagNote: failed', { userId, noteId, code, message });
     }
