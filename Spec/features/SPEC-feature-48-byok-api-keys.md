@@ -1,134 +1,49 @@
-# SPEC — Feature 48: BYOK API Keys (Anthropic, generación)
+# SPEC — Feature 48: BYOK API Keys (Anthropic, generación) (Registro de implementación)
 
-> **Estado:** Planificado — pendiente de implementación
-> **Rama:** `feat/byok-api-keys` > **Discovery:** sesión 2026-05-28 (3 ejes: almacenamiento seguro, migración de CFs, UI/persistencia). Arquitectura aprobada por el owner.
+> **Estado:** Completada Mayo 2026 — desplegada a prod y validada por E2E (Firebase MCP + logs reales).
+> **Commits:** `b9ff305` SPEC inicial, `fc94431` F1 helper cripto AES-256-GCM + tests, `2e61bbb` F4 rule deny-all userSecrets/, `1e8ee45` F2 callables saveApiKey/deleteApiKey + validación + cifrado, `8359b7b` F3 CFs leen key BYOK del usuario + auto-invalidación 401, `2fd9348` F5 hook useApiKeys + capa cliente, `48a8eba` F6 sección API Keys en Settings, `3ecde52` F7 empty state en inbox, `fd3d069` excluir tests del build de functions, `990a4b3` limpiar eslint-disable, `dd8a876` fix stale-spinner (merge `3a20242`).
+> **Gotchas operativos vigentes** → `Spec/ESTADO-ACTUAL.md`
 
 ## Objetivo
 
-Cada usuario configura **su propia API key de Anthropic** en Settings (BYOK — Bring Your Own Key) y las Cloud Functions de **generación** (`processInboxItem`, `autoTagNote`) usan esa key en lugar del secret del proyecto. Sin key configurada, las features de IA de generación quedan **deshabilitadas** para ese usuario (no hay fallback al secret del proyecto) y la UI muestra empty states que invitan a configurarla. El resto de la app (notas, tareas, proyectos, búsqueda) sigue 100% funcional sin key. La key se guarda **cifrada** server-side y nunca vuelve al cliente.
+Cada usuario configura **su propia API key de Anthropic** en Settings (BYOK — Bring Your Own Key) y las Cloud Functions de **generación** (`processInboxItem`, `autoTagNote`) usan esa key en lugar del secret del proyecto. Sin key configurada, las features de IA de generación quedan **deshabilitadas** para ese usuario (no hay fallback al secret del proyecto) y la UI muestra empty states que invitan a configurarla. El resto de la app sigue 100% funcional sin key. La key se guarda **cifrada** server-side y nunca vuelve al cliente. Motivación: trasladar el costo de la IA de generación al usuario.
 
 **Fuera de scope (MVP):** Gemini y otros providers (feature futura F49+ sobre esta misma base), BYOK de embeddings (`generateEmbedding`/`embedQuery` siguen con la `OPENAI_API_KEY` del proyecto — ver D3), reproceso retroactivo del contenido creado sin key (ver D7).
 
-## Decisiones de arquitectura (del discovery)
+## Qué se implementó
 
-| #   | Decisión                                                                                                  | Razón                                                                                                                                                                                                                                                                                                                                               |
-| --- | --------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| D1  | Solo **Anthropic**, solo **generación** (`processInboxItem` + `autoTagNote`)                              | Las CFs ya hablan Anthropic (SDK, schemas, `tool_choice` configurados). Cero adapter nuevo: solo cambia de dónde viene la key. Gemini duplica el trabajo de adapter → feature separada F49+. Beta de ~100 usuarios: "traé tu key Anthropic" alcanza.                                                                                                |
-| D2  | **Sin fallback** al secret del proyecto                                                                   | Objetivo = trasladar el costo de IA al usuario. Fallback lo derrotaría. Sin key → features de IA de generación deshabilitadas + empty state.                                                                                                                                                                                                        |
-| D3  | **Embeddings fuera del MVP** (siguen con `OPENAI_API_KEY` del proyecto)                                   | Cambiar el provider de embeddings rompe la búsqueda semántica: vectores de distinto modelo/dimensión no son comparables (OpenAI `text-embedding-3-small` 1536d vs otros) → exigiría re-embedear todo el corpus. El costo de embeddings es marginal vs generación. `generateEmbedding` y `embedQuery` NO se tocan.                                   |
-| D4  | Storage **A1**: AES-256-GCM + master key en Secret Manager                                                | A escala beta, Cloud KMS (A2) es overkill. A1 se implementa rápido, reusa el patrón `defineSecret` ya conocido, y es **migrable a A2 sin cambiar el modelo de datos**. Riesgo aceptado: una master key filtrada expone todas las keys (manejable con buenas prácticas a esta escala).                                                               |
-| D5  | Secreto cifrado en colección **top-level** `userSecrets/{uid}/keys/{provider}`, no bajo `users/{uid}/...` | Las Firestore rules son **aditivas (OR)**: el `match /users/{userId}/{document=**}` actual da read/write al owner sobre todo su subárbol; un `allow read: if false` más específico NO lo bloquea. Mover el secreto a una colección top-level con bloque deny-all propio evita reestructurar las rules de `users/` (sensibles tras la auditoría C1). |
-| D6  | Metadata legible en doc separado `users/{uid}/settings/aiKeys` (NO en `UserPreferences`)                  | El cliente necesita `{ configured, last4 }` para pintar estado. Doc propio evita el race con `setPreferences` del cliente y no toca `PREFERENCES_SCHEMA_VERSION`. La escribe la CF; el cliente solo la lee. El ciphertext nunca está acá.                                                                                                           |
-| D7  | **Sin reproceso retroactivo** en MVP                                                                      | Los triggers Firestore no son retroactivos. Contenido creado antes de configurar la key: notas se re-taggean al editarlas (`autoTagNote` es `onDocumentWritten`); inbox capturado sin key queda sin sugerencias de IA pero **sigue clasificable manualmente** (la IA solo pre-rellena). Un job de reproceso queda post-MVP.                         |
-| D8  | Escritura de la key vía **CF callable** (validar → cifrar → guardar), nunca por repos/TinyBase            | TinyBase sincroniza al cliente: un `apiKeysRepo` bajaría el ciphertext al browser. El cliente manda la key en claro una sola vez sobre TLS; la CF la cifra y persiste; nunca vuelve.                                                                                                                                                                |
+- **F1 — Helper de cifrado:** `encryptSecret`/`decryptSecret` con AES-256-GCM (IV aleatorio de 12 bytes por escritura, `setAuthTag` antes de `final`, master key de 32 bytes validada, algoritmo hardcodeado). Sin imports de firebase-functions para correr bajo vitest. 6 tests (round-trip, IV distinto, tamper ciphertext/authTag, key !=32B). Archivos tocados: `src/functions/src/lib/crypto.ts`, `crypto.test.ts`.
+- **F2 — Callables `saveApiKey` + `deleteApiKey`:** `saveApiKey` valida la key contra Anthropic (`GET /v1/models`), la cifra y persiste ciphertext en `userSecrets/` + metadata en `settings/aiKeys` vía **WriteBatch** atómico; retorna `{ ok, last4 }`. `deleteApiKey` borra ambos (sin `secrets`, no descifra). `validateProviderKey` distingue `invalid` (401/403) de `unknown` (429/5xx/network) con `AbortSignal.timeout(5000)`. La key nunca se loggea. Archivos tocados: `src/functions/src/settings/saveApiKey.ts`, `deleteApiKey.ts`, `src/functions/src/lib/validateProviderKey.ts`, `src/functions/src/index.ts`.
+- **F3 — Factory + migración de las 2 CFs:** `getUserAnthropicKey(userId, masterKey)` lee+descifra de `userSecrets/`. `processInboxItem`/`autoTagNote`: se borró `defineSecret('ANTHROPIC_API_KEY')`, se agregó `BYOK_MASTER_KEY`, early-return sin key (sin marcar `aiProcessed`), y en el catch detección de 401/403 → `invalidateUserAnthropicKey` (D9). Archivos tocados: `src/functions/src/lib/getUserAnthropicKey.ts`, `processInboxItem.ts`, `autoTagNote.ts`.
+- **F4 — Firestore rules:** bloque `match /userSecrets/{userId}/{document=**} { allow read, write: if false }` (solo Admin SDK). Sin tocar `users/` (mantiene `email_verified` C1) ni `config/app`. Archivos tocados: `firestore.rules`.
+- **F5 — Capa cliente:** `useApiKeys` (molde `usePreferences`: `userIdRef` anti-stale, `(data,isLoaded)`) sobre `lib/apiKeys.ts` (subscribe module-level + cache + dedup, espejo de `preferences.ts`); `saveKey`/`deleteKey` vía `httpsCallable`; `mapApiKeyError` a español; `invalidateAiKeysCache` en `signOut`. Archivos tocados: `src/types/apiKey.ts`, `src/lib/apiKeys.ts`, `src/lib/apiKeyErrors.ts`, `src/hooks/useApiKeys.ts`, `src/hooks/useAuth.ts`.
+- **F6 — Sección API Keys en Settings:** `ApiKeysSection` (card Anthropic: estado `sk-ant-…last4`/no configurada, input password nativo, guardar/borrar, link a console.anthropic, skeleton al cargar). Archivos tocados: `src/components/settings/ApiKeysSection.tsx`, `src/app/settings/page.tsx`.
+- **F7 — Empty state en inbox:** banner en `/inbox` cuando `isLoaded && !configured` con CTA a Settings; prop `aiEnabled` a `InboxItemCard`. Solo aplica a inbox — el auto-tagging es invisible por diseño, no toca el editor. Archivos tocados: `src/app/inbox/page.tsx`, `src/components/capture/InboxItem.tsx`.
 
-## Modelo de datos
+## Decisiones clave
 
-**Secreto cifrado** — `userSecrets/{uid}/keys/anthropic` (top-level, deny-all cliente, solo Admin SDK):
+| #   | Decisión                                                                       | Razón                                                                                                                                                                                                                                                                      |
+| --- | ------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| D1  | Solo Anthropic, solo generación (`processInboxItem` + `autoTagNote`)           | Las CFs ya hablan Anthropic (SDK, schemas, `tool_choice`). Cero adapter nuevo. Gemini = F49+. Beta de ~100 usuarios: "traé tu key Anthropic" alcanza.                                                                                                                      |
+| D2  | Sin fallback al secret del proyecto                                            | Objetivo = trasladar el costo de IA al usuario. Fallback lo derrotaría. Sin key → IA de generación deshabilitada + empty state.                                                                                                                                            |
+| D3  | Embeddings fuera del MVP (siguen con `OPENAI_API_KEY` del proyecto)            | Cambiar el provider de embeddings rompe la búsqueda semántica: vectores de distinta dimensión no son comparables → exigiría re-embedear el corpus. Costo marginal vs generación.                                                                                           |
+| D4  | Storage A1: AES-256-GCM + master key en Secret Manager                         | A escala beta, Cloud KMS (A2) es overkill. A1 reusa el patrón `defineSecret`, es migrable a A2 sin cambiar el modelo de datos. Riesgo aceptado: master key filtrada expone todas.                                                                                          |
+| D5  | Secreto cifrado en colección **top-level** `userSecrets/{uid}/keys/{provider}` | Las Firestore rules son aditivas (OR): el wildcard `users/{userId}/{document=**}` daría read al owner; un `if false` más específico NO lo bloquea. Top-level con deny-all propio.                                                                                          |
+| D6  | Metadata legible en doc separado `users/{uid}/settings/aiKeys`                 | El cliente necesita `{ configured, last4 }`. Doc propio evita el race con `setPreferences` y no toca `PREFERENCES_SCHEMA_VERSION`. La escribe la CF; el ciphertext nunca está acá.                                                                                         |
+| D7  | Sin reproceso retroactivo en MVP                                               | Los triggers Firestore no son retroactivos. Notas se re-taggean al editarlas (`autoTagNote` es onWrite); inbox sin key queda sin sugerencias pero clasificable a mano.                                                                                                     |
+| D8  | Escritura de la key vía CF callable (validar → cifrar → guardar)               | TinyBase sincroniza al cliente: un repo bajaría el ciphertext al browser. La key en claro viaja una vez por TLS, se cifra server-side y nunca vuelve.                                                                                                                      |
+| D9  | Auto-invalidación de la key ante 401/403 en uso (detectado en validación)      | Una key revocada tras configurarla daría 401 perpetuo en `autoTagNote` (onWrite, se dispara en cada edición) + spinner mentiroso. El catch detecta `error.status` 401/403 → WriteBatch borra ciphertext + `configured:false`, cortando reintentos y reflejándolo en la UI. |
 
-```jsonc
-{
-  "ciphertext": "<base64>",
-  "iv": "<base64>",
-  "authTag": "<base64>",
-  "algo": "aes-256-gcm",
-  "updatedAt": 1716800000000
-}
-```
+## Rondas de fix
 
-**Metadata legible** — `users/{uid}/settings/aiKeys` (read owner, write efectivo solo CF):
+**Stale spinner post-deploy (branch `fix/inbox-ai-stale-spinner`, `dd8a876`).** Tras configurar la key, los items de inbox capturados _antes_ quedaban en "Procesando con AI…" perpetuo. Root cause: `processInboxItem` es `onDocumentCreated` — ya corrió (early-return sin key) cuando el item se creó y NO se re-dispara al configurar la key después (D7); con `aiEnabled` ahora `true`, el gate de F7 volvía a mostrar el spinner indefinidamente. Fix: ventana de 30s sobre `item.createdAt` — el indicador solo aparece mientras el trigger aún podría estar corriendo; pasado eso, el item se muestra normal y se clasifica a mano. (El primer diseño de F7 con solo `aiEnabled` no contemplaba items pre-existentes a la configuración de la key.)
 
-```jsonc
-{ "anthropic": { "configured": true, "last4": "AB12", "validatedAt": 1716800000000 } }
-```
+## Lecciones
 
-**Master key** — secret nuevo del proyecto `BYOK_MASTER_KEY` (32 bytes, base64) en Secret Manager, igual que `ANTHROPIC_API_KEY` hoy.
-
-## Sub-features
-
-### F1 — Helper de cifrado (`lib/crypto.ts`)
-
-- **Qué:** módulo con `encryptSecret(plaintext, masterKeyB64)` → `{ ciphertext, iv, authTag }` (AES-256-GCM, IV aleatorio de 12 bytes por escritura) y `decryptSecret({ ciphertext, iv, authTag }, masterKeyB64)` → plaintext. Sin estado, sin logging del plaintext.
-- **Criterio de done:** `decryptSecret(encryptSecret(x))` round-trips a `x`; IV distinto en dos cifrados del mismo input; tamper en `authTag`/`ciphertext` lanza error. Tests unit en Vitest.
-- **Archivos:** `src/functions/src/lib/crypto.ts` (nuevo), `src/functions/src/lib/crypto.test.ts` (nuevo).
-- **Notas:** `crypto.createCipheriv('aes-256-gcm', key, iv)` + `cipher.getAuthTag()`. La master key se decodifica de base64 a Buffer de 32 bytes.
-
-### F2 — CF callables `saveApiKey` + `deleteApiKey`
-
-- **Qué:** `saveApiKey({ provider: 'anthropic', key })` callable: (1) valida la key con un ping liviano, (2) cifra con `BYOK_MASTER_KEY`, (3) escribe `userSecrets/{uid}/keys/anthropic` (ciphertext) + `users/{uid}/settings/aiKeys` (metadata `configured/last4/validatedAt`). `deleteApiKey({ provider })`: borra ambos docs.
-- **Criterio de done:** key válida → guarda y retorna `{ ok: true, last4 }`; key inválida (401 del provider) → `HttpsError('invalid-argument', 'API key inválida')` sin persistir; no autenticado → `HttpsError('unauthenticated')`. El ciphertext nunca se loggea (usar `sanitizeError`).
-- **Archivos:** `src/functions/src/settings/saveApiKey.ts` (nuevo), `src/functions/src/settings/deleteApiKey.ts` (nuevo), `src/functions/src/index.ts` (export), `src/functions/src/lib/validateProviderKey.ts` (nuevo).
-- **Notas:** validación Anthropic = `GET https://api.anthropic.com/v1/models` con headers `x-api-key: <key>` + `anthropic-version: 2023-06-01`, timeout ~5s; `fetch` global (Node 18+). 200 → válida, 401 → inválida, 429/5xx → tratar como "no se pudo validar ahora" (no rechazar la key, reintentar). `last4` = últimos 4 chars de la key. `saveApiKey` declara `secrets: [byokMasterKey]` (cifra); `deleteApiKey` **no** lo declara — solo borra docs, no descifra.
-
-### F3 — Factory `getUserAnthropicKey` + migración de las 2 CFs de generación
-
-- **Qué:** `getUserAnthropicKey(userId)` lee `userSecrets/{uid}/keys/anthropic`, descifra con `BYOK_MASTER_KEY`, retorna `string | null`. En `processInboxItem` y `autoTagNote`: reemplazar `defineSecret('ANTHROPIC_API_KEY')` por `defineSecret('BYOK_MASTER_KEY')` en `secrets: [...]`; al inicio del `try`, `const key = await getUserAnthropicKey(userId); if (!key) { log + return; }` (early-return **sin marcar `aiProcessed`**); instanciar `new Anthropic({ apiKey: key })`.
-- **Criterio de done:** con key del user → procesa idéntico a hoy (sugerencias en inbox, tags en notas); sin key → early-return limpio, el doc **no** queda con `aiProcessed: true` (queda pendiente, no "procesado vacío"); log `info` distinguible (`reason: 'no-byok-key'`). `generateEmbedding`/`embedQuery` intactas.
-- **Archivos:** `src/functions/src/lib/getUserAnthropicKey.ts` (nuevo), `src/functions/src/inbox/processInboxItem.ts` (tocar), `src/functions/src/notes/autoTagNote.ts` (tocar).
-- **Notas:** ojo con el guard de idempotencia de `autoTagNote` (`if (after.aiProcessed) return` línea 43): el early-return sin key debe ir **después** de ese guard pero no marcarlo, para que al configurar la key y reescribir la nota se reprocese. El secret `ANTHROPIC_API_KEY` del proyecto deja de inyectarse en estas 2 CFs (sigue existiendo en Secret Manager por si se revierte, pero ya no se referencia).
-
-### F4 — Firestore rules: colección de secretos deny-all
-
-- **Qué:** bloque nuevo para `userSecrets/{uid}/{document=**}` con `allow read, write: if false` (solo Admin SDK desde CFs accede). La metadata `users/{uid}/settings/aiKeys` queda cubierta por el wildcard existente (read owner) — aceptable que el cliente la lea; su write desde cliente es cosméticamente irrelevante (no afecta seguridad ni procesamiento, ver D6).
-- **Criterio de done:** validar con Firebase MCP / emulador que un cliente autenticado NO puede leer ni escribir `userSecrets/{suUid}/keys/anthropic`; sí puede leer `users/{suUid}/settings/aiKeys`; las CFs (Admin SDK) bypassan rules y leen/escriben el secreto. No hay regresión en `users/{uid}/{document=**}` (notas/tareas/etc. siguen accesibles).
-- **Archivos:** `firestore.rules` (tocar).
-- **Notas:** mantener el enforcement de `email_verified` que ya existe en el bloque de `users/` (C1). El bloque `userSecrets/` es deny-all puro, no necesita esa condición.
-
-### F5 — Types + hook `useApiKeys` (cliente)
-
-- **Qué:** tipos de dominio del provider y estado; hook que (1) se suscribe vía `onSnapshot` a `users/{uid}/settings/aiKeys` para exponer `{ anthropic: { configured, last4 } }` reactivo, (2) expone `saveKey(provider, key)` y `deleteKey(provider)` que invocan las callables (`httpsCallable`), con estados `saving`/`error`.
-- **Criterio de done:** el hook refleja en tiempo real el cambio de metadata tras guardar/borrar; `saveKey` con key inválida propaga el error mapeado a español; loading states sin spinner (skeleton si aplica).
-- **Archivos:** `src/types/apiKey.ts` (nuevo), `src/hooks/useApiKeys.ts` (nuevo).
-- **Notas:** la key en claro vive solo en el `useState` del form hasta el `saveKey`; nunca se persiste client-side. Mapeo de errores reusa el patrón de `src/lib/authErrors.ts`.
-
-### F6 — UI: sección API Keys en Settings
-
-- **Qué:** `<section id="api-keys">` nueva en la página de Settings con una card por provider (solo Anthropic en MVP): estado (`✓ sk-ant-…AB12 configurada` / `no configurada`), input `type="password"`, botón Guardar (+ Borrar si está configurada), link a `console.anthropic.com` para obtener la key, y nota de qué features habilita (inbox processing + auto-tagging).
-- **Criterio de done:** configurar key válida → card pasa a ✓ con last4; key inválida → mensaje de error inline; borrar → vuelve a "no configurada"; responsive (375/768/1280) consistente con el resto de Settings.
-- **Archivos:** `src/components/settings/ApiKeysSection.tsx` (nuevo), `src/app/settings/page.tsx` (tocar — montar `<section>`).
-- **Notas:** molde visual = `src/components/settings/TrashAutoPurgeSelector.tsx` (grid de cards con estado + descripción). Componentes `@/components/ui/{button,input}`; icons lucide (`Key`, `CheckCircle2`, `ExternalLink`). Lógica en `useApiKeys`, no en el componente.
-
-### F7 — Empty states en features de IA de generación
-
-- **Qué:** donde hoy se muestran/esperan las sugerencias de IA (inbox processor, banner/flujo de auto-tagging), cuando `anthropic.configured === false` mostrar un estado que explique que la IA está deshabilitada hasta configurar la key + CTA a Settings, en vez de esperar sugerencias que no llegan.
-- **Criterio de done:** sin key, inbox y notas no muestran "procesando…" indefinido sino el CTA; con key, comportamiento normal sin cambios. El gate lee `useApiKeys` (no re-fetch propio).
-- **Archivos:** componentes de inbox/notas a identificar en implementación (probablemente `src/components/capture/*` y el banner de sugerencias de notas). **Mapear con grep antes de tocar** — no asumir paths.
-- **Notas:** mantener la app usable: el inbox sigue permitiendo clasificación manual; el empty state es informativo, no bloqueante.
-
-## Orden de implementación
-
-`F1` (crypto) → `F4` (rules) → `F2` (callables, dep F1) → `F3` (factory + migrar CFs, dep F1) → `F5` (types + hook, dep F2) → `F6` (UI, dep F5) → `F7` (empty states, dep F5). Un commit atómico por sub-feature (`feat`/`refactor` según corresponda).
-
-## Pre-deploy (obligatorio, antes de `deploy:functions`)
-
-1. Generar la master key: `openssl rand -base64 32` (o equivalente Node `crypto.randomBytes(32).toString('base64')`).
-2. Subirla a Secret Manager: `firebase functions:secrets:set BYOK_MASTER_KEY` y pegar el valor. **Guardar el valor en un gestor seguro** — si se pierde, las keys cifradas quedan irrecuperables (los usuarios deben recargarlas).
-
-## Migración post-deploy (OBLIGATORIA)
-
-> ⚠️ **Crítico — solicitado explícitamente por el owner.** Tras desplegar functions + rules + hosting, `processInboxItem` y `autoTagNote` **dejan de usar `ANTHROPIC_API_KEY` del proyecto**. La IA de generación queda inoperante para todo usuario sin key propia, **incluido el owner**.
-
-**Paso 1 inmediato post-deploy:** el owner entra a Settings → API Keys y configura su key Anthropic. Recién entonces inbox processing y auto-tagging vuelven a funcionar para su cuenta. Validar con una captura de inbox real que las sugerencias de IA reaparecen.
-
-Comunicar a los usuarios de la beta (si los hubiera con uso de IA activo) que deben configurar su key para conservar inbox processing + auto-tagging.
-
-## Verificación E2E (Playwright MCP + Firebase MCP)
-
-UID de tests: `gYPP7NIo5JanxIbPqMe6nC3SQfE3` (proyecto `secondmindv1`).
-
-- **Sin key:** borrar la key del user de test → capturar inbox item → confirmar que NO se escriben campos `aiSuggested*` y el doc no queda `aiProcessed: true`; UI muestra empty state. Crear nota → sin `aiTags`.
-- **Validación:** guardar una key con formato inválido → rechazo con mensaje en español, nada persistido. (El golden path "key válida procesa" requiere una key Anthropic real de test — lo verifica el owner manualmente; el path de error y el sin-key no la necesitan.)
-- **Con key (owner):** configurar key válida → card ✓ con last4; capturar inbox → sugerencias de IA aparecen; crear nota → auto-tags. Borrar key → vuelve a sin-key.
-- **Seguridad:** con Firebase MCP confirmar que `userSecrets/{uid}/keys/anthropic` guarda ciphertext (no plaintext) y que las rules deniegan lectura cliente; que `users/{uid}/settings/aiKeys` no contiene la key, solo metadata.
-
-## Checklist de cierre
-
-- [ ] F1–F7 implementadas, cada una con su commit atómico
-- [ ] `npm run lint` + `npm test` verdes (incluye `crypto.test.ts`)
-- [ ] `npm run build` sin errores TS
-- [ ] Pre-deploy: `BYOK_MASTER_KEY` generada y subida a Secret Manager (valor respaldado)
-- [ ] Deploy: `deploy:functions` (2 CFs migradas + 2 callables nuevos) + `deploy:rules` + `deploy` (hosting)
-- [ ] **Migración post-deploy: owner configura su key Anthropic en Settings y valida que la IA de generación vuelve a funcionar**
-- [ ] E2E: sin-key / validación-error / con-key / seguridad de rules
-- [ ] Merge `--no-ff` a main; push a origin
-- [ ] Paso 8 SDD: convertir este SPEC a registro de implementación + escalar gotchas (rules aditivas / deny-all top-level; patrón BYOK crypto en CFs) según corresponda
+- **AES-256-GCM en Node: `decipher.setAuthTag()` debe ir ANTES de `update`/`final`.** Si se omite o se llama después, GCM no verifica integridad y el descifrado de datos manipulados no lanza. Validar también que la master key sea exactamente 32 bytes. Tests de tamper en `ciphertext` y `authTag` por separado.
+- **Firestore rules son aditivas (OR), no existe deny-override.** Un `allow read: if false` específico NO bloquea si un `match` padre con wildcard (`{document=**}`) ya concede el acceso. Para datos genuinamente privados (secretos cifrados), usar una colección **top-level** con su propio bloque deny-all — no anidarlos bajo un path con wildcard permisivo. El Admin SDK (CFs) bypassa rules siempre, así que sigue accediendo.
+- **Tests en `src/functions/` deben excluirse del tsconfig de functions** (`exclude: ["**/*.test.ts"]`). Sino `tsc` los compila al outDir `lib/` y vitest (root, que globbea `**/*.test.*`) intenta correr el `.js` CommonJS resultante y falla con "Vitest cannot be imported in a CommonJS module". Surge la primera vez que se agrega un test bajo functions.
+- **Triggers `onDocumentCreated` no son retroactivos; UI que espera su resultado puede mentir.** Si un trigger puede no producir resultado (sin credencial, error) y la UI muestra un indicador de "procesando", acotarlo con una ventana temporal (`createdAt < N s`) — sino queda perpetuo para todo lo creado antes de que la precondición se cumpla.
+- **Validar credenciales externas distingue `invalid` de `unknown`.** 401/403 = rechazar; 429/5xx/network = transitorio, NO persistir pero tampoco rechazar (guardar una key no verificada causa fallos posteriores que se ven como bug). Ping liviano de solo-lectura (`/v1/models`), sin consumir tokens, con timeout corto vía `AbortSignal.timeout`.
+- **CFs disparadas por triggers no reciben secretos del cliente** (corren async, sin cliente presente) → para BYOK en background la key debe persistirse cifrada y leerse en runtime (factory `getUserAnthropicKey`). `defineSecret` solo sirve para secrets estáticos del proyecto (la master key), no per-user. El proxy client-side (key efímera) solo aplica a callables invocadas en vivo.
+- **Escritura de secretos cross-collection vía `WriteBatch` del Admin SDK** (ciphertext + metadata atómicos) evita estado parcial inconsistente (UI dice "configurada" sin ciphertext, o viceversa).
