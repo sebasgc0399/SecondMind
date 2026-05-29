@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { CloudOff, FileText, Loader2, Trash2 } from 'lucide-react';
 import AiSuggestionCard from '@/components/capture/AiSuggestionCard';
 import PendingSyncDot from '@/components/layout/PendingSyncDot';
@@ -34,7 +35,10 @@ export default function InboxItemCard({
   // retroactivo). Para items viejos sin procesar el spinner sería perpetuo;
   // lo mostramos solo en la ventana donde el trigger aún podría estar
   // corriendo. Pasado eso, el item se muestra normal y se clasifica a mano.
-  const isRecent = Date.now() - item.createdAt < 30_000;
+  // Date.now() capturado una vez al montar (lazy useState) en vez de en cada
+  // render: llamar una función impura durante el render viola react-hooks/purity.
+  const [mountedAt] = useState(() => Date.now());
+  const isRecent = mountedAt - item.createdAt < 30_000;
 
   return (
     <div className="relative rounded-lg border border-border bg-card p-4">

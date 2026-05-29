@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { NavLink } from 'react-router';
 import { Settings, LogOut, Menu, Search } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -47,9 +47,13 @@ export function SidebarContent({ user, onSignOut, collapsed, onNavigate }: Sideb
   // h-8 w-8, generando layout shift visible (ver F42.5). Defensivo: state
   // local + render condicional + reset al cambiar photoURL.
   const [imgError, setImgError] = useState(false);
-  useEffect(() => {
+  // Reset al cambiar photoURL vía set-state-during-render (no useEffect):
+  // React re-renderiza sync sin paint intermedio ni cascading render.
+  const [prevPhotoURL, setPrevPhotoURL] = useState(user.photoURL);
+  if (user.photoURL !== prevPhotoURL) {
+    setPrevPhotoURL(user.photoURL);
     setImgError(false);
-  }, [user.photoURL]);
+  }
 
   // Cuando se invoca dentro del NavigationDrawer (mobile), cerramos el
   // drawer ANTES de abrir el palette en rAF — evita conflict de

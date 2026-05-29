@@ -7,6 +7,7 @@
 // patrón global del proyecto, pero justificado por el contexto unauth.
 
 import { useState, useCallback } from 'react';
+// eslint-disable-next-line no-restricted-imports -- excepción reconocida (Docs/04 § Excepciones): ruta pre-auth sin TinyBase, ver comentario al tope del archivo
 import { doc, getDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 
