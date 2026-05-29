@@ -8,4 +8,6 @@ export { onNoteDeleted } from './notes/onNoteDeleted';
 export { autoPurgeTrash } from './notes/autoPurgeTrash';
 export { generateEmbedding } from './embeddings/generateEmbedding';
 export { embedQuery } from './search/embedQuery';
+export { saveApiKey } from './settings/saveApiKey';
+export { deleteApiKey } from './settings/deleteApiKey';
 export { onUserCreated, onUserDeleted } from './auth/userCountTriggers';
