@@ -1,3 +1,9 @@
+import { notesStore } from '@/stores/notesStore';
+import { tasksStore } from '@/stores/tasksStore';
+import { projectsStore } from '@/stores/projectsStore';
+import { objectivesStore } from '@/stores/objectivesStore';
+import { habitsStore } from '@/stores/habitsStore';
+import { inboxStore } from '@/stores/inboxStore';
 import {
   saveContentQueue,
   saveNotesMetaQueue,
@@ -12,12 +18,6 @@ import {
   saveObjectivesCreatesQueue,
   type SaveQueue,
 } from './saveQueue';
-import { notesStore } from '@/stores/notesStore';
-import { tasksStore } from '@/stores/tasksStore';
-import { projectsStore } from '@/stores/projectsStore';
-import { objectivesStore } from '@/stores/objectivesStore';
-import { habitsStore } from '@/stores/habitsStore';
-import { inboxStore } from '@/stores/inboxStore';
 
 export type DiscardableEntityType =
   | 'note'
