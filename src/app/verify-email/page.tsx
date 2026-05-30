@@ -20,17 +20,24 @@ export default function VerifyEmailPage() {
     }
   }, [user?.emailVerified, navigate]);
 
-  // Refresh user vía focus + visibilitychange. user.reload() refresca
-  // el objeto Firebase pero NO dispara onAuthStateChanged; refreshUser
-  // de useAuth hace setUser(auth.currentUser) explícito post-reload
-  // (G9 plan F47).
+  // Refresh user vía focus + visibilitychange cuando el usuario vuelve desde
+  // su correo. refreshUser hace reload() + getIdToken(true) si quedó verificado
+  // y RETORNA el emailVerified actualizado: navegamos sobre ese valor en vez de
+  // esperar el re-render del effect de arriba, porque setUser(auth.currentUser)
+  // recibe el mismo ref del objeto User (Firebase lo muta in-place) → React
+  // bail-out → ese effect no re-evalúa. El return decopla el redirect del bail.
   useEffect(() => {
+    async function check() {
+      if (await refreshUser()) {
+        navigate('/', { replace: true });
+      }
+    }
     function handleFocus() {
-      void refreshUser();
+      void check();
     }
     function handleVisibility() {
       if (document.visibilityState === 'visible') {
-        void refreshUser();
+        void check();
       }
     }
     window.addEventListener('focus', handleFocus);
@@ -39,7 +46,7 @@ export default function VerifyEmailPage() {
       window.removeEventListener('focus', handleFocus);
       document.removeEventListener('visibilitychange', handleVisibility);
     };
-  }, [refreshUser]);
+  }, [refreshUser, navigate]);
 
   if (isLoading) {
     return (
