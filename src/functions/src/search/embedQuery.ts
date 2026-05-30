@@ -2,6 +2,7 @@ import { onCall, HttpsError } from 'firebase-functions/v2/https';
 import { defineSecret } from 'firebase-functions/params';
 import { logger } from 'firebase-functions';
 import OpenAI from 'openai';
+import { requireVerified } from '../lib/requireVerified';
 import { sanitizeError } from '../lib/sanitizeError';
 
 const openaiApiKey = defineSecret('OPENAI_API_KEY');
@@ -24,11 +25,7 @@ export const embedQuery = onCall<EmbedQueryRequest, Promise<EmbedQueryResponse>>
     region: 'us-central1',
   },
   async (request) => {
-    if (!request.auth) {
-      throw new HttpsError('unauthenticated', 'Login required');
-    }
-
-    const userId = request.auth.uid;
+    const userId = requireVerified(request);
     const rawText = request.data?.text;
 
     if (rawText === null || rawText === undefined || typeof rawText !== 'string') {

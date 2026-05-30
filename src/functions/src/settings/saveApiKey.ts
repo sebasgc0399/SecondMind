@@ -3,6 +3,7 @@ import { defineSecret } from 'firebase-functions/params';
 import { logger } from 'firebase-functions';
 import * as admin from 'firebase-admin';
 import { encryptSecret } from '../lib/crypto';
+import { requireVerified } from '../lib/requireVerified';
 import { validateProviderKey } from '../lib/validateProviderKey';
 import { sanitizeError } from '../lib/sanitizeError';
 
@@ -28,10 +29,7 @@ export const saveApiKey = onCall<SaveApiKeyRequest, Promise<SaveApiKeyResponse>>
     region: 'us-central1',
   },
   async (request) => {
-    if (!request.auth) {
-      throw new HttpsError('unauthenticated', 'Login required');
-    }
-    const userId = request.auth.uid;
+    const userId = requireVerified(request);
     const provider = request.data?.provider;
     const rawKey = request.data?.key;
 
