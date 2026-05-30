@@ -12,6 +12,7 @@ import Sidebar from '@/components/layout/Sidebar';
 import TopBar from '@/components/layout/TopBar';
 import UpdateBanner from '@/components/layout/UpdateBanner';
 import EmailVerificationBanner from '@/components/auth/EmailVerificationBanner';
+import WelcomeModal from '@/components/onboarding/WelcomeModal';
 import useAuth from '@/hooks/useAuth';
 import useHideSplashWhenReady from '@/hooks/useHideSplashWhenReady';
 import { useBreakpoint } from '@/hooks/useMediaQuery';
@@ -164,6 +165,7 @@ export default function Layout() {
             <ShareIntentMount />
             <CommandPalette />
             <InstallPrompt />
+            <WelcomeModal />
           </div>
         </QuickCaptureProvider>
       </CommandPaletteProvider>
