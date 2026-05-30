@@ -136,3 +136,12 @@ SPEC-50 F7 ató el ciphertext BYOK al uid (AAD) y agregó `keyVersion`, **EXIGID
 ## `checkAllowlist` es un oráculo de enumeración aceptado para la beta (mitigación App Check, A-3) (post-SPEC-50 F5)
 
 El callable público `checkAllowlist` (sin `request.auth`; corre pre-cuenta para el pre-check del signup email/pw) devuelve `{ allowed: boolean }` → revela si un email está invitado a la beta = oráculo de enumeración 1-a-1. El booleano **ES** la fuga; un mensaje genérico NO lo mitiga. **Aceptado para la beta** (revelar quién está invitado es daño bajo). La mitigación real es **App Check** (A-3, fast-follow) sobre `checkAllowlist` + el resto de callables; `maxInstances` solo acota costo/concurrencia, no cierra el oráculo. Tener presente al exponer cualquier callable público que revele estado. Vivo en [checkAllowlist.ts](../../src/functions/src/auth/checkAllowlist.ts).
+
+## Allowlist como gestión de acceso: crear el doc da acceso, borrarlo lo revoca al instante (post-SPEC-50)
+
+El gate de allowlist (SPEC-50 F4/F5) NO es solo un control de deploy — es la **gestión de acceso operacional continua** de la beta. Cualquier cuenta nueva necesita su email en `allowlist/{email-lowercase}` (casing exacto de `token.email`) **ANTES** de poder usar la app: sin ese doc, las rules niegan todo `users/**` y los callables `saveApiKey`/`deleteApiKey` rechazan con `permission-denied` (`embedQuery` NO lleva `assertAllowlisted` por diseño — ver gotcha del oráculo de enumeración). El ciclo de vida:
+
+- **Alta de un usuario a la beta** = crear el doc `allowlist/{email}` (Console o script). Acceso disponible **al instante** — el `exists()` se evalúa en vivo por request, sin re-deploy.
+- **Baja / revocación** = borrar el doc. Revoca el acceso al instante y deja la cuenta **inerte** (las rules la neutralizan): NO hace falta re-deployar rules ni tocar Firebase Auth — la cuenta sigue existiendo en Auth pero no puede leer/escribir nada. El counter `config/app.userCount` no se ajusta (métrica aproximada, D4).
+
+Es la base operacional de la futura rotación de usuarios inactivos. Hoy la única cuenta allowlisted es la del operador. Estado vivo del gate en `Spec/ESTADO-ACTUAL.md`; vivo en [firestore.rules](../../firestore.rules) + [assertAllowlisted.ts](../../src/functions/src/lib/assertAllowlisted.ts).
