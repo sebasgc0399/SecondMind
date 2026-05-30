@@ -53,7 +53,7 @@ export const saveApiKey = onCall<SaveApiKeyRequest, Promise<SaveApiKeyResponse>>
         );
       }
 
-      const encrypted = encryptSecret(key, byokMasterKey.value());
+      const encrypted = encryptSecret(key, byokMasterKey.value(), userId);
       const last4 = key.slice(-4);
 
       // WriteBatch: ciphertext + metadata atómicos (evita estado parcial).
