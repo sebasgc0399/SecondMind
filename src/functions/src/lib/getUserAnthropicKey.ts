@@ -12,9 +12,18 @@ export async function getUserAnthropicKey(
   if (!snap.exists) return null;
   const data = snap.data() as Partial<EncryptedSecret> | undefined;
   if (!data?.ciphertext || !data.iv || !data.authTag) return null;
+  // AAD = userId (F7 K-2) + keyVersion del doc (F7 K-3). Si keyVersion falta
+  // (doc pre-F7), decryptSecret lanza: comportamiento intencional, no hay docs
+  // viejos post-wipe pre-release.
   return decryptSecret(
-    { ciphertext: data.ciphertext, iv: data.iv, authTag: data.authTag },
+    {
+      ciphertext: data.ciphertext,
+      iv: data.iv,
+      authTag: data.authTag,
+      keyVersion: data.keyVersion as number,
+    },
     masterKeyB64,
+    userId,
   );
 }
 

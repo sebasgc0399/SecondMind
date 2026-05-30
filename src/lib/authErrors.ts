@@ -16,7 +16,10 @@ export function mapAuthError(
     case 'auth/invalid-credential':
       return 'Email o contraseña incorrectos.';
     case 'auth/user-not-found':
-      return context === 'reset' ? RESET_GENERIC : 'No existe una cuenta con ese email.';
+      // A-5 (F3): en signin colapsa al mismo string que wrong-password/
+      // invalid-credential → sin oráculo de enumeración de cuentas. reset
+      // mantiene su genérico anti-enumeration.
+      return context === 'reset' ? RESET_GENERIC : 'Email o contraseña incorrectos.';
     case 'auth/user-disabled':
       return 'Esta cuenta está deshabilitada.';
     case 'auth/email-already-in-use':
@@ -35,6 +38,9 @@ export function mapAuthError(
       return 'Beta llena. No podemos crear cuentas nuevas ahora.';
     case 'capacity-unavailable':
       return 'No se pudo verificar disponibilidad. Reintentá.';
+    case 'allowlist-not-authorized':
+      // SPEC-50 F6 (A-2): email fuera de la allowlist de la beta cerrada.
+      return 'Este email no está en la lista de la beta. Escribinos para sumarte.';
     default:
       return 'Algo salió mal. Intentá de nuevo.';
   }

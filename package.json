@@ -13,6 +13,7 @@
     "deploy:functions": "firebase deploy --only functions",
     "logs:functions": "firebase functions:log",
     "test": "vitest",
+    "test:rules": "firebase emulators:exec --project=demo-secondmind --only firestore \"vitest run --config vitest.rules.config.ts\"",
     "tauri": "tauri",
     "tauri:dev": "tauri dev",
     "tauri:build": "tauri build",
@@ -70,6 +71,7 @@
   "devDependencies": {
     "@capacitor/assets": "^3.0.5",
     "@eslint/js": "^9.39.4",
+    "@firebase/rules-unit-testing": "^5.0.1",
     "@tailwindcss/postcss": "^4.2.2",
     "@tauri-apps/cli": "^2.10.1",
     "@testing-library/dom": "^10.4.1",

@@ -3,6 +3,8 @@ import { defineSecret } from 'firebase-functions/params';
 import { logger } from 'firebase-functions';
 import * as admin from 'firebase-admin';
 import { encryptSecret } from '../lib/crypto';
+import { requireVerified } from '../lib/requireVerified';
+import { assertAllowlisted } from '../lib/assertAllowlisted';
 import { validateProviderKey } from '../lib/validateProviderKey';
 import { sanitizeError } from '../lib/sanitizeError';
 
@@ -26,12 +28,13 @@ export const saveApiKey = onCall<SaveApiKeyRequest, Promise<SaveApiKeyResponse>>
     secrets: [byokMasterKey],
     timeoutSeconds: 10,
     region: 'us-central1',
+    // A-4 (F2): cap de instancias. saveApiKey hace un fetch a Anthropic por
+    // invocación (validateProviderKey) → bounded-cost ante abuso.
+    maxInstances: 3,
   },
   async (request) => {
-    if (!request.auth) {
-      throw new HttpsError('unauthenticated', 'Login required');
-    }
-    const userId = request.auth.uid;
+    const userId = requireVerified(request);
+    await assertAllowlisted(request.auth?.token.email);
     const provider = request.data?.provider;
     const rawKey = request.data?.key;
 
@@ -55,7 +58,7 @@ export const saveApiKey = onCall<SaveApiKeyRequest, Promise<SaveApiKeyResponse>>
         );
       }
 
-      const encrypted = encryptSecret(key, byokMasterKey.value());
+      const encrypted = encryptSecret(key, byokMasterKey.value(), userId);
       const last4 = key.slice(-4);
 
       // WriteBatch: ciphertext + metadata atómicos (evita estado parcial).

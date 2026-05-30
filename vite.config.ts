@@ -1,6 +1,6 @@
 import path from 'path';
 import { readFileSync } from 'node:fs';
-import { defineConfig } from 'vitest/config';
+import { defineConfig, configDefaults } from 'vitest/config';
 import react from '@vitejs/plugin-react';
 import { VitePWA } from 'vite-plugin-pwa';
 
@@ -99,5 +99,8 @@ export default defineConfig({
   test: {
     environment: 'node',
     globals: true,
+    // El test de security rules (F4) necesita el emulador de Firestore — corre
+    // aparte con `npm run test:rules`, no en el `npm test` default.
+    exclude: [...configDefaults.exclude, '**/firestore.rules.test.ts'],
   },
 });

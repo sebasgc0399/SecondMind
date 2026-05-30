@@ -4,6 +4,8 @@ import { useNavigate } from 'react-router';
 import { Button } from '@/components/ui/button';
 import useAuth from '@/hooks/useAuth';
 import { mapAuthError } from '@/lib/authErrors';
+import { checkAllowlist } from '@/lib/allowlist';
+import { normalizeEmail } from '@/lib/normalizeEmail';
 
 interface SignUpFormProps {
   onError: (message: string) => void;
@@ -50,8 +52,17 @@ export default function SignUpForm({ onError }: SignUpFormProps) {
     onError('');
     if (!validate()) return;
     setLoading(true);
+    const normalizedEmail = normalizeEmail(email);
     try {
-      await signUpWithEmail(email, password);
+      // F6: pre-check de allowlist ANTES de crear la cuenta. Email/pw permite
+      // este pre-check (el path Google no — ver useAuth.signIn). El backstop
+      // real son las rules (F4); esto es UX para no dejar una cuenta inerte.
+      if (!(await checkAllowlist(normalizedEmail))) {
+        onError(mapAuthError('allowlist-not-authorized'));
+        setLoading(false);
+        return;
+      }
+      await signUpWithEmail(normalizedEmail, password);
       navigate('/', { replace: true });
     } catch (err) {
       const code = (err as { code?: string } | null)?.code;

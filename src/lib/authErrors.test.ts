@@ -31,10 +31,8 @@ describe('mapAuthError', () => {
       );
     });
 
-    it('signin context → mensaje claro', () => {
-      expect(mapAuthError('auth/user-not-found', 'signin')).toBe(
-        'No existe una cuenta con ese email.',
-      );
+    it('signin context → colapsa a credenciales incorrectas (anti-enumeration A-5)', () => {
+      expect(mapAuthError('auth/user-not-found', 'signin')).toBe('Email o contraseña incorrectos.');
     });
   });
 
@@ -69,6 +67,14 @@ describe('mapAuthError', () => {
     });
   });
 
+  describe('allowlist (F6)', () => {
+    it('allowlist-not-authorized → mensaje claro de beta cerrada', () => {
+      expect(mapAuthError('allowlist-not-authorized')).toBe(
+        'Este email no está en la lista de la beta. Escribinos para sumarte.',
+      );
+    });
+  });
+
   describe('fallback y default context', () => {
     it('unknown code → fallback generico', () => {
       expect(mapAuthError('auth/unknown-thing')).toBe('Algo salió mal. Intentá de nuevo.');
@@ -78,8 +84,8 @@ describe('mapAuthError', () => {
       expect(mapAuthError(undefined)).toBe('Algo salió mal. Intentá de nuevo.');
     });
 
-    it('default context es signin', () => {
-      expect(mapAuthError('auth/user-not-found')).toBe('No existe una cuenta con ese email.');
+    it('default context es signin (user-not-found colapsado)', () => {
+      expect(mapAuthError('auth/user-not-found')).toBe('Email o contraseña incorrectos.');
     });
   });
 });
