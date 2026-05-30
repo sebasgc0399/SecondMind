@@ -67,6 +67,14 @@ describe('mapAuthError', () => {
     });
   });
 
+  describe('allowlist (F6)', () => {
+    it('allowlist-not-authorized → mensaje claro de beta cerrada', () => {
+      expect(mapAuthError('allowlist-not-authorized')).toBe(
+        'Este email no está en la lista de la beta. Escribinos para sumarte.',
+      );
+    });
+  });
+
   describe('fallback y default context', () => {
     it('unknown code → fallback generico', () => {
       expect(mapAuthError('auth/unknown-thing')).toBe('Algo salió mal. Intentá de nuevo.');

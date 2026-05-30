@@ -10,6 +10,8 @@ import {
   GoogleAuthProvider,
 } from 'firebase/auth';
 import { auth } from '@/lib/firebase';
+import { checkAllowlist } from '@/lib/allowlist';
+import { normalizeEmail } from '@/lib/normalizeEmail';
 import { readSignupCapacity } from '@/hooks/useSignupCapacity';
 import { invalidateEmbeddingsCache } from '@/lib/embeddings';
 import { invalidatePreferencesCache } from '@/lib/preferences';
@@ -55,10 +57,20 @@ export default function useAuth(): UseAuthReturn {
     } else {
       await signInWithPopup(auth, googleProvider);
     }
+    // F6 allowlist gate (Google): el email solo existe POST-auth (Firebase crea
+    // el user en signInWithCredential). Si no está en la allowlist, cerramos la
+    // sesión local de inmediato y señalamos el rechazo. La cuenta queda inerte
+    // (las rules de F4 la neutralizan); no se borra (D4). firebaseSignOut directo
+    // (no el signOut del hook) evita el TDZ por orden de declaración.
+    const email = auth.currentUser?.email;
+    if (email && !(await checkAllowlist(normalizeEmail(email)))) {
+      await firebaseSignOut(auth);
+      throw { code: 'allowlist-not-authorized' };
+    }
   }, []);
 
   const signInWithEmail = useCallback(async (email: string, password: string) => {
-    await signInWithEmailAndPassword(auth, email, password);
+    await signInWithEmailAndPassword(auth, normalizeEmail(email), password);
   }, []);
 
   const signUpWithEmail = useCallback(async (email: string, password: string) => {
@@ -79,7 +91,7 @@ export default function useAuth(): UseAuthReturn {
       throw { code: 'capacity-full' };
     }
 
-    const credential = await createUserWithEmailAndPassword(auth, email, password);
+    const credential = await createUserWithEmailAndPassword(auth, normalizeEmail(email), password);
     // Auto-send verification email post-create. Si el envío falla (rate limit,
     // network), no rompemos el flow — el banner F4 ofrecerá reenviar.
     try {

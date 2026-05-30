@@ -38,6 +38,9 @@ export function mapAuthError(
       return 'Beta llena. No podemos crear cuentas nuevas ahora.';
     case 'capacity-unavailable':
       return 'No se pudo verificar disponibilidad. Reintentá.';
+    case 'allowlist-not-authorized':
+      // SPEC-50 F6 (A-2): email fuera de la allowlist de la beta cerrada.
+      return 'Este email no está en la lista de la beta. Escribinos para sumarte.';
     default:
       return 'Algo salió mal. Intentá de nuevo.';
   }
