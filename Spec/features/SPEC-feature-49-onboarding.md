@@ -62,12 +62,14 @@ Problema: un usuario **existente** (con datos previos al deploy) también tiene 
 
 **D4 — Detección reactiva de completitud de hitos** (sin hook `useRowCount`; patrón canónico `useTable` + `useMemo`):
 
-| Hito            | Fuente              | Condición de "completo"                                   |
-| --------------- | ------------------- | --------------------------------------------------------- |
-| ① API key       | `useApiKeys()`      | `isLoaded && apiKeys.anthropic.configured`                |
-| ② Primera nota  | `useTable('notes')` | ≥1 row con `!isArchived && deletedAt === 0`               |
-| ③ Inbox con IA  | `useTable('inbox')` | ≥1 row con `aiProcessed === true && status !== 'pending'` |
-| ④ Primera tarea | `useTable('tasks')` | ≥1 row con `!isArchived`                                  |
+| Hito            | Fuente                       | Condición de "completo"                     |
+| --------------- | ---------------------------- | ------------------------------------------- |
+| ① API key       | `useApiKeys()`               | `isLoaded && apiKeys.anthropic.configured`  |
+| ② Primera nota  | `useTable('notes')`          | ≥1 row con `!isArchived && deletedAt === 0` |
+| ③ Inbox con IA  | `useTable('inbox', 'inbox')` | ≥1 row con `aiProcessed === true`           |
+| ④ Primera tarea | `useTable('tasks', 'tasks')` | ≥1 row con `!isArchived`                    |
+
+> **Corrección (audit step 2, confirmado con el usuario):** el hito ③ NO lleva `&& status !== 'pending'`. La CF `processInboxItem` setea `aiProcessed: true` dejando el item en `status: 'pending'` (ese ES el momento aha, con la sugerencia visible); el status solo cambia a `processed`/`dismissed` al convertir/descartar. `aiProcessed === true` es además monótono porque la row del inbox nunca se borra (`inboxRepo` la conserva).
 
 **D5 — Modal con primitiva base-ui** (`@base-ui/react/dialog`), siguiendo el patrón canónico de `QuickCapture` / `ProjectCreateModal`: `Dialog.Root/Portal/Backdrop/Popup` con animación vía `data-starting-style` / `data-ending-style` (NO `data-state` de Radix; las clases `animate-in` de tw-animate-css **no** aplican a base-ui — ver memoria del proyecto).
 
@@ -116,7 +118,7 @@ Problema: un usuario **existente** (con datos previos al deploy) también tiene 
     completedCount: number; // 0..4
     allComplete: boolean;
     shouldShowWelcome: boolean; // D2 + D3 (cuenta nueva, no vista, hidratado)
-    shouldShowChecklist: boolean; // welcomeSeen && !dismissed && !allComplete
+    shouldShowChecklist: boolean; // welcomeSeen && !dismissed (NO !allComplete — Opción A)
     markWelcomeSeen: () => Promise<void>;
     dismissChecklist: () => Promise<void>;
   }
@@ -134,7 +136,7 @@ Problema: un usuario **existente** (con datos previos al deploy) también tiene 
 ### F4 — `OnboardingChecklist` (card del dashboard)
 
 - **Qué:** card "Primeros pasos" con los 4 hitos (✓/○), contador/`progress` `n/4`, CTA por hito y botón "Descartar guía".
-- **Criterio de done:** visible solo si `shouldShowChecklist`; cada hito refleja completitud reactiva sin recargar; descartar lo oculta permanentemente (`onboardingChecklistDismissed: true`); al llegar a 4/4 muestra estado final breve y se auto-oculta (vía `allComplete`).
+- **Criterio de done:** visible solo si `shouldShowChecklist`; cada hito refleja completitud reactiva sin recargar; descartar lo oculta permanentemente (`onboardingChecklistDismissed: true`); al llegar a 4/4 muestra estado de logro + botón "Cerrar"; **no se auto-oculta** — la única ruta de desaparición es descartar la guía (Opción A, decisión del usuario).
 - **Archivos:**
   - `src/components/onboarding/OnboardingChecklist.tsx` (nuevo) — consume `useOnboarding`; estilo de card del dashboard (`rounded-lg border border-border bg-card`).
   - `src/app/page.tsx` — insertar entre `<header>` (Greeting) y el `<div className="grid ...">`.
