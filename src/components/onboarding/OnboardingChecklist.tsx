@@ -98,7 +98,7 @@ function StepRow({ step, emphasized }: { step: OnboardingStep; emphasized: boole
 }
 
 function StepCta({ step, emphasized }: { step: OnboardingStep; emphasized: boolean }) {
-  const className = `inline-flex min-h-9 shrink-0 items-center justify-center rounded-md px-3 py-1.5 text-xs font-medium transition-colors ${
+  const className = `inline-flex min-h-9 w-28 shrink-0 items-center justify-center rounded-md px-3 py-1.5 text-xs font-medium transition-colors ${
     emphasized
       ? 'bg-primary text-primary-foreground hover:bg-primary/90'
       : 'border border-border bg-background text-foreground hover:bg-accent/40'
