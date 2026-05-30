@@ -114,6 +114,19 @@ export default function useAuth(): UseAuthReturn {
     if (!auth.currentUser) return;
     try {
       await auth.currentUser.reload();
+      // reload() actualiza la propiedad `emailVerified` del objeto User, pero
+      // NO refresca el ID token: su claim `email_verified` queda stale hasta el
+      // refresh natural (~1h) o re-login. Las security rules leen
+      // `request.auth.token.email_verified`, así que un usuario recién
+      // verificado quedaría con TODA lectura/escritura Firestore denegada
+      // (preferences, apiKeys y datos) pese a tener emailVerified=true en el
+      // cliente. getIdToken(true) fuerza un token nuevo con el claim
+      // actualizado antes de que el redirect monte el árbol autenticado.
+      // Gate sobre emailVerified: solo refrescar el token al detectar la
+      // verificación, no en cada focus/visibilitychange mientras sigue pendiente.
+      if (auth.currentUser.emailVerified) {
+        await auth.currentUser.getIdToken(true);
+      }
       setUser(auth.currentUser);
     } catch {
       // Network failed o similar: silent. El banner sigue mostrando.
