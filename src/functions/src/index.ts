@@ -10,4 +10,5 @@ export { generateEmbedding } from './embeddings/generateEmbedding';
 export { embedQuery } from './search/embedQuery';
 export { saveApiKey } from './settings/saveApiKey';
 export { deleteApiKey } from './settings/deleteApiKey';
+export { checkAllowlist } from './auth/checkAllowlist';
 export { onUserCreated, onUserDeleted } from './auth/userCountTriggers';

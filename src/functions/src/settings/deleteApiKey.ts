@@ -2,6 +2,7 @@ import { onCall, HttpsError } from 'firebase-functions/v2/https';
 import { logger } from 'firebase-functions';
 import * as admin from 'firebase-admin';
 import { requireVerified } from '../lib/requireVerified';
+import { assertAllowlisted } from '../lib/assertAllowlisted';
 import { sanitizeError } from '../lib/sanitizeError';
 
 interface DeleteApiKeyRequest {
@@ -21,6 +22,7 @@ export const deleteApiKey = onCall<DeleteApiKeyRequest, Promise<DeleteApiKeyResp
   },
   async (request) => {
     const userId = requireVerified(request);
+    await assertAllowlisted(request.auth?.token.email);
     const provider = request.data?.provider;
 
     if (provider !== 'anthropic') {

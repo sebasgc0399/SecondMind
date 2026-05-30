@@ -4,6 +4,7 @@ import { logger } from 'firebase-functions';
 import * as admin from 'firebase-admin';
 import { encryptSecret } from '../lib/crypto';
 import { requireVerified } from '../lib/requireVerified';
+import { assertAllowlisted } from '../lib/assertAllowlisted';
 import { validateProviderKey } from '../lib/validateProviderKey';
 import { sanitizeError } from '../lib/sanitizeError';
 
@@ -33,6 +34,7 @@ export const saveApiKey = onCall<SaveApiKeyRequest, Promise<SaveApiKeyResponse>>
   },
   async (request) => {
     const userId = requireVerified(request);
+    await assertAllowlisted(request.auth?.token.email);
     const provider = request.data?.provider;
     const rawKey = request.data?.key;
 
