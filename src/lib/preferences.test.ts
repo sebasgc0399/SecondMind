@@ -70,6 +70,8 @@ describe('parsePrefs', () => {
       distillBannersSeen: { l1: false, l2: false, l3: false },
       sidebarHidden: false,
       splitPaneLayout: { left: 50, right: 50 },
+      onboardingWelcomeSeen: false,
+      onboardingChecklistDismissed: false,
     });
   });
 
@@ -189,6 +191,8 @@ describe('parsePrefs schema versioning (F36.F8)', () => {
       distillBannersSeen: { l1: false, l2: false, l3: false },
       sidebarHidden: true,
       splitPaneLayout: { left: 50, right: 50 },
+      onboardingWelcomeSeen: false,
+      onboardingChecklistDismissed: false,
     });
   });
 
@@ -211,6 +215,8 @@ describe('parsePrefs schema versioning (F36.F8)', () => {
       distillBannersSeen: { l1: false, l2: false, l3: false },
       sidebarHidden: true,
       splitPaneLayout: { left: 50, right: 50 },
+      onboardingWelcomeSeen: false,
+      onboardingChecklistDismissed: false,
     });
   });
 });
