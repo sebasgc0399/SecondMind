@@ -6,6 +6,7 @@ import HubsCard from '@/components/dashboard/HubsCard';
 import ProjectsActiveCard from '@/components/dashboard/ProjectsActiveCard';
 import RecentNotesCard from '@/components/dashboard/RecentNotesCard';
 import HabitsTodayCard from '@/components/dashboard/HabitsTodayCard';
+import OnboardingChecklist from '@/components/onboarding/OnboardingChecklist';
 
 export default function DashboardPage() {
   return (
@@ -13,6 +14,7 @@ export default function DashboardPage() {
       <header className="mb-6 md:mb-8">
         <Greeting />
       </header>
+      <OnboardingChecklist />
       <div className="mb-4 grid grid-cols-1 gap-4 lg:grid-cols-2">
         <ReviewCard />
         <TasksTodayCard />
