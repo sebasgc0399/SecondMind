@@ -368,6 +368,10 @@ Cada feature comprimida a 1 línea con pointer al SPEC archivado. Para detalles 
 - [`MAX_CONTENT_CHARS` cap antes de llamadas LLM en CFs con input user (post-audit-2026-05)](gotchas/cloud-functions-guards.md#max_content_chars-cap-antes-de-llamadas-llm-en-cfs-con-input-user-post-audit-2026-05)
 - [Datos privados del cliente: colección top-level deny-all, no sub-path bajo el catch-all (post-F48)](gotchas/cloud-functions-guards.md#datos-privados-del-cliente-colección-top-level-deny-all-no-sub-path-bajo-el-catch-all-post-f48)
 - [API keys per-user (BYOK): cifrado en Firestore con factory en runtime, no defineSecret (post-F48)](gotchas/cloud-functions-guards.md#api-keys-per-user-byok-cifrado-en-firestore-con-factory-en-runtime-no-definesecret-post-f48)
+- [Allowlist en rules no normaliza el email: seed lowercase y fail-closed (post-SPEC-50)](gotchas/cloud-functions-guards.md#allowlist-en-rules-no-normaliza-el-email-seed-lowercase-y-fail-closed-post-spec-50)
+- [Gate por `exists()` en rules: seedear el backstop ANTES del deploy de rules (auto-lockout) (post-SPEC-50)](gotchas/cloud-functions-guards.md#gate-por-exists-en-rules-seedear-el-backstop-antes-del-deploy-de-rules-auto-lockout-post-spec-50)
+- [Cambio de esquema de cifrado sin fallback: wipear el store cifrado ANTES del deploy de functions (post-SPEC-50 F7)](gotchas/cloud-functions-guards.md#cambio-de-esquema-de-cifrado-sin-fallback-wipear-el-store-cifrado-antes-del-deploy-de-functions-post-spec-50-f7)
+- [`checkAllowlist` es un oráculo de enumeración aceptado para la beta (mitigación App Check, A-3) (post-SPEC-50 F5)](gotchas/cloud-functions-guards.md#checkallowlist-es-un-oráculo-de-enumeración-aceptado-para-la-beta-mitigación-app-check-a-3-post-spec-50-f5)
 
 ---
 
