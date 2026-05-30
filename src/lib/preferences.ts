@@ -86,6 +86,10 @@ export function parsePrefs(data: Record<string, unknown> | undefined): UserPrefe
     },
     sidebarHidden: data?.sidebarHidden === true,
     splitPaneLayout: parseSplitPaneLayout(data?.splitPaneLayout),
+    // F49: campos aditivos, no requieren bump de schema (mismo criterio que
+    // splitPaneLayout). Ausente → false = default correcto (no ver onboarding).
+    onboardingWelcomeSeen: data?.onboardingWelcomeSeen === true,
+    onboardingChecklistDismissed: data?.onboardingChecklistDismissed === true,
   };
 }
 

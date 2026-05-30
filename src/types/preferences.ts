@@ -20,6 +20,14 @@ export interface UserPreferences {
   // hay split activo en desktop ≥1024px. Campo aditivo F46 — NO bumpear
   // PREFERENCES_SCHEMA_VERSION (D7 del SPEC).
   splitPaneLayout: { left: number; right: number };
+  // Flag one-time (F49): el welcome modal de onboarding se muestra una sola
+  // vez a cuentas nuevas; tras cerrarlo queda true cross-device. También
+  // actúa como proxy de "candidato de onboarding" que gatea el checklist de
+  // Primeros pasos (D2). Campo aditivo — NO bumpear PREFERENCES_SCHEMA_VERSION.
+  onboardingWelcomeSeen: boolean;
+  // Flag one-time (F49): el usuario descartó explícitamente el checklist de
+  // Primeros pasos del dashboard. Campo aditivo — NO bumpear schema.
+  onboardingChecklistDismissed: boolean;
 }
 
 export const DEFAULT_PREFERENCES: UserPreferences = {
@@ -28,4 +36,6 @@ export const DEFAULT_PREFERENCES: UserPreferences = {
   distillBannersSeen: { l1: false, l2: false, l3: false },
   sidebarHidden: false,
   splitPaneLayout: { left: 50, right: 50 },
+  onboardingWelcomeSeen: false,
+  onboardingChecklistDismissed: false,
 };
