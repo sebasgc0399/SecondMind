@@ -31,10 +31,8 @@ describe('mapAuthError', () => {
       );
     });
 
-    it('signin context → mensaje claro', () => {
-      expect(mapAuthError('auth/user-not-found', 'signin')).toBe(
-        'No existe una cuenta con ese email.',
-      );
+    it('signin context → colapsa a credenciales incorrectas (anti-enumeration A-5)', () => {
+      expect(mapAuthError('auth/user-not-found', 'signin')).toBe('Email o contraseña incorrectos.');
     });
   });
 
@@ -78,8 +76,8 @@ describe('mapAuthError', () => {
       expect(mapAuthError(undefined)).toBe('Algo salió mal. Intentá de nuevo.');
     });
 
-    it('default context es signin', () => {
-      expect(mapAuthError('auth/user-not-found')).toBe('No existe una cuenta con ese email.');
+    it('default context es signin (user-not-found colapsado)', () => {
+      expect(mapAuthError('auth/user-not-found')).toBe('Email o contraseña incorrectos.');
     });
   });
 });
