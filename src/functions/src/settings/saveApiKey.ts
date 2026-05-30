@@ -27,6 +27,9 @@ export const saveApiKey = onCall<SaveApiKeyRequest, Promise<SaveApiKeyResponse>>
     secrets: [byokMasterKey],
     timeoutSeconds: 10,
     region: 'us-central1',
+    // A-4 (F2): cap de instancias. saveApiKey hace un fetch a Anthropic por
+    // invocación (validateProviderKey) → bounded-cost ante abuso.
+    maxInstances: 3,
   },
   async (request) => {
     const userId = requireVerified(request);

@@ -23,6 +23,9 @@ export const embedQuery = onCall<EmbedQueryRequest, Promise<EmbedQueryResponse>>
     secrets: [openaiApiKey],
     timeoutSeconds: 10,
     region: 'us-central1',
+    // A-4 (F2): cap de instancias concurrentes. embedQuery usa la OPENAI_API_KEY
+    // COMPARTIDA del operador (no BYOK) → bounded-cost ante abuso.
+    maxInstances: 5,
   },
   async (request) => {
     const userId = requireVerified(request);
