@@ -372,6 +372,7 @@ Cada feature comprimida a 1 línea con pointer al SPEC archivado. Para detalles 
 - [Gate por `exists()` en rules: seedear el backstop ANTES del deploy de rules (auto-lockout) (post-SPEC-50)](gotchas/cloud-functions-guards.md#gate-por-exists-en-rules-seedear-el-backstop-antes-del-deploy-de-rules-auto-lockout-post-spec-50)
 - [Cambio de esquema de cifrado sin fallback: wipear el store cifrado ANTES del deploy de functions (post-SPEC-50 F7)](gotchas/cloud-functions-guards.md#cambio-de-esquema-de-cifrado-sin-fallback-wipear-el-store-cifrado-antes-del-deploy-de-functions-post-spec-50-f7)
 - [`checkAllowlist` es un oráculo de enumeración aceptado para la beta (mitigación App Check, A-3) (post-SPEC-50 F5)](gotchas/cloud-functions-guards.md#checkallowlist-es-un-oráculo-de-enumeración-aceptado-para-la-beta-mitigación-app-check-a-3-post-spec-50-f5)
+- [Allowlist como gestión de acceso: crear el doc da acceso, borrarlo lo revoca al instante (post-SPEC-50)](gotchas/cloud-functions-guards.md#allowlist-como-gestión-de-acceso-crear-el-doc-da-acceso-borrarlo-lo-revoca-al-instante-post-spec-50)
 
 ---
 
