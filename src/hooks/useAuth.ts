@@ -30,7 +30,7 @@ interface UseAuthReturn {
   signUpWithEmail: (email: string, password: string) => Promise<void>;
   resetPassword: (email: string) => Promise<void>;
   resendVerification: () => Promise<void>;
-  refreshUser: () => Promise<void>;
+  refreshUser: () => Promise<boolean>;
   signOut: () => Promise<void>;
 }
 
@@ -110,8 +110,8 @@ export default function useAuth(): UseAuthReturn {
   // user.reload() refresca el objeto User de Firebase pero NO dispara
   // onAuthStateChanged. Necesitamos setUser(auth.currentUser) explícito
   // para forzar re-render del consumer del hook (G9 plan F47).
-  const refreshUser = useCallback(async () => {
-    if (!auth.currentUser) return;
+  const refreshUser = useCallback(async (): Promise<boolean> => {
+    if (!auth.currentUser) return false;
     try {
       await auth.currentUser.reload();
       // reload() actualiza la propiedad `emailVerified` del objeto User, pero
@@ -128,8 +128,15 @@ export default function useAuth(): UseAuthReturn {
         await auth.currentUser.getIdToken(true);
       }
       setUser(auth.currentUser);
+      // Retorna el estado verificado para que el caller (p. ej. /verify-email)
+      // navegue sobre el valor, decoplado del re-render: setUser recibe el
+      // MISMO ref del objeto User (Firebase lo muta in-place), así que React
+      // hace bail-out y el useEffect que observa `user.emailVerified` no
+      // re-evalúa. El boolean retornado evita depender de ese re-render.
+      return auth.currentUser.emailVerified;
     } catch {
       // Network failed o similar: silent. El banner sigue mostrando.
+      return false;
     }
   }, []);
 
