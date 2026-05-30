@@ -1,7 +1,7 @@
 # SPEC — Feature 50: Security Hardening pre-beta (Registro de implementación)
 
 > **Estado:** Completada mayo 2026 — desplegada y verificada en prod (`secondmindv1`).
-> **Alimentó:** release **v0.4.1**. (v0.5.0 queda reservada para la apertura de la beta.)
+> **Deploy:** code-only sobre **v0.4.0** (functions + rules + hosting en `secondmindv1`) — **sin bump de versión ni tag**. Tauri/Android sin alinear, diferidos a la apertura de la beta (reservada para v0.5.0).
 > **Origen:** auditoría READ-ONLY `Spec/audits/AUDIT-auth-keys-v0.5.md` (2026-05-29, 24 hallazgos).
 > **Commits:** `7fc9100` F1 requireVerified · `ddddd1c` F7 crypto AAD+keyVersion · `02e4827` F2 maxInstances · `76d7b44` F3 anti-enumeración · `e95e0e8` F4 allowlist rules+test · `ff97be9` F5 allowlist CFs · `844ebdf` F6 allowlist UX · merge `4bcb7a9`.
 > **Gotchas operativos vigentes** → `Spec/ESTADO-ACTUAL.md` (§ Cloud Functions — Guards y edge cases).
