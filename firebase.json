@@ -55,5 +55,9 @@
         "headers": [{ "key": "Cache-Control", "value": "no-cache" }]
       }
     ]
+  },
+  "emulators": {
+    "firestore": { "port": 8080 },
+    "singleProjectMode": true
   }
 }

@@ -7,11 +7,17 @@ service cloud.firestore {
       // email/password el banner client-side era solo UI nudge antes de
       // este fix. Sin grace period: zero users email/password no
       // verificados en prod al deploy (confirmado por user).
+      // SPEC-50 F4 (A-2) — beta cerrada por allowlist. En AND (nunca OR: las
+      // rules son aditivas, un OR abriría de más) con C1: ademas de owner +
+      // verificado, el email del token debe existir en allowlist/. Asume
+      // token.email lowercase (Firebase normaliza email/pw; Google entrega
+      // lowercase). Si falta o viene mixed-case, exists() falla → fail-closed.
       allow read, write: if
         request.auth != null
         && request.auth.uid == userId
         && (request.auth.token.firebase.sign_in_provider == 'google.com'
-            || request.auth.token.email_verified == true);
+            || request.auth.token.email_verified == true)
+        && exists(/databases/$(database)/documents/allowlist/$(request.auth.token.email));
     }
 
     // F47.F6 — config/app: read público (LoginPage no tiene user
@@ -33,6 +39,16 @@ service cloud.firestore {
     // vive en colección top-level con regla propia. La metadata legible
     // (configured/last4) va en users/{uid}/settings/aiKeys.
     match /userSecrets/{userId}/{document=**} {
+      allow read, write: if false;
+    }
+
+    // SPEC-50 F4 (A-2) — allowlist/: emails invitados a la beta cerrada.
+    // Deny-all client-side (mismo patrón que userSecrets/): las rules la leen
+    // server-side vía exists() en users/**, pero el cliente NUNCA la lee
+    // (evita exponer los ~100 emails como PII). Gestión manual del operador
+    // (consola/script), doc IDs en lowercase+trim. La existencia del doc ES el
+    // flag (sin payload, opcionalmente { addedAt } para auditoría).
+    match /allowlist/{email} {
       allow read, write: if false;
     }
   }
