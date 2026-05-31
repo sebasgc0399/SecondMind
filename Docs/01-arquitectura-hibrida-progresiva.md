@@ -343,7 +343,7 @@ Colecciones con regla propia (fuera del árbol `users/`):
 - `config/app` — **read público** (la LoginPage chequea capacity sin user todavía), write solo Admin SDK (triggers `onUserCreated`/`onUserDeleted`).
 - `userSecrets/{uid}/keys/{provider}` y `allowlist/{email}` — **deny-all client-side**; solo el Admin SDK (Cloud Functions) los toca. Top-level por la aditividad de las rules (un `if false` anidado bajo el catch-all `users/` no bloquearía el read del owner).
 
-La beta cerrada está **LIVE en prod** con un único allowlisted; la apertura real queda reservada para v0.5. El detalle operativo (orden de deploy, seed del backstop antes de `deploy:rules`, wipe del store cifrado, oráculo de enumeración) vive en [`SPEC-feature-50`](../Spec/features/SPEC-feature-50-security-hardening-v0.5.md) y en el índice de gotchas de [`ESTADO-ACTUAL.md`](../Spec/ESTADO-ACTUAL.md). Ver decisiones D24-D26.
+La **allowlist es el control de acceso real** (enforced en las rules — es el gate de seguridad). El capacity gate de `config/app` es **secundario**: solo decide si los sign-ups están abiertos o si la beta está llena, y su `userCount` es una métrica aproximada (eventually-consistent vía triggers, no un límite de seguridad). La beta cerrada está **LIVE en prod** con un único allowlisted; la apertura real queda reservada para v0.5. El detalle operativo (orden de deploy, seed del backstop antes de `deploy:rules`, wipe del store cifrado, oráculo de enumeración) vive en [`SPEC-feature-50`](../Spec/features/SPEC-feature-50-security-hardening-v0.5.md) y en el índice de gotchas de [`ESTADO-ACTUAL.md`](../Spec/ESTADO-ACTUAL.md). Ver decisiones D24-D26.
 
 ---
 
