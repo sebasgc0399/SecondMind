@@ -1,0 +1,48 @@
+name: CI
+
+# Gate de calidad para los DOS caminos a producción que parten de main:
+#   1. Hosting web — `npm run deploy` manual desde main (no pasa por tags).
+#   2. Desktop/Android — tags `v*` que dispara release.yml.
+# Por eso el trigger es main (push + PR), no tags: cubre ambos caminos.
+# release.yml solo buildea/firma artefactos nativos; NO corre lint ni tests.
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+# Cancela runs viejos del mismo ref si llega un push nuevo (ahorra minutos).
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lint-typecheck-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Setup Node
+        uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+
+      # --legacy-peer-deps: mismo flag que release.yml — el árbol de deps tiene
+      # conflictos de peer que npm 7+ rechaza en modo estricto.
+      - name: Install deps
+        run: npm ci --legacy-peer-deps
+
+      # eslint . incluye el guard no-restricted-syntax (mutaciones TinyBase en
+      # hooks) + no-restricted-imports (Clean Arch capa 2). No auto-fix: falla
+      # el job si hay cualquier violación.
+      - name: Lint
+        run: npm run lint
+
+      - name: Type-check
+        run: npx tsc --noEmit
+
+      # vitest detecta CI=true (lo setea GitHub Actions) y corre una sola vez,
+      # sin watch mode. Cubre los 223 tests (repos, tinybase, saveQueue, etc).
+      - name: Test
+        run: npm test
