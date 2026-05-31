@@ -109,13 +109,13 @@ Esto significa que podés **reemplazar una capa externa sin tocar las internas**
 
 ### Capa 3: Adaptadores
 
-**Qué es:** el **traductor** entre el mundo externo (HTTP, Firebase, APIs) y los componentes. En proyectos grandes aplica optimistic updates, retry, batching, cache, normalización de shapes y uniformización de errores. **En SecondMind el scope actual es más acotado:** el factory `createFirestoreRepo` implementa **solo optimistic update** (sync TinyBase antes de await Firestore). El "cache" es el propio store TinyBase vía el custom persister; retry y batching no están implementados. Si en el futuro se necesitan, viven acá.
+**Qué es:** el **traductor** entre el mundo externo (HTTP, Firebase, APIs) y los componentes. En proyectos grandes aplica optimistic updates, retry, batching, cache, normalización de shapes y uniformización de errores. **En SecondMind el factory `createFirestoreRepo` implementa optimistic update Y retry:** sync TinyBase antes del write async y —cuando se le inyecta un `SaveQueue` (F28-F30)— encola el `setDoc`/`deleteDoc` con backoff exponencial + recheck de uid mid-retry en vez de un `await` directo. El "cache" es el propio store TinyBase vía el custom persister. **Batching** sigue sin implementarse (cada write va solo); si se necesita, vive acá.
 
 **Qué contiene:**
 
 - **Adapters:** funciones que transforman respuestas del backend al shape interno. En proyectos con APIs REST heterogéneas normalizan `snake_case → camelCase`, `null → undefined`, parseo de fechas, etc. **En SecondMind no aplica esta normalización** porque Firestore devuelve shapes TS-friendly y el propio proyecto define el schema. El rol de "adaptador" lo cumplen los repos absorbiendo patrones de acceso (optimistic update, serialización de arrays — ver gotchas abajo).
 - **Interceptors:** lógica que envuelve todas las requests/responses (inyectar auth tokens, manejar 401 refrescando token, capturar 500s para logging global)
-- **Repositorios (repos):** abstracción de operaciones CRUD por entidad, encapsulando el patrón de acceso (optimistic update, batching, cache)
+- **Repositorios (repos):** abstracción de operaciones CRUD por entidad, encapsulando el patrón de acceso (optimistic update + retry queue, cache vía persister)
 
 **Qué NO contiene:**
 
@@ -177,7 +177,8 @@ Esto significa que podés **reemplazar una capa externa sin tocar las internas**
 
 - `src/lib/firebase.ts` — `initializeApp`, export de `db` y `auth`
 - `src/lib/orama.ts` — inicialización del índice de búsqueda
-- `src/lib/embeddings.ts` — wrapper sobre el cache de embeddings desde Firestore
+- `src/lib/embeddings.ts` — doble rol: (a) cache de embeddings desde Firestore (`getDocs` + cache module-level) y (b) wrapper `httpsCallable` del callable `embedQuery`
+- **Wrappers de Cloud Functions callable** (`src/lib/apiKeys.ts`, `src/lib/allowlist.ts`, `embeddings.ts`): un sub-tipo de capa 4 donde el "servicio externo" es una CF remota (`httpsCallable`), consumido por un hook de capa 2 igual que cualquier otro servicio
 
 **Regla mental:** si borrás esta capa completa y la reemplazás por otra implementación (ej: mocks para tests, o otro proveedor), el resto del sistema debería compilar con cambios mínimos.
 
@@ -245,6 +246,8 @@ No todo el frontend cabe en el molde "componente → repo → Firestore". En Sec
 **2. Lectura one-shot MVP — [`useNote`](../src/hooks/useNote.ts):** hook de carga inicial de una nota individual que usa `getDoc` directo (no listener reactivo). No existe `notesRepo.getById()` porque TinyBase ya mantiene la colección reactiva; este hook solo se usa en el primer render de la página de nota para garantizar que `content` (que no vive en TinyBase) esté disponible antes de hidratar el editor. Candidato a migrar al repo si aparece un segundo caso de lectura imperativa.
 
 **3. Type imports externos en capa 2:** importar `type User` de `firebase/auth` en componentes (ej. [`NavigationDrawer.tsx`](../src/components/layout/NavigationDrawer.tsx), [`Sidebar.tsx`](../src/components/layout/Sidebar.tsx)) es aceptable. La regla estricta aplica a **capa 1 (`src/types/`)**, que debe quedar libre de tipos de librerías externas; en componentes es pragmático y no propaga el acoplamiento al dominio.
+
+**4. Escritura de secretos vía callable — BYOK ([`useApiKeys`](../src/hooks/useApiKeys.ts) → [`src/lib/apiKeys.ts`](../src/lib/apiKeys.ts)):** la API key del usuario NO se escribe vía un repo — va por un callable (`saveApiKey`/`deleteApiKey`). El motivo es estructural del modelo del proyecto: TinyBase sincroniza todo al cliente, así que un repo bajaría el ciphertext al browser. La key en claro viaja una sola vez por TLS, se cifra server-side y nunca vuelve; el cliente solo lee metadata (`{ configured, last4 }`). Regla general: cuando un dato **no puede** sincronizar al cliente, el write evita el repo y va por una Cloud Function callable (D8 de F48).
 
 Estas excepciones son **excepciones reales, no etiqueta para cualquier violación nueva**. Antes de agregar una nueva, preguntá: "¿esto es genuinamente transversal/MVP como las tres de arriba, o estoy evitando escribir un repo?".
 
@@ -350,17 +353,17 @@ src/
 
 Referencia concreta para ver cómo se traduce la teoría:
 
-| Capa | Clean Arch nombre  | SecondMind ubicación          | Ejemplos                                                                 |
-| ---- | ------------------ | ----------------------------- | ------------------------------------------------------------------------ |
-| 1    | Models             | `src/types/`                  | `note.ts`, `task.ts`, `habit.ts`                                         |
-| 1    | State              | `src/stores/`                 | `notesStore.ts`, `tasksStore.ts` (TinyBase)                              |
-| 2    | Use cases (UI)     | `src/components/`             | `TaskCard.tsx`, `NoteEditor.tsx`                                         |
-| 2    | Use cases (lógica) | `src/hooks/`                  | `useTasks.ts`, `useHybridSearch.ts`                                      |
-| 2    | Routing            | `src/app/`                    | `layout.tsx`, `notes/page.tsx`                                           |
-| 3    | Adapters/Repos     | `src/infra/repos/`            | `baseRepo.ts` (factory), `tasksRepo.ts`                                  |
-| 3    | Interceptors       | _(implícito en Firebase SDK)_ | Auth tokens automáticos                                                  |
-| 4    | Services           | `src/lib/`                    | `firebase.ts`, `orama.ts`, `embeddings.ts`                               |
-| 4    | State bridge       | `src/lib/tinybase.ts`         | Custom persister TinyBase ↔ Firestore; helpers `stringifyIds`/`parseIds` |
+| Capa | Clean Arch nombre  | SecondMind ubicación          | Ejemplos                                                                                    |
+| ---- | ------------------ | ----------------------------- | ------------------------------------------------------------------------------------------- |
+| 1    | Models             | `src/types/`                  | `note.ts`, `task.ts`, `habit.ts`                                                            |
+| 1    | State              | `src/stores/`                 | `notesStore.ts`, `tasksStore.ts` (TinyBase)                                                 |
+| 2    | Use cases (UI)     | `src/components/`             | `TaskCard.tsx`, `NoteEditor.tsx`                                                            |
+| 2    | Use cases (lógica) | `src/hooks/`                  | `useTasks.ts`, `useHybridSearch.ts`                                                         |
+| 2    | Routing            | `src/app/`                    | `layout.tsx`, `notes/page.tsx`                                                              |
+| 3    | Adapters/Repos     | `src/infra/repos/`            | `baseRepo.ts` (factory), `tasksRepo.ts`                                                     |
+| 3    | Interceptors       | _(implícito en Firebase SDK)_ | Auth tokens automáticos                                                                     |
+| 4    | Services           | `src/lib/`                    | `firebase.ts`, `orama.ts`; wrappers callable: `apiKeys.ts`, `allowlist.ts`, `embeddings.ts` |
+| 4    | State bridge       | `src/lib/tinybase.ts`         | Custom persister TinyBase ↔ Firestore; helpers `stringifyIds`/`parseIds`                    |
 
 **Detalles únicos de SecondMind:**
 
