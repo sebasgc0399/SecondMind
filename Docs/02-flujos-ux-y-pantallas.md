@@ -56,25 +56,27 @@ Overlays globales (accesibles desde cualquier pantalla):
 │                          │
 │                          │
 ├──────────────────────────┤
-│  ◇ Dash │ ◇ Not │ ◇ Tar │ ◇ Inb │ ◇ Más │
+│  ◇ Dash │ ◇ Notas │ ◇ Tareas │ ◇ Inbox │
 └──────────────────────────┘
 
   FAB "+" flotante → Quick Capture
-  "Más" → Drawer con: Proyectos, Objetivos,
-          Hábitos, Graph, Config
+  Secciones secundarias (Proyectos, Objetivos, Hábitos,
+  Grafo, Settings) → NavigationDrawer (hamburger), fuera de la bottom nav (F43)
 ```
 
 ### Navegación por plataforma
 
-| Plataforma          | Patrón                              | Detalles                                   |
-| ------------------- | ----------------------------------- | ------------------------------------------ |
-| Desktop (>1024px)   | Sidebar fija (240px) + content area | Sidebar colapsable a iconos (64px) con ⌘+B |
-| Tablet (768-1024px) | Sidebar colapsada por defecto       | Se expande con hamburger o swipe derecho   |
-| Mobile (<768px)     | Bottom nav (5 items) + FAB          | Drawer para secciones secundarias          |
+| Plataforma          | Patrón                              | Detalles                                                              |
+| ------------------- | ----------------------------------- | --------------------------------------------------------------------- |
+| Desktop (≥1024px)   | Sidebar fija (240px) + content area | Colapsable a iconos (64px) con ⌘/Ctrl+B; ocultable a TopBar (F31/F32) |
+| Tablet (768-1023px) | Sidebar colapsada a iconos (64px)   | Inline, sin overlay                                                   |
+| Mobile (≤767px)     | Bottom nav (4 items) + FAB          | NavigationDrawer para secciones secundarias                           |
 
 ---
 
 ## 2. Pantallas
+
+> **Nota sobre los marcadores `Fase:`** — son históricos: indican en qué fase nació cada pantalla, no un estado pendiente. Todo lo listado (fases 0-5.2 + features F1-F50) está implementado y en prod. Etiquetas como `[Fase 1.1]` o `[MVP]` quedaron del diseño original.
 
 ---
 
@@ -124,26 +126,26 @@ Overlays globales (accesibles desde cualquier pantalla):
 
 #### Elementos
 
-| Elemento          | Tipo              | Comportamiento                                         |
-| ----------------- | ----------------- | ------------------------------------------------------ |
-| Saludo            | H1 dinámico       | "Buenos días/tardes/noches" + nombre                   |
-| Tareas de hoy     | Card con lista    | Top 5 tareas con fecha = hoy. Click → editor tarea     |
-| Inbox badge       | Card con contador | Últimos 3 items. Click → Inbox completo                |
-| Proyectos activos | Card con lista    | Proyectos status = In Progress. Click → detalle        |
-| Daily Digest      | Card con notas    | 2-3 notas resurfaceadas por FSRS [Fase 1.1]            |
-| Hábitos de hoy    | Card inline       | Checkboxes directamente clickeables. Barra de progreso |
-| Botón captura     | Icon button       | Abre Quick Capture modal                               |
-| Command palette   | Icon button       | Abre ⌘K                                                |
+| Elemento          | Tipo              | Comportamiento                                          |
+| ----------------- | ----------------- | ------------------------------------------------------- |
+| Saludo            | H1 dinámico       | "Buenos días/tardes/noches" + nombre                    |
+| Tareas de hoy     | Card con lista    | Top 5 tareas con fecha = hoy. Click → editor tarea      |
+| Inbox badge       | Card con contador | Últimos 3 items. Click → Inbox completo                 |
+| Proyectos activos | Card con lista    | Proyectos status = In Progress. Click → detalle         |
+| Daily Digest      | Card con notas    | 2-3 notas resurfaceadas por FSRS (Fase 4, implementado) |
+| Hábitos de hoy    | Card inline       | Checkboxes directamente clickeables. Barra de progreso  |
+| Botón captura     | Icon button       | Abre Quick Capture modal                                |
+| Command palette   | Icon button       | Abre ⌘K                                                 |
 
 #### Estados
 
-| Estado             | Qué se muestra                                                                                                  |
-| ------------------ | --------------------------------------------------------------------------------------------------------------- |
-| Vacío (primer uso) | Onboarding: "Bienvenido a SecondMind" + 3 pasos: captura tu primera nota, crea un proyecto, configura tus áreas |
-| Cargando           | Skeleton en cada card (mantener layout)                                                                         |
-| Con datos          | Layout completo como wireframe                                                                                  |
-| Error              | Toast: "Error cargando datos" + retry. Datos cacheados si hay                                                   |
-| Offline            | Datos del último sync + badge "Offline" en header                                                               |
+| Estado             | Qué se muestra                                                                                                                                                                                                                                                                     |
+| ------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Vacío (primer uso) | Onboarding (F49): `WelcomeModal` de 1 paso (auto-open one-shot a cuenta vacía) + `OnboardingChecklist` de 4 hitos reactivos en el dashboard — ① API key Anthropic (BYOK), ② primera nota, ③ inbox procesado por IA, ④ primera tarea — con barra de progreso y descarte persistente |
+| Cargando           | Skeleton en cada card (mantener layout)                                                                                                                                                                                                                                            |
+| Con datos          | Layout completo como wireframe                                                                                                                                                                                                                                                     |
+| Error              | Toast: "Error cargando datos" + retry. Datos cacheados si hay                                                                                                                                                                                                                      |
+| Offline            | Datos del último sync + badge "Offline" en header                                                                                                                                                                                                                                  |
 
 #### Interacciones
 
@@ -222,7 +224,9 @@ El modal NO tiene selector de tipo (nota/tarea/proyecto), NO tiene tags, NO tien
 **Ruta:** `/inbox`
 **Acceso:** Sidebar → Inbox / Dashboard → badge Inbox
 **Propósito:** Ver y procesar capturas sin clasificar
-**Fase:** MVP (lista simple) → Fase 3 (con sugerencias AI)
+**Fase:** MVP (lista simple) → Fase 3 (sugerencias AI) → F26 (buckets de confianza)
+
+> **Inbox híbrido (F26).** Coexisten dos modos: (a) **vista de buckets de confianza** en `/inbox` — "Alta confianza" (≥0.85) con aceptar en lote ("Aceptar N items") y "Revisar" para los de menor confianza, con Aceptar/Editar/Nota/Descartar por tarjeta; (b) **modo "Procesar"** = wizard secuencial (§2.4). El usuario elige: lote para alta confianza, wizard para revisión detallada. Sin API key BYOK configurada, los items muestran un empty state que invita a configurarla (F48).
 
 #### Layout
 
@@ -504,17 +508,18 @@ El modal NO tiene selector de tipo (nota/tarea/proyecto), NO tiene tags, NO tien
 
 #### Elementos
 
-| Elemento             | Tipo               | Comportamiento                                                    |
-| -------------------- | ------------------ | ----------------------------------------------------------------- |
-| Breadcrumb "← Notas" | Link               | Vuelve a lista de notas                                           |
-| Favorito ⭐          | Toggle icon        | Marca/desmarca favorito                                           |
-| PARA select          | Dropdown           | project / area / resource / archive                               |
-| Menú "⋮ Más"         | Dropdown menu      | Archivar, Eliminar, Exportar MD, Ver historial                    |
-| Editor TipTap        | Rich text editor   | Título es la primera línea (H1 auto). Body con Markdown shortcuts |
-| `@mención`           | Custom node TipTap | Al escribir `@` aparece autocompletado de notas existentes        |
-| `#tag`               | Custom mark TipTap | Al escribir `#` aparece autocompletado de tags existentes         |
-| Sidebar - Backlinks  | Lista de links     | Notas que apuntan a esta nota. Click → navega a esa nota          |
-| Sidebar - Info       | Metadata panel     | Tipo, área, tags, fechas, conteo de links, nivel de destilación   |
+| Elemento             | Tipo               | Comportamiento                                                     |
+| -------------------- | ------------------ | ------------------------------------------------------------------ |
+| Breadcrumb "← Notas" | Link               | Vuelve a lista de notas                                            |
+| Favorito ⭐          | Toggle icon        | Marca/desmarca favorito                                            |
+| PARA select          | Dropdown           | project / area / resource / archive                                |
+| Menú "⋮ Más"         | Dropdown menu      | Archivar, Eliminar, Exportar MD, Ver historial                     |
+| Editor TipTap        | Rich text editor   | Título es la primera línea (H1 auto). Body con Markdown shortcuts  |
+| `@mención`           | Custom node TipTap | Al escribir `@` aparece autocompletado de notas existentes         |
+| `#tag`               | Custom mark TipTap | Al escribir `#` aparece autocompletado de tags existentes          |
+| Sidebar - Backlinks  | Lista de links     | Notas que apuntan a esta nota. Click → navega a esa nota           |
+| Sidebar - Info       | Metadata panel     | Tipo, área, tags, fechas, conteo de links, nivel de destilación    |
+| Sidebar - Similares  | Panel (Fase 4)     | `SimilarNotesPanel`: top notas por cosine similarity de embeddings |
 
 #### Estados
 
@@ -557,14 +562,20 @@ Escribo: La captura debe ser @rá
 ↑↓ navegar, Enter seleccionar, Escape cerrar
 ```
 
+#### Split-pane multinota (F46, desktop ≥1024)
+
+Dos notas lado a lado en `/notes/:noteId` vía query `?split=noteId` (bookmarkeable, refresh-safe). Atajo `Cmd/Ctrl+\` togglea el panel derecho; el picker reusa la búsqueda Orama. El ratio persiste en `preferences.splitPaneLayout`. Durante el split, los paneles laterales (Backlinks/Similares) se auto-colapsan.
+
+> **Nota:** el empty state de "IA sin key" (BYOK no configurado) vive en `/inbox`, **no** en el editor — el auto-tagging es invisible por diseño (F48.F7).
+
 ---
 
 ### 2.7 Graph View
 
 **Ruta:** `/notes/graph`
-**Acceso:** Lista de notas → "Ver como grafo" / Sidebar → (sub-opción de Notas)
+**Acceso:** Lista de notas → "Ver como grafo" / Sidebar → "Grafo" (sección Conocimiento)
 **Propósito:** Visualizar el knowledge graph — descubrir conexiones y clusters
-**Fase:** MVP (básico con Reagraph) → Fase 4 (Sigma.js con filtros)
+**Fase:** Fase 4 — implementado con **Reagraph** (WebGL). Sigma.js + Graphology es roadmap v2 (no implementado).
 
 #### Layout
 
@@ -606,14 +617,14 @@ Filtros (panel expandible):
 
 #### Elementos
 
-| Elemento         | Tipo                | Comportamiento                                                           |
-| ---------------- | ------------------- | ------------------------------------------------------------------------ |
-| Canvas del grafo | Reagraph / Sigma.js | Nodos = notas, Edges = links. Force-directed layout                      |
-| Nodos            | Círculos            | Tamaño proporcional a linkCount. Color por área. Label = título truncado |
-| Edges            | Líneas              | Grosor por strength (si AI). Color sutil                                 |
-| Panel de nodo    | Card flotante       | Aparece al click en nodo: título, tipo, link count, botón abrir          |
-| Filtros          | Panel desplegable   | Filtrar nodos por área, tipo, rango de links, fecha                      |
-| Fullscreen       | Toggle              | Expande grafo a pantalla completa                                        |
+| Elemento         | Tipo              | Comportamiento                                                                      |
+| ---------------- | ----------------- | ----------------------------------------------------------------------------------- |
+| Canvas del grafo | Reagraph (WebGL)  | Nodos = notas, Edges = links. Force-directed layout (graphology-layout-forceatlas2) |
+| Nodos            | Círculos          | Tamaño proporcional a linkCount. Color por área. Label = título truncado            |
+| Edges            | Líneas            | Grosor por strength (si AI). Color sutil                                            |
+| Panel de nodo    | Card flotante     | Aparece al click en nodo: título, tipo, link count, botón abrir                     |
+| Filtros          | Panel desplegable | Filtrar nodos por área, tipo, rango de links, fecha                                 |
+| Fullscreen       | Toggle            | Expande grafo a pantalla completa                                                   |
 
 #### Estados
 
@@ -969,19 +980,59 @@ Filtros (panel expandible):
 
 **Ruta:** `/settings`
 **Acceso:** Sidebar → Settings (ícono gear) / Command palette → "Settings"
-**Propósito:** Configuración de cuenta, áreas, tags y preferencias
-**Fase:** MVP (básico) → iteraciones
+**Propósito:** Apariencia, visibilidad del menú, papelera, API keys de IA (BYOK), info de la app
+**Fase:** MVP → F48 (Proveedores de IA)
 
 #### Secciones
 
-| Sección    | Contenido                                                         |
-| ---------- | ----------------------------------------------------------------- |
-| Cuenta     | Nombre, email, avatar, sign out                                   |
-| Áreas      | CRUD de áreas de responsabilidad                                  |
-| Tags       | Gestión de tags/temas                                             |
-| Hábitos    | Agregar/editar/reordenar hábitos                                  |
-| Apariencia | Tema claro/oscuro, sidebar compacta                               |
-| Datos      | Exportar todo como JSON/MD, importar, danger zone (borrar cuenta) |
+| Sección                  | Contenido                                                                            |
+| ------------------------ | ------------------------------------------------------------------------------------ |
+| Apariencia               | Modo de color: Claro / Automático / Oscuro (`ThemeSelector`)                         |
+| Visibilidad del menú     | Mostrar/ocultar sidebar — solo desktop ≥1024 (`SidebarVisibilitySelector`)           |
+| Papelera de notas        | Días en papelera antes del hard-delete (ancla `#trash`, `TrashAutoPurgeSelector`)    |
+| Proveedores de IA (BYOK) | API key Anthropic propia — habilita inbox AI + auto-tagging (ancla `#api-keys`, F48) |
+| Info de la app           | Versión y plataforma (`AppInfoSection`)                                              |
+
+> Las secciones del diseño original (Cuenta, Áreas, Tags, Hábitos, Datos/export) no se implementaron como tales; áreas/tags/hábitos se gestionan en sus propias vistas.
+
+---
+
+### 2.15 Login
+
+**Ruta:** `/login` (top-level, fuera del Layout)
+**Acceso:** Redirect automático cuando no hay sesión
+**Propósito:** Autenticación + gate de acceso a la beta cerrada
+**Fase:** F47 (rediseño Linear-style) + F50 (allowlist)
+
+Hero centrado (logo `favicon.svg` + "SecondMind" + tagline "Tu segundo cerebro digital", radial glow indigo) sobre `LoginCard` con `@base-ui/react/tabs` balanceadas 50/50:
+
+- **Iniciar sesión / Crear cuenta** (tabs): email + password con validación client-side; errores mapeados a español (`authErrors.ts`). El sign-up dispara `sendEmailVerification`.
+- **Google** (`GoogleSignInButton`): branching por plataforma (Capacitor → Tauri → `signInWithPopup`).
+- **Reset password**: switch inline `mode: 'tabs' | 'reset'`.
+- **Gate de beta (allowlist, F50):** email/password hace pre-check `checkAllowlist` (no crea cuenta si no está invitado); Google chequea POST-auth y hace `signOut` si el email no está en la allowlist.
+- **Capacity gate (F47):** `SignupCapacityGate` lee `config/app` y muestra "Beta llena" / sign-ups cerrados según `userCount`/`maxUsers`.
+
+---
+
+### 2.16 Verificación de email
+
+**Ruta:** `/verify-email` (top-level) + banner global persistente
+**Acceso:** Redirect de usuarios email/password no verificados; banner en el Layout
+**Propósito:** Forzar verificación de email (las rules exigen `email_verified` server-side)
+**Fase:** F47
+
+`EmailVerificationBanner` debajo del `UpdateBanner` cuando `user && !user.emailVerified`: reenviar (cooldown 60s en sessionStorage) + dismiss. Refresca el estado con `focus`/`visibilitychange` → `refreshUser()`. Gotcha: `user.reload()` NO refresca el ID token → tras verificar hay que re-login para que las rules dejen de ver `email_verified=false`.
+
+---
+
+### 2.17 Captura desktop (ventana Tauri)
+
+**Ruta:** `/capture` (top-level, ventana frameless de Tauri)
+**Acceso:** Atajo global `Ctrl+Shift+Space` — abre la ventana centrada en el monitor del cursor
+**Propósito:** Capturar una idea sin abrir la app completa
+**Fase:** Fase 5.1 / F7
+
+Textarea minimal con header "Captura rápida": Enter guarda (`inboxRepo.createFromCapture` con source `desktop-capture` → repo factory, optimistic + retry vía `saveInboxQueue`), check ✓ y la ventana se cierra a los 600ms; Esc cierra. Surface distinta del modal web Quick Capture (§2.2): ventana efímera que no hidrata TinyBase, pero igual escribe a través de la capa de repos (no `setDoc` crudo).
 
 ---
 
@@ -998,9 +1049,10 @@ Filtros (panel expandible):
 ```
 Cualquier pantalla
     │
-    ├── ⌘+Shift+N (desktop)
+    ├── Alt+N (desktop / web)
+    ├── Ctrl+Shift+Space (ventana de captura Tauri desktop)
     ├── FAB "+" (mobile)
-    └── Botón "+" en header
+    └── Botón "+" en header (con sidebar oculta / TopBar)
          │
          ▼
     Quick Capture modal
@@ -1040,34 +1092,21 @@ Cualquier pantalla
 **Resultado:** Items convertidos en notas/tareas/proyectos clasificados
 
 ```
-Dashboard (badge "Inbox 5")
+Inbox (/inbox) — items procesados por IA (badge en sidebar/dashboard)
+    │
+    │  El usuario elige el modo (F26 — ambos coexisten):
+    │
+    ├── BUCKETS (fast path) — en /inbox
+    │     "Alta confianza" (≥0.85) → [Aceptar N items] en lote
+    │     "Revisar" (menor confianza) → por tarjeta: Aceptar / Editar / Nota / Descartar
+    │
+    └── WIZARD (detailed) — /inbox/process
+          "Procesando Inbox · X de N", campos editables pre-llenados por IA
+          → "Crear y siguiente" / "Descartar" por item
     │
     ▼
-Click "Procesar →"
-    │
-    ▼
-Inbox Processor (/inbox/process)
-    │
-    ▼
-Ver item 1 de 5
-  ┌─────────────────────────────────────┐
-  │ Contenido original + sugerencia AI  │
-  │ Campos editables pre-llenados       │
-  └─────────────────────────────────────┘
-    │
-    ├── "✓ Crear" → Crea nota/tarea → siguiente item
-    ├── Editar campos → modificar → "✓ Crear"
-    └── "Descartar" → elimina → siguiente item
-    │
-    ▼
-(repite para cada item)
-    │
-    ▼
-"¡Inbox limpio! 🎉"
-Resumen: 3 notas, 1 tarea, 1 descartado
-    │
-    ▼
-"Volver al Dashboard"
+Items convertidos en notas / tareas / proyectos
+(sin API key BYOK configurada → empty state que invita a configurarla, F48)
 ```
 
 ---
@@ -1120,7 +1159,7 @@ Auto-save (cada 2s de inactividad)
     └────┬─────┘
          │
     ┌────┴─────────┐
-    │ SYNC LINKS   │ syncLinks() actualiza links/ y
+    │ SYNC LINKS   │ syncLinksFromEditor() actualiza links/ y
     └────┬─────────┘  incomingLinkIds (client-side)
          │
          ▼
@@ -1146,7 +1185,7 @@ Dashboard
     │
     ├── 2. ¿Inbox tiene items? → Procesar (Flujo 2)
     │
-    ├── 3. Daily Digest [Fase 1.1]
+    ├── 3. Daily Digest (Fase 4)
     │      Ver 2-3 notas resurfaceadas
     │      Click → revisar → refinar (Progressive Summarization)
     │
@@ -1204,6 +1243,55 @@ Graph View
 
 ---
 
+### Flujo 6: Configurar IA propia (BYOK)
+
+```
+Settings → "Proveedores de IA" → pegar API key de Anthropic
+    │
+    ▼
+Valida contra Anthropic → cifra (AES-256-GCM) → guarda en userSecrets/
+    │
+    ▼
+Inbox AI + auto-tagging habilitados. Sin key → IA de generación deshabilitada
+con empty states (D2, sin fallback al secret del proyecto). Detalle en Docs/01 § Flujo 5.
+```
+
+---
+
+### Flujo 7: Acceso a la beta (allowlist gate)
+
+```
+Login (email/pw)               Login (Google)
+    │                             │
+ pre-check checkAllowlist       auth → obtiene email → check
+    │                             │
+ no invitado → no crea cuenta   no invitado → signOut (cuenta inerte)
+    └──────────────┬──────────────┘
+                   ▼
+   invitado → las rules confirman exists(allowlist/{token.email}) en cada read/write
+   (defensa en profundidad: UI + callable + rules)
+```
+
+---
+
+### Flujo 8: Onboarding (usuario nuevo)
+
+```
+Primer login → cuenta vacía
+    │
+    ▼
+WelcomeModal (1 paso, auto-open one-shot) → "Empezar"
+    │
+    ▼
+OnboardingChecklist en el dashboard — 4 hitos reactivos:
+  ① API key BYOK → ② primera nota → ③ inbox procesado por IA → ④ primera tarea
+    │
+    ▼
+4/4 → estado de logro + "Cerrar" manual (sin auto-ocultar)
+```
+
+---
+
 ## 4. Componentes globales
 
 ---
@@ -1255,11 +1343,12 @@ Colapsada (64px):
 
 **Comportamiento:**
 
-- Desktop: fija, 240px. ⌘+B para toggle collapse (64px iconos)
-- Tablet: colapsada por defecto. Hamburger o swipe para expandir
-- Mobile: no visible (reemplazada por bottom nav)
-- Item activo: highlighted con fondo sutil + indicador izquierdo
-- Inbox badge: número rojo si hay items pendientes
+- **Nav agrupado en 2 secciones (F34):** Ejecución (Dashboard, Inbox, Tareas, Proyectos, Objetivos, Hábitos) y Conocimiento (Notas, Grafo). Arriba, un trigger "Buscar" abre el Command Palette.
+- Desktop: fija, 240px. ⌘/Ctrl+B para toggle collapse (64px iconos).
+- **Hidden Sidebar Mode (F31/F32/F35):** en desktop el sidebar puede ocultarse y swappear a un `<TopBar />` alterno (logo + Buscar + captura) con animación. Preferencia `sidebarHidden`.
+- Tablet: colapsada a iconos (64px), inline sin overlay.
+- Mobile: no visible (reemplazada por bottom nav + NavigationDrawer).
+- Item activo: highlighted con fondo sutil + indicador izquierdo. Inbox badge: número si hay items pendientes.
 
 ---
 
@@ -1269,13 +1358,13 @@ Colapsada (64px):
 
 ```
 ┌──────────────────────────────────────┐
-│  ◇       ◇       ◇       ◇      ◇  │
-│ Dash    Notas   Tareas  Inbox   Más  │
+│   ◇        ◇         ◇        ◇      │
+│  Dash     Notas    Tareas    Inbox   │
 └──────────────────────────────────────┘
 ```
 
-- 5 items máximo (regla de UX mobile)
-- "Más" abre drawer con: Proyectos, Objetivos, Hábitos, Graph, Settings
+- 4 items (F43 — se eliminó el slot "Más" + MoreDrawer)
+- Secciones secundarias (Proyectos, Objetivos, Hábitos, Grafo, Settings) → NavigationDrawer (hamburger del header mobile)
 - Item activo: icono filled + color primario + label visible
 - Inbox: badge numérico
 
@@ -1315,32 +1404,46 @@ Cada sección tiene su propio copy. Nunca mostrar una lista vacía sin contexto.
 
 ---
 
+### 4.5 Chrome global persistente
+
+Banners y controles montados en el Layout, transversales a todas las pantallas autenticadas:
+
+- **UpdateBanner (F36):** ofrece recargar cuando hay una versión nueva (PWA `registerType: 'prompt'`).
+- **EmailVerificationBanner (F47):** cuando `user && !user.emailVerified` (ver §2.16).
+- **Capacity gate "Beta llena" (F47):** en la LoginPage, según `config/app`.
+- **PendingSyncIndicator / chip offline (F42):** estado de la retry queue (pendientes/errores) en el header mobile y el sidebar/TopBar.
+
+---
+
 ## 5. Shortcuts y atajos
 
-| Shortcut | Acción                   | Contexto       |
-| -------- | ------------------------ | -------------- |
-| ⌘K       | Command Palette          | Global         |
-| Alt+N    | Quick Capture            | Global         |
-| ⌘+B      | Toggle sidebar           | Global         |
-| ⌘+S      | Forzar guardado          | Editor de nota |
-| ⌘+Enter  | Guardar y cerrar         | Modales        |
-| Escape   | Cerrar modal/palette     | Modales        |
-| `@`      | Autocompletado wikilinks | Editor de nota |
-| `/`      | Slash commands           | Editor de nota |
-| `#`      | Autocompletado tags      | Editor de nota |
+| Shortcut         | Acción                                   | Contexto                 |
+| ---------------- | ---------------------------------------- | ------------------------ |
+| ⌘K               | Command Palette                          | Global                   |
+| Alt+N            | Quick Capture                            | Global                   |
+| ⌘/Ctrl+B         | Toggle sidebar (colapsar/ocultar)        | Global (desktop)         |
+| ⌘/Ctrl+\         | Toggle split-pane multinota              | Editor / Notas (desktop) |
+| Ctrl+Shift+Space | Captura global (abre ventana `/capture`) | Tauri desktop            |
+| ⌘+S              | Forzar guardado                          | Editor de nota           |
+| ⌘+Enter          | Guardar y cerrar                         | Modales                  |
+| Escape           | Cerrar modal/palette                     | Modales                  |
+| `@`              | Autocompletado wikilinks                 | Editor de nota           |
+| `/`              | Slash commands                           | Editor de nota           |
+| `#`              | Autocompletado tags                      | Editor de nota           |
 
 ---
 
 ## 6. Responsive breakpoints
 
-| Breakpoint | Rango      | Cambios principales                                                                 |
-| ---------- | ---------- | ----------------------------------------------------------------------------------- |
-| Mobile     | <768px     | Bottom nav, FAB, stacked layouts, drawer para secciones secundarias, swipe gestures |
-| Tablet     | 768-1024px | Sidebar colapsada, 2 columnas donde aplique, touch-friendly                         |
-| Desktop    | >1024px    | Sidebar fija expandida, layouts completos, hover states, keyboard shortcuts         |
+| Breakpoint | Rango      | Cambios principales                                                                       |
+| ---------- | ---------- | ----------------------------------------------------------------------------------------- |
+| Mobile     | ≤767px     | Bottom nav (4), FAB, stacked layouts, NavigationDrawer, swipe gestures                    |
+| Tablet     | 768-1023px | Sidebar colapsada a iconos, 2 columnas donde aplique, touch-friendly                      |
+| Desktop    | ≥1024px    | Sidebar fija (o TopBar si oculta), split-pane multinota, hover states, keyboard shortcuts |
 
 ### Reglas responsive globales
 
+- **Viewports de referencia para QA:** 375 (mobile) / 768 (tablet) / 1280 (desktop). El breakpoint desktop (≥1024) activa hidden sidebar y split-pane.
 - Sidebar de backlinks en editor: visible en desktop, toggle/drawer en tablet, bottom sheet en mobile
 - Graph view: mismo canvas, controles adaptados (pinch zoom mobile vs scroll desktop)
 - Kanban de proyectos: scroll horizontal en mobile, columnas completas en desktop
