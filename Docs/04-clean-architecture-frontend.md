@@ -239,7 +239,7 @@ Patrón válido cuando: (1) la orquestación es intrínseca al caso de uso (inbo
 
 ## Excepciones reconocidas
 
-No todo el frontend cabe en el molde "componente → repo → Firestore". En SecondMind hay tres excepciones documentadas que **respetan el espíritu de la regla sin seguir la letra**:
+No todo el frontend cabe en el molde "componente → repo → Firestore". En SecondMind hay cinco excepciones documentadas que **respetan el espíritu de la regla sin seguir la letra**:
 
 **1. Auth global — [`useAuth`](../src/hooks/useAuth.ts):** importa `firebase/auth` directo y orquesta `signInWithPopup`, `signInWithTauri`, `signInWithCapacitor` según la plataforma. No es CRUD de una entidad de dominio — es un concern transversal (multi-plataforma web/desktop/mobile) que no encaja en el patrón de repos por entidad. Si mañana se agregan otros providers (Apple Sign-In, magic links), la lógica sigue acá, no en un repo.
 
@@ -249,7 +249,9 @@ No todo el frontend cabe en el molde "componente → repo → Firestore". En Sec
 
 **4. Escritura de secretos vía callable — BYOK ([`useApiKeys`](../src/hooks/useApiKeys.ts) → [`src/lib/apiKeys.ts`](../src/lib/apiKeys.ts)):** la API key del usuario NO se escribe vía un repo — va por un callable (`saveApiKey`/`deleteApiKey`). El motivo es estructural del modelo del proyecto: TinyBase sincroniza todo al cliente, así que un repo bajaría el ciphertext al browser. La key en claro viaja una sola vez por TLS, se cifra server-side y nunca vuelve; el cliente solo lee metadata (`{ configured, last4 }`). Regla general: cuando un dato **no puede** sincronizar al cliente, el write evita el repo y va por una Cloud Function callable (D8 de F48).
 
-Estas excepciones son **excepciones reales, no etiqueta para cualquier violación nueva**. Antes de agregar una nueva, preguntá: "¿esto es genuinamente transversal/MVP como las tres de arriba, o estoy evitando escribir un repo?".
+**5. Lectura pre-auth sin TinyBase — [`useSignupCapacity`](../src/hooks/useSignupCapacity.ts):** corre en `LoginPage` ANTES de autenticar, cuando TinyBase no está inicializado (sus persisters dependen del UID). Lee `config/app` con `getDoc` directo del SDK web + cache 60s en `sessionStorage`; `firestore.rules` permite read público de `config/{configId}`. Mismo espíritu que #2 (lectura one-shot) pero en contexto unauth. A diferencia de useNote/useAuth —exentas por glob en el config— usa `// eslint-disable-next-line no-restricted-imports` inline sobre el único import de `firebase/firestore` del archivo: el disable granular documenta la excepción en el call-site. Gotcha canónico: `Spec/gotchas/tinybase-firestore.md` § "Rutas pre-auth".
+
+Estas excepciones son **excepciones reales, no etiqueta para cualquier violación nueva**. Antes de agregar una nueva, preguntá: "¿esto es genuinamente transversal/MVP como las de arriba, o estoy evitando escribir un repo?".
 
 ---
 
@@ -424,7 +426,9 @@ src/
 
 **Reglas a setear desde el principio:**
 
-1. **ESLint rule "no-restricted-imports"** que prohíba importar desde capa 4 en componentes. Ejemplo: bloquear `firebase/firestore` desde `src/components/**` y `src/hooks/**`. **✅ Implementada en F38.4** ([eslint.config.js](../eslint.config.js)) — bloquea `firebase/firestore` y `firebase/auth` con `allowTypeImports: true`; excepciones por glob `**/useNote.ts` y `**/useAuth.ts`.
+1. **Dos guard-rails ESLint de capas** ([eslint.config.js](../eslint.config.js)) que impiden que la capa 2 toque la capa 4 directo:
+   - **`no-restricted-imports` (✅ F38.4)** — bloquea `import` de `firebase/firestore` y `firebase/auth` (con `allowTypeImports: true`) en `src/components/**` y `src/hooks/**`. Excepciones por glob **de basename** (`**/useNote.ts`, `**/useAuth.ts` — matchean el archivo en cualquier carpeta, no por path completo), más `useSignupCapacity` con `eslint-disable` inline (excepción #5). El routing (`src/app/`, también capa 2) NO está en los `files` del bloque hoy: gap latente sin violaciones actuales (ninguna ruta importa Firestore directo); si alguna llega a hacerlo, extender el glob del bloque a esa carpeta.
+   - **`no-restricted-syntax` (✅ cierre Clean Arch)** — bloquea mutaciones directas de un store TinyBase (`setRow`/`setPartialRow`/`setCell`/`delRow`) en `src/hooks/**`; todo write debe pasar por un repo. Cierra el punto ciego que el guard de imports no veía: mutar un store **ya importado** de `stores/`, no un `import` nuevo (caso que dejó pasar useResurfacing). Scope hooks-only a propósito (QuickCaptureProvider en `components/` usa `setRow` directo por diseño, F42.1 D2); `delTable` fuera de la lista (cleanup F11 de useStoreInit); tests exentos.
 2. **Convenciones de naming:** `use[Entidad][Acción]` para hooks, `[entidad]Repo` para repos (singular, const con **named export**: `export const tasksRepo = { createTask, updateTask, ... }` — nunca clases ni default exports), `[Entidad]` para modelos.
 3. **Serialización de arrays:** si tu store (TinyBase, o similar) solo acepta primitivos, estandarizá helpers `stringifyIds`/`parseIds` desde el día 1. Los repos serializan al escribir, los hooks deserializan al leer con `useMemo`. Crítico: `stringifyIds` NO debe ser idempotente — pasar una string ya serializada produce escaped nesting; hacelo explícito en el contrato.
 4. **Tests unitarios del repo layer desde el primer repo** — valida que el patrón optimistic update funciona antes de multiplicarlo.
