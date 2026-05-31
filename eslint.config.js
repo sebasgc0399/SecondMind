@@ -78,4 +78,28 @@ export default defineConfig([
       ],
     },
   },
+  {
+    // Cierre Clean Arch — guard rail capa 2: los hooks de prod NO deben mutar
+    // un store TinyBase directo. Todo write pasa por un repo de src/infra/repos/
+    // (factory createFirestoreRepo) que centraliza el optimistic setRow→setDoc +
+    // queue de retry. Cierra el punto ciego que dejó pasar useResurfacing (A1):
+    // el guard de imports de arriba solo ve `import`, no mutaciones sobre un store
+    // ya importado del módulo stores/. Scope hooks-only (NO components) a propósito:
+    // QuickCaptureProvider en components/ usa setRow directo por diseño (F42.1 D2).
+    // delTable queda fuera de la lista: useStoreInit lo usa para el cleanup F11.
+    // Tests exentos: seedean el store con setRow/delTable en el setup.
+    files: ['src/hooks/**/*.{ts,tsx}'],
+    ignores: ['**/*.test.{ts,tsx}'],
+    rules: {
+      'no-restricted-syntax': [
+        'error',
+        {
+          selector:
+            ":matches(CallExpression[callee.property.name='setRow'], CallExpression[callee.property.name='setPartialRow'], CallExpression[callee.property.name='setCell'], CallExpression[callee.property.name='delRow'])",
+          message:
+            'Capa 2 (hooks) no debe mutar un store TinyBase directo (setRow/setPartialRow/setCell/delRow). Usar un repo en src/infra/repos/ — el factory createFirestoreRepo centraliza el patrón optimistic + queue. Ver Docs/04-clean-architecture-frontend.md § Excepciones reconocidas.',
+        },
+      ],
+    },
+  },
 ]);
