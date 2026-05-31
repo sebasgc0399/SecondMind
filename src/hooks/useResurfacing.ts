@@ -1,6 +1,6 @@
 import { useCallback } from 'react';
 import { useRow } from 'tinybase/ui-react';
-import { notesStore } from '@/stores/notesStore';
+import { notesRepo } from '@/infra/repos/notesRepo';
 import {
   createEmptyCard,
   Rating,
@@ -37,7 +37,7 @@ export default function useResurfacing(noteId: string): UseResurfacingReturn {
       const card = fsrsState ? deserializeCard(fsrsState) : createEmptyCard();
       const { card: newCard, dueTimestamp } = scheduleReview(card, rating);
 
-      notesStore.setPartialRow('notes', noteId, {
+      notesRepo.updateMeta(noteId, {
         fsrsState: serializeCard(newCard),
         fsrsDue: dueTimestamp,
         fsrsLastReview: Date.now(),
@@ -50,7 +50,7 @@ export default function useResurfacing(noteId: string): UseResurfacingReturn {
     const card = createEmptyCard();
     const { card: newCard, dueTimestamp } = scheduleReview(card, Rating.Good);
 
-    notesStore.setPartialRow('notes', noteId, {
+    notesRepo.updateMeta(noteId, {
       fsrsState: serializeCard(newCard),
       fsrsDue: dueTimestamp,
       fsrsLastReview: Date.now(),
