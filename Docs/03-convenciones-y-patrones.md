@@ -596,7 +596,7 @@ generateEmbedding.ts → export const generateEmbedding = onDocumentWritten(...)
 embedQuery.ts        → export const embedQuery = onCall(...)
 ```
 
-Hoy hay **10 CFs** desplegadas en `us-central1` (8 v2 + 2 triggers v1 de Auth), re-exportadas desde `src/functions/src/index.ts`. Las de arriba son las 4 originales; el inventario completo (triggers + timeouts) vive en [`ESTADO-ACTUAL.md`](../Spec/ESTADO-ACTUAL.md) § Cloud Functions — no se duplica acá.
+Hoy hay **11 CFs** desplegadas en `us-central1` (9 v2 + 2 triggers v1 de Auth), re-exportadas desde `src/functions/src/index.ts`. Las de arriba son las 4 originales; el inventario completo (triggers + timeouts) vive en [`ESTADO-ACTUAL.md`](../Spec/ESTADO-ACTUAL.md) § Cloud Functions — no se duplica acá.
 
 ### Patrón de Cloud Function
 
