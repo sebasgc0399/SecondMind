@@ -25,7 +25,7 @@ Los principios de diseño, la teoría detrás (CODE de Tiago Forte, Zettelkasten
 
 La fuente primaria de estado y arquitectura vigente es [`Spec/ESTADO-ACTUAL.md`](Spec/ESTADO-ACTUAL.md). Cada fase tiene su SPEC en [`Spec/`](Spec/); cada feature post-MVP en [`Spec/features/`](Spec/features/).
 
-> **Beta cerrada (v0.5).** La app está LIVE en prod ([secondmind.web.app](https://secondmind.web.app)) pero el acceso está gateado por una **allowlist** enforced en las Firestore rules (F50): hoy opera una única cuenta autorizada. No es registro abierto — toda cuenta fuera de la allowlist recibe `permission-denied`.
+> **Beta cerrada.** La app está LIVE en prod ([secondmind.web.app](https://secondmind.web.app), sobre v0.4.0) pero el acceso está gateado por una **allowlist** enforced en las Firestore rules (F50): hoy opera una única cuenta autorizada. No es registro abierto — toda cuenta fuera de la allowlist recibe `permission-denied`. La apertura real de la beta queda reservada para v0.5.
 
 - **Fase 0 — Setup** ✅ Proyecto compilando, auth con Google, sync TinyBase ↔ Firestore, deploy a Firebase Hosting
 - **Fase 0.1 — Toolkit** ✅ MCPs (Firebase, Context7, Playwright, Brave Search), skills de frontend/UX, hooks de formato automático (Prettier + ESLint en PostToolUse), protección de la rama main
