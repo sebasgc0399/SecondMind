@@ -134,6 +134,7 @@ Cada feature comprimida a 1 línea con pointer al SPEC archivado. Para detalles 
 - [Per-entity hook sobre aggregator: cache `(entityType, id)` preservando ref + `matchesId` para composite keys (post-F42.1)](gotchas/tinybase-firestore.md#per-entity-hook-sobre-aggregator-cache-entitytype-id-preservando-ref--matchesid-para-composite-keys-post-f421)
 - [Rutas pre-auth: TinyBase no inicializado → `getDoc` directo del SDK web (post-F47)](gotchas/tinybase-firestore.md#rutas-pre-auth-tinybase-no-inicializado--getdoc-directo-del-sdk-web-post-f47)
 - [Schema versioning local de cache (post-F36.F8 — v0.2.4+)](gotchas/tinybase-firestore.md#schema-versioning-local-de-cache-post-f36f8-v024)
+- [El `progress` de hábitos se persiste pero es write-only — la UI recomputa](gotchas/tinybase-firestore.md#el-progress-de-hábitos-se-persiste-pero-ningún-componente-lo-lee-write-only)
 
 ### Relaciones entre entidades — [`gotchas/relaciones-entidades.md`](gotchas/relaciones-entidades.md)
 
