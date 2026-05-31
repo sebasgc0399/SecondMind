@@ -95,7 +95,7 @@ Versiones específicas y notas operativas (gotchas mini que justifican la elecci
 - **Notas son ciudadanos de primera clase** — no subcolecciones de proyectos
 - **Links como colección separada** — IDs determinísticos `${sourceId}__${targetId}` para dedup trivial y queries bidireccionales eficientes
 - **PARA como metadata** — no como estructura de carpetas
-- **Títulos de links resueltos in-memory** — `useBacklinks` hace join con `useTable('notes')` en vez de cachear títulos en el doc de link. Cero stale titles, reactivo a cambios
+- **Títulos de links: fresh-first con fallback cacheado** — `useBacklinks` prioriza el título fresco vía join con `useTable('notes')`; `sourceTitle`/`targetTitle` se persisten en el doc de link como respaldo y se usan solo si la nota aún no está hidratada en el store. Reactivo a cambios cuando la nota está cargada
 - **Content de notas fuera de TinyBase** — el campo `content` (TipTap JSON) se lee/escribe directo de Firestore solo cuando se abre el editor. TinyBase solo maneja metadata. El persister usa `merge: true` para no sobrescribir `content` al sincronizar
 - **AI fields flat en TinyBase** — TinyBase no soporta objetos anidados. Los campos de AI (`aiSuggestedTitle`, `aiSuggestedType`, etc.) se almacenan como strings flat en el store y se agrupan en objetos solo en el hook de mapping
 - **Timestamps como `number` (UNIX ms)** — aunque Firestore serializa `Timestamp` nativo al leer/escribir, los types del proyecto (`src/types/*.ts`) usan `number` por consistencia con TinyBase, que solo acepta primitivos (`string | number | boolean`). Los schemas en este documento usan `number` para reflejar la representación TS, no el wire format Firestore
@@ -114,7 +114,12 @@ firestore/
 │   ├── inbox/           → Capturas sin procesar
 │   ├── tags/            → Tags/temas
 │   ├── habits/          → Habit tracker entries
-│   └── embeddings/      → Vectores para búsqueda semántica (Fase 4)
+│   ├── embeddings/      → Vectores para búsqueda semántica (Fase 4)
+│   └── settings/        → Metadata legible per-user (doc `aiKeys`: { configured, last4 } — BYOK, F48)
+│
+├── config/app                           → Capacity gate de la beta (maxUsers, signupsEnabled, userCount). Read público, write solo Admin SDK (F47)
+├── userSecrets/{userId}/keys/{provider} → API keys BYOK cifradas AES-256-GCM. Deny-all client-side, solo Admin SDK (F48)
+└── allowlist/{email}                    → Emails invitados a la beta cerrada. Deny-all client-side; el gate vive en las rules vía exists() (F50)
 ```
 
 ### Esquema: `notes/{noteId}`
@@ -153,6 +158,9 @@ interface Note {
   aiTags?: string[]; // Tags sugeridos por Claude
   aiSummary?: string; // Resumen de una línea generado
   aiProcessed: boolean; // ¿Ya pasó por el pipeline AI?
+  suggestedNoteType?: NoteType; // Promoción Zettelkasten sugerida (fleeting → literature → permanent)
+  noteTypeConfidence?: number; // Confianza 0-1 de la sugerencia de noteType
+  dismissedSuggestions?: string[]; // IDs de sugerencias descartadas por el usuario (no re-ofrecer)
 
   // FSRS — Spaced Repetition (Fase 4, opt-in por nota)
   fsrsState?: string; // Card de ts-fsrs serializado como JSON string
@@ -166,6 +174,7 @@ interface Note {
   viewCount: number; // Engagement tracking
   isFavorite: boolean;
   isArchived: boolean;
+  deletedAt: number | null; // Soft delete / papelera (null = activa; timestamp = en papelera, F18/F19)
 }
 ```
 
@@ -181,6 +190,10 @@ interface NoteLink {
   context?: string; // Texto alrededor de la mención @ en la nota origen
   linkType: 'explicit' | 'ai-suggested'; // ¿Lo creó el usuario o la AI?
 
+  // Títulos cacheados (respaldo — useBacklinks prefiere el título fresco del store)
+  sourceTitle: string;
+  targetTitle: string;
+
   // Metadata
   createdAt: number;
   strength?: number; // AI: similitud semántica (0-1)
@@ -188,7 +201,7 @@ interface NoteLink {
 }
 ```
 
-> **Nota:** `sourceTitle` y `targetTitle` no se cachean en el doc de link. Se resuelven in-memory con join en `useBacklinks` → `useTable('notes')`. Esto elimina el stale-title problem sin round-trip.
+> **Nota:** `sourceTitle`/`targetTitle` **sí** se persisten en el doc de link como respaldo, pero `useBacklinks` prioriza el título **fresco** vía join in-memory con `useTable('notes')` (fresh-first); usa el cacheado solo si la nota aún no está hidratada en el store. Evita el stale-title sin perder un fallback offline.
 
 ### Esquema: `inbox/{itemId}`
 
@@ -211,7 +224,7 @@ interface InboxItem {
     suggestedArea: AreaKey; // Key del map AREAS — enum enforced, nunca null
     summary: string;
     priority: Priority; // enum enforced
-    relatedNoteIds: string[]; // Notas similares encontradas (Fase 4 embeddings)
+    confidence?: number; // Confianza global 0-1 de la clasificación (F26 — buckets de confianza)
   };
 
   // Estado
@@ -262,7 +275,7 @@ interface Task {
 interface Project {
   id: string;
   name: string;
-  status: 'not-started' | 'in-progress' | 'on-hold' | 'completed';
+  status: 'inbox' | 'not-started' | 'in-progress' | 'on-hold' | 'completed';
   priority: 'low' | 'medium' | 'high' | 'urgent';
 
   // Relaciones
@@ -290,12 +303,13 @@ interface Objective {
   id: string;
   name: string;
   status: 'not-started' | 'in-progress' | 'completed';
-  deadline?: number;
+  deadline: number;
 
-  areaId?: string;
+  areaId: string;
   projectIds: string[];
   taskIds: string[];
 
+  isArchived: boolean;
   createdAt: number;
   updatedAt: number;
 }
@@ -316,6 +330,21 @@ interface NoteEmbedding {
 }
 ```
 
+### Modelo de seguridad y control de acceso
+
+El gate de acceso vive en `firestore.rules`, no solo en la UI. La regla del catch-all `users/{userId}/{document=**}` exige **en AND** (nunca OR — las rules son aditivas y un OR abriría de más):
+
+- `request.auth != null` y `request.auth.uid == userId` (owner).
+- `sign_in_provider == 'google.com'` **o** `email_verified == true` — email verificado server-side (C1, audit 2026-05). Google marca `email_verified` automáticamente; para email/password el banner client-side era solo un nudge antes de este enforcement.
+- `exists(allowlist/{request.auth.token.email})` — **beta cerrada**: solo emails sembrados en `allowlist/` operan la app (SPEC-50 F4, A-2). Asume `token.email` lowercase; si falta o viene mixed-case, `exists()` falla → fail-closed.
+
+Colecciones con regla propia (fuera del árbol `users/`):
+
+- `config/app` — **read público** (la LoginPage chequea capacity sin user todavía), write solo Admin SDK (triggers `onUserCreated`/`onUserDeleted`).
+- `userSecrets/{uid}/keys/{provider}` y `allowlist/{email}` — **deny-all client-side**; solo el Admin SDK (Cloud Functions) los toca. Top-level por la aditividad de las rules (un `if false` anidado bajo el catch-all `users/` no bloquearía el read del owner).
+
+La beta cerrada está **LIVE en prod** con un único allowlisted; la apertura real queda reservada para v0.5. El detalle operativo (orden de deploy, seed del backstop antes de `deploy:rules`, wipe del store cifrado, oráculo de enumeración) vive en [`SPEC-feature-50`](../Spec/features/SPEC-feature-50-security-hardening-v0.5.md) y en el índice de gotchas de [`ESTADO-ACTUAL.md`](../Spec/ESTADO-ACTUAL.md). Ver decisiones D24-D26.
+
 ---
 
 ## 4. Arquitectura de componentes (React)
@@ -325,27 +354,32 @@ interface NoteEmbedding {
 ```
 src/
 ├── app/                         # Rutas (React Router con createBrowserRouter)
-│   ├── router.tsx               # Definición de rutas
-│   ├── layout.tsx               # Layout compartido: Sidebar + Outlet + QuickCapture + CommandPalette
-│   ├── page.tsx                 # Dashboard
+│   ├── router.tsx               # Definición de rutas (Layout + 3 rutas top-level fuera del Layout)
+│   ├── layout.tsx               # Layout: Sidebar/TopBar + Outlet + QuickCapture + CommandPalette + banners globales
+│   ├── TauriIntegration.tsx     # Bridge eventos Tauri (tray, global shortcut) ↔ React (Fase 5.1)
+│   ├── page.tsx                 # Dashboard (+ onboarding: WelcomeModal + checklist, F49)
 │   ├── not-found.tsx            # 404
 │   ├── inbox/
-│   │   ├── page.tsx             # Lista de inbox items
+│   │   ├── page.tsx             # Lista de inbox items (buckets de confianza, F26)
 │   │   └── process/
-│   │       └── page.tsx         # Inbox Processor one-by-one (Fase 3)
+│   │       └── page.tsx         # Inbox Processor — wizard secuencial (Fase 3)
 │   ├── notes/
-│   │   ├── page.tsx             # Lista de notas
+│   │   ├── page.tsx             # Lista de notas (+ split-pane ?split=, F46)
 │   │   ├── [noteId]/
 │   │   │   └── page.tsx         # Editor de nota
 │   │   └── graph/
-│   │       └── page.tsx         # Vista de grafo (Fase 4)
+│   │       └── page.tsx         # Vista de grafo (Reagraph WebGL, Fase 4)
 │   ├── tasks/
 │   ├── projects/
 │   │   ├── page.tsx
 │   │   └── [projectId]/
 │   │       └── page.tsx         # Detalle de proyecto
 │   ├── objectives/
-│   └── habits/
+│   ├── habits/
+│   ├── settings/                # Apariencia, visibilidad menú, papelera, Proveedores de IA (BYOK)
+│   ├── login/                   # Top-level (fuera del Layout): sign-in/up + reset + Google + capacity gate (F47)
+│   ├── verify-email/            # Top-level: verificación de email (F47)
+│   └── capture/                 # Top-level: ventana frameless Tauri (Ctrl+Shift+Space, Fase 5.1)
 │
 ├── components/
 │   ├── ui/                      # shadcn/ui components (Base UI)
@@ -404,15 +438,17 @@ src/
 │   └── habitsStore.ts
 │
 ├── infra/                       # Capa 3: adaptadores entre componentes y backend (F10+)
-│   └── repos/                   # Factory createFirestoreRepo + repos por entidad
-│       ├── baseRepo.ts          # Factory genérico con optimistic update
-│       ├── baseRepo.test.ts     # Tests del factory (Vitest)
-│       ├── tasksRepo.ts
-│       ├── notesRepo.ts         # + saveContent (content-split: content solo en Firestore)
-│       ├── projectsRepo.ts
-│       ├── objectivesRepo.ts
-│       ├── habitsRepo.ts
-│       └── inboxRepo.ts         # + orquestación convertToNote/Task/Project
+│   ├── repos/                   # Factory createFirestoreRepo + repos por entidad
+│   │   ├── baseRepo.ts          # Factory genérico: optimistic update + retry queue (F28-30)
+│   │   ├── baseRepo.test.ts     # Tests del factory (Vitest)
+│   │   ├── tasksRepo.ts
+│   │   ├── notesRepo.ts         # + saveContent (content-split: content solo en Firestore)
+│   │   ├── projectsRepo.ts
+│   │   ├── objectivesRepo.ts
+│   │   ├── habitsRepo.ts
+│   │   ├── inboxRepo.ts         # + convertToNote/Task/Project + createFromCapture (F38.3)
+│   │   └── linksRepo.ts         # syncLinks paralelo de links bidireccionales (F38.1)
+│   └── syncLinksFromEditor.ts   # Diff + write de links client-side (F38, ex lib/editor/syncLinks.ts)
 │
 ├── hooks/
 │   ├── useAuth.ts
@@ -454,10 +490,11 @@ src/
 │   ├── tauriAuth.ts             # signInWithTauri: OAuth Desktop flow PKCE (Fase 5.1)
 │   ├── capacitor.ts             # isCapacitor() helper via Capacitor.isNativePlatform() (Fase 5.2)
 │   ├── capacitorAuth.ts         # initCapacitorAuth + signInWithCapacitor: SocialLogin → signInWithCredential (Fase 5.2)
+│   ├── apiKeys.ts               # Cliente BYOK: httpsCallable saveApiKey/deleteApiKey + cache (F48)
+│   ├── allowlist.ts             # Cliente del gate de beta: httpsCallable checkAllowlist (F47/F50)
 │   └── editor/
-│       ├── syncLinks.ts         # Diff + write links bidireccionales client-side
 │       ├── extractLinks.ts      # Parser de menciones @ del contenido
-│       └── serialize.ts         # TipTap JSON ↔ Markdown
+│       └── computeDistillLevel.ts  # Deriva distillLevel 0-3 desde los marks del content
 │
 ├── types/
 │   ├── note.ts
@@ -470,20 +507,34 @@ src/
 │   ├── area.ts
 │   └── common.ts               # TaskStatus, ObjectiveStatus, Priority
 │
-└── functions/                   # Cloud Functions v2 (deploy separado, CommonJS, Node 20)
+└── functions/                   # Cloud Functions v2 (deploy separado, CommonJS, Node 22) — 10 CFs
     ├── src/
     │   ├── index.ts             # Entry point, admin.initializeApp(), re-exports
     │   ├── inbox/
-    │   │   └── processInboxItem.ts   # onDocumentCreated → Claude Haiku tool use (Fase 3 + 3.1)
+    │   │   └── processInboxItem.ts   # onDocumentCreated → Claude Haiku; key BYOK del usuario (Fase 3/3.1, F48)
     │   ├── notes/
-    │   │   └── autoTagNote.ts        # onDocumentWritten → Claude Haiku tool use (Fase 3 + 3.1)
-    │   ├── lib/
-    │   │   └── schemas.ts            # JSON Schemas compartidos para tool use (Fase 3.1)
+    │   │   ├── autoTagNote.ts        # onDocumentWritten → Claude Haiku; key BYOK (Fase 3/3.1, F48)
+    │   │   ├── onNoteDeleted.ts      # onDocumentDeleted → cleanup cascada embeddings + links (F19)
+    │   │   └── autoPurgeTrash.ts     # onSchedule diario → hard-delete de notas en papelera (F19)
     │   ├── embeddings/
     │   │   └── generateEmbedding.ts  # onDocumentWritten → OpenAI text-embedding-3-small (Fase 4)
-    │   └── search/
-    │       └── embedQuery.ts         # CF callable: embed de query para búsqueda híbrida (F3)
-    ├── package.json             # CommonJS, Node 20, firebase-functions ^7.2.5
+    │   ├── search/
+    │   │   └── embedQuery.ts         # onCall: embed de query para búsqueda híbrida (F3)
+    │   ├── settings/
+    │   │   ├── saveApiKey.ts         # onCall: valida + cifra + guarda la key BYOK (F48)
+    │   │   └── deleteApiKey.ts       # onCall: borra la key BYOK (F48)
+    │   ├── auth/
+    │   │   ├── checkAllowlist.ts     # onCall: pre-check de membresía en la allowlist (F50)
+    │   │   └── userCountTriggers.ts  # onUserCreated/onUserDeleted (v1): mantienen config/app.userCount (F47)
+    │   └── lib/
+    │       ├── schemas.ts            # JSON Schemas compartidos para tool use (Fase 3.1)
+    │       ├── crypto.ts             # encrypt/decryptSecret AES-256-GCM (AAD=uid, keyVersion — F48/F50)
+    │       ├── getUserAnthropicKey.ts # Lee + descifra la key BYOK en runtime (F48)
+    │       ├── requireVerified.ts    # Guard: auth + email verificado en callables (F50)
+    │       ├── assertAllowlisted.ts  # Guard: email en allowlist en callables (F50)
+    │       ├── sanitizeError.ts      # Sanitiza errores antes de loggear (F50)
+    │       └── validateProviderKey.ts # Valida la key contra el provider Anthropic (F48)
+    ├── package.json             # CommonJS, Node 22, firebase-functions ^7.2.5
     └── tsconfig.json
 
 # Multi-plataforma (Fase 5)
@@ -507,7 +558,7 @@ extension/                       # Chrome Extension MV3 (Fase 5.0)
 └── manifest.json                # chrome.identity + firestore/lite
 ```
 
-> **Nota:** `syncBacklinks` Cloud Function fue eliminada del diseño. Los links bidireccionales se sincronizan 100% client-side en `syncLinks.ts` (decisión de diseño — ver sección 5, Flujo 2 y sección 10, D8).
+> **Nota:** `syncBacklinks` Cloud Function fue eliminada del diseño. Los links bidireccionales se sincronizan 100% client-side en [`src/infra/syncLinksFromEditor.ts`](../src/infra/syncLinksFromEditor.ts) (movido desde `lib/editor/syncLinks.ts` en F38 — ver sección 5 Flujo 2 y sección 10 D8). El inventario detallado de las 10 CFs (triggers, timeouts, retry) vive en [`ESTADO-ACTUAL.md`](../Spec/ESTADO-ACTUAL.md) § "Cloud Functions" para no duplicar.
 
 ---
 
@@ -573,15 +624,15 @@ Selecciona nota → se crea una mención @
 Al guardar (debounce 2s via useNoteSave → notesRepo.saveContent desde F10):
   1. setPartialRow sync a TinyBase con metadata (sin content — el content vive solo en Firestore)
   2. await updateDoc async a Firestore con content + metadata (merge: true)
-  3. syncLinks() — client-side, NO Cloud Function:
+  3. syncLinksFromEditor() (src/infra/, F38) — client-side, NO Cloud Function:
      a. extractLinks() parsea el TipTap JSON
      b. Diff con links existentes en linksStore (filtrados por sourceId)
      c. Self-links (targetId === sourceId) se filtran
-     d. setDoc para creates, deleteDoc para removes (en paralelo)
+     d. setDoc para creates, deleteDoc para removes (en paralelo, via linksRepo)
      e. Actualiza incomingLinkIds de targets afectados via setPartialRow
-     f. Retorna { outgoingLinkIds, linkCount }
+     f. Persiste sourceTitle/targetTitle como respaldo + retorna { outgoingLinkIds, linkCount }
   4. BacklinksPanel muestra backlinks con títulos frescos
-     (join in-memory useTable('notes'), no cache en doc de link)
+     (join in-memory useTable('notes'); fallback al título cacheado en el doc de link)
     │
     ▼
 Cloud Function autoTagNote se dispara (onDocumentWritten)
@@ -670,6 +721,57 @@ En el editor, el usuario revisa la nota:
   - Persistencia: setPartialRow local-first → persister sync a Firestore
 ```
 
+### Flujo 5: Configurar IA propia (BYOK, F48)
+
+```
+Settings → sección "Proveedores de IA" → pega la API key de Anthropic
+    │
+    ▼
+useApiKeys.saveKey → httpsCallable saveApiKey (la key en claro viaja una sola vez por TLS)
+    │
+    ▼
+Cloud Function saveApiKey (onCall, requireVerified + assertAllowlisted):
+  1. validateProviderKey() — GET /v1/models contra Anthropic (distingue key inválida de error transitorio)
+  2. encryptSecret() AES-256-GCM (AAD = uid, keyVersion) → ciphertext a userSecrets/{uid}/keys/anthropic
+  3. metadata { configured, last4 } a users/{uid}/settings/aiKeys (WriteBatch atómico)
+    │
+    ▼
+Las CFs de generación (processInboxItem, autoTagNote) leen la key en runtime con
+getUserAnthropicKey() y la descifran. Sin key → early-return: IA de generación deshabilitada
+(D2 de F48, sin fallback al secret del proyecto). 401/403 en uso → auto-invalidación.
+```
+
+### Flujo 6: Gate de acceso (beta cerrada por allowlist, F47/F50)
+
+```
+Login email/password                Login Google
+    │                                   │
+    ▼                                   ▼
+pre-check checkAllowlist(email)     signInWithPopup/credential → obtiene el email
+    │                                   │
+    ▼                                   ▼
+no invitado → no crea cuenta        no invitado → signOut inmediato (cuenta queda inerte)
+    │                                   │
+    └─────────────────┬─────────────────┘
+                      ▼
+   invitado: las Firestore rules confirman exists(allowlist/{token.email}) en cada
+   read/write — defensa en profundidad: UI + callable + rules (nunca solo UI)
+```
+
+### Flujo 7: Capacity gate (beta llena, F47)
+
+```
+LoginPage (sin user) → getDoc config/app (read público) con cache 60s
+    │
+    ▼
+{ maxUsers, signupsEnabled, userCount } → SignupCapacityGate renderiza:
+  signupsEnabled=false → cerrado · userCount >= maxUsers → "Beta llena" · si no → sign-up habilitado
+    │
+    ▼
+Al crear/borrar cuenta, los triggers v1 onUserCreated/onUserDeleted ajustan userCount
+con FieldValue.increment(±1) (eventually consistent — D4 de F47)
+```
+
 ---
 
 ## 6. TinyBase como data layer
@@ -735,6 +837,8 @@ TinyBase solo almacena primitivos (`string | number | boolean`). Dos consecuenci
 - **Arrays de IDs → JSON strings.** `projectIds`, `tagIds`, `outgoingLinkIds` y similares se serializan con `stringifyIds([...ids, newId])` al escribir y se deserializan con `parseIds(row.projectIds)` al leer. Helpers en [`src/lib/tinybase.ts`](../src/lib/tinybase.ts). `stringifyIds` NO es idempotente — nunca pasar una string ya serializada.
 
 > **`useNoteSave` es el único punto que escribe `content`** a Firestore. Nuevas features que manipulen notas no deben tocar `content` por fuera de este flujo.
+
+> **Versionado del cache local (F36).** El cache de TinyBase y el de preferences tienen versión de schema independiente (`TINYBASE_SCHEMA_VERSION` en [`src/lib/tinybase.ts`](../src/lib/tinybase.ts), `PREFERENCES_SCHEMA_VERSION` en [`src/lib/preferences.ts`](../src/lib/preferences.ts)). Al cambiar el shape de cualquier Row o de `UserPreferences` hay que bumpear la versión correspondiente: un mismatch purga el cache local (purge-on-mismatch, zero data loss porque la fuente de verdad es Firestore). Detalle del tratamiento asimétrico de "ausente" en [`ESTADO-ACTUAL.md`](../Spec/ESTADO-ACTUAL.md) § "TinyBase + Firestore sync".
 
 Patrones operativos (optimistic updates, orden `setRow` sync → `setDoc` async, creación de entidades via repo factory, hidratación con `useStoreHydration`) viven centralizados en [`CLAUDE.md`](../CLAUDE.md) "Gotchas universales" + [`Spec/ESTADO-ACTUAL.md`](../Spec/ESTADO-ACTUAL.md). Ver pointer de sección 13 para el mapa completo.
 
@@ -914,7 +1018,7 @@ Last-Writer-Wins (LWW) por campo. Para notas atómicas (documentos cortos editad
 
 ### D8: ¿Por qué links bidireccionales client-side y no Cloud Function?
 
-Una Cloud Function `syncBacklinks` agregaría latencia, costo, y un segundo write path. El sync client-side en `syncLinks.ts` es síncrono con el save, determinístico, y los títulos se resuelven in-memory sin cache stale.
+Una Cloud Function `syncBacklinks` agregaría latencia, costo, y un segundo write path. El sync client-side en `src/infra/syncLinksFromEditor.ts` (F38) es síncrono con el save y determinístico; los títulos se resuelven fresh-first in-memory (`useBacklinks` → `useTable('notes')`) con `sourceTitle`/`targetTitle` cacheados en el doc de link como fallback.
 
 ### D9: ¿Por qué `onDocumentWritten` y no `onDocumentCreated` para auto-tagging?
 
@@ -975,6 +1079,18 @@ El generador procesa PNGs para adaptive icon format (insets de 16.7%) y distorsi
 ### D23: ¿Por qué `pendingMetaRef` en QuickCaptureProvider en vez de extender `save(content, source, sourceUrl)`?
 
 Cambiar la firma de `save()` requería actualizar todos los callers (QuickCapture.tsx pasa `trimmed` directo). `useRef` stashea meta desde `open()`, `save()` lo consume y resetea. API estable, lógica concentrada.
+
+### D24: ¿Por qué BYOK (la API key del usuario) y no el secret del proyecto?
+
+Traslada el costo de la IA de generación al usuario para una beta de ~100 personas. La key se valida contra el provider, se cifra server-side (AES-256-GCM con AAD=uid + keyVersion) y nunca vuelve al cliente; las CFs la descifran en runtime con `getUserAnthropicKey`. Sin key, la IA de generación queda deshabilitada — sin fallback al secret del proyecto (D2 de F48). Los embeddings siguen con la `OPENAI_API_KEY` del proyecto (cambiar el provider rompería la comparabilidad de vectores). Detalle: [`SPEC-feature-48`](../Spec/features/SPEC-feature-48-byok-api-keys.md).
+
+### D25: ¿Por qué beta cerrada por allowlist enforced en rules y no solo en la UI?
+
+Un gate solo-UI lo evade cualquiera con un endpoint directo. El allowlist vive en una colección top-level deny-all y el gate se aplica **en AND** dentro del catch-all `users/**` (`exists(allowlist/{token.email})`), además del pre-check en los callables y la UI (defensa en profundidad). Crear el doc da acceso; borrarlo lo revoca al instante (el `exists()` se evalúa en vivo, sin re-deploy). Detalle: [`SPEC-feature-50`](../Spec/features/SPEC-feature-50-security-hardening-v0.5.md).
+
+### D26: ¿Por qué enforcement de `email_verified` server-side en las rules?
+
+El banner de verificación client-side era solo un nudge: un email/password sin verificar podía leer/escribir Firestore. El gate de las rules exige `email_verified == true` (o `sign_in_provider == 'google.com'`, que ya lo garantiza) en AND con owner + allowlist. Los callables BYOK/search replican el chequeo con `requireVerified` (el Admin SDK las bypassa, de ahí la consistencia explícita). Detalle: [`SPEC-feature-50`](../Spec/features/SPEC-feature-50-security-hardening-v0.5.md).
 
 > **Decisiones post-F5.2:** Las decisiones arquitectónicas introducidas por features iterativas (factory repo centralizado, orden `destroy() → delTable()` en cleanup, `changes` nativo de TinyBase v8 para persister diff-based, eventual consistency con `onIgnoredError` y `Promise.allSettled`) viven en los SPECs correspondientes: [`SPEC-feature-10-repos-layer.md`](../Spec/features/SPEC-feature-10-repos-layer.md), [`SPEC-feature-11-store-isolation-gating.md`](../Spec/features/SPEC-feature-11-store-isolation-gating.md), [`SPEC-feature-12-persister-diff-based.md`](../Spec/features/SPEC-feature-12-persister-diff-based.md). Mantener el canon histórico junto al código que las originó evita duplicar contenido aquí.
 
