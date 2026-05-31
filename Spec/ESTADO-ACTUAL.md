@@ -342,6 +342,7 @@ Cada feature comprimida a 1 línea con pointer al SPEC archivado. Para detalles 
 - [Vite cachea `node_modules/.vite/deps/` aunque cambies versiones de deps transitivas](gotchas/tooling-local.md#vite-cachea-node_modulesvitedeps-aunque-cambies-versiones-de-deps-transitivas)
 - [`react-resizable-panels` v4 rompe compat con v2 (Group/Separator + useDefaultLayout)](gotchas/tooling-local.md#react-resizable-panels-v4-rompe-compat-con-v2-groupseparator-usedefaultlayout)
 - [Tests en `src/functions/` deben excluirse del tsconfig de functions (post-F48)](gotchas/tooling-local.md#tests-en-srcfunctions-deben-excluirse-del-tsconfig-de-functions-post-f48)
+- [Tests verdes local pero rojos en CI por env faltante (side-effects de init en el top-level)](gotchas/tooling-local.md#tests-verdes-local-pero-rojos-en-ci-por-env-faltante-side-effects-de-init-en-el-top-level)
 
 ### Cloud Functions — Tool use con schema enforcement — [`gotchas/cloud-functions-schema.md`](gotchas/cloud-functions-schema.md)
 
