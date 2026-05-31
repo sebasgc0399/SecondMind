@@ -11,8 +11,8 @@ Sistema de productividad y conocimiento personal construido desde código. Combi
 - **State:** TinyBase (13KB, store reactivo con persister Firestore)
 - **Search:** Orama (FTS client-side, TypeScript-native)
 - **Graph:** Reagraph 4.x (MVP) — Sigma.js + Graphology en roadmap v2
-- **Backend:** Firebase (Firestore + Cloud Functions v2 + Auth + Storage)
-- **AI:** Claude Haiku (inbox processing + auto-tagging notas) + OpenAI embeddings (v1.1)
+- **Backend:** Firebase (Firestore + Cloud Functions v2 + Auth)
+- **AI:** Claude Haiku para generación (inbox processing + auto-tagging) con la **API key del usuario (BYOK)** — sin key, la IA de generación queda deshabilitada; embeddings con OpenAI `text-embedding-3-small` (key del proyecto)
 - **Deploy:** Firebase Hosting
 
 ## Comandos
@@ -20,8 +20,9 @@ Sistema de productividad y conocimiento personal construido desde código. Combi
 ```bash
 npm run dev          # Servidor de desarrollo (Vite)
 npm run build        # Build producción (tsc + vite build)
-npm run lint         # ESLint sobre src/
+npm run lint         # ESLint (eslint .)
 npm test             # Vitest (unit tests — repos, tinybase, etc.)
+npm run test:rules   # Vitest sobre security rules (emulador Firestore, requiere JDK)
 npm run preview      # Preview del build local
 npm run deploy       # Deploy a Firebase Hosting
 npm run deploy:rules      # Deploy solo Firestore security rules
@@ -152,11 +153,13 @@ src/
 │   ├── projects/    # Project cards, create modal, note link
 │   ├── objectives/  # Objective cards, create modal
 │   ├── habits/      # Habit grid, habit row
-│   ├── settings/    # Settings panels
-│   └── layout/      # Sidebar, CommandPalette, Breadcrumbs
+│   ├── settings/    # Settings panels (incl. ApiKeysSection BYOK)
+│   ├── onboarding/  # WelcomeModal + OnboardingChecklist (F49)
+│   ├── auth/        # LoginCard, SignInForm, SignUpForm, capacity gate (F47)
+│   └── layout/      # Sidebar, TopBar, CommandPalette, Breadcrumbs
 ├── stores/          # TinyBase stores (1 archivo por entidad)
 ├── hooks/           # Custom hooks (1 archivo por hook)
-├── infra/repos/     # Capa 3 (F10): factory createFirestoreRepo + repos por entidad
+├── infra/           # Capa 3 (F10): repos/ (factory createFirestoreRepo) + syncLinksFromEditor.ts
 ├── lib/             # Configs (firebase.ts, tinybase.ts, orama.ts) + utils
 ├── types/           # Interfaces TypeScript (1 archivo por entidad)
 └── functions/       # Cloud Functions v2 (deploy separado)
@@ -208,19 +211,21 @@ src/
 
 ### Firestore
 
-- Paths: `users/{userId}/[collection]/{docId}`
+- Paths: `users/{userId}/[collection]/{docId}`. Colecciones **top-level** (fuera de `users/`): `config/app` (capacity gate, read público), `userSecrets/` + `allowlist/` (deny-all client-side), y metadata legible en `users/{uid}/settings/aiKeys` (F47/F48/F50)
 - IDs auto-generados por Firestore (excepto embeddings que usa noteId)
 - Timestamps: `serverTimestamp()` en escrituras desde Cloud Functions; `Date.now()` numérico para optimistic writes desde el cliente vía repos TinyBase
-- Security rules: solo el dueño lee/escribe sus datos
+- Security rules: **beta cerrada** — el catch-all `users/**` exige en AND owner + (`google` ‖ `email_verified`) + `exists(allowlist/{token.email})`; `config/app` read público, `userSecrets/`/`allowlist/` deny-all. Detalle en [Docs/01 § Modelo de seguridad](Docs/01-arquitectura-hibrida-progresiva.md) + `Spec/gotchas/cloud-functions-guards.md` (no duplicar acá)
 
 ### Cloud Functions v2
 
 - Un archivo = un trigger = una responsabilidad
 - Siempre loggear con contexto: `{ userId, entityId }`
 - Timeout y retry configurados explícitamente, nunca defaults
-- Secret management: `defineSecret('ANTHROPIC_API_KEY')` + declarar en `secrets: [...]` del trigger. El valor se accede con `secret.value()` dentro del handler, no en top-level
-- Tool use con schema enforcement: ambas CFs usan `tools` + `tool_choice: { type: 'tool' }` para forzar JSON válido. Schemas compartidos en `src/functions/src/lib/schemas.ts`
-- Cloud Functions desplegadas (6): `processInboxItem`, `autoTagNote`, `generateEmbedding`, `embedQuery` (callable), `onNoteDeleted` (cleanup cascada), `autoPurgeTrash` (scheduled). Detalle de triggers + timeouts en `Spec/ESTADO-ACTUAL.md` § "Cloud Functions"
+- Secret management (BYOK, post-F48): el secret del proyecto es `defineSecret('BYOK_MASTER_KEY')` (master key para descifrar) + `OPENAI_API_KEY` (embeddings); `secret.value()` dentro del handler, nunca top-level. La key del LLM es **del usuario**: se obtiene en runtime con `getUserAnthropicKey(userId, masterKey.value())`, no con `defineSecret`. `ANTHROPIC_API_KEY` ya no se usa
+- Logs sin datos crudos: pasar los errores por `sanitizeError()` antes de `logger.error` (nunca el error crudo — puede filtrar contenido del usuario o la key)
+- `maxInstances` explícito en callables para acotar costo ante abuso (ej. `embedQuery`/`checkAllowlist` 5, `saveApiKey` 3)
+- Tool use con schema enforcement: las 2 CFs de generación (`processInboxItem`, `autoTagNote`) usan `tools` + `tool_choice: { type: 'tool' }` para forzar JSON válido. Schemas compartidos en `src/functions/src/lib/schemas.ts`
+- Cloud Functions desplegadas (11 = 9 v2 + 2 v1 auth triggers): `processInboxItem`, `autoTagNote`, `onNoteDeleted` (cleanup cascada), `autoPurgeTrash` (scheduled), `generateEmbedding`, `embedQuery` (callable), `saveApiKey`/`deleteApiKey` (callables BYOK), `checkAllowlist` (callable), `onUserCreated`/`onUserDeleted` (triggers v1, counter del capacity gate). Detalle de triggers + timeouts en `Spec/ESTADO-ACTUAL.md` § "Cloud Functions"
 
 ### Git
 
@@ -230,18 +235,18 @@ src/
 
 ## Entidades del dominio
 
-| Entidad    | Singular  | Plural     | ID          | Firestore Path                       |
-| ---------- | --------- | ---------- | ----------- | ------------------------------------ |
-| Nota       | note      | notes      | noteId      | users/{uid}/notes/{noteId}           |
-| Link       | noteLink  | noteLinks  | linkId      | users/{uid}/links/{linkId}           |
-| Tarea      | task      | tasks      | taskId      | users/{uid}/tasks/{taskId}           |
-| Proyecto   | project   | projects   | projectId   | users/{uid}/projects/{projectId}     |
-| Objetivo   | objective | objectives | objectiveId | users/{uid}/objectives/{objectiveId} |
-| Área       | area      | areas      | areaId      | users/{uid}/areas/{areaId}           |
-| Inbox item | inboxItem | inboxItems | itemId      | users/{uid}/inbox/{itemId}           |
-| Tag        | tag       | tags       | tagId       | users/{uid}/tags/{tagId}             |
-| Hábito     | habit     | habits     | habitId     | users/{uid}/habits/{habitId}         |
-| Embedding  | embedding | embeddings | noteId      | users/{uid}/embeddings/{noteId}      |
+| Entidad    | Singular  | Plural     | ID                   | Firestore Path                           |
+| ---------- | --------- | ---------- | -------------------- | ---------------------------------------- |
+| Nota       | note      | notes      | noteId               | users/{uid}/notes/{noteId}               |
+| Link       | noteLink  | noteLinks  | sourceId\_\_targetId | users/{uid}/links/{sourceId\_\_targetId} |
+| Tarea      | task      | tasks      | taskId               | users/{uid}/tasks/{taskId}               |
+| Proyecto   | project   | projects   | projectId            | users/{uid}/projects/{projectId}         |
+| Objetivo   | objective | objectives | objectiveId          | users/{uid}/objectives/{objectiveId}     |
+| Área       | area      | areas      | areaId               | users/{uid}/areas/{areaId}               |
+| Inbox item | inboxItem | inboxItems | itemId               | users/{uid}/inbox/{itemId}               |
+| Tag        | tag       | tags       | tagId                | users/{uid}/tags/{tagId}                 |
+| Hábito     | habit     | habits     | YYYY-MM-DD           | users/{uid}/habits/{YYYY-MM-DD}          |
+| Embedding  | embedding | embeddings | noteId               | users/{uid}/embeddings/{noteId}          |
 
 ## Gotchas universales
 
