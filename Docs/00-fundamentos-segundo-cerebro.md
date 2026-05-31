@@ -124,14 +124,14 @@ USO (expresar, producir, decidir)
     ├──→ Alimentar proyectos activos
     ├──→ Tomar decisiones informadas
     ├──→ Crear contenido
-    └──→ Resurfacing automático (AI)
+    └──→ Resurfacing (FSRS, spaced repetition)
 ```
 
 ### El rol de la AI en este flujo
 
 - **Captura**: transcribir reuniones, extraer ideas clave de textos largos
-- **Procesamiento**: sugerir clasificación, detectar conexiones con notas existentes, generar resúmenes
-- **Resurfacing**: "Basado en lo que estás trabajando hoy, estas 3 notas podrían ser relevantes"
+- **Procesamiento**: sugerir clasificación, detectar conexiones con notas existentes, generar resúmenes — _opt-in_: el usuario aporta su propia clave de IA (BYOK); sin ella el sistema funciona completo, solo sin la IA de generación
+- **Notas similares**: sugerir notas relacionadas por similitud semántica (embeddings). El _resurfacing_ de notas a revisar, en cambio, es algorítmico (FSRS, spaced repetition opt-in), no AI
 - **Expresión**: ayudar a sintetizar notas en documentos, presentaciones, decisiones
 
 ---
@@ -206,8 +206,8 @@ Después de meses usando un Segundo Cerebro en Notion, estas son las lecciones q
 
 - Captura instantánea desde cualquier contexto
 - Notas conectadas entre sí (grafo, no carpetas)
-- AI que procese el inbox automáticamente
-- Resurfacing inteligente basado en contexto
+- AI opt-in que ayude a procesar el inbox (sugiere; el humano decide — P6)
+- Resurfacing de notas olvidadas (spaced repetition / FSRS)
 - Progressive summarization nativa
 - Que la información capturada realmente se REUTILICE
 
