@@ -87,7 +87,7 @@ Cada feature comprimida a 1 línea con pointer al SPEC archivado. Para detalles 
 
 ## Cloud Functions
 
-8 CFs desplegadas en `us-central1` (6 v2 Node.js 22 con `retry: false` + 2 v1 Auth triggers post-F47):
+11 CFs desplegadas en `us-central1` (9 v2 Node.js 22 — triggers con `retry: false`, callables con `maxInstances` — + 2 v1 Auth triggers post-F47):
 
 - **`processInboxItem`** — `onDocumentCreated('users/{userId}/inbox/{itemId}')`, `timeoutSeconds: 60`. Claude Haiku con tool `classify_inbox` + `INBOX_CLASSIFICATION_SCHEMA`. Escribe 6 campos flat `aiSuggested*` + `aiProcessed: true`.
 - **`autoTagNote`** — `onDocumentWritten('users/{userId}/notes/{noteId}')`, `timeoutSeconds: 60`. Claude Haiku con tool `tag_note` + `NOTE_TAGGING_SCHEMA`. Escribe `aiTags`, `aiSummary`, `aiProcessed: true`.
@@ -95,6 +95,9 @@ Cada feature comprimida a 1 línea con pointer al SPEC archivado. Para detalles 
 - **`embedQuery`** — `onCall` v2 (`firebase-functions/v2/https`), `timeoutSeconds: 10`. Input `{ text: string }` ≤500 chars, output `{ vector: number[] }`. Mismo modelo que `generateEmbedding`.
 - **`onNoteDeleted`** — `onDocumentDeleted('users/{userId}/notes/{noteId}')`, cleanup cascada (embeddings + links bidireccionales) con WriteBatch chunked.
 - **`autoPurgeTrash`** — `onSchedule('0 3 * * *', timeZone: 'UTC')`, scheduled hard-delete de notas en papelera tras `trashAutoPurgeDays`.
+- **`saveApiKey`** (callable, post-F48) — `onCall` v2, `maxInstances: 3`. Valida la key contra Anthropic (`GET /v1/models`), la cifra AES-256-GCM (AAD=uid, `keyVersion`) → `userSecrets/` + metadata `{ configured, last4 }` en `settings/aiKeys` (WriteBatch). Guards `requireVerified` + `assertAllowlisted` (F48/F50).
+- **`deleteApiKey`** (callable, post-F48) — `onCall` v2. Borra ciphertext + metadata de la key BYOK. Guards `requireVerified` + `assertAllowlisted`.
+- **`checkAllowlist`** (callable, post-F50) — `onCall` v2 público, `maxInstances: 5`. Pre-check de membresía en la allowlist para el gate de signup. Oráculo de enumeración aceptado para la beta.
 - **`onUserCreated`** (v1, post-F47) — `functions.region('us-central1').auth.user().onCreate(...)`. Increment `config/app.userCount` con `FieldValue.increment(1)`. Mantiene counter del gate "Beta llena" (F47.F6). Async post-create, race eventually consistent aceptada.
 - **`onUserDeleted`** (v1, post-F47) — `functions.region('us-central1').auth.user().onDelete(...)`. Análogo con `increment(-1)`.
 

@@ -507,7 +507,7 @@ src/
 │   ├── area.ts
 │   └── common.ts               # TaskStatus, ObjectiveStatus, Priority
 │
-└── functions/                   # Cloud Functions v2 (deploy separado, CommonJS, Node 22) — 10 CFs
+└── functions/                   # Cloud Functions v2 (deploy separado, CommonJS, Node 22) — 11 CFs
     ├── src/
     │   ├── index.ts             # Entry point, admin.initializeApp(), re-exports
     │   ├── inbox/
@@ -558,7 +558,7 @@ extension/                       # Chrome Extension MV3 (Fase 5.0)
 └── manifest.json                # chrome.identity + firestore/lite
 ```
 
-> **Nota:** `syncBacklinks` Cloud Function fue eliminada del diseño. Los links bidireccionales se sincronizan 100% client-side en [`src/infra/syncLinksFromEditor.ts`](../src/infra/syncLinksFromEditor.ts) (movido desde `lib/editor/syncLinks.ts` en F38 — ver sección 5 Flujo 2 y sección 10 D8). El inventario detallado de las 10 CFs (triggers, timeouts, retry) vive en [`ESTADO-ACTUAL.md`](../Spec/ESTADO-ACTUAL.md) § "Cloud Functions" para no duplicar.
+> **Nota:** `syncBacklinks` Cloud Function fue eliminada del diseño. Los links bidireccionales se sincronizan 100% client-side en [`src/infra/syncLinksFromEditor.ts`](../src/infra/syncLinksFromEditor.ts) (movido desde `lib/editor/syncLinks.ts` en F38 — ver sección 5 Flujo 2 y sección 10 D8). El inventario detallado de las 11 CFs (triggers, timeouts, retry) vive en [`ESTADO-ACTUAL.md`](../Spec/ESTADO-ACTUAL.md) § "Cloud Functions" para no duplicar.
 
 ---
 
