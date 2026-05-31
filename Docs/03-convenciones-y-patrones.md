@@ -4,7 +4,7 @@
 > Fuente: `01-arquitectura-hibrida-progresiva.md`
 > Stack: React 19 + TypeScript strict + Vite + Tailwind CSS + TinyBase + Firebase + TipTap + Tauri (desktop) + Capacitor (Android)
 > Escala: Solo developer
-> Última actualización: Abril 2026
+> Última actualización: Mayo 2026 (post bloque pre-beta F45-F50: BYOK, allowlist, capa de repos)
 
 ---
 
@@ -31,17 +31,25 @@ src/
 │   │       └── page.tsx
 │   ├── objectives/
 │   ├── habits/
-│   └── settings/
+│   ├── settings/
+│   ├── login/                   # Top-level (fuera del Layout): auth + capacity gate (F47)
+│   ├── verify-email/            # Top-level: verificación de email (F47)
+│   └── capture/                 # Top-level: ventana frameless Tauri (Fase 5.1)
 │
-├── components/
+├── components/                  # Agrupados por FEATURE, no por tipo
 │   ├── ui/                      # shadcn/ui (no tocar, auto-generados)
-│   ├── editor/                  # TipTap: editor + extensiones + menus
+│   ├── editor/                  # TipTap: editor + extensions/ + menus/
 │   ├── graph/                   # Reagraph: knowledge graph WebGL
 │   ├── capture/                 # Quick Capture modal, Inbox Processor
 │   ├── dashboard/               # Cards del dashboard
-│   └── layout/                  # Sidebar, CommandPalette, Breadcrumbs
+│   ├── tasks/ projects/ objectives/ habits/  # Cards + modals por entidad
+│   ├── settings/                # Paneles de settings (incl. ApiKeysSection BYOK, F48)
+│   ├── onboarding/              # WelcomeModal + OnboardingChecklist (F49)
+│   ├── auth/                    # LoginCard, SignInForm, SignUpForm, capacity gate (F47)
+│   └── layout/                  # Sidebar, TopBar, CommandPalette, banners globales
 │
 ├── stores/                      # TinyBase stores (1 archivo por entidad)
+├── infra/                       # Capa 3 (Clean Arch): repos/ (factory createFirestoreRepo) + syncLinksFromEditor (F10/F38)
 ├── hooks/                       # Custom hooks (1 archivo por hook)
 ├── lib/                         # Configs y utilidades
 │   ├── firebase.ts              # Config Firebase (singleton)
@@ -268,7 +276,8 @@ notesStore.setTablesSchema({
     linkCount: { type: 'number' },
     isFavorite: { type: 'boolean' },
     isArchived: { type: 'boolean' },
-    // NO incluir: content, contentPlain (muy pesado)
+    contentPlain: { type: 'string' }, // texto plano para FTS (Orama) — SÍ vive en el store
+    // NO incluir: content (TipTap JSON, muy pesado — solo en Firestore)
   },
 });
 
@@ -320,12 +329,14 @@ function parseAiResult(raw: any): AiResult {
 
 **Ubicación de tipos:**
 
-| Tipo                                   | Ubicación                    |
-| -------------------------------------- | ---------------------------- |
-| Props de componente                    | Mismo archivo del componente |
-| Entidad de dominio (Note, Task, etc.)  | `types/[entidad].ts`         |
-| Response de Cloud Function             | `types/api.ts`               |
-| Tipos compartidos (ParaType, Priority) | `types/common.ts`            |
+| Tipo                                   | Ubicación                                |
+| -------------------------------------- | ---------------------------------------- |
+| Props de componente                    | Mismo archivo del componente             |
+| Entidad de dominio (Note, Task, etc.)  | `types/[entidad].ts`                     |
+| Tipos de CF / AI / API keys            | `types/apiKey.ts`, `types/suggestion.ts` |
+| Shapes de Row para repos               | `types/repoRows.ts`                      |
+| Preferencias de usuario                | `types/preferences.ts`                   |
+| Tipos compartidos (ParaType, Priority) | `types/common.ts`                        |
 
 ---
 
@@ -428,17 +439,9 @@ const doc = await getDoc(doc(db, `users/${uid}/notes/${noteId}`));
 
 **Excepción: embeddings.** Los vectores de 1536 floats se cargan on-demand desde Firestore con `getDocs` + cache en `useRef`. Son demasiado grandes para TinyBase.
 
-**Loading states: skeleton siempre, spinner nunca.** Los skeletons mantienen el layout y reducen el "salto" visual.
+**Loading states: skeleton siempre, spinner nunca** — canon en [`CLAUDE.md`](../CLAUDE.md) § Gotchas universales (el skeleton mantiene el layout; el spinner produce layout shift).
 
-```tsx
-// ✅ Skeleton que respeta el layout
-if (isLoading) return <NoteCardSkeleton />;
-
-// ❌ Spinner centrado
-if (isLoading) return <Spinner />;
-```
-
-**Optimistic updates via repo factory (post-F10).** Toggle de checkbox, favorito, archivar — el repo encapsula el patrón `setPartialRow` (sync TinyBase) → `await setDoc` (async Firestore). Los componentes NO hacen `setCell` directo desde F10.
+**Optimistic updates via repo factory (post-F10).** Toggle de checkbox, favorito, archivar — el repo encapsula el patrón `setPartialRow` (sync TinyBase) → `setDoc` (async Firestore). Los componentes NO hacen `setCell` directo desde F10. Cuando el repo tiene un `SaveQueue` inyectado (F28-30), el write **no es un `await setDoc` directo**: se encola con backoff exponencial + recheck de uid mid-retry (resiliencia offline). La regla base (orden sync→async) es canon en [`CLAUDE.md`](../CLAUDE.md) § Gotchas universales; acá queda el detalle ampliado del factory + retry queue.
 
 ```tsx
 // ✅ Via repo — UI instant + awaitability
@@ -521,6 +524,8 @@ fix/backlinks-count
 
 **Commit cuando funciona, no cuando termina el día.** No commitear código roto.
 
+**Cada commit cierra con un trailer `Co-Authored-By: ...`** — el valor exacto (modelo + versión) lo fija [`CLAUDE.md`](../CLAUDE.md) § Metodología SDD (paso 4), no se duplica acá.
+
 ---
 
 ## 10. Imports
@@ -575,6 +580,8 @@ import { useBacklinks } from '@/hooks/useBacklinks';
 import { useBacklinks } from '@/hooks'; // via index.ts
 ```
 
+**Capa 2 no importa Firestore/Auth directo (guard ESLint `no-restricted-imports`, F38.4).** En `src/components/**` y `src/hooks/**`, importar `firebase/firestore` o `firebase/auth` como valor es error de lint — usar un repo de `src/infra/repos/`. Excepciones (declaradas en `eslint.config.js`): `useAuth.ts` (#1 auth multi-plataforma), `useNote.ts` (#2 lectura MVP one-shot), tests, y type-only imports (`allowTypeImports: true`, #3). Ver [`Docs/04`](04-clean-architecture-frontend.md#excepciones-reconocidas).
+
 ---
 
 ## 11. Cloud Functions v2
@@ -589,58 +596,63 @@ generateEmbedding.ts → export const generateEmbedding = onDocumentWritten(...)
 embedQuery.ts        → export const embedQuery = onCall(...)
 ```
 
-Las 4 CFs desplegadas hoy en `us-central1`, re-exportadas desde `src/functions/src/index.ts`.
+Hoy hay **10 CFs** desplegadas en `us-central1` (8 v2 + 2 triggers v1 de Auth), re-exportadas desde `src/functions/src/index.ts`. Las de arriba son las 4 originales; el inventario completo (triggers + timeouts) vive en [`ESTADO-ACTUAL.md`](../Spec/ESTADO-ACTUAL.md) § Cloud Functions — no se duplica acá.
 
 ### Patrón de Cloud Function
 
 ```typescript
-// src/functions/src/inbox/processInboxItem.ts (forma real)
+// src/functions/src/inbox/processInboxItem.ts (forma real, post-F48 BYOK)
 import Anthropic from '@anthropic-ai/sdk';
 import { onDocumentCreated } from 'firebase-functions/v2/firestore';
 import { defineSecret } from 'firebase-functions/params';
 import { logger } from 'firebase-functions';
 import { INBOX_CLASSIFICATION_SCHEMA, InboxClassification } from '../lib/schemas';
+import { sanitizeError } from '../lib/sanitizeError';
+import { getUserAnthropicKey } from '../lib/getUserAnthropicKey';
 
-const anthropicApiKey = defineSecret('ANTHROPIC_API_KEY');
+// NO se declara ANTHROPIC_API_KEY: la key del LLM es del usuario (BYOK).
+// El único secret del proyecto acá es la master key para descifrarla.
+const byokMasterKey = defineSecret('BYOK_MASTER_KEY');
 
 export const processInboxItem = onDocumentCreated(
   {
     document: 'users/{userId}/inbox/{itemId}',
-    secrets: [anthropicApiKey],
+    secrets: [byokMasterKey],
     timeoutSeconds: 60,
     retry: false,
     region: 'us-central1',
   },
   async (event) => {
     const { userId, itemId } = event.params;
-    // ... guards de snapshot vacío + rawContent vacío ...
+    // ... guards: snapshot vacío, rawContent vacío, MAX_CONTENT_CHARS ...
+    try {
+      // Lee + descifra la key del usuario en runtime (no defineSecret).
+      const key = await getUserAnthropicKey(userId, byokMasterKey.value());
+      if (!key) return; // sin key BYOK → IA de generación deshabilitada
 
-    const client = new Anthropic({ apiKey: anthropicApiKey.value() });
-    const response = await client.messages.create({
-      model: 'claude-haiku-4-5-20251001',
-      tools: [{ name: 'classify_inbox', input_schema: INBOX_CLASSIFICATION_SCHEMA }],
-      tool_choice: { type: 'tool', name: 'classify_inbox' },
-      // ...
-    });
+      const client = new Anthropic({ apiKey: key });
+      const response = await client.messages.create({
+        model: 'claude-haiku-4-5-20251001',
+        tools: [{ name: 'classify_inbox', input_schema: INBOX_CLASSIFICATION_SCHEMA }],
+        tool_choice: { type: 'tool', name: 'classify_inbox' },
+        // ...
+      });
 
-    // Campos flat en Firestore — TinyBase los mapea a aiResult en useInbox
-    const result = toolBlock.input as InboxClassification;
-    await event.data.ref.update({
-      aiSuggestedTitle: result.suggestedTitle,
-      aiSuggestedType: result.suggestedType,
-      aiSuggestedTags: JSON.stringify(result.suggestedTags),
-      aiSuggestedArea: result.suggestedArea,
-      aiSummary: result.summary,
-      aiPriority: result.priority,
-      aiProcessed: true,
-    });
+      // Campos flat en Firestore — TinyBase los mapea a aiResult en useInbox
+      const result = toolBlock.input as InboxClassification;
+      await event.data.ref.update({
+        /* aiSuggestedTitle, aiSuggestedType, ... + aiProcessed: true */
+      });
+    } catch (error) {
+      logger.error('processInboxItem failed', { userId, itemId, error: sanitizeError(error) });
+    }
   },
 );
 ```
 
 ### Secret management y tool use (F3.1)
 
-**Secrets via `defineSecret`.** `ANTHROPIC_API_KEY`, `OPENAI_API_KEY` se declaran con `defineSecret(...)` a nivel de módulo y se pasan en `secrets: [...]` del trigger. El valor se accede con `secret.value()` DENTRO del handler, nunca en top-level (se evalúa en build y rompe el deploy).
+**Secret management — dos niveles (post-F48 BYOK).** (1) El **secret del proyecto** se declara con `defineSecret(...)` a nivel de módulo y se pasa en `secrets: [...]` del trigger; su valor se lee con `.value()` DENTRO del handler, nunca en top-level (se evalúa en build y rompe el deploy). Hoy el secret de las CFs de generación es `BYOK_MASTER_KEY` (master key para descifrar), y `OPENAI_API_KEY` para embeddings — **`ANTHROPIC_API_KEY` ya no se usa**. (2) La **key del LLM es del usuario (BYOK)**: se obtiene en runtime con `getUserAnthropicKey(userId, masterKey)` (descifra desde `userSecrets/`), no con `defineSecret`. Sin key del usuario, la CF hace early-return y la IA de generación queda deshabilitada (sin fallback al secret del proyecto).
 
 **Schema enforcement con tool use.** Las CFs que consumen LLM (`processInboxItem`, `autoTagNote`) usan `tools: [{...}]` + `tool_choice: { type: 'tool', name: 'X' }` para forzar JSON válido vía el schema declarado en [`src/functions/src/lib/schemas.ts`](../src/functions/src/lib/schemas.ts). Elimina `stripJsonFence`, fallbacks null, y valores fuera de enum — el modelo devuelve un objeto que cumple `input_schema` o falla.
 
@@ -654,11 +666,17 @@ export const processInboxItem = onDocumentCreated(
 
 **Timeout y retry configurados explícitamente.** No dejar defaults.
 
+**Logs sin datos crudos: `sanitizeError` (post-audit F50).** Nunca loggear el error crudo (puede filtrar contenido del usuario o la key); pasar por `sanitizeError(error)` antes de `logger.error`.
+
+**`maxInstances` explícito en callables (post-F50).** Acota el costo ante abuso: p. ej. `embedQuery` y `checkAllowlist` 5, `saveApiKey` 3.
+
+**Guards de acceso en callables que tocan datos del usuario (post-F50).** `requireVerified` (auth + email verificado) y `assertAllowlisted` (email en la allowlist) al inicio de `saveApiKey`/`deleteApiKey` — el Admin SDK bypassa las rules, así que el chequeo se replica en el callable.
+
 ```typescript
 export const processInboxItem = onDocumentCreated(
   {
     document: 'users/{userId}/inbox/{itemId}',
-    secrets: [anthropicApiKey],
+    secrets: [byokMasterKey],
     timeoutSeconds: 60,
     retry: false, // No reintentar — procesamiento no es idempotente
     region: 'us-central1',
@@ -690,19 +708,7 @@ users/{userId}/embeddings/{noteId}
 
 ### Reglas de Firestore Security Rules
 
-**Patrón base: solo el dueño lee/escribe sus datos.**
-
-```javascript
-rules_version = '2';
-service cloud.firestore {
-  match /databases/{database}/documents {
-    match /users/{userId}/{document=**} {
-      allow read, write: if request.auth != null
-                         && request.auth.uid == userId;
-    }
-  }
-}
-```
+**Patrón base: owner + verificado + allowlist, en AND.** El catch-all `users/{userId}/{document=**}` ya no es solo `uid == userId`: suma email verificado (`sign_in_provider == 'google.com'` o `email_verified == true`) **y** `exists(allowlist/{token.email})` (beta cerrada). Las colecciones de secretos (`userSecrets/`, `allowlist/`) viven **top-level con deny-all** propio porque las rules son aditivas; `config/app` es read público (capacity gate). El detalle vigente vive en [`firestore.rules`](../firestore.rules) y se explica en [`Docs/01`](01-arquitectura-hibrida-progresiva.md) § Modelo de seguridad — no se pega el código acá para que el doc no se desincronice del archivo real.
 
 ### Reglas de escritura
 
@@ -719,7 +725,7 @@ const newNote = {
 };
 ```
 
-**Denormalización explícita.** Si un campo se cachea para evitar reads extra, documentar cómo se mantiene en sync. Nota: los títulos de links (`sourceTitle`/`targetTitle`) ya no se cachean en el doc — se resuelven in-memory con join en `useBacklinks` → `useTable('notes')`.
+**Denormalización explícita.** Si un campo se cachea para evitar reads extra, documentar cómo se mantiene en sync. Ejemplo: los títulos de links (`sourceTitle`/`targetTitle`) **sí** se cachean en el doc de link como respaldo, pero `useBacklinks` prioriza el título fresco vía join in-memory con `useTable('notes')` (fresh-first, fallback al cacheado si la nota no está hidratada).
 
 ---
 
@@ -775,21 +781,24 @@ extensions/
 ```json
 {
   "dev": "vite",
-  "build": "tsc && vite build",
+  "build": "tsc -b && vite build",
+  "lint": "eslint .",
   "preview": "vite preview",
-  "lint": "eslint src/",
-  "deploy": "firebase deploy --only hosting",
+  "deploy": "npm run build && firebase deploy --only hosting",
+  "deploy:rules": "firebase deploy --only firestore:rules",
   "deploy:functions": "firebase deploy --only functions",
-  "tauri": "tauri",
+  "logs:functions": "firebase functions:log",
+  "test": "vitest",
+  "test:rules": "firebase emulators:exec --project=demo-secondmind --only firestore \"vitest run --config vitest.rules.config.ts\"",
   "tauri:dev": "tauri dev",
   "tauri:build": "tauri build",
-  "cap:sync": "npm run build && npx cap sync",
-  "cap:run": "npx cap run android",
-  "cap:build": "cd android && ./gradlew.bat assembleDebug"
+  "cap:sync": "npm run build && cap sync android",
+  "cap:run": "cap run android",
+  "cap:build": "npm run build && cap sync android && cd android && gradlew assembleDebug"
 }
 ```
 
-> **Nota Windows:** `npx cap run android` falla por `gradlew` sin `.bat`. Usar `cap:build` + `adb install -r android/app/build/outputs/apk/debug/app-debug.apk` + `adb shell am start -n com.secondmind.app/.MainActivity`.
+> **Nota Windows (shell):** `cap run android` falla por `gradlew` sin `.bat`. El script `cap:build` invoca `gradlew` (npm lo resuelve a `gradlew.bat` vía cmd); si lo corrés **a mano en PowerShell**, usá `.\gradlew.bat assembleDebug`. La divergencia `gradlew` (en el script) vs `.\gradlew.bat` (invocación manual) es intencional según el shell — no unificar. Tras la build: `adb install -r android/app/build/outputs/apk/debug/app-debug.apk` + `adb shell am start -n com.secondmind.app/.MainActivity`.
 
 ---
 
@@ -829,12 +838,14 @@ if (isCapacitor()) {
 
 ### Write paths por plataforma
 
-| Plataforma                 | Write path                        | Razón                                |
-| -------------------------- | --------------------------------- | ------------------------------------ |
-| Web (Alt+N)                | TinyBase → persister → Firestore  | App completa cargada con store       |
-| Capacitor (Share Intent)   | TinyBase via QuickCaptureProvider | App completa cargada — reusar modal  |
-| Tauri (`Ctrl+Shift+Space`) | `setDoc` directo a Firestore      | Ventana efímera, no hidrata TinyBase |
-| Chrome Extension           | `setDoc` via `firestore/lite`     | Popup sin store                      |
+| Plataforma                 | Write path                                                                   | Razón                                                                                       |
+| -------------------------- | ---------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------- |
+| Web (Alt+N)                | `inboxStore.setRow` → persister F12 → Firestore (QuickCaptureProvider)       | App completa cargada con store                                                              |
+| Capacitor (Share Intent)   | igual que web — reusa QuickCaptureProvider                                   | App completa cargada — reusar modal                                                         |
+| Tauri (`Ctrl+Shift+Space`) | `inboxRepo.createFromCapture` (repo factory → `setDoc` vía `saveInboxQueue`) | Ventana efímera, pero reusa la capa de repos (F38.3): optimistic + retry, no `setDoc` crudo |
+| Chrome Extension           | `setDoc` directo vía `firestore/lite`                                        | Popup sin store ni capa de repos (lockfile propio)                                          |
+
+> Todos estos write paths usan la sesión Firebase autenticada y pasan el gate de [`firestore.rules`](../firestore.rules) (owner + email verificado + allowlist, F50). La extension escribe con `firestore/lite`, pero con el mismo token verificado + allowlisted, así que las rules la aceptan igual.
 
 ### Imports condicionales
 
