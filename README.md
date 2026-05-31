@@ -19,11 +19,13 @@ Los principios de diseño, la teoría detrás (CODE de Tiago Forte, Zettelkasten
 - **Editor:** TipTap (ProseMirror) con extensiones custom (wikilinks `@`, slash commands `/`)
 - **Búsqueda:** Orama (FTS client-side)
 - **Backend:** Firebase — Firestore + Cloud Functions v2 + Auth + Hosting
-- **AI:** Claude Haiku (inbox processing + auto-tagging notas) + OpenAI embeddings
+- **AI:** Claude Haiku para generación (inbox processing + auto-tagging) con la **API key del usuario (BYOK)** — sin key, la IA de generación queda deshabilitada; OpenAI embeddings con la key del proyecto
 
 ## Estado actual
 
 La fuente primaria de estado y arquitectura vigente es [`Spec/ESTADO-ACTUAL.md`](Spec/ESTADO-ACTUAL.md). Cada fase tiene su SPEC en [`Spec/`](Spec/); cada feature post-MVP en [`Spec/features/`](Spec/features/).
+
+> **Beta cerrada (v0.5).** La app está LIVE en prod ([secondmind.web.app](https://secondmind.web.app)) pero el acceso está gateado por una **allowlist** enforced en las Firestore rules (F50): hoy opera una única cuenta autorizada. No es registro abierto — toda cuenta fuera de la allowlist recibe `permission-denied`.
 
 - **Fase 0 — Setup** ✅ Proyecto compilando, auth con Google, sync TinyBase ↔ Firestore, deploy a Firebase Hosting
 - **Fase 0.1 — Toolkit** ✅ MCPs (Firebase, Context7, Playwright, Brave Search), skills de frontend/UX, hooks de formato automático (Prettier + ESLint en PostToolUse), protección de la rama main
@@ -82,7 +84,7 @@ La fuente primaria de estado y arquitectura vigente es [`Spec/ESTADO-ACTUAL.md`]
   - **F4 · Autostart + window-state:** toggle en el tray registra `HKCU\...\Run\SecondMind`. Main window persiste pos/size; capture siempre centrada (denylist)
   - **F5 · Single-instance + CSP Firebase:** plugin previene procesos duplicados (crítico con autostart). CSP explícito en `tauri.conf.json` permite auth + firestore en release
   - **F6 · OAuth Desktop flow (post-merge fix):** `signInWithPopup` no funciona en Tauri WebView2 (window.open va al browser del sistema, no puede postMessage back). Reemplazado por flow custom con `tauri-plugin-shell` + HTTP listener local en Rust (`src-tauri/src/oauth.rs`), PKCE S256, state CSRF, intercambio code→id_token, `signInWithCredential`. OAuth Client tipo "Desktop app" en Google Cloud Console. `useAuth` detecta `isTauri()` y ramifica
-  - Instaladores: `SecondMind_0.2.0_x64_en-US.msi` + `SecondMind_0.2.0_x64-setup.exe` (NSIS) en `src-tauri/target/release/bundle/`
+  - Instaladores: `SecondMind_0.2.0_x64_en-US.msi` + `SecondMind_0.2.0_x64-setup.exe` (NSIS, versión de entonces) en `src-tauri/target/release/bundle/`
 
 - **Fase 5.2 — Capacitor Mobile (Android)** ✅ Wrapper nativo Android. 5 features:
 
@@ -139,9 +141,21 @@ La fuente primaria de estado y arquitectura vigente es [`Spec/ESTADO-ACTUAL.md`]
 
   Detalle técnico, decisiones y gotchas: [`Spec/ESTADO-ACTUAL.md`](Spec/ESTADO-ACTUAL.md) y [`Spec/features/SPEC-feature-*.md`](Spec/features/).
 
+- **Features 38-50 (mayo 2026)** ✅ Cleanup arquitectónico, fixes de plataforma y el bloque pre-beta. 13 features:
+
+  - **F38-44 · Infra & polish:** clean-arch cleanup (`linksRepo`/`inboxRepo`), fixes CSP Tauri (grafo workers F39 + cloudfunctions F44), splash screens Android/Tauri (F40/F41), polish offline UX (F42), limpieza de nav mobile (F43). Detalle en [`Spec/ESTADO-ACTUAL.md`](Spec/ESTADO-ACTUAL.md)
+  - **F45 · Code blocks:** syntax highlighting con lowlight (25 lenguajes) + language picker; primer NodeView React del proyecto
+  - **F46 · Split-pane multinota:** dos notas lado a lado en `/notes/:noteId` (`?split=`, atajo `Cmd/Ctrl+\`), ratio persistido en preferences
+  - **F47 · Login redesign + email/password + capacity gate:** LoginPage Linear-style con tabs email/pw + Google + reset password, verificación de email, y capacity gate ("Beta llena") sobre `config/app`
+  - **F48 · BYOK API Keys:** cada usuario aporta su propia API key de Anthropic (cifrada AES-256-GCM server-side, nunca vuelve al cliente); sin key, la IA de generación queda deshabilitada
+  - **F49 · Onboarding:** `WelcomeModal` de 1 paso + checklist de 4 hitos reactivos en el dashboard (API key BYOK como hito central)
+  - **F50 · Security hardening + beta cerrada:** `requireVerified` en los callables, **allowlist** enforced en rules + CFs + UX (beta cerrada), crypto AAD+`keyVersion`, `maxInstances` bounded-cost, anti-enumeración en login
+
+  Detalle, decisiones y gotchas: [`Spec/ESTADO-ACTUAL.md`](Spec/ESTADO-ACTUAL.md) y [`Spec/features/SPEC-feature-*.md`](Spec/features/).
+
 **Ya se puede usar a diario:** capturar ideas desde cualquier app con `Ctrl+Shift+Space` (desktop) o `Alt+N` (web/in-app), web clip desde Chrome via extensión, share intent desde cualquier app Android al Quick Capture, procesar inbox con sugerencias AI agrupadas por confianza (`Aceptar N` para los items ≥0.85), buscar globalmente con `Ctrl+K`, escribir notas con wikilinks + backlinks + auto-tags + resumen AI + sugerencias contextuales accept/dismiss en el editor, marcar favoritos y mandar a papelera con auto-purga configurable, explorar el grafo de conocimiento, ver notas similares por embeddings, agendar revisiones con FSRS, organizar tareas/proyectos/objetivos/hábitos, y todo offline gracias a TinyBase + PWA + retry queue end-to-end (creates + updates + saveContent) con `<PendingSyncIndicator />` global cuando hay writes pendientes.
 
-**Backend AI:** 6 Cloud Functions v2 desplegadas en `us-central1` (Node.js 22, `retry: false`):
+**Cloud Functions:** 11 desplegadas en `us-central1` (9 v2 Node.js 22 — triggers con `retry: false`, callables con `maxInstances` — + 2 v1 Auth triggers):
 
 - `processInboxItem` — `onDocumentCreated` en inbox, Claude Haiku con tool use + schema enforcement, escribe 6 campos flat `aiSuggested*`
 - `autoTagNote` — `onDocumentWritten` en notes, Claude Haiku con prompt caching `ephemeral`, escribe `aiTags` + `aiSummary`
@@ -149,6 +163,9 @@ La fuente primaria de estado y arquitectura vigente es [`Spec/ESTADO-ACTUAL.md`]
 - `embedQuery` — `onCall` v2 callable para búsqueda híbrida client-side (input ≤500 chars)
 - `onNoteDeleted` — cleanup cascada (embeddings + links bidireccionales) con `WriteBatch` chunked
 - `autoPurgeTrash` — `onSchedule('0 3 * * *', UTC)` hard-delete diario tras `trashAutoPurgeDays`
+- `saveApiKey` / `deleteApiKey` — `onCall` callables BYOK: validan/cifran/borran la API key del usuario (F48)
+- `checkAllowlist` — `onCall` público: pre-check de membresía en la allowlist para el gate de signup (F50)
+- `onUserCreated` / `onUserDeleted` — triggers v1 que mantienen el counter del capacity gate (`config/app.userCount`)
 
 ## Setup local
 
@@ -181,6 +198,8 @@ npm run deploy:rules
 npm run dev
 ```
 
+> **Nota — beta cerrada (allowlist).** Las Firestore rules exigen que el email del usuario exista en `allowlist/{email}` (gate de F50). Si levantás tu propio Firebase, tras `deploy:rules` quedás afuera de tu propia instancia hasta sembrar tu email: creá el doc `allowlist/<tu-email-en-minúsculas>` en Firestore (Console o script) o todo read/write da `permission-denied` (auto-lockout).
+
 ## Comandos
 
 ```bash
@@ -205,7 +224,7 @@ npm run cap:build         # Build web + sync + gradlew assembleDebug → APK deb
 - **Web / PWA:** https://secondmind.web.app — instalable desde Chrome/Edge
 - **Chrome Extension:** código en [`extension/`](extension/) (build separado vía CRXJS)
 - **Desktop Windows:** instaladores en `src-tauri/target/release/bundle/{msi,nsis}/` vía `npm run tauri:build`. Auto-update tag-based (F8)
-- **Android:** APK debug en `android/app/build/outputs/apk/debug/` vía `npm run cap:build`. Release firmado se distribuye por Firebase App Distribution con el mismo flujo tag-based (F9)
+- **Android:** APK debug en `android/app/build/outputs/apk/debug/` vía `npm run cap:build`. El release firmado se distribuye por **Firebase App Distribution** (grupo `owner`) con el mismo flujo tag-based (F9). Es el canal del APK — distinto del gate de acceso por allowlist (auth, F50)
 
 ## Documentación
 
@@ -223,6 +242,6 @@ Las SPECs viven en [`Spec/`](Spec/):
 
 - [`Spec/ESTADO-ACTUAL.md`](Spec/ESTADO-ACTUAL.md) — snapshot consolidado (fuente primaria de estado y arquitectura vigente) + índice de gotchas por dominio
 - [`Spec/SPEC-fase-*.md`](Spec/) — canon histórico por fase (0 a 5.2)
-- [`Spec/features/SPEC-feature-*.md`](Spec/features/) — canon histórico por feature (1 a 37)
+- [`Spec/features/SPEC-feature-*.md`](Spec/features/) — canon histórico por feature (1 a 50)
 - [`Spec/gotchas/<dominio>.md`](Spec/gotchas/) — canon de gotchas técnicos por dominio (15 archivos: editor, ui-componentes, tinybase-firestore, capacitor-mobile, tauri-desktop, cloud-functions-\*, etc.)
 - [`Spec/drafts/DRAFT-*.md`](Spec/drafts/) — discovery pre-SPEC temporal (se eliminan al convertirse en SPEC formal)
