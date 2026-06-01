@@ -6,7 +6,7 @@
 > **Depende de:** F50 (security hardening — allowlist, `requireVerified`, `assertAllowlisted`, anti-enumeración), F47 (auth Google + capacity gate), F48 (BYOK crypto).
 > **Origen:** ítem **A-3** de la auditoría `AUDIT-auth-keys-v0.5` (`Spec/audits/AUDIT-auth-keys-v0.5.md`). A-3 estaba anotado como "App Check (fast-follow)"; tras el discovery de App Check se **reformuló**: App Check **descartado para la beta** y A-3 pasó a "cerrar el oráculo post-auth + hardening de `embedQuery`".
 > **Verificación E2E (prod real):** 5/5 — (1) email/pw no-allowlisted → cuenta huérfana + `signOut` + `BETA_NO_ACCESS_MESSAGE`, **bounce real validado** (`/login→/verify-email→/login`, `LoginCard` re-montado, mensaje persiste); (2) fallo de red en el gate → **NO** desloguea; (3) `embedQuery` verificado-no-allowlisted → `403 permission-denied` (`assertAllowlisted`, no `requireVerified`); (4) verificado+allowlisted → `200` vector 1536 (legítimo no bloqueado); (5) rate-limit → `429 resource-exhausted` en la 61ª llamada/min. Gate 1 (lint+tsc×2+suite 231+rules 5) verde por canal confiable.
-> **Pasos manuales del operador (Console):** EEP toggle (Authentication → Settings → User actions), budget alerts (GCP Billing ~$5/$10/$20), TTL policy sobre `rateLimits.expireAt`.
+> **Pasos manuales del operador (Console) — ✅ COMPLETOS (2026-06-01):** EEP toggle (ya estaba activo → **F5 no-op**), budget alerts (GCP Billing — $20/mes, umbrales 25/50/100%), TTL policy sobre `rateLimits.expireAt` (creada; activa ~10 min tras crearla). **SPEC-51 cerrado al 100% — sin acción de código ni de operador pendiente.**
 
 ## Por qué NO App Check (resumen del discovery)
 
@@ -101,6 +101,7 @@ Eliminar el **oráculo de enumeración de emails** (la callable pública `checkA
 - **Qué cubre:** protege los **endpoints nativos de Firebase Auth** (`createAuthUri`/`fetchSignInMethodsForEmail` y mensajes de error de signup/signin/reset) para que no revelen si un email tiene cuenta. **Complementario** a F1-F4 (que cierran nuestra callable custom), no redundante. Refuerza F3 de F50 (anti-enumeración client-side): con EEP el backend colapsa `wrong-password`/`user-not-found` en `invalid-credential`, lo que `authErrors.ts:16` ya hace en cliente → no rompe nada.
 - **Pasos:** Firebase Console → **Authentication → Settings → User actions** → activar **Email enumeration protection**. (Opcional: bajar la cuota default de `identitytoolkit.googleapis.com` en GCP.)
 - **Criterio de done:** toggle **ON** confirmado en Console. Costo $0.
+- ✅ **Hecho (2026-06-01) — no-op:** el toggle **ya estaba activado** desde antes (estaba ON, "Guardar" en gris). Coincide con el gotcha "EEP active" preexistente → **F5 no era un pendiente real**, fue confirmación.
 
 ### Frente C — Hardening de `embedQuery`
 
@@ -120,7 +121,7 @@ Eliminar el **oráculo de enumeración de emails** (la callable pública `checkA
   - `increment` atómico del `count`; si supera el umbral → `HttpsError('resource-exhausted')`. (Contar también los rechazados es aceptable para rate-limiting.)
   - `expireAt` (timestamp) para que la **TTL policy** de Firestore auto-purgue los slots viejos.
   - Regla en `firestore.rules`: `match /rateLimits/{document=**} { allow read, write: if false; }` (Admin SDK bypassa; patrón `allowlist/`/`userSecrets/`).
-  - **TTL policy:** crear policy sobre el campo `expireAt` de la colección `rateLimits` (gcloud/Console — semi-manual, ver Pasos manuales).
+  - **TTL policy:** crear policy sobre el campo `expireAt` de la colección `rateLimits` (gcloud/Console — semi-manual, ver Pasos manuales). ✅ **Creada (2026-06-01):** la Console aceptó el grupo de colecciones con `rateLimits` vacía; lista para purgar cuando lleguen docs reales.
 - **Criterio de done:** test unit del helper (umbral alcanzado → throw; ventana nueva → reset; min y día independientes); rule deny-all cubierta por `firestore.rules.test.ts`; los docs creados llevan `expireAt`.
 - **Archivos:** `src/functions/src/lib/rateLimit.ts`, `src/functions/src/lib/rateLimit.test.ts`, `firestore.rules`, `firestore.rules.test.ts`.
 
@@ -166,10 +167,10 @@ Eliminar el **oráculo de enumeración de emails** (la callable pública `checkA
 
 1. `firebase deploy --only functions:checkMyAccess,functions:embedQuery` — crea `checkMyAccess` (nueva) + actualiza `embedQuery` (allowlist+rate-limit). **No-destructivo**: no considera las demás funciones para borrado → `checkAllowlist` queda viva, el hosting actual no se rompe durante la ventana. ✅ **EJECUTADO** (create checkMyAccess + update embedQuery OK).
 2. `npm run deploy:rules` — regla deny-all `rateLimits/`. **No-destructivo**, reversible. ✅ **EJECUTADO**.
-3. **Crear TTL policy** sobre `rateLimits.expireAt` (gcloud/Console). Pendiente (manual).
-4. `npm run build && npm run deploy` — hosting que llama `checkMyAccess`. **(Destructivo: a partir de acá el hosting prod usa el flujo nuevo — detrás del Gate 2.)**
-5. `firebase functions:delete checkAllowlist --region us-central1` — borrar la función huérfana ya sin call-sites (SOLO post-hosting). Pendiente.
-6. **F5** (EEP) y **F9** (budget) en Console. Pendiente (manual).
+3. **Crear TTL policy** sobre `rateLimits.expireAt` (gcloud/Console). ✅ **EJECUTADO (2026-06-01)** — policy creada; la Console aceptó el grupo con la colección vacía.
+4. `npm run build && npm run deploy` — hosting que llama `checkMyAccess`. **(Destructivo: a partir de acá el hosting prod usa el flujo nuevo — detrás del Gate 2.)** ✅ **EJECUTADO**.
+5. `firebase functions:delete checkAllowlist --region us-central1` — borrar la función huérfana ya sin call-sites (SOLO post-hosting). ✅ **EJECUTADO** (post-hosting; sin call-sites).
+6. **F5** (EEP) y **F9** (budget) en Console. ✅ **EJECUTADO (2026-06-01)** — F5 **no-op** (EEP ya activo); F9 = budget mensual $20 con alertas 25/50/100%.
 
 > Tauri/Android: el cambio es 100% client-side compartido vía `useAuth` → entran en su próximo release nativo (sin divergencia de datos, igual que A1 de Clean Arch). No requieren build nativo en este SPEC.
 
@@ -193,15 +194,15 @@ Eliminar el **oráculo de enumeración de emails** (la callable pública `checkA
 
 ## Checklist de cierre (SDD step 8)
 
-- [ ] F1-F4, F6-F8 implementadas + criterios verificados.
-- [ ] F5 (EEP) y F9 (budget) ejecutados en Console; TTL policy creada.
-- [ ] `npm run lint` + `tsc --noEmit` + `npm test` verdes (CI gate).
-- [ ] `npm run test:rules` verde (regla `rateLimits/`).
-- [ ] E2E allowlisted + no-allowlisted + fallo-de-red + rate-limit/degradado OK.
-- [ ] Deploy ejecutado en el orden crítico; `checkAllowlist` vieja borrada.
-- [ ] Commits atómicos Conventional (uno por sub-feature) + merge `--no-ff`.
-- [ ] Escalación de gotchas (oráculo cerrado → actualizar/retirar el gotcha "checkAllowlist es oráculo" en `Spec/gotchas/cloud-functions-guards.md`; nuevo gotcha rate-limit si aplica).
-- [ ] Convertir este SPEC a registro de implementación.
+- [x] F1-F4, F6-F8 implementadas + criterios verificados.
+- [x] F5 (EEP) y F9 (budget) ejecutados en Console; TTL policy creada. _(2026-06-01: EEP ya estaba activo → F5 no-op; F9 = $20/mes alertas 25/50/100%.)_
+- [x] `npm run lint` + `tsc --noEmit` + `npm test` verdes (CI gate).
+- [x] `npm run test:rules` verde (regla `rateLimits/`).
+- [x] E2E allowlisted + no-allowlisted + fallo-de-red + rate-limit/degradado OK.
+- [x] Deploy ejecutado en el orden crítico; `checkAllowlist` vieja borrada.
+- [x] Commits atómicos Conventional (uno por sub-feature) + merge `--no-ff`.
+- [x] Escalación de gotchas (oráculo cerrado → actualizar/retirar el gotcha "checkAllowlist es oráculo" en `Spec/gotchas/cloud-functions-guards.md`; nuevo gotcha rate-limit si aplica).
+- [x] Convertir este SPEC a registro de implementación.
 
 ## Hardening futuro (anotado, fuera de scope)
 
