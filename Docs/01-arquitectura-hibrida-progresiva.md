@@ -491,7 +491,7 @@ src/
 │   ├── capacitor.ts             # isCapacitor() helper via Capacitor.isNativePlatform() (Fase 5.2)
 │   ├── capacitorAuth.ts         # initCapacitorAuth + signInWithCapacitor: SocialLogin → signInWithCredential (Fase 5.2)
 │   ├── apiKeys.ts               # Cliente BYOK: httpsCallable saveApiKey/deleteApiKey + cache (F48)
-│   ├── allowlist.ts             # Cliente del gate de beta: httpsCallable checkAllowlist (F47/F50)
+│   ├── allowlist.ts             # Cliente del gate de beta: httpsCallable checkMyAccess sin args (F47/F50/SPEC-51)
 │   └── editor/
 │       ├── extractLinks.ts      # Parser de menciones @ del contenido
 │       └── computeDistillLevel.ts  # Deriva distillLevel 0-3 desde los marks del content
@@ -524,7 +524,7 @@ src/
     │   │   ├── saveApiKey.ts         # onCall: valida + cifra + guarda la key BYOK (F48)
     │   │   └── deleteApiKey.ts       # onCall: borra la key BYOK (F48)
     │   ├── auth/
-    │   │   ├── checkAllowlist.ts     # onCall: pre-check de membresía en la allowlist (F50)
+    │   │   ├── checkMyAccess.ts      # onCall autenticado: lee el email del token → gate de allowlist post-auth (SPEC-51, reemplaza checkAllowlist)
     │   │   └── userCountTriggers.ts  # onUserCreated/onUserDeleted (v1): mantienen config/app.userCount (F47)
     │   └── lib/
     │       ├── schemas.ts            # JSON Schemas compartidos para tool use (Fase 3.1)
@@ -747,10 +747,12 @@ getUserAnthropicKey() y la descifran. Sin key → early-return: IA de generació
 Login email/password                Login Google
     │                                   │
     ▼                                   ▼
-pre-check checkAllowlist(email)     signInWithPopup/credential → obtiene el email
+createUser → gate POST-auth         signInWithPopup/credential → obtiene el email
     │                                   │
     ▼                                   ▼
-no invitado → no crea cuenta        no invitado → signOut inmediato (cuenta queda inerte)
+checkMyAccess() autenticado (lee el email del token, gate unificado en useAuth)
+    │                                   │
+no invitado → signOut + msg genérico (cuenta queda inerte vía rules)
     │                                   │
     └─────────────────┬─────────────────┘
                       ▼

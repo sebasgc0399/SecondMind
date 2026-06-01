@@ -668,7 +668,7 @@ export const processInboxItem = onDocumentCreated(
 
 **Logs sin datos crudos: `sanitizeError` (post-audit F50).** Nunca loggear el error crudo (puede filtrar contenido del usuario o la key); pasar por `sanitizeError(error)` antes de `logger.error`.
 
-**`maxInstances` explícito en callables (post-F50).** Acota el costo ante abuso: p. ej. `embedQuery` y `checkAllowlist` 5, `saveApiKey` 3.
+**`maxInstances` explícito en callables (post-F50).** Acota el costo ante abuso: p. ej. `embedQuery` y `checkMyAccess` 5, `saveApiKey` 3.
 
 **Guards de acceso en callables que tocan datos del usuario (post-F50).** `requireVerified` (auth + email verificado) y `assertAllowlisted` (email en la allowlist) al inicio de `saveApiKey`/`deleteApiKey` — el Admin SDK bypassa las rules, así que el chequeo se replica en el callable.
 

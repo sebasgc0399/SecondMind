@@ -1,8 +1,12 @@
-# SPEC — Feature 51: Cerrar el oráculo de allowlist + hardening de `embedQuery`
+# SPEC — Feature 51: Cerrar el oráculo de allowlist + hardening de `embedQuery` (Registro de implementación)
 
-> **Estado:** 📋 Planificado — pendiente de revisión e implementación.
-> **Rama:** `feat/cerrar-oraculo-allowlist` > **Depende de:** F50 (security hardening — allowlist, `requireVerified`, `assertAllowlisted`, anti-enumeración), F47 (auth Google + capacity gate), F48 (BYOK crypto).
-> **Origen:** ítem **A-3** de la auditoría `AUDIT-auth-keys-v0.5` (`Spec/audits/AUDIT-auth-keys-v0.5.md`). A-3 estaba anotado como "App Check (fast-follow)"; tras el discovery de App Check (esta sesión) se **reformula**: App Check queda **descartado para la beta** y A-3 pasa a "cerrar el oráculo post-auth + hardening de `embedQuery`".
+> **Estado:** ✅ Completada 2026-05-31 — desplegada y verificada en prod (`secondmindv1`).
+> **Deploy:** code-only sobre **v0.4.0** (functions + rules + hosting en `secondmindv1`) — **sin bump de versión ni tag**, igual que SPEC-50. Tauri/Android: cambio 100% client-side compartido vía `useAuth` → entran en su próximo release nativo (sin divergencia de datos).
+> **Rama:** `feat/cerrar-oraculo-allowlist` → merge `--no-ff` a `main`.
+> **Depende de:** F50 (security hardening — allowlist, `requireVerified`, `assertAllowlisted`, anti-enumeración), F47 (auth Google + capacity gate), F48 (BYOK crypto).
+> **Origen:** ítem **A-3** de la auditoría `AUDIT-auth-keys-v0.5` (`Spec/audits/AUDIT-auth-keys-v0.5.md`). A-3 estaba anotado como "App Check (fast-follow)"; tras el discovery de App Check se **reformuló**: App Check **descartado para la beta** y A-3 pasó a "cerrar el oráculo post-auth + hardening de `embedQuery`".
+> **Verificación E2E (prod real):** 5/5 — (1) email/pw no-allowlisted → cuenta huérfana + `signOut` + `BETA_NO_ACCESS_MESSAGE`, **bounce real validado** (`/login→/verify-email→/login`, `LoginCard` re-montado, mensaje persiste); (2) fallo de red en el gate → **NO** desloguea; (3) `embedQuery` verificado-no-allowlisted → `403 permission-denied` (`assertAllowlisted`, no `requireVerified`); (4) verificado+allowlisted → `200` vector 1536 (legítimo no bloqueado); (5) rate-limit → `429 resource-exhausted` en la 61ª llamada/min. Gate 1 (lint+tsc×2+suite 231+rules 5) verde por canal confiable.
+> **Pasos manuales del operador (Console):** EEP toggle (Authentication → Settings → User actions), budget alerts (GCP Billing ~$5/$10/$20), TTL policy sobre `rateLimits.expireAt`.
 
 ## Por qué NO App Check (resumen del discovery)
 
