@@ -157,12 +157,14 @@ Eliminar el **oráculo de enumeración de emails** (la callable pública `checkA
 
 ## Orden de deploy (crítico)
 
-1. `npm run deploy:functions` — crea `checkMyAccess`, `embedQuery` (con allowlist+rate-limit), helpers. _(La `checkAllowlist` vieja sigue viva → el hosting actual no se rompe durante la ventana.)_
-2. `npm run deploy:rules` — regla deny-all `rateLimits/`.
-3. **Crear TTL policy** sobre `rateLimits.expireAt` (gcloud/Console).
-4. `npm run build && npm run deploy` — hosting que llama `checkMyAccess`.
-5. `firebase functions:delete checkAllowlist` — borrar la función huérfana ya sin call-sites.
-6. **F5** (EEP) y **F9** (budget) en Console.
+> **⚠️ Gotcha (hallado en E2E):** `npm run deploy:functions` (= `firebase deploy --only functions`, **todas**) **NO** "deja `checkAllowlist` viva": detecta que existe en prod pero no en el código y **aborta en modo no-interactivo** (`exit 1`, "deletion cannot proceed"). La única forma de que ese comando proceda sería `--force`, que la **borraría ya** — pero el borrado es destructivo y debe ir DESPUÉS del hosting (si no, rompe el signup del hosting viejo en prod). **Solución:** deploy **selectivo por nombre** en el paso 1.
+
+1. `firebase deploy --only functions:checkMyAccess,functions:embedQuery` — crea `checkMyAccess` (nueva) + actualiza `embedQuery` (allowlist+rate-limit). **No-destructivo**: no considera las demás funciones para borrado → `checkAllowlist` queda viva, el hosting actual no se rompe durante la ventana. ✅ **EJECUTADO** (create checkMyAccess + update embedQuery OK).
+2. `npm run deploy:rules` — regla deny-all `rateLimits/`. **No-destructivo**, reversible. ✅ **EJECUTADO**.
+3. **Crear TTL policy** sobre `rateLimits.expireAt` (gcloud/Console). Pendiente (manual).
+4. `npm run build && npm run deploy` — hosting que llama `checkMyAccess`. **(Destructivo: a partir de acá el hosting prod usa el flujo nuevo — detrás del Gate 2.)**
+5. `firebase functions:delete checkAllowlist --region us-central1` — borrar la función huérfana ya sin call-sites (SOLO post-hosting). Pendiente.
+6. **F5** (EEP) y **F9** (budget) en Console. Pendiente (manual).
 
 > Tauri/Android: el cambio es 100% client-side compartido vía `useAuth` → entran en su próximo release nativo (sin divergencia de datos, igual que A1 de Clean Arch). No requieren build nativo en este SPEC.
 
