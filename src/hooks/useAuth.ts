@@ -10,7 +10,8 @@ import {
   GoogleAuthProvider,
 } from 'firebase/auth';
 import { auth } from '@/lib/firebase';
-import { checkAllowlist } from '@/lib/allowlist';
+import { checkMyAccess } from '@/lib/allowlist';
+import { setLoginError } from '@/lib/loginError';
 import { normalizeEmail } from '@/lib/normalizeEmail';
 import { readSignupCapacity } from '@/hooks/useSignupCapacity';
 import { invalidateEmbeddingsCache } from '@/lib/embeddings';
@@ -23,6 +24,30 @@ import { signInWithTauri } from '@/lib/tauriAuth';
 import type { User } from 'firebase/auth';
 
 const googleProvider = new GoogleAuthProvider();
+
+// SPEC-51 F3 (A-3): gate de acceso post-auth UNIFICADO (Google + email/pw).
+// Reemplaza el oráculo público checkAllowlist por checkMyAccess (autenticado, lee
+// el email del propio token). Distingue TRES resultados:
+//  (1) authorized === true  → no-op; el caller continúa (navega / envía verificación).
+//  (2) authorized === false → firebaseSignOut + throw 'allowlist-not-authorized'
+//      (echar al no-invitado + mensaje genérico).
+//  (3) checkMyAccess() LANZA (red / callable no disponible) → NO signOut + throw
+//      'access-check-unavailable'. No echamos al usuario ante un fallo transitorio:
+//      no sabemos si está autorizado y las rules son el backstop de datos
+//      (un legítimo entra y funciona; un no-legítimo lo frenan las rules).
+// Module-level (no usa estado del hook) para compartirse entre signIn y signUpWithEmail.
+async function enforceAccessGate(): Promise<void> {
+  let authorized: boolean;
+  try {
+    authorized = await checkMyAccess();
+  } catch {
+    throw { code: 'access-check-unavailable' };
+  }
+  if (!authorized) {
+    await firebaseSignOut(auth);
+    throw { code: 'allowlist-not-authorized' };
+  }
+}
 
 interface UseAuthReturn {
   user: User | null;
@@ -57,16 +82,10 @@ export default function useAuth(): UseAuthReturn {
     } else {
       await signInWithPopup(auth, googleProvider);
     }
-    // F6 allowlist gate (Google): el email solo existe POST-auth (Firebase crea
-    // el user en signInWithCredential). Si no está en la allowlist, cerramos la
-    // sesión local de inmediato y señalamos el rechazo. La cuenta queda inerte
-    // (las rules de F4 la neutralizan); no se borra (D4). firebaseSignOut directo
-    // (no el signOut del hook) evita el TDZ por orden de declaración.
-    const email = auth.currentUser?.email;
-    if (email && !(await checkAllowlist(normalizeEmail(email)))) {
-      await firebaseSignOut(auth);
-      throw { code: 'allowlist-not-authorized' };
-    }
+    // F6→F3 allowlist gate (Google): el email solo existe POST-auth. El gate
+    // unificado (checkMyAccess autenticado) decide entrar/echar/reintentar; ver
+    // enforceAccessGate. firebaseSignOut directo (dentro del gate) evita TDZ.
+    await enforceAccessGate();
   }, []);
 
   const signInWithEmail = useCallback(async (email: string, password: string) => {
@@ -92,8 +111,14 @@ export default function useAuth(): UseAuthReturn {
     }
 
     const credential = await createUserWithEmailAndPassword(auth, normalizeEmail(email), password);
-    // Auto-send verification email post-create. Si el envío falla (rate limit,
-    // network), no rompemos el flow — el banner F4 ofrecerá reenviar.
+    // SPEC-51 F3: gate post-auth ANTES de enviar la verificación. Si no está
+    // autorizado (signOut + throw) o no se pudo verificar (throw sin signOut),
+    // enforceAccessGate LANZA → no se envía verificación a un no-invitado y el
+    // form muestra el mensaje sin navegar. Email/pw converge al patrón de Google.
+    await enforceAccessGate();
+    // Auto-send verification email post-create (solo si pasó el gate). Si el
+    // envío falla (rate limit, network), no rompemos el flow — el banner F4
+    // ofrecerá reenviar.
     try {
       await sendEmailVerification(credential.user);
     } catch {
@@ -156,6 +181,9 @@ export default function useAuth(): UseAuthReturn {
     invalidateEmbeddingsCache();
     invalidatePreferencesCache();
     invalidateAiKeysCache();
+    // SPEC-51 F3: limpiar el error de login persistente para que no quede stale
+    // al volver a /login tras un logout (el store sobrevive entre montajes).
+    setLoginError('');
     await firebaseSignOut(auth);
   }, []);
 
