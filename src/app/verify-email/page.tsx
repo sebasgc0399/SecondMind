@@ -101,8 +101,10 @@ export default function VerifyEmailPage() {
           </div>
           <h2 className="text-xl font-semibold">Verificá tu email para continuar</h2>
           <p className="text-sm text-muted-foreground">
-            Enviamos un enlace a <span className="font-medium text-foreground">{user.email}</span>.
-            Hacé click para activar tu cuenta — sin verificación no podés guardar notas ni tareas.
+            Para activar tu cuenta verificá{' '}
+            <span className="font-medium text-foreground">{user.email}</span>. Revisá tu bandeja de
+            entrada y la carpeta de spam, y hacé click en el enlace — sin verificación no podés
+            guardar notas ni tareas. ¿No te llegó? Reenvialo abajo.
           </p>
           <Button
             type="button"
