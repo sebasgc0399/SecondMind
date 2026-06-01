@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { mapAuthError } from './authErrors';
+import { BETA_NO_ACCESS_MESSAGE, mapAuthError } from './authErrors';
 
 const GENERIC = 'Ya existe una cuenta con este email. Probá iniciar sesión o usar Google.';
 
