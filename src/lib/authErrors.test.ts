@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { mapAuthError } from './authErrors';
+import { BETA_NO_ACCESS_MESSAGE, mapAuthError } from './authErrors';
 
 const GENERIC = 'Ya existe una cuenta con este email. Probá iniciar sesión o usar Google.';
 
@@ -67,11 +67,19 @@ describe('mapAuthError', () => {
     });
   });
 
-  describe('allowlist (F6)', () => {
-    it('allowlist-not-authorized → mensaje claro de beta cerrada', () => {
-      expect(mapAuthError('allowlist-not-authorized')).toBe(
-        'Este email no está en la lista de la beta. Escribinos para sumarte.',
-      );
+  describe('allowlist post-auth (SPEC-51 F3/F4)', () => {
+    it('allowlist-not-authorized usa copy genérico que NO confirma membresía', () => {
+      const result = mapAuthError('allowlist-not-authorized');
+      expect(result).toBe(BETA_NO_ACCESS_MESSAGE);
+      expect(result).not.toMatch(/lista|allowlist|invitad/i);
+      expect(result).not.toContain('@');
+    });
+
+    it('access-check-unavailable invita a reintentar, distinto de no-autorizado', () => {
+      const result = mapAuthError('access-check-unavailable');
+      expect(result).not.toBe(BETA_NO_ACCESS_MESSAGE);
+      expect(result.toLowerCase()).toContain('reintent');
+      expect(result).not.toMatch(/lista|allowlist|invitad/i);
     });
   });
 

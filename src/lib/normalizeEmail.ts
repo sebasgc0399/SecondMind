@@ -1,6 +1,6 @@
-// SPEC-50 F6: normalización consistente de email en los puntos cliente
-// (pre-check de allowlist + sign in/up). El seed de la allowlist y los guards
-// server-side (isAllowlisted/checkAllowlist) aplican el mismo .trim().toLowerCase().
+// SPEC-50 F6 / SPEC-51 F3: normalización consistente de email en los puntos
+// cliente (sign in/up). El seed de la allowlist y los guards server-side
+// (isAllowlisted, vía checkMyAccess/assertAllowlisted) aplican .trim().toLowerCase().
 export function normalizeEmail(email: string): string {
   return email.trim().toLowerCase();
 }

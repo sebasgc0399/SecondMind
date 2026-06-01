@@ -5,9 +5,11 @@ import * as admin from 'firebase-admin';
 // allowlist/{email} con Admin SDK (bypassa el deny-all de F4). Normaliza igual
 // que el seed y los puntos cliente: .trim().toLowerCase().
 export async function isAllowlisted(email: unknown): Promise<boolean> {
-  // checkAllowlist es un callable PÚBLICO (sin auth) → email es input no
-  // confiable. Validar ANTES de normalizar: si no es string no-vacío,
-  // fail-closed (return false), sin que email.trim() tire TypeError → 500.
+  // email es input NO totalmente confiable: checkMyAccess pasa
+  // request.auth.token.email (puede ser undefined si el token no trae email) y
+  // assertAllowlisted lo recibe de los callables. Validar ANTES de normalizar: si
+  // no es string no-vacío, fail-closed (return false) sin que email.trim() tire
+  // TypeError → 500.
   if (typeof email !== 'string' || !email.trim()) return false;
   const normalized = email.trim().toLowerCase();
   const snap = await admin.firestore().collection('allowlist').doc(normalized).get();

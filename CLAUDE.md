@@ -223,9 +223,9 @@ src/
 - Timeout y retry configurados explícitamente, nunca defaults
 - Secret management (BYOK, post-F48): el secret del proyecto es `defineSecret('BYOK_MASTER_KEY')` (master key para descifrar) + `OPENAI_API_KEY` (embeddings); `secret.value()` dentro del handler, nunca top-level. La key del LLM es **del usuario**: se obtiene en runtime con `getUserAnthropicKey(userId, masterKey.value())`, no con `defineSecret`. `ANTHROPIC_API_KEY` ya no se usa
 - Logs sin datos crudos: pasar los errores por `sanitizeError()` antes de `logger.error` (nunca el error crudo — puede filtrar contenido del usuario o la key)
-- `maxInstances` explícito en callables para acotar costo ante abuso (ej. `embedQuery`/`checkAllowlist` 5, `saveApiKey` 3)
+- `maxInstances` explícito en callables para acotar costo ante abuso (ej. `embedQuery`/`checkMyAccess` 5, `saveApiKey` 3)
 - Tool use con schema enforcement: las 2 CFs de generación (`processInboxItem`, `autoTagNote`) usan `tools` + `tool_choice: { type: 'tool' }` para forzar JSON válido. Schemas compartidos en `src/functions/src/lib/schemas.ts`
-- Cloud Functions desplegadas (11 = 9 v2 + 2 v1 auth triggers): `processInboxItem`, `autoTagNote`, `onNoteDeleted` (cleanup cascada), `autoPurgeTrash` (scheduled), `generateEmbedding`, `embedQuery` (callable), `saveApiKey`/`deleteApiKey` (callables BYOK), `checkAllowlist` (callable), `onUserCreated`/`onUserDeleted` (triggers v1, counter del capacity gate). Detalle de triggers + timeouts en `Spec/ESTADO-ACTUAL.md` § "Cloud Functions"
+- Cloud Functions desplegadas (11 = 9 v2 + 2 v1 auth triggers): `processInboxItem`, `autoTagNote`, `onNoteDeleted` (cleanup cascada), `autoPurgeTrash` (scheduled), `generateEmbedding`, `embedQuery` (callable, con allowlist + rate-limit per-uid post-SPEC-51), `saveApiKey`/`deleteApiKey` (callables BYOK), `checkMyAccess` (callable autenticado, gate de allowlist post-auth — reemplazó al público `checkAllowlist` en SPEC-51), `onUserCreated`/`onUserDeleted` (triggers v1, counter del capacity gate). Detalle de triggers + timeouts en `Spec/ESTADO-ACTUAL.md` § "Cloud Functions"
 
 ### Git
 

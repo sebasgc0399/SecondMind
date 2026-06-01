@@ -51,5 +51,13 @@ service cloud.firestore {
     match /allowlist/{email} {
       allow read, write: if false;
     }
+
+    // SPEC-51 F7 (A-3) — rateLimits/: contadores de rate-limit por uid+key+ventana
+    // (embedQuery, etc.). Deny-all client-side (mismo patrón que allowlist/userSecrets):
+    // solo el Admin SDK (Cloud Functions) los lee/escribe. La TTL sobre el campo
+    // expireAt purga slots viejos (config GCP, no acá).
+    match /rateLimits/{document=**} {
+      allow read, write: if false;
+    }
   }
 }

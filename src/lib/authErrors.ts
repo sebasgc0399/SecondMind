@@ -5,6 +5,12 @@ const GENERIC_ACCOUNT_EXISTS =
 
 const RESET_GENERIC = 'Si la cuenta existe, recibirás un enlace en tu email.';
 
+// SPEC-51 F4 (A-3): copy genérico de "sin acceso a la beta". NO confirma membresía
+// (no menciona lista/allowlist/invitado) y por ahora NO incluye canal de contacto.
+// EDITAR ACÁ cuando exista el formulario público de solicitud de acceso para
+// apuntar a él — punto único de edición.
+export const BETA_NO_ACCESS_MESSAGE = 'Tu cuenta todavía no tiene acceso a la beta.';
+
 export function mapAuthError(
   code: string | undefined,
   context: AuthErrorContext = 'signin',
@@ -39,8 +45,13 @@ export function mapAuthError(
     case 'capacity-unavailable':
       return 'No se pudo verificar disponibilidad. Reintentá.';
     case 'allowlist-not-authorized':
-      // SPEC-50 F6 (A-2): email fuera de la allowlist de la beta cerrada.
-      return 'Este email no está en la lista de la beta. Escribinos para sumarte.';
+      // SPEC-51 F3/F4 (A-3): gate post-auth — el usuario autenticado no está en la
+      // allowlist. Copy genérico que NO confirma membresía (ver BETA_NO_ACCESS_MESSAGE).
+      return BETA_NO_ACCESS_MESSAGE;
+    case 'access-check-unavailable':
+      // SPEC-51 F3 (A-3): no se pudo verificar el acceso (red / callable caída). NO
+      // echamos al usuario; invitamos a reintentar. Distinto de allowlist-not-authorized.
+      return 'No pudimos verificar tu acceso. Reintentá en un momento.';
     default:
       return 'Algo salió mal. Intentá de nuevo.';
   }

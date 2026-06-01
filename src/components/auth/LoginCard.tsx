@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Tabs } from '@base-ui/react/tabs';
 import { cn } from '@/lib/utils';
+import useLoginError from '@/hooks/useLoginError';
 import useMountedTransition from '@/hooks/useMountedTransition';
 import SignInForm from './SignInForm';
 import SignUpForm from './SignUpForm';
@@ -14,7 +15,10 @@ type Mode = 'tabs' | 'reset';
 export default function LoginCard() {
   const [tab, setTab] = useState<TabValue>('signin');
   const [mode, setMode] = useState<Mode>('tabs');
-  const [error, setError] = useState('');
+  // SPEC-51 F3: error en store persistente (no useState local) para que SOBREVIVA
+  // el re-montaje de LoginCard durante el bounce del gate post-auth (/login→/→/login).
+  // Ver src/lib/loginError.ts. Misma firma [error, setError] → los forms no cambian.
+  const [error, setError] = useLoginError();
 
   // Switch tabs ↔ reset con anim 200ms. Grid 1x1 hace overlap durante
   // los 200ms de exit+entry. fill-mode-forwards en exit obligatorio

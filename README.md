@@ -160,11 +160,11 @@ La fuente primaria de estado y arquitectura vigente es [`Spec/ESTADO-ACTUAL.md`]
 - `processInboxItem` — `onDocumentCreated` en inbox, Claude Haiku con tool use + schema enforcement, escribe 6 campos flat `aiSuggested*`
 - `autoTagNote` — `onDocumentWritten` en notes, Claude Haiku con prompt caching `ephemeral`, escribe `aiTags` + `aiSummary`
 - `generateEmbedding` — `onDocumentWritten` en notes, OpenAI `text-embedding-3-small` (1536 dims), guard por `contentHash` SHA-256
-- `embedQuery` — `onCall` v2 callable para búsqueda híbrida client-side (input ≤500 chars)
+- `embedQuery` — `onCall` v2 callable para búsqueda híbrida client-side (input ≤300 chars; guards allowlist + rate-limit per-uid, SPEC-51)
 - `onNoteDeleted` — cleanup cascada (embeddings + links bidireccionales) con `WriteBatch` chunked
 - `autoPurgeTrash` — `onSchedule('0 3 * * *', UTC)` hard-delete diario tras `trashAutoPurgeDays`
 - `saveApiKey` / `deleteApiKey` — `onCall` callables BYOK: validan/cifran/borran la API key del usuario (F48)
-- `checkAllowlist` — `onCall` público: pre-check de membresía en la allowlist para el gate de signup (F50)
+- `checkMyAccess` — `onCall` autenticado: gate de allowlist post-auth (lee el email del token, no enumera terceros — reemplazó al público `checkAllowlist` en SPEC-51)
 - `onUserCreated` / `onUserDeleted` — triggers v1 que mantienen el counter del capacity gate (`config/app.userCount`)
 
 ## Setup local
