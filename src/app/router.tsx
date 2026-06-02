@@ -16,6 +16,7 @@ import NotFoundPage from '@/app/not-found';
 import LoginPage from '@/app/login/page';
 import VerifyEmailPage from '@/app/verify-email/page';
 import CapturePage from '@/app/capture/page';
+import AccessRequestPage from '@/app/solicitar-acceso/page';
 
 const router = createBrowserRouter([
   {
@@ -40,6 +41,7 @@ const router = createBrowserRouter([
   { path: '/capture', Component: CapturePage },
   { path: '/login', Component: LoginPage },
   { path: '/verify-email', Component: VerifyEmailPage },
+  { path: '/solicitar-acceso', Component: AccessRequestPage },
 ]);
 
 export default router;
