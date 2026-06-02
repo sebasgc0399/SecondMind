@@ -1,5 +1,5 @@
 import { onCall } from 'firebase-functions/v2/https';
-import * as admin from 'firebase-admin';
+import { getFirestore, Timestamp } from 'firebase-admin/firestore';
 import { requireAdmin, adminEmail } from '../lib/requireAdmin';
 
 // DTO de salida (definido local — functions es un proyecto TS independiente del web,
@@ -30,15 +30,13 @@ export const listAccessRequests = onCall<unknown, Promise<{ requests: AccessRequ
   async (request) => {
     requireAdmin(request, adminEmail.value());
 
-    const snap = await admin
-      .firestore()
+    const snap = await getFirestore()
       .collection('accessRequests')
       .where('status', '==', 'pending')
       .limit(MAX_RESULTS)
       .get();
 
-    const toMs = (v: unknown): number | null =>
-      v instanceof admin.firestore.Timestamp ? v.toMillis() : null;
+    const toMs = (v: unknown): number | null => (v instanceof Timestamp ? v.toMillis() : null);
 
     const requests: AccessRequestDTO[] = snap.docs.map((d) => {
       const data = d.data();

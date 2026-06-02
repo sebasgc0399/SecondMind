@@ -1,6 +1,6 @@
 import { onCall, HttpsError, type CallableRequest } from 'firebase-functions/v2/https';
 import { logger } from 'firebase-functions';
-import * as admin from 'firebase-admin';
+import { getFirestore, FieldValue } from 'firebase-admin/firestore';
 import { createHash } from 'node:crypto';
 import { enforceRateLimit } from '../lib/rateLimit';
 import { sanitizeError } from '../lib/sanitizeError';
@@ -95,7 +95,7 @@ export const submitAccessRequest = onCall<
     //    un doc para ese email → no-op (no pisa status ni createdAt). Re-solicitar tras
     //    un rejected requiere que el operador borre el doc a mano (raro, aceptado).
     try {
-      const db = admin.firestore();
+      const db = getFirestore();
       const ref = db.collection('accessRequests').doc(email);
       await db.runTransaction(async (tx) => {
         const snap = await tx.get(ref);
@@ -104,7 +104,7 @@ export const submitAccessRequest = onCall<
           email,
           ...(motivo ? { motivo } : {}),
           status: 'pending',
-          createdAt: admin.firestore.FieldValue.serverTimestamp(),
+          createdAt: FieldValue.serverTimestamp(),
         });
       });
     } catch (error) {

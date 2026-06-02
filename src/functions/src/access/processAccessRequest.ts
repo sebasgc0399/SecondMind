@@ -1,6 +1,6 @@
 import { onCall, HttpsError } from 'firebase-functions/v2/https';
 import { logger } from 'firebase-functions';
-import * as admin from 'firebase-admin';
+import { getFirestore, FieldValue } from 'firebase-admin/firestore';
 import { requireAdmin, adminEmail } from '../lib/requireAdmin';
 import { sanitizeError } from '../lib/sanitizeError';
 
@@ -34,7 +34,7 @@ export const processAccessRequest = onCall<ProcessAccessRequestData, Promise<{ o
     }
 
     try {
-      const db = admin.firestore();
+      const db = getFirestore();
       const reqRef = db.collection('accessRequests').doc(id);
       const snap = await reqRef.get();
       if (!snap.exists) {
@@ -42,7 +42,7 @@ export const processAccessRequest = onCall<ProcessAccessRequestData, Promise<{ o
       }
 
       const batch = db.batch();
-      const now = admin.firestore.FieldValue.serverTimestamp();
+      const now = FieldValue.serverTimestamp();
 
       if (action === 'approve') {
         // El doc id ES el email normalizado; tomamos el campo email por robustez (== id).
