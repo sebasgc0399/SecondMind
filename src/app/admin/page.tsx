@@ -7,9 +7,13 @@ import AccessRequestQueue from '@/components/admin/AccessRequestQueue';
 // La seguridad REAL está en las CFs (requireAdmin server-side por ADMIN_EMAIL). Sin
 // VITE_ADMIN_UID configurado → denegar (fail-closed).
 export default function AdminPage() {
-  const { user } = useAuth();
+  const { user, isLoading } = useAuth();
   const adminUid = import.meta.env.VITE_ADMIN_UID as string | undefined;
 
+  // useAuth resuelve el user de forma async (onAuthStateChanged dispara en el próximo
+  // tick). En el PRIMER render user es null aunque haya sesión → si evaluáramos el gate
+  // ya, el admin real rebotaría a / antes de que llegue la sesión. Esperar a isLoading.
+  if (isLoading) return null;
   if (!adminUid || user?.uid !== adminUid) {
     return <Navigate to="/" replace />;
   }
