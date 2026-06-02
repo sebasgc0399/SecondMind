@@ -12,4 +12,5 @@ export { saveApiKey } from './settings/saveApiKey';
 export { deleteApiKey } from './settings/deleteApiKey';
 export { checkMyAccess } from './auth/checkMyAccess';
 export { submitAccessRequest } from './access/submitAccessRequest';
+export { listAccessRequests } from './access/listAccessRequests';
 export { onUserCreated, onUserDeleted } from './auth/userCountTriggers';
