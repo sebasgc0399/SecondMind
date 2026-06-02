@@ -35,6 +35,12 @@ const router = createBrowserRouter([
       { path: 'objectives', Component: ObjectivesPage },
       { path: 'habits', Component: HabitsPage },
       { path: 'settings', Component: SettingsPage },
+      // SPEC-52 F6 — /admin lazy-loaded (primer code-split del router): chunk aparte
+      // que solo carga al navegar. Gate por uid (cosmético) dentro de AdminPage.
+      {
+        path: 'admin',
+        lazy: async () => ({ Component: (await import('@/app/admin/page')).default }),
+      },
       { path: '*', Component: NotFoundPage },
     ],
   },
