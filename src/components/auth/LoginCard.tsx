@@ -8,7 +8,7 @@ import SignInForm from './SignInForm';
 import SignUpForm from './SignUpForm';
 import ResetPasswordForm from './ResetPasswordForm';
 import GoogleSignInButton from './GoogleSignInButton';
-import SignupCapacityGate from './SignupCapacityGate';
+import SignupGate from './SignupGate';
 
 type TabValue = 'signin' | 'signup';
 type Mode = 'tabs' | 'reset';
@@ -74,9 +74,9 @@ export default function LoginCard() {
                 </Tabs.Panel>
 
                 <Tabs.Panel value="signup" className="outline-none">
-                  <SignupCapacityGate>
+                  <SignupGate>
                     <SignUpForm onError={setError} />
-                  </SignupCapacityGate>
+                  </SignupGate>
                 </Tabs.Panel>
               </Tabs.Root>
             </div>

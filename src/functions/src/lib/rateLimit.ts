@@ -51,7 +51,7 @@ export function exceedsLimit(count: number, limit: number): boolean {
 }
 
 // I/O Firestore (verificada E2E, no unit): cap anti-abuso por uid+key. Patrón
-// increment-then-read (no transacción, consistente con userCountTriggers.ts): el
+// increment-then-read (no transacción): el
 // increment es atómico server-side y contar los rechazados es aceptable para un cap
 // anti-abuso (no facturación). Colección top-level rateLimits/ deny-all (las rules la
 // blindan; el Admin SDK la bypassa). Si CUALQUIER ventana excede → resource-exhausted.

@@ -20,9 +20,10 @@ service cloud.firestore {
         && exists(/databases/$(database)/documents/allowlist/$(request.auth.token.email));
     }
 
-    // F47.F6 — config/app: read público (LoginPage no tiene user
-    // al verificar capacity). Writes solo via Admin SDK (triggers
-    // onUserCreated/onUserDeleted) — client-side deny.
+    // F47.F6 / SPEC-53 — config/app: read público (LoginPage no tiene user
+    // al leer signupsEnabled). Writes solo via Admin SDK (operador/Console) —
+    // client-side deny. SPEC-53 removió el counter userCount y sus triggers;
+    // config/app queda con { signupsEnabled, maxUsers }.
     //
     // Path explícito (no wildcard {configId}): si se agregan más docs
     // bajo /config/ (config/secrets, config/featureFlags, etc.), cada

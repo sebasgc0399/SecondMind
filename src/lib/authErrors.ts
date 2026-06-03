@@ -41,10 +41,6 @@ export function mapAuthError(
     case 'auth/popup-closed-by-user':
     case 'auth/cancelled-popup-request':
       return '';
-    case 'capacity-full':
-      return 'Beta llena. No podemos crear cuentas nuevas ahora.';
-    case 'capacity-unavailable':
-      return 'No se pudo verificar disponibilidad. Reintentá.';
     case 'allowlist-not-authorized':
       // SPEC-51 F3/F4 (A-3): gate post-auth — el usuario autenticado no está en la
       // allowlist. Copy genérico que NO confirma membresía (ver BETA_NO_ACCESS_MESSAGE).

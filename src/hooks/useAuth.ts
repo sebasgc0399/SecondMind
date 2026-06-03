@@ -13,7 +13,6 @@ import { auth } from '@/lib/firebase';
 import { checkMyAccess } from '@/lib/allowlist';
 import { setLoginError } from '@/lib/loginError';
 import { normalizeEmail } from '@/lib/normalizeEmail';
-import { readSignupCapacity } from '@/hooks/useSignupCapacity';
 import { invalidateEmbeddingsCache } from '@/lib/embeddings';
 import { invalidatePreferencesCache } from '@/lib/preferences';
 import { invalidateAiKeysCache } from '@/lib/apiKeys';
@@ -93,23 +92,9 @@ export default function useAuth(): UseAuthReturn {
   }, []);
 
   const signUpWithEmail = useCallback(async (email: string, password: string) => {
-    // Defense in depth (F6): re-check capacity ANTES del create. La UI de
-    // SignupCapacityGate ya bloquea pero la ventana entre check inicial y
-    // submit del form puede dejar pasar un signup invalido si el counter
-    // cambió mid-session. Fail-closed (G8) si doc no existe o lectura falla.
-    let capacity;
-    try {
-      capacity = await readSignupCapacity();
-    } catch {
-      throw { code: 'capacity-unavailable' };
-    }
-    if (!capacity) {
-      throw { code: 'capacity-unavailable' };
-    }
-    if (!capacity.canSignUp) {
-      throw { code: 'capacity-full' };
-    }
-
+    // SPEC-53 Modelo C: el capacity ya NO se chequea en el signup — se enforce en la
+    // APROBACIÓN (CF processAccessRequest). El kill-switch signupsEnabled vive en SignupGate
+    // (UI, cliente-only). Acá: crear la cuenta y converger al gate post-auth de allowlist.
     const credential = await createUserWithEmailAndPassword(auth, normalizeEmail(email), password);
     // SPEC-51 F3: gate post-auth ANTES de enviar la verificación. Si no está
     // autorizado (signOut + throw) o no se pudo verificar (throw sin signOut),
