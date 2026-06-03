@@ -1,10 +1,14 @@
 # SPEC — Feature 52: Formulario público de solicitud de acceso + gestión de allowlist (`/admin`)
 
-> **Estado:** 📝 Planificado — pendiente de revisión e implementación. Sin código todavía.
-> **Versión objetivo:** `0.4.2` — **feature independiente, NO abre la beta** (ver "Por qué 0.4.2").
+> **Estado:** ✅ Completada 2026-06-02 — desplegada y verificada en prod (`secondmindv1`). Las secciones F1–F7 abajo describen la implementación enviada.
+> **Versión:** `0.4.2` (functions selectivo + rules + hosting). **Feature independiente, NO abre la beta** (ver "Por qué 0.4.2"). Tauri/Android: cambio web+CFs sin tocar `src-tauri/`/`android/` → entran en su próximo release nativo (las rutas existen en el dist compartido, son web-first).
 > **Rama:** `feat/solicitud-acceso` → merge `--no-ff` a `main`.
 > **Depende de:** F50 (allowlist `deny-all`, `isAllowlisted`, `assertAllowlisted`, patrón anti-enumeración), F51 (`checkMyAccess`, `BETA_NO_ACCESS_MESSAGE`, `rateLimit.ts` + colección `rateLimits/` + TTL), F47 (auth + capacity gate `config/app`).
 > **Origen:** ítem "Formulario público de solicitud de acceso — feature aparte" anotado en SPEC-51 § Hardening futuro.
+> **Verificación:** Gate CI verde (functions build + `tsc -b` + ESLint + 242 unit + 8 rules). **E2E emulador 18/18** (functions+firestore+auth): F2 no-oráculo (ya-allowlisted → respuesta idéntica + crea `pending`, sin leer `allowlist/`) + dedup (no pisa `createdAt`) + rate-limit por IP (4ª/min → `resource-exhausted`); F3/F4 sin sesión → `unauthenticated`, no-admin → `permission-denied`, admin → cola + `approve` escribe `allowlist/`. **Smoke prod real:** submit a la callable pública → `{ ok: true }`; `/admin` con la sesión del operador → ver la solicitud → aprobar → cayó en `allowlist/` (throwaway limpiado post-smoke con `firebase firestore:delete`).
+> **Bug cazado en el walkthrough Playwright (y arreglado):** `/admin` rebotaba al admin real porque `AdminPage` evaluaba el gate uid en el primer render, antes de que su `useAuth` resolviera el `user` async (`onAuthStateChanged` dispara en el próximo tick). Fix: guard `isLoading` antes del gate. El E2E del emulador no lo veía (prueba las CFs, no el cliente).
+> **Desvío de implementación:** imports modulares `firebase-admin/firestore` (`getFirestore`/`FieldValue`/`Timestamp`) en `rateLimit.ts` + las 3 CFs, en vez de `admin.firestore.FieldValue.*` — los estáticos quedan `undefined` en el runtime del emulador (gotcha escalado a `cloud-functions-guards.md`). Behavior-preserving en prod.
+> **Pasos manuales del operador — ✅ COMPLETOS:** secret `ADMIN_EMAIL` (`firebase functions:secrets:set`, version 1) + `VITE_ADMIN_UID` en `.env.production.local` (gitignored, no commiteado).
 
 ## Por qué 0.4.2 (y no 0.5.0)
 
@@ -169,19 +173,18 @@ Reemplazar la gestión 100% manual de la allowlist (seedear `allowlist/{email}` 
 
 ## Checklist de completado
 
-- [ ] F1–F7 implementadas + criterios verificados.
-- [ ] `npm run lint` + `tsc --noEmit` + `npm test` (incl. unit de `submitAccessRequest`) verdes.
-- [ ] `npm run test:rules` verde (deny-all `accessRequests/`).
-- [ ] Secret `ADMIN_EMAIL` seteado; `VITE_ADMIN_UID` en `.env` de build.
-- [ ] E2E: form público (éxito/dedup/no-oráculo/rate-limit) + `/admin` (approve/reject/gate) + funnel de rechazo OK.
-- [ ] Deploy en orden (secret → functions selectivo → rules → hosting) + bump `0.4.2`.
-- [ ] Commits atómicos Conventional (uno por sub-feature) + merge `--no-ff`.
-- [ ] Escalación de gotchas (SDD step 8): no-oráculo del formulario (leer `accessRequests/`, nunca `allowlist/`; respuesta uniforme) → `Spec/gotchas/cloud-functions-guards.md` si aplica a >1 feature; gotcha de IP-en-callable (`x-forwarded-for` vs `rawRequest.ip`) si resultó no trivial.
-- [ ] Convertir este SPEC a registro de implementación.
+- [x] F1–F7 implementadas + criterios verificados.
+- [x] `npm run lint` + `tsc -b` + `npm test` (242, incl. 11 unit de `submitAccessRequest`) verdes.
+- [x] `npm run test:rules` verde (8, incl. deny-all `accessRequests/`).
+- [x] Secret `ADMIN_EMAIL` seteado; `VITE_ADMIN_UID` en `.env.production.local`.
+- [x] E2E emulador 18/18 (form público éxito/dedup/no-oráculo/rate-limit + `/admin` approve/reject/gate) + smoke prod real.
+- [x] Deploy en orden (secret → functions selectivo → rules → hosting) + bump `0.4.2`.
+- [x] Commits atómicos Conventional (uno por sub-feature) + merge `--no-ff`.
+- [x] Escalación de gotchas (SDD step 8): estáticos `admin.firestore` undefined en emulador → imports modulares `firebase-admin/firestore` → `Spec/gotchas/cloud-functions-guards.md`. (El no-oráculo del form queda cubierto por el principio ya canonizado en F51 "callable público que revela estado = oráculo"; la derivación IP `x-forwarded-for` resultó trivial, sin gotcha aparte.)
+- [x] Convertido a registro de implementación.
 
 ## Hardening futuro (anotado, fuera de scope)
 
+- **→ SPEC-53 (feature aparte, discovery propio):** gestión de miembros desde `/admin` (listar `allowlist/` + revocar) **+** migrar el counter `config/app.userCount` (hoy cuenta cuentas Auth, infla con huérfanas no-allowlisted) a contar **solo allowlisted** (la fuente de verdad real). Reintroduce la race del flag persistido (hardening (ii) de F50/F51). Decidido explícitamente FUERA de SPEC-52 (scope acotado a solicitar→aprobar). Hoy revocar se hace a mano en Console (borrar el doc `allowlist/{email}`).
 - **Turnstile/reCAPTCHA** en el form público si aparece spam real (web-only → el blocker de Tauri/extensión de F51 no aplica).
-- **Counter solo-allowlisted** + apertura de signups públicos = parte de `0.5.0` (reintroduce la race de D4/F50 → flag persistido).
 - **Notificación al operador** (trigger `onCreate` en `accessRequests/` → email) si el chequeo manual de `/admin` se vuelve incómodo. Requiere servicio de envío + `OPERATOR_EMAIL`.
-- **Gestión completa de allowlist desde `/admin`** (listar miembros + revocar) si el volumen lo justifica — hoy se revoca a mano en Console.
