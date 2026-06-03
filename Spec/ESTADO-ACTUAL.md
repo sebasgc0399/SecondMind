@@ -408,7 +408,7 @@ Tabla de versiones + notas operativas movida a [`Docs/01-arquitectura-hibrida-pr
 
 Lista curada sin compromiso de orden ni scope. La próxima feature se decide con Sebastián al arrancar la sesión.
 
-- **Harness E2E de callables (emulador functions+auth)** — construir el primer harness automatizado que invoque callables admin/no-admin/sin-sesión contra el emulador. Hoy las CFs se prueban con unit + rules test + smoke manual; **NO hay E2E de callables** (fue la causa del desvío en SPEC-53, que asumió un E2E inexistente de SPEC-52). Requiere declarar `functions`+`auth` en `firebase.json` + inyectar `ADMIN_EMAIL` en el emulador. **Trigger:** antes de abrir la beta a escala (`0.5.0`) o si entra un segundo dev — no deuda abierta indefinida.
+- **Harness E2E de callables (emulador functions+auth)** — construir el primer harness automatizado que invoque callables admin/no-admin/sin-sesión contra el emulador. Hoy las CFs se prueban con unit + rules test + smoke manual; **NO hay E2E de callables** (fue la causa del desvío en SPEC-53, que asumió un E2E inexistente de SPEC-52). Requiere declarar `functions`+`auth` en `firebase.json` + inyectar `ADMIN_EMAIL` en el emulador. **Trigger:** antes de abrir la beta a escala (`0.5.0`) o si entra un segundo dev — no deuda abierta indefinida. Brief: [`drafts/DRAFT-harness-e2e-callables.md`](drafts/DRAFT-harness-e2e-callables.md).
 - **Command Palette con tab "semántico"** — toggle opcional sobre `useHybridSearch` si el uso real lo justifica.
 - **AI-suggested links en el editor** — embeddings para sugerir wikilinks inline mientras se escribe, debounced.
 - **Floating menu al inicio de línea vacía** — complementa bubble menu con hint "press `/` for commands".
