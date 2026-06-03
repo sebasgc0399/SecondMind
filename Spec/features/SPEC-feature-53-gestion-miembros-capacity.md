@@ -1,6 +1,9 @@
 # SPEC — Feature 53: Gestión de miembros de la allowlist (ver/revocar) + capacity sobre allowlisted
 
-> **Estado:** ✅ **Aprobado — listo para implementar** (D5/D7 cerrados con Sebastián esta sesión). Las secciones F1–F11 son **prescriptivas** (qué construir), no un registro de implementación.
+> **Estado:** ✅ **Completada 2026-06-03** — desplegada y verificada en prod (`secondmindv1`), `0.4.3`. Las secciones F1–F13 abajo describen la implementación enviada (ya no es prescriptivo).
+> **Verificación:** unit **252/252** (incl. `decideApproval` + `requireAdmin`) + rules **9/9** (incl. backstop de revoke, ambos polos sobre el mismo usuario) + lint/build verdes + **smoke prod real** (ciclo solicitar→aprobar→revocar verificado por MCP; `addedAt` Timestamp confirmado por lectura PITR).
+> **Desvíos (decididos en step-2 / sesión):** (1) **Plan B** desde el arranque — `count()` FUERA de la tx (el emulador no garantiza aggregation en tx; con un solo admin secuencial la race no ocurre; la atomicidad se preserva escribiendo `allowlist` + marca `approved` DENTRO); lógica extraída a la función pura `decideApproval`. (2) **Testing estrategia A** (unit + rules + smoke manual): el "E2E emulador 18/18" de SPEC-52 NO existía como suite (era smoke manual) → nada que "extender"; harness E2E de callables anotado como candidato en ESTADO-ACTUAL. (3) **F8** pasa `{ maxUsers, current }` por `HttpsError` details. (4) **F12/F13** agregados a pedido: `/admin` con **tabs** (Solicitudes/Miembros + contador at-a-glance) + **buscador** por email en ambas listas.
+> **Orden de deploy (ejecutado):** `maxUsers` verificado (100) → functions selectivo → `functions:delete onUserCreated onUserDeleted` aparte → rules → hosting → **borrar `config/app.userCount` ÚLTIMO** (post-hosting; borrarlo antes mostraría un falso "beta llena" al cliente viejo aún sirviéndose en esa ventana).
 > **Versión objetivo:** `0.4.3`. **NO abre la beta**: `checkMyAccess` + rules `users/**` + `allowlist/` deny-all no cambian. Esto **arregla el capacity** (prerequisito real de `0.5.0`) y agrega gestión de miembros.
 > **Rama:** `feat/gestion-miembros` → merge `--no-ff` a `main`.
 > **Depende de:** F47 (capacity gate `config/app`, `useSignupCapacity`, `SignupCapacityGate`), F50 (`allowlist/` deny-all, `isAllowlisted`, normalización email), F51 (`checkMyAccess`, `rateLimit.ts`), **F52** (`requireAdmin`/`adminEmail`, `/admin`, `listAccessRequests`/`processAccessRequest` como molde, patrón callable cliente).
@@ -126,6 +129,18 @@ Dos piezas acopladas:
 - **Criterio de done:** `firestore.rules` deploya; `config/app` en prod queda `{ signupsEnabled, maxUsers }`.
 - **Archivos:** `firestore.rules` (solo comentario). Migración de datos = paso manual (abajo).
 
+### Frente D — Mejora de UX de `/admin` (agregado en sesión, F12/F13)
+
+#### F12 — Buscador por email en ambas listas
+
+- **Qué:** input de búsqueda **client-side** (filtro sobre lo ya fetcheado por la CF) en Solicitudes y Miembros. Empty-con-filtro **diferenciado** (mantiene el input + "Ningún X coincide", no el empty real). Visible cuando la lista tiene ≥1 item.
+- **Archivos:** `src/components/admin/AccessRequestQueue.tsx`, `src/components/admin/AllowlistMembers.tsx`.
+
+#### F13 — Tabs Solicitudes / Miembros en `/admin`
+
+- **Qué:** dos tabs (base-ui, molde `LoginCard`) para separar las dos tareas del admin (procesar la cola vs gestionar miembros) — **foco**, no por largo de las listas. Los datos se fetchean a nivel página (`AdminPage`) y se pasan a cada panel → **contador at-a-glance** en cada tab; los componentes pasan a presentacionales (data por prop). Default = Solicitudes.
+- **Archivos:** `src/app/admin/page.tsx`, `src/hooks/useAccessRequestsQueue.ts` + `src/hooks/useAllowlistMembers.ts` (export del tipo de retorno) + los 2 componentes de F12.
+
 ---
 
 ## Orden de implementación
@@ -158,15 +173,17 @@ Dos piezas acopladas:
 
 ## Checklist
 
-- [ ] F1 — approve transaccional con `count()` (+ E2E, + riesgo emulador validado)
-- [ ] F2 — `listAllowlistMembers` (admin-only)
-- [ ] F3 — `revokeAccess` (admin-only, idempotente)
-- [ ] F4 — borrar triggers `onUserCreated`/`onUserDeleted` (+ `functions:delete`)
-- [ ] F5 — lib + hook de miembros
-- [ ] F6 — `AllowlistMembers` + `AllowlistMemberRow` (revoke con confirmación)
-- [ ] F7 — segunda sección en `/admin`
-- [ ] F8 — error `resource-exhausted` en approve UI
-- [ ] F9 — quitar defense-in-depth de capacity en `signUpWithEmail`
-- [ ] F10 — gate de signup → `signupsEnabled` simple (D5 = conservar, cliente-only)
-- [ ] F11 — limpieza `config/app.userCount` + comentario rules
-- [ ] Deploy + E2E + smoke prod + cierre (registro de implementación + escalación de gotchas)
+- [x] F1 — approve transaccional con `count()` **fuera de la tx (Plan B)** + unit `decideApproval`/`requireAdmin`
+- [x] F2 — `listAllowlistMembers` (admin-only)
+- [x] F3 — `revokeAccess` (admin-only, idempotente) + rules test del backstop (ambos polos)
+- [x] F4 — borrar triggers `onUserCreated`/`onUserDeleted` (+ `functions:delete` en prod)
+- [x] F5 — lib + hook de miembros
+- [x] F6 — `AllowlistMembers` + `AllowlistMemberRow` (revoke con `ConfirmDialog`)
+- [x] F7 — sección Miembros en `/admin` (luego envuelta en tabs por F13)
+- [x] F8 — error `resource-exhausted` en approve UI (`maxUsers` por `HttpsError` details)
+- [x] F9 — quitar defense-in-depth de capacity en `signUpWithEmail` + limpiar `authErrors`
+- [x] F10 — gate de signup → `SignupGate` (`signupsEnabled`, cliente-only)
+- [x] F11 — limpieza `config/app.userCount` (borrado último) + comentario rules
+- [x] F12 — buscador por email en ambas listas
+- [x] F13 — tabs Solicitudes/Miembros + contador at-a-glance
+- [x] Deploy `0.4.3` + smoke prod + cierre (registro + escalación de gotchas + docs colgantes)
