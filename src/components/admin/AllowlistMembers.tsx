@@ -1,13 +1,18 @@
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import useAllowlistMembers from '@/hooks/useAllowlistMembers';
+import type { UseAllowlistMembersReturn } from '@/hooks/useAllowlistMembers';
 import { revokeAccess } from '@/lib/allowlistMembers';
 import AllowlistMemberRow from './AllowlistMemberRow';
 
-export default function AllowlistMembers() {
-  const { members, isLoading, error, refetch } = useAllowlistMembers();
+interface AllowlistMembersProps {
+  data: UseAllowlistMembersReturn;
+}
+
+export default function AllowlistMembers({ data }: AllowlistMembersProps) {
+  const { members, isLoading, error, refetch } = data;
   const [busyEmail, setBusyEmail] = useState<string | null>(null);
   const [actionError, setActionError] = useState('');
+  const [query, setQuery] = useState('');
 
   async function handleRevoke(email: string) {
     setBusyEmail(email);
@@ -44,6 +49,7 @@ export default function AllowlistMembers() {
     );
   }
 
+  // Empty real (sin miembros): sin buscador, nada que filtrar.
   if (members.length === 0) {
     return (
       <div className="rounded-xl border border-dashed border-border p-8 text-center">
@@ -52,6 +58,10 @@ export default function AllowlistMembers() {
     );
   }
 
+  // SPEC-53 F12 — filtro client-side por email (la CF ya trajo todo).
+  const q = query.trim().toLowerCase();
+  const filtered = q ? members.filter((m) => m.email.toLowerCase().includes(q)) : members;
+
   return (
     <div className="flex flex-col gap-3">
       {actionError && (
@@ -59,16 +69,31 @@ export default function AllowlistMembers() {
           {actionError}
         </p>
       )}
-      <ul className="flex flex-col gap-3">
-        {members.map((member) => (
-          <AllowlistMemberRow
-            key={member.email}
-            member={member}
-            busy={busyEmail === member.email}
-            onRevoke={(email) => void handleRevoke(email)}
-          />
-        ))}
-      </ul>
+      <input
+        type="search"
+        value={query}
+        onChange={(e) => setQuery(e.target.value)}
+        placeholder="Buscar por email…"
+        aria-label="Buscar miembros por email"
+        className="rounded-lg border border-border bg-card px-3 py-2 text-sm outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-ring/40"
+      />
+      {/* Empty con filtro activo: mantener el buscador + mensaje diferenciado (no el empty real). */}
+      {filtered.length === 0 ? (
+        <div className="rounded-xl border border-dashed border-border p-8 text-center">
+          <p className="text-sm text-muted-foreground">Ningún miembro coincide con la búsqueda.</p>
+        </div>
+      ) : (
+        <ul className="flex flex-col gap-3">
+          {filtered.map((member) => (
+            <AllowlistMemberRow
+              key={member.email}
+              member={member}
+              busy={busyEmail === member.email}
+              onRevoke={(email) => void handleRevoke(email)}
+            />
+          ))}
+        </ul>
+      )}
     </div>
   );
 }

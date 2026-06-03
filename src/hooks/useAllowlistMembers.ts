@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { listAllowlistMembers } from '@/lib/allowlistMembers';
 import type { AllowlistMember } from '@/types/allowlistMember';
 
-interface UseAllowlistMembersReturn {
+export interface UseAllowlistMembersReturn {
   members: AllowlistMember[];
   isLoading: boolean;
   error: string;

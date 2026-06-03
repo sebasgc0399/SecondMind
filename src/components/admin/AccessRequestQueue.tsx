@@ -1,8 +1,12 @@
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import useAccessRequestsQueue from '@/hooks/useAccessRequestsQueue';
+import type { UseAccessRequestsQueueReturn } from '@/hooks/useAccessRequestsQueue';
 import { processAccessRequest } from '@/lib/accessRequests';
 import AccessRequestRow from './AccessRequestRow';
+
+interface AccessRequestQueueProps {
+  data: UseAccessRequestsQueueReturn;
+}
 
 // SPEC-53 F8 — el approve ahora enforce capacity sobre la allowlist: si está llena, la CF
 // lanza resource-exhausted con { maxUsers, current } en details. Mapeamos ese caso a un
@@ -18,10 +22,11 @@ function mapProcessError(err: unknown): string {
   return 'No se pudo procesar la solicitud. Probá de nuevo.';
 }
 
-export default function AccessRequestQueue() {
-  const { requests, isLoading, error, refetch } = useAccessRequestsQueue();
+export default function AccessRequestQueue({ data }: AccessRequestQueueProps) {
+  const { requests, isLoading, error, refetch } = data;
   const [busyId, setBusyId] = useState<string | null>(null);
   const [actionError, setActionError] = useState('');
+  const [query, setQuery] = useState('');
 
   async function handleProcess(id: string, action: 'approve' | 'reject') {
     setBusyId(id);
@@ -58,6 +63,7 @@ export default function AccessRequestQueue() {
     );
   }
 
+  // Empty real (sin solicitudes): sin buscador, nada que filtrar.
   if (requests.length === 0) {
     return (
       <div className="rounded-xl border border-dashed border-border p-8 text-center">
@@ -66,6 +72,10 @@ export default function AccessRequestQueue() {
     );
   }
 
+  // SPEC-53 F12 — filtro client-side por email (la CF ya trajo todo).
+  const q = query.trim().toLowerCase();
+  const filtered = q ? requests.filter((r) => r.email.toLowerCase().includes(q)) : requests;
+
   return (
     <div className="flex flex-col gap-3">
       {actionError && (
@@ -73,17 +83,34 @@ export default function AccessRequestQueue() {
           {actionError}
         </p>
       )}
-      <ul className="flex flex-col gap-3">
-        {requests.map((request) => (
-          <AccessRequestRow
-            key={request.id}
-            request={request}
-            busy={busyId === request.id}
-            onApprove={(id) => void handleProcess(id, 'approve')}
-            onReject={(id) => void handleProcess(id, 'reject')}
-          />
-        ))}
-      </ul>
+      <input
+        type="search"
+        value={query}
+        onChange={(e) => setQuery(e.target.value)}
+        placeholder="Buscar por email…"
+        aria-label="Buscar solicitudes por email"
+        className="rounded-lg border border-border bg-card px-3 py-2 text-sm outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-ring/40"
+      />
+      {/* Empty con filtro activo: mantener el buscador + mensaje diferenciado (no el empty real). */}
+      {filtered.length === 0 ? (
+        <div className="rounded-xl border border-dashed border-border p-8 text-center">
+          <p className="text-sm text-muted-foreground">
+            Ninguna solicitud coincide con la búsqueda.
+          </p>
+        </div>
+      ) : (
+        <ul className="flex flex-col gap-3">
+          {filtered.map((request) => (
+            <AccessRequestRow
+              key={request.id}
+              request={request}
+              busy={busyId === request.id}
+              onApprove={(id) => void handleProcess(id, 'approve')}
+              onReject={(id) => void handleProcess(id, 'reject')}
+            />
+          ))}
+        </ul>
+      )}
     </div>
   );
 }
