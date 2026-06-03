@@ -4,6 +4,20 @@ import useAccessRequestsQueue from '@/hooks/useAccessRequestsQueue';
 import { processAccessRequest } from '@/lib/accessRequests';
 import AccessRequestRow from './AccessRequestRow';
 
+// SPEC-53 F8 — el approve ahora enforce capacity sobre la allowlist: si está llena, la CF
+// lanza resource-exhausted con { maxUsers, current } en details. Mapeamos ese caso a un
+// mensaje accionable; el resto sigue genérico.
+function mapProcessError(err: unknown): string {
+  const e = err as { code?: string; details?: { maxUsers?: number } } | null;
+  if (e?.code === 'functions/resource-exhausted') {
+    const max = e.details?.maxUsers;
+    return max != null
+      ? `Beta llena (${max}). Subí el límite o revocá un miembro antes de aprobar.`
+      : 'Beta llena. Subí el límite o revocá un miembro antes de aprobar.';
+  }
+  return 'No se pudo procesar la solicitud. Probá de nuevo.';
+}
+
 export default function AccessRequestQueue() {
   const { requests, isLoading, error, refetch } = useAccessRequestsQueue();
   const [busyId, setBusyId] = useState<string | null>(null);
@@ -15,8 +29,8 @@ export default function AccessRequestQueue() {
     try {
       await processAccessRequest(id, action);
       await refetch();
-    } catch {
-      setActionError('No se pudo procesar la solicitud. Probá de nuevo.');
+    } catch (err) {
+      setActionError(mapProcessError(err));
     } finally {
       setBusyId(null);
     }

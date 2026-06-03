@@ -1,6 +1,7 @@
 import { Navigate } from 'react-router';
 import useAuth from '@/hooks/useAuth';
 import AccessRequestQueue from '@/components/admin/AccessRequestQueue';
+import AllowlistMembers from '@/components/admin/AllowlistMembers';
 
 // SPEC-52 F6 — ruta /admin (lazy, hija del Layout → hereda el gate anónimo→/login y
 // verified→/verify-email). El gate por uid acá es COSMÉTICO: oculta la ruta a no-admins.
@@ -25,6 +26,13 @@ export default function AdminPage() {
         Aprobá o rechazá las solicitudes pendientes de la beta.
       </p>
       <AccessRequestQueue />
+
+      <h2 className="mt-10 text-2xl font-bold tracking-tight">Miembros de la beta</h2>
+      <p className="mt-1 mb-6 text-sm text-muted-foreground">
+        Quiénes tienen acceso hoy. Revocar saca a alguien de la beta (no borra su cuenta ni sus
+        datos).
+      </p>
+      <AllowlistMembers />
     </div>
   );
 }
