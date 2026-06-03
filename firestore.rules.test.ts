@@ -79,3 +79,30 @@ describe('firestore.rules — allowlist (SPEC-50 F4)', () => {
     await assertFails(getDoc(doc(db, 'allowlist', INVITED)));
   });
 });
+
+describe('firestore.rules — accessRequests (SPEC-52 F1)', () => {
+  const REQ_ID = 'solicitante@example.com';
+
+  it('un usuario autenticado NO puede leer la cola (deny-all)', async () => {
+    const db = testEnv
+      .authenticatedContext('uid-invited', { email: INVITED, email_verified: true })
+      .firestore();
+    await assertFails(getDoc(doc(db, 'accessRequests', REQ_ID)));
+  });
+
+  it('un usuario autenticado NO puede escribir la cola (deny-all)', async () => {
+    const db = testEnv
+      .authenticatedContext('uid-invited', { email: INVITED, email_verified: true })
+      .firestore();
+    await assertFails(
+      setDoc(doc(db, 'accessRequests', REQ_ID), { email: REQ_ID, status: 'pending' }),
+    );
+  });
+
+  it('un visitante anónimo NO puede crear una solicitud directo (solo vía CF)', async () => {
+    const db = testEnv.unauthenticatedContext().firestore();
+    await assertFails(
+      setDoc(doc(db, 'accessRequests', REQ_ID), { email: REQ_ID, status: 'pending' }),
+    );
+  });
+});

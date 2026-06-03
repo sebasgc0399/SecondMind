@@ -5,11 +5,12 @@ const GENERIC_ACCOUNT_EXISTS =
 
 const RESET_GENERIC = 'Si la cuenta existe, recibirás un enlace en tu email.';
 
-// SPEC-51 F4 (A-3): copy genérico de "sin acceso a la beta". NO confirma membresía
-// (no menciona lista/allowlist/invitado) y por ahora NO incluye canal de contacto.
-// EDITAR ACÁ cuando exista el formulario público de solicitud de acceso para
-// apuntar a él — punto único de edición.
-export const BETA_NO_ACCESS_MESSAGE = 'Tu cuenta todavía no tiene acceso a la beta.';
+// SPEC-51 F4 (A-3) / SPEC-52 F7: copy genérico de "sin acceso a la beta". NO confirma
+// membresía (no menciona lista/allowlist/invitado, sin email). Desde SPEC-52 existe el
+// formulario público (/solicitar-acceso); el CTA vive en el footer persistente de
+// LoginCard y este copy apunta hacia abajo. Punto único de edición del texto.
+export const BETA_NO_ACCESS_MESSAGE =
+  'Tu cuenta todavía no tiene acceso a la beta. Podés solicitarlo más abajo.';
 
 export function mapAuthError(
   code: string | undefined,

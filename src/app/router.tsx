@@ -16,6 +16,7 @@ import NotFoundPage from '@/app/not-found';
 import LoginPage from '@/app/login/page';
 import VerifyEmailPage from '@/app/verify-email/page';
 import CapturePage from '@/app/capture/page';
+import AccessRequestPage from '@/app/solicitar-acceso/page';
 
 const router = createBrowserRouter([
   {
@@ -34,12 +35,19 @@ const router = createBrowserRouter([
       { path: 'objectives', Component: ObjectivesPage },
       { path: 'habits', Component: HabitsPage },
       { path: 'settings', Component: SettingsPage },
+      // SPEC-52 F6 — /admin lazy-loaded (primer code-split del router): chunk aparte
+      // que solo carga al navegar. Gate por uid (cosmético) dentro de AdminPage.
+      {
+        path: 'admin',
+        lazy: async () => ({ Component: (await import('@/app/admin/page')).default }),
+      },
       { path: '*', Component: NotFoundPage },
     ],
   },
   { path: '/capture', Component: CapturePage },
   { path: '/login', Component: LoginPage },
   { path: '/verify-email', Component: VerifyEmailPage },
+  { path: '/solicitar-acceso', Component: AccessRequestPage },
 ]);
 
 export default router;

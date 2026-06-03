@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Link } from 'react-router';
 import { Tabs } from '@base-ui/react/tabs';
 import { cn } from '@/lib/utils';
 import useLoginError from '@/hooks/useLoginError';
@@ -114,6 +115,13 @@ export default function LoginCard() {
             <GoogleSignInButton onError={setError} />
           </>
         )}
+
+        <p className="mt-6 text-center text-sm text-muted-foreground">
+          ¿No tenés acceso?{' '}
+          <Link to="/solicitar-acceso" className="font-medium text-primary hover:underline">
+            Solicitá una invitación
+          </Link>
+        </p>
       </div>
     </div>
   );

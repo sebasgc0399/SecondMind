@@ -1,5 +1,5 @@
 import { HttpsError } from 'firebase-functions/v2/https';
-import * as admin from 'firebase-admin';
+import { getFirestore, FieldValue, Timestamp } from 'firebase-admin/firestore';
 
 const MINUTE_MS = 60_000;
 const DAY_MS = 86_400_000;
@@ -61,13 +61,13 @@ export async function enforceRateLimit(
   limits: RateLimits,
 ): Promise<void> {
   const windows = computeWindows(uid, key, limits, Date.now());
-  const db = admin.firestore();
+  const db = getFirestore();
   for (const window of windows) {
     const ref = db.collection('rateLimits').doc(window.docId);
     await ref.set(
       {
-        count: admin.firestore.FieldValue.increment(1),
-        expireAt: admin.firestore.Timestamp.fromMillis(window.expireAtMs),
+        count: FieldValue.increment(1),
+        expireAt: Timestamp.fromMillis(window.expireAtMs),
       },
       { merge: true },
     );

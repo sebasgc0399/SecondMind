@@ -59,5 +59,15 @@ service cloud.firestore {
     match /rateLimits/{document=**} {
       allow read, write: if false;
     }
+
+    // SPEC-52 F1 — accessRequests/: cola del formulario público de solicitud de
+    // acceso. Deny-all client-side (mismo patrón que allowlist/userSecrets/rateLimits):
+    // submit (público), list y process pasan SIEMPRE por Cloud Functions (el Admin
+    // SDK bypassa). El cliente NUNCA la lee ni escribe directo — guarda emails de
+    // solicitantes (PII), mismo cuidado que A-3 dio a la allowlist. Doc id = email
+    // normalizado (trim+lowercase) para dedup natural.
+    match /accessRequests/{id} {
+      allow read, write: if false;
+    }
   }
 }
