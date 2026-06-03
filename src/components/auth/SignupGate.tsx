@@ -1,19 +1,23 @@
 import { useEffect } from 'react';
 import type { ReactNode } from 'react';
-import useSignupCapacity from '@/hooks/useSignupCapacity';
+import useSignupsEnabled from '@/hooks/useSignupsEnabled';
 
-interface SignupCapacityGateProps {
+interface SignupGateProps {
   children: ReactNode;
 }
 
-export default function SignupCapacityGate({ children }: SignupCapacityGateProps) {
-  const { state, fetchCapacity } = useSignupCapacity();
+// SPEC-53 Modelo C — el registro ya NO muestra capacity (el límite se enforce en la
+// aprobación, no acá). Solo queda el kill-switch `signupsEnabled` (cliente-only: oculta el
+// form; un createUserWithEmailAndPassword directo crearía una huérfana inerte igual — las
+// rules + checkMyAccess son el backstop real). Reemplaza al viejo SignupCapacityGate.
+export default function SignupGate({ children }: SignupGateProps) {
+  const { state, fetchState } = useSignupsEnabled();
 
   useEffect(() => {
     if (state.status === 'idle') {
-      void fetchCapacity();
+      void fetchState();
     }
-  }, [state.status, fetchCapacity]);
+  }, [state.status, fetchState]);
 
   if (state.status === 'loading' || state.status === 'idle') {
     return (
@@ -30,10 +34,10 @@ export default function SignupCapacityGate({ children }: SignupCapacityGateProps
   if (state.status === 'error') {
     return (
       <div className="flex flex-col gap-3 rounded-lg border border-border bg-muted/40 p-4 text-sm">
-        <p className="text-destructive">{state.message}</p>
+        <p className="text-destructive">No se pudo verificar disponibilidad. Reintentá.</p>
         <button
           type="button"
-          onClick={() => void fetchCapacity()}
+          onClick={() => void fetchState()}
           className="self-start text-primary hover:underline"
         >
           Reintentar
@@ -42,28 +46,12 @@ export default function SignupCapacityGate({ children }: SignupCapacityGateProps
     );
   }
 
-  const { capacity } = state;
-
-  if (!capacity.signupsEnabled) {
+  if (!state.signupsEnabled) {
     return (
       <div className="flex flex-col gap-2 rounded-lg border border-border bg-muted/40 p-4 text-sm">
         <p className="font-medium">Registro deshabilitado temporalmente</p>
         <p className="text-muted-foreground">
           Volvé más adelante o iniciá sesión con Google si ya tenés cuenta.
-        </p>
-      </div>
-    );
-  }
-
-  if (!capacity.canSignUp) {
-    return (
-      <div className="flex flex-col gap-2 rounded-lg border border-border bg-muted/40 p-4 text-sm">
-        <p className="font-medium">
-          Beta llena · {capacity.userCount}/{capacity.maxUsers} cuentas
-        </p>
-        <p className="text-muted-foreground">
-          Estamos cerrando esta primera ronda. Volvé pronto o iniciá sesión con Google si ya tenés
-          cuenta.
         </p>
       </div>
     );

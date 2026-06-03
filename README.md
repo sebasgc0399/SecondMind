@@ -165,7 +165,8 @@ La fuente primaria de estado y arquitectura vigente es [`Spec/ESTADO-ACTUAL.md`]
 - `autoPurgeTrash` — `onSchedule('0 3 * * *', UTC)` hard-delete diario tras `trashAutoPurgeDays`
 - `saveApiKey` / `deleteApiKey` — `onCall` callables BYOK: validan/cifran/borran la API key del usuario (F48)
 - `checkMyAccess` — `onCall` autenticado: gate de allowlist post-auth (lee el email del token, no enumera terceros — reemplazó al público `checkAllowlist` en SPEC-51)
-- `onUserCreated` / `onUserDeleted` — triggers v1 que mantienen el counter del capacity gate (`config/app.userCount`)
+- `submitAccessRequest` / `listAccessRequests` / `processAccessRequest` — solicitud de acceso + cola admin (SPEC-52); el `approve` enforce el capacity contando la `allowlist/` en transacción (SPEC-53)
+- `listAllowlistMembers` / `revokeAccess` — gestión de miembros de la beta desde `/admin`, admin-only (SPEC-53)
 
 ## Setup local
 

@@ -117,7 +117,7 @@ firestore/
 │   ├── embeddings/      → Vectores para búsqueda semántica (Fase 4)
 │   └── settings/        → Metadata legible per-user (doc `aiKeys`: { configured, last4 } — BYOK, F48)
 │
-├── config/app                           → Capacity gate de la beta (maxUsers, signupsEnabled, userCount). Read público, write solo Admin SDK (F47)
+├── config/app                           → Kill-switch + límite de la beta (signupsEnabled, maxUsers). Read público, write solo Admin SDK. SPEC-53 quitó userCount
 ├── userSecrets/{userId}/keys/{provider} → API keys BYOK cifradas AES-256-GCM. Deny-all client-side, solo Admin SDK (F48)
 └── allowlist/{email}                    → Emails invitados a la beta cerrada. Deny-all client-side; el gate vive en las rules vía exists() (F50)
 ```
@@ -340,10 +340,10 @@ El gate de acceso vive en `firestore.rules`, no solo en la UI. La regla del catc
 
 Colecciones con regla propia (fuera del árbol `users/`):
 
-- `config/app` — **read público** (la LoginPage chequea capacity sin user todavía), write solo Admin SDK (triggers `onUserCreated`/`onUserDeleted`).
+- `config/app` — **read público** (la LoginPage lee `signupsEnabled` sin user todavía), write solo Admin SDK (operador/Console; SPEC-53 eliminó los triggers `onUserCreated`/`onUserDeleted` y el campo `userCount`).
 - `userSecrets/{uid}/keys/{provider}` y `allowlist/{email}` — **deny-all client-side**; solo el Admin SDK (Cloud Functions) los toca. Top-level por la aditividad de las rules (un `if false` anidado bajo el catch-all `users/` no bloquearía el read del owner).
 
-La **allowlist es el control de acceso real** (enforced en las rules — es el gate de seguridad). El capacity gate de `config/app` es **secundario**: solo decide si los sign-ups están abiertos o si la beta está llena, y su `userCount` es una métrica aproximada (eventually-consistent vía triggers, no un límite de seguridad). La beta cerrada está **LIVE en prod** con un único allowlisted; la apertura real queda reservada para v0.5. El detalle operativo (orden de deploy, seed del backstop antes de `deploy:rules`, wipe del store cifrado, oráculo de enumeración) vive en [`SPEC-feature-50`](../Spec/features/SPEC-feature-50-security-hardening-v0.5.md) y en el índice de gotchas de [`ESTADO-ACTUAL.md`](../Spec/ESTADO-ACTUAL.md). Ver decisiones D24-D26.
+La **allowlist es el control de acceso real** (enforced en las rules — es el gate de seguridad). El kill-switch `signupsEnabled` de `config/app` es **secundario**: solo decide si los sign-ups están abiertos. El límite real de la beta se enforce en la **aprobación** (`processAccessRequest` approve → `count(allowlist) < maxUsers`, SPEC-53 Modelo C), no en el signup; el viejo `userCount` (métrica aproximada por triggers) se eliminó. La beta cerrada está **LIVE en prod** con un único allowlisted; la apertura real queda reservada para v0.5. El detalle operativo (orden de deploy, seed del backstop antes de `deploy:rules`, wipe del store cifrado, oráculo de enumeración) vive en [`SPEC-feature-50`](../Spec/features/SPEC-feature-50-security-hardening-v0.5.md) y en el índice de gotchas de [`ESTADO-ACTUAL.md`](../Spec/ESTADO-ACTUAL.md). Ver decisiones D24-D26.
 
 ---
 
@@ -524,8 +524,7 @@ src/
     │   │   ├── saveApiKey.ts         # onCall: valida + cifra + guarda la key BYOK (F48)
     │   │   └── deleteApiKey.ts       # onCall: borra la key BYOK (F48)
     │   ├── auth/
-    │   │   ├── checkMyAccess.ts      # onCall autenticado: lee el email del token → gate de allowlist post-auth (SPEC-51, reemplaza checkAllowlist)
-    │   │   └── userCountTriggers.ts  # onUserCreated/onUserDeleted (v1): mantienen config/app.userCount (F47)
+    │   │   └── checkMyAccess.ts      # onCall autenticado: lee el email del token → gate de allowlist post-auth (SPEC-51, reemplaza checkAllowlist)
     │   └── lib/
     │       ├── schemas.ts            # JSON Schemas compartidos para tool use (Fase 3.1)
     │       ├── crypto.ts             # encrypt/decryptSecret AES-256-GCM (AAD=uid, keyVersion — F48/F50)
@@ -763,15 +762,16 @@ no invitado → signOut + msg genérico (cuenta queda inerte vía rules)
 ### Flujo 7: Capacity gate (beta llena, F47)
 
 ```
-LoginPage (sin user) → getDoc config/app (read público) con cache 60s
+LoginPage (sin user) → getDoc config/app (read público)
     │
     ▼
-{ maxUsers, signupsEnabled, userCount } → SignupCapacityGate renderiza:
-  signupsEnabled=false → cerrado · userCount >= maxUsers → "Beta llena" · si no → sign-up habilitado
+{ signupsEnabled } → SignupGate renderiza:
+  signupsEnabled=false → "Registro deshabilitado" · si no → sign-up habilitado
     │
     ▼
-Al crear/borrar cuenta, los triggers v1 onUserCreated/onUserDeleted ajustan userCount
-con FieldValue.increment(±1) (eventually consistent — D4 de F47)
+El límite de la beta NO se mide acá: se enforce en la aprobación (processAccessRequest
+approve → count(allowlist) < maxUsers en transacción, SPEC-53 Modelo C). config/app ya no
+tiene userCount; los triggers v1 onUserCreated/onUserDeleted se eliminaron.
 ```
 
 ---

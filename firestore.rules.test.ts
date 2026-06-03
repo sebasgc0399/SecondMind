@@ -6,7 +6,7 @@ import {
   initializeTestEnvironment,
   type RulesTestEnvironment,
 } from '@firebase/rules-unit-testing';
-import { doc, getDoc, setDoc } from 'firebase/firestore';
+import { doc, getDoc, setDoc, deleteDoc } from 'firebase/firestore';
 
 // SPEC-50 F4 — test de las security rules de allowlist contra el emulador.
 // Corre vía `npm run test:rules` (firebase emulators:exec). NO entra en el
@@ -104,5 +104,29 @@ describe('firestore.rules — accessRequests (SPEC-52 F1)', () => {
     await assertFails(
       setDoc(doc(db, 'accessRequests', REQ_ID), { email: REQ_ID, status: 'pending' }),
     );
+  });
+});
+
+describe('firestore.rules — backstop de revoke (SPEC-53 F3)', () => {
+  // Ambos polos sobre el MISMO usuario para que el test no pase por la razón equivocada:
+  // con allowlist/{email} presente accede; tras revocar (borrar el doc, lo que hace la CF
+  // revokeAccess vía Admin SDK) las rules lo frenan. Soft revoke: la sesión sigue, pero
+  // toda I/O nueva a users/** queda denegada (backstop real, sin heartbeat de checkMyAccess).
+  it('un miembro pierde acceso a users/** tras revocar su allowlist/{email}', async () => {
+    const db = testEnv
+      .authenticatedContext('uid-invited', { email: INVITED, email_verified: true })
+      .firestore();
+
+    // Polo positivo: con el seed de allowlist/{INVITED} presente → accede.
+    await assertSucceeds(setDoc(doc(db, 'users/uid-invited/notes/n1'), { title: 'antes' }));
+
+    // Revoke: borrar el doc de allowlist (equivalente a lo que hace revokeAccess).
+    await testEnv.withSecurityRulesDisabled(async (ctx) => {
+      await deleteDoc(doc(ctx.firestore(), 'allowlist', INVITED));
+    });
+
+    // Polo negativo: misma sesión, ahora sin allowlist → permission-denied.
+    await assertFails(getDoc(doc(db, 'users/uid-invited/notes/n1')));
+    await assertFails(setDoc(doc(db, 'users/uid-invited/notes/n2'), { title: 'después' }));
   });
 });

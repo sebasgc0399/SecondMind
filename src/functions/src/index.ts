@@ -14,4 +14,5 @@ export { checkMyAccess } from './auth/checkMyAccess';
 export { submitAccessRequest } from './access/submitAccessRequest';
 export { listAccessRequests } from './access/listAccessRequests';
 export { processAccessRequest } from './access/processAccessRequest';
-export { onUserCreated, onUserDeleted } from './auth/userCountTriggers';
+export { listAllowlistMembers } from './access/listAllowlistMembers';
+export { revokeAccess } from './access/revokeAccess';

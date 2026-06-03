@@ -1010,7 +1010,7 @@ Hero centrado (logo `favicon.svg` + "SecondMind" + tagline "Tu segundo cerebro d
 - **Google** (`GoogleSignInButton`): branching por plataforma (Capacitor → Tauri → `signInWithPopup`).
 - **Reset password**: switch inline `mode: 'tabs' | 'reset'`.
 - **Gate de beta (allowlist, F50 + SPEC-51):** gate **post-auth unificado** (email/pw + Google) vía `checkMyAccess` autenticado en `useAuth` — se crea la sesión, se consulta el acceso (el server lee el email del token), y si no está invitado → `signOut` + mensaje genérico (cuenta inerte vía rules). El error sobrevive el re-montaje de `LoginCard` (store reactivo). Cerró el oráculo de enumeración del viejo `checkAllowlist`.
-- **Capacity gate (F47):** `SignupCapacityGate` lee `config/app` y muestra "Beta llena" / sign-ups cerrados según `userCount`/`maxUsers`.
+- **Signup gate (F47 → SPEC-53 Modelo C):** `SignupGate` lee `config/app.signupsEnabled` y muestra el form o "Registro deshabilitado". El capacity ya NO se mide acá — se enforce en la aprobación (`processAccessRequest` approve, contando la `allowlist/`). SPEC-53 eliminó el counter `userCount` y el viejo `SignupCapacityGate`.
 
 ---
 

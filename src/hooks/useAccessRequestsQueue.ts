@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { listAccessRequests } from '@/lib/accessRequests';
 import type { AccessRequest } from '@/types/accessRequest';
 
-interface UseAccessRequestsQueueReturn {
+export interface UseAccessRequestsQueueReturn {
   requests: AccessRequest[];
   isLoading: boolean;
   error: string;
