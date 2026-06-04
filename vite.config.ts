@@ -53,7 +53,11 @@ export default defineConfig({
         globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
         maximumFileSizeToCacheInBytes: 4 * 1024 * 1024,
         navigateFallback: 'index.html',
-        navigateFallbackDenylist: [/^\/api/, /^\/__\//],
+        // SPEC-54: /auth/action se golpea desde links de email externos → debe cargar
+        // SIEMPRE el bundle actual desde la red, nunca el index.html precacheado (que con
+        // un SW viejo no tiene la ruta → 404 en el Layout). La ruta necesita red igual
+        // (llama a Firebase Auth), así que no perdemos nada offline.
+        navigateFallbackDenylist: [/^\/api/, /^\/__\//, /^\/auth\/action/],
         // prompt mode requiere skipWaiting: false explícito — el SW nuevo
         // queda en `waiting` hasta que el cliente llame updateSW(true).
         // clientsClaim: false complementa: tabs abiertos no migran al SW
