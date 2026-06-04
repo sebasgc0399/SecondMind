@@ -53,3 +53,32 @@ export function mapAuthError(
       return 'Algo salió mal. Intentá de nuevo.';
   }
 }
+
+// SPEC-54: copy de la landing custom /auth/action (procesar el oobCode de un link de
+// email con applyActionCode / verifyPasswordResetCode / confirmPasswordReset). Separado
+// de mapAuthError porque los códigos relevantes son los de "action-code", no los de
+// signin/signup/reset-send. El default cubre los errores de ENLACE (el caso dominante
+// acá), no un "algo salió mal" genérico.
+export function mapActionError(code: string | undefined): string {
+  switch (code) {
+    case 'auth/expired-action-code':
+      return 'El enlace expiró. Pedí uno nuevo.';
+    case 'auth/user-disabled':
+      return 'Esta cuenta está deshabilitada.';
+    case 'auth/weak-password':
+      // Alineado a la regla del cliente (≥8) que ya validamos antes de llamar a
+      // confirmPasswordReset; NO al copy "con al menos un número" (no se enforce).
+      return 'Mínimo 8 caracteres.';
+    case 'auth/network-request-failed':
+      // El enlace está bien; falló la red. NO mandar a "pedí uno nuevo" (resolvería el
+      // problema equivocado): invitar a reintentar el mismo link.
+      return 'Hubo un problema de conexión. Reintentá.';
+    case 'auth/too-many-requests':
+      return 'Demasiados intentos. Probá de nuevo en unos minutos.';
+    // auth/invalid-action-code + auth/user-not-found caen al default a propósito:
+    // "inválido o ya usado" es honesto (Firebase no los distingue) y user-not-found
+    // colapsa al genérico para no confirmar enumeración de cuentas (paranoia F50-53).
+    default:
+      return 'El enlace no es válido. Pedí uno nuevo.';
+  }
+}
