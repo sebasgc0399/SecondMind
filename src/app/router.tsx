@@ -48,6 +48,13 @@ const router = createBrowserRouter([
   { path: '/login', Component: LoginPage },
   { path: '/verify-email', Component: VerifyEmailPage },
   { path: '/solicitar-acceso', Component: AccessRequestPage },
+  // SPEC-54: landing custom de los action-links de email (verifyEmail / resetPassword).
+  // Sibling público fuera del Layout (sin auth-gate). Lazy: solo se golpea desde un link
+  // de email, nunca desde nav in-app → chunk aparte (2º code-split del router tras /admin).
+  {
+    path: '/auth/action',
+    lazy: async () => ({ Component: (await import('@/app/auth/action/page')).default }),
+  },
 ]);
 
 export default router;
