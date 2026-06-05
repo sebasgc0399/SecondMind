@@ -122,3 +122,7 @@ Todos los menus flotantes del editor (WikilinkMenu, SlashMenu, BubbleToolbar, Li
 ## Marks viven en text nodes, no en containers
 
 Cualquier traversal que inspeccione `node.marks` debe recurrir hasta `node.type === 'text'` — containers como paragraph/heading/listItem nunca tienen marks directamente. Walk recursivo sobre `node.content` con early return en text nodes. Patrón consolidado en `extractLinks` y `computeDistillLevel`.
+
+## `NodeViewContent` aplica inline `white-space: pre-wrap` — overridear con `style` prop, no CSS
+
+El `NodeViewContent` de `@tiptap/react` setea un **inline `white-space: pre-wrap`** en su contentDOM. Un inline style gana sobre cualquier regla CSS sin importar specificity (ni `!important` del lado CSS lo limpia de forma confiable), así que en un code block las líneas largas **se envuelven en vez de scrollear horizontal** aunque el `.hljs`/`<pre>` declare `white-space: pre` — clarísimo en mobile. Fix: pasar `style={{ whiteSpace: 'pre' }}` directo al `NodeViewContent`; TipTap mergea `...props.style` **después** de su default, así que el prop gana limpio, sin `!important`. La cadena flex y el CSS del bloque NO son el root cause — el canal correcto es el `style` prop del NodeView, no más CSS. Aplica a cualquier NodeView React futura cuyo contentDOM necesite overridear un estilo que TipTap escribe inline. Regresión introducida en F45 (paso de code-block a NodeView React); fix en [CodeBlockNodeView.tsx:110](../../src/components/editor/nodeviews/CodeBlockNodeView.tsx#L110).

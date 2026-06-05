@@ -191,6 +191,7 @@ Cada feature comprimida a 1 línea con pointer al SPEC archivado. Para detalles 
 - [Popup wikilinks sin `tippy.js`](gotchas/editor-tiptap.md#popup-wikilinks-sin-tippyjs)
 - [Tokens de popup styling unificados](gotchas/editor-tiptap.md#tokens-de-popup-styling-unificados)
 - [Marks viven en text nodes, no en containers](gotchas/editor-tiptap.md#marks-viven-en-text-nodes-no-en-containers)
+- [`NodeViewContent` aplica inline `white-space: pre-wrap` — overridear con `style` prop, no CSS](gotchas/editor-tiptap.md#nodeviewcontent-aplica-inline-white-space-pre-wrap--overridear-con-style-prop-no-css)
 
 ### UI y componentes — [`gotchas/ui-componentes.md`](gotchas/ui-componentes.md)
 
