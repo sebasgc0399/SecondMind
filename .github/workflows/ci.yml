@@ -64,8 +64,8 @@ jobs:
       - name: Test
         run: npm test
 
-      # SPEC-55 — JDK para el Firebase Emulator Suite (Firestore/Auth lo requieren).
-      # Primer uso de emulador en CI; el PR de test:rules (D8) reusará este setup.
+      # JDK para el Firebase Emulator Suite (Firestore/Auth lo requieren). Compartido por
+      # el gate de rules (test:rules, D8) y el E2E de callables (test:functions, SPEC-55).
       - name: Setup Java (Firebase emulators)
         uses: actions/setup-java@v4
         with:
@@ -77,6 +77,12 @@ jobs:
         with:
           path: ~/.cache/firebase/emulators
           key: firebase-emulators-${{ runner.os }}
+
+      # D8 — gate de las security rules (allowlist/accessRequests deny-all + backstop de
+      # revoke) contra el emulador de Firestore. Hasta ahora corría solo local; las rules
+      # son el borde de seguridad de la beta y no tenían gate automático en CI.
+      - name: Rules tests (emulator)
+        run: npm run test:rules
 
       # SPEC-55 — E2E de las 5 callables de access contra el emulador
       # (functions+auth+firestore). Genera .secret.local en runtime, compila functions
