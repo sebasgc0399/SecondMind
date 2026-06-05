@@ -33,6 +33,15 @@ jobs:
       - name: Install deps
         run: npm ci --legacy-peer-deps
 
+      # src/functions es un proyecto npm independiente (su propio package-lock). Los unit
+      # tests de functions (que corren en `npm test`) importan firebase-functions, y el
+      # build de functions (test:functions) usa su toolchain. El `npm ci` de arriba NO
+      # instala estas deps → sin esto, `npm test` falla con ERR_MODULE_NOT_FOUND. Bug de
+      # CI preexistente (el job venía rojo) que el harness destapa y necesita resuelto.
+      - name: Install functions deps
+        working-directory: src/functions
+        run: npm ci --legacy-peer-deps
+
       # eslint . incluye el guard no-restricted-syntax (mutaciones TinyBase en
       # hooks) + no-restricted-imports (Clean Arch capa 2). No auto-fix: falla
       # el job si hay cualquier violación.
