@@ -42,7 +42,32 @@ jobs:
       - name: Type-check
         run: npx tsc --noEmit
 
+      # SPEC-55 — el harness e2e/ NO entra en el `tsc --noEmit` de arriba (root con
+      # `references`; --noEmit no las sigue). Gate de tipos dedicado del harness.
+      - name: Type-check e2e harness
+        run: npm run typecheck:e2e
+
       # vitest detecta CI=true (lo setea GitHub Actions) y corre una sola vez,
-      # sin watch mode. Cubre los 223 tests (repos, tinybase, saveQueue, etc).
+      # sin watch mode. Cubre los tests unit (repos, tinybase, saveQueue, etc).
       - name: Test
         run: npm test
+
+      # SPEC-55 — JDK para el Firebase Emulator Suite (Firestore/Auth lo requieren).
+      # Primer uso de emulador en CI; el PR de test:rules (D8) reusará este setup.
+      - name: Setup Java (Firebase emulators)
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Cache Firebase emulators
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/firebase/emulators
+          key: firebase-emulators-${{ runner.os }}
+
+      # SPEC-55 — E2E de las 5 callables de access contra el emulador
+      # (functions+auth+firestore). Genera .secret.local en runtime, compila functions
+      # y corre la suite secuencial (fileParallelism: false).
+      - name: E2E callables (emulator)
+        run: npm run test:functions

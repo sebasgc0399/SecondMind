@@ -1,0 +1,23 @@
+{
+  // SPEC-55 — type-check standalone del harness E2E. NO entra por `references` del
+  // tsconfig.json raíz: el `npx tsc --noEmit` de CI no sigue references (chequearía 0
+  // archivos). El gate real es `npm run typecheck:e2e` = `tsc -p tsconfig.e2e.json --noEmit`,
+  // que apunta directo a este archivo → SÍ chequea `e2e/`. Espeja tsconfig.node.json
+  // (node-side, sin DOM) + `vitest/globals` por el `globals: true` del vitest config.
+  "compilerOptions": {
+    "target": "es2023",
+    "lib": ["ES2023"],
+    "module": "esnext",
+    "types": ["node", "vitest/globals"],
+    "skipLibCheck": true,
+    "moduleResolution": "bundler",
+    "verbatimModuleSyntax": true,
+    "moduleDetection": "force",
+    "noEmit": true,
+    "strict": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noFallthroughCasesInSwitch": true
+  },
+  "include": ["e2e"]
+}

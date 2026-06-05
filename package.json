@@ -14,6 +14,8 @@
     "logs:functions": "firebase functions:log",
     "test": "vitest",
     "test:rules": "firebase emulators:exec --project=demo-secondmind --only firestore \"vitest run --config vitest.rules.config.ts\"",
+    "test:functions": "node scripts/emu-secret.mjs && npm --prefix src/functions run build && firebase emulators:exec --project=demo-secondmind --only functions,auth,firestore \"vitest run --config vitest.functions.config.ts\"",
+    "typecheck:e2e": "tsc -p tsconfig.e2e.json --noEmit",
     "tauri": "tauri",
     "tauri:dev": "tauri dev",
     "tauri:build": "tauri build",
