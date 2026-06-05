@@ -1,10 +1,11 @@
 # SPEC — Feature 54: Custom auth action handler (`/auth/action`) — Nivel 1
 
-> **Estado:** 🟡 **Prescriptivo / pendiente de implementación.** Las secciones F1–F9 abajo son el contrato a construir (Qué / Criterio de done / Archivos).
-> **Versión objetivo:** `0.4.4` (cambio client-side + config Console; **no abre la beta**, no toca rules ni gate de acceso).
-> **Rama:** `feat/auth-action-pages` → merge `--no-ff` a `main`.
+> **Estado:** ✅ **Código completo, en prod y testeado** (`0.4.4`, deploy 2026-06-03/04). F1–F7 implementados, desplegados a `secondmind.web.app` y verificados E2E en prod. **F8 (custom action URL) + F9 (copy español de templates) PENDIENTES del soporte de Firebase** — config server-side, NO código (ver nota abajo). Las secciones F1–F9 describen lo enviado.
+> **Verificación:** build (tsc+vite) + lint completo + `npm test` **252/252** verdes. E2E Playwright local (fallback · verify ok/error · reset form/validación/golden path · claro/oscuro · 375/1280) + **test en prod real** con oobCodes del Admin SDK contra `secondmind.web.app` (verify success + reset golden path; **G3 confirmado en prod**: usuario logueado igual recibe la landing standalone, sin app shell ni redirect). QA con cuenta descartable `qa-spec54@example.com` (borrada al cierre) + SA key temporal (archivo borrado + revocada en GCP).
+> **Desvío/agregado (decidido en implementación):** se sumó el **fix PWA `navigateFallbackDenylist: /^\/auth\/action/`** ([vite.config.ts](../../vite.config.ts), commit `e7df5b0`) tras detectar en el test de prod que el service worker servía el `index.html` precacheado (bundle viejo sin la ruta → 404 en el `*` del Layout). Crítico porque la landing se golpea desde **links de email externos** y debe cargar siempre el bundle actual. No estaba en el SPEC original; gotcha escalado a `gotchas/pwa-offline.md`.
+> **⛔ F8/F9 BLOQUEADAS por Firebase (escalado a soporte):** la Console devuelve `EMAIL_TEMPLATE_UPDATE_NOT_ALLOWED` al guardar el callbackUri (F8) y al editar los templates (F9) tras varios reintentos. Escalado al engineering team de Firebase vía **soporte de Firebase** (NO Google Cloud Support — Blaze es facturación, no incluye soporte técnico de GCP; confirmado por Ruben). Puede tardar días. Son **config server-side, no commits** — la landing ya está lista; cuando el soporte mueva el callbackUri, los emails apuntan a `/auth/action` y se activa **sin más deploy**. **Smoke email→landing queda pendiente post-soporte** (no bloqueó el merge; el código ya está validado en prod con oobCodes manuales).
+> **Versión:** `0.4.4` (client-side + config; **no abre la beta**, no toca rules ni gate de acceso). 4 commits feat + 1 release + 1 fix PWA en `feat/auth-action-pages` → merge `--no-ff` a `main`.
 > **Depende de:** F47 (LoginCard, verify-email page, `authErrors.ts`, `SignUpForm` validación), SPEC-51 (`enforceAccessGate`, store reactivo `loginError` — **no se tocan**), SPEC-53 (`SignupGate` cliente-only — no se toca).
-> **No depende de:** dominio propio. Por eso es Nivel 1 (ver "Nivel 2 — SPEC futuro" abajo).
 > **Origen:** las "action handler pages" genéricas de Firebase (`secondmindv1.firebaseapp.com/__/auth/action`) rompen la coherencia visual del producto en los dos momentos más frágiles del onboarding (activar cuenta / reset password).
 
 ## Objetivo
@@ -128,15 +129,17 @@ Una página pública `/auth/action` que reemplaza la landing genérica de Fireba
 
 ### Frente B — Configuración Console (manual / checklist, al final)
 
-#### F8 — Custom action URL → `https://secondmind.web.app/auth/action`
+#### F8 — Custom action URL → `https://secondmind.web.app/auth/action` ⛔ PENDIENTE SOPORTE
 
+- **Estado:** **bloqueado** — la Console rechaza el guardado con `EMAIL_TEMPLATE_UPDATE_NOT_ALLOWED` (ver header). Escalado a soporte de Firebase. Sin código pendiente: la landing ya procesa el callbackUri cuando el soporte lo habilite.
 - **Qué:** en Firebase Console → Authentication → Templates → "Customize action URL" (aplica **global** a todos los templates) → `https://secondmind.web.app/auth/action`.
 - **Orden:** **penúltimo paso**, **después** de desplegar la landing a prod y testearla con un `oobCode` real del Admin SDK (ver Verificación). Antes de este cambio, los emails de prod siguen yendo al handler genérico — la landing nueva queda lista pero no recibe tráfico hasta el switch.
 - **Criterio de done:** un email de prod (verify o reset) lleva un link a `secondmind.web.app/auth/action?mode=...&oobCode=...` y la landing lo procesa.
 - **Archivos:** ninguno (Console). Agrupado con F9 en una sola entrada a Console.
 
-#### F9 — Personalizar plantillas de email en Console (SOLO copy + remitente)
+#### F9 — Personalizar plantillas de email en Console (SOLO copy + remitente) ⛔ PENDIENTE SOPORTE
 
+- **Estado:** **bloqueado** — mismo `EMAIL_TEMPLATE_UPDATE_NOT_ALLOWED` que F8. Escalado a soporte de Firebase.
 - **Qué:** en Console → Authentication → Templates, para **Verificación de email** y **Restablecimiento de contraseña**: asunto + cuerpo + nombre del remitente → **español, branded en COPY**. **SOLO texto y remitente, NADA de HTML diseñado** (eso es Nivel 2). Sebastián lo hace con guía del asesor.
 - **Criterio de done:** los dos emails llegan en español con remitente branded; el resto (emisor Firebase, mecánica del link) intacto.
 - **Archivos:** ninguno (Console). Misma entrada a Console que F8.
@@ -184,15 +187,17 @@ Una página pública `/auth/action` que reemplaza la landing genérica de Fireba
 
 ## Checklist
 
-- [ ] F1 — ruta pública lazy `/auth/action`
-- [ ] F2 — page shell (wrapper + branding) + dispatch por `mode`
-- [ ] F3 — `ActionStatus` (loading/success/error compartido)
-- [ ] F4 — `VerifyEmailAction` (state machine verify + guard StrictMode)
-- [ ] F5 — `ResetPasswordAction` (verify-code → form → confirm + validación reusada)
-- [ ] F6 — `lib/authActions.ts` (3 wrappers)
-- [ ] F7 — `mapActionError` en `authErrors.ts`
-- [ ] E2E local (oobCodes Admin SDK, cuenta descartable) + lint/build verdes
-- [ ] Deploy hosting (Tauri/Android opcionales) + test prod de la landing con oobCode manual
-- [ ] F8 — custom action URL → `secondmind.web.app/auth/action` (Console)
-- [ ] F9 — copy español + remitente en plantillas verify + reset (Console)
-- [ ] Smoke prod final + cierre (registro + escalación de gotchas + Nivel 2 anotado en ESTADO-ACTUAL)
+- [x] F1 — ruta pública lazy `/auth/action`
+- [x] F2 — page shell (wrapper + branding) + dispatch por `mode`
+- [x] F3 — `ActionStatus` (loading/success/error compartido)
+- [x] F4 — `VerifyEmailAction` (state machine verify + guard StrictMode)
+- [x] F5 — `ResetPasswordAction` (verify-code → form → confirm + validación reusada)
+- [x] F6 — `lib/authActions.ts` (3 wrappers)
+- [x] F7 — `mapActionError` en `authErrors.ts`
+- [x] **Fix PWA** `navigateFallbackDenylist: /^\/auth\/action/` (agregado en implementación tras el test de prod)
+- [x] E2E local (oobCodes Admin SDK, cuenta descartable) + lint/build/test **252/252** verdes
+- [x] Deploy hosting `0.4.4` + test prod real (verify success + reset golden path + G3 con oobCode del Admin SDK)
+- [ ] F8 — custom action URL → `secondmind.web.app/auth/action` (Console) — ⛔ **pendiente soporte Firebase**
+- [ ] F9 — copy español + remitente en plantillas verify + reset (Console) — ⛔ **pendiente soporte Firebase**
+- [ ] Smoke prod final email→landing — ⛔ **pendiente post-soporte** (depende del callbackUri de F8)
+- [x] Cierre: merge + registro + gotchas escalados (PWA denylist + action-code) + Nivel 2 en ESTADO-ACTUAL + patrón QA en CLAUDE.md
