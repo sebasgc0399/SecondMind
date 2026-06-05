@@ -100,7 +100,14 @@ export default function CodeBlockNodeView({ node, updateAttributes }: ReactNodeV
         </button>
       </div>
       <pre className="hljs" spellCheck={false}>
-        <NodeViewContent<'code'> as="code" className="font-mono" />
+        {/*
+          NodeViewContent aplica un inline `white-space: pre-wrap` al contentDOM
+          (@tiptap/react). Un inline style pisa la regla CSS `white-space: pre`
+          del bloque, así que sin esto las líneas largas se ENVUELVEN en vez de
+          scrollear horizontal. TipTap mergea `...props.style` DESPUÉS de su
+          default, por eso pasar `style` acá gana sin necesidad de `!important`.
+        */}
+        <NodeViewContent<'code'> as="code" className="font-mono" style={{ whiteSpace: 'pre' }} />
       </pre>
     </NodeViewWrapper>
   );
