@@ -48,11 +48,14 @@ jobs:
       - name: Lint
         run: npm run lint
 
+      # `tsc -b` sigue las project references del root (tsconfig.app.json + tsconfig.node.json)
+      # → type-checkea src/ DE VERDAD. El `npx tsc --noEmit` anterior NO seguía references
+      # (root con `files: []` → chequeaba 0 archivos = no-op silencioso, falso-verde). D9.
       - name: Type-check
-        run: npx tsc --noEmit
+        run: npx tsc -b
 
-      # SPEC-55 — el harness e2e/ NO entra en el `tsc --noEmit` de arriba (root con
-      # `references`; --noEmit no las sigue). Gate de tipos dedicado del harness.
+      # SPEC-55 — el harness e2e/ NO está en las references del root → el `tsc -b` de arriba
+      # no lo cubre. Gate de tipos dedicado del harness (tsconfig.e2e.json standalone).
       - name: Type-check e2e harness
         run: npm run typecheck:e2e
 
