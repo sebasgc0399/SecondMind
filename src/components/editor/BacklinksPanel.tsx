@@ -63,14 +63,20 @@ interface BacklinksToggleProps {
 }
 
 export function BacklinksToggle({ count, onClick }: BacklinksToggleProps) {
+  // Mismo patrón de chip que DistillIndicator: pill visual chico dentro de un
+  // contenedor de 44px de alto (tap target). Los dos chips de la fila de
+  // metadata (L1 + Backlinks) se leen como un grupo homogéneo.
   return (
     <button
       type="button"
       onClick={onClick}
-      className="inline-flex items-center gap-1.5 rounded-full border border-border bg-card px-2.5 py-1 text-xs font-medium text-foreground transition-colors hover:bg-accent/40"
+      aria-label={`Backlinks (${count})`}
+      className="inline-flex h-11 items-center justify-center rounded-full px-1 outline-none transition-colors hover:bg-accent/40 motion-safe:active:scale-95"
     >
-      <Link2 className="h-3 w-3" />
-      Backlinks ({count})
+      <span className="inline-flex items-center gap-1 rounded-full border border-border bg-card px-2 py-0.5 text-xs font-medium text-foreground">
+        <Link2 className="h-3 w-3" aria-hidden />
+        Backlinks ({count})
+      </span>
     </button>
   );
 }
