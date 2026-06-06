@@ -34,3 +34,19 @@ navigateFallbackDenylist: [/^\/api/, /^\/__\//, /^\/auth\/action/],
 ```
 
 Aplica a cualquier futura ruta hit-from-outside. **Caveat:** el denylist solo ayuda una vez que el SW que lo contiene está activo en el cliente — los clientes con un SW pre-fix necesitan un ciclo de actualización primero. Por eso conviene desplegar el denylist **antes** de que la ruta reciba tráfico externo real (en SPEC-54 se desplegó antes de que el soporte de Firebase active el callbackUri que apunta los emails a `/auth/action`).
+
+## El SW no debe registrarse en native — y `immediate:!isNative` no lo impide
+
+En Capacitor (Android) y Tauri (WebView2) el PWA service worker **no debe registrarse**: la app ya trae el bundle empacado y lo sirve local, así que el SW solo agrega un precache cache-first que pelea contra el bundle nativo. Tras un update del binario el SW viejo **persiste en el storage del WebView** (`app_webview/Default/Service Worker/` en Android, `EBWebView/Default/Service Worker/` en WebView2 — sobrevive a la reinstalación) e intercepta `index.html` sirviendo el bundle viejo. Síntoma: actualizás el APK/instalador y seguís viendo lo viejo hasta borrar datos de la app.
+
+**Trampa que tumbó F36.F7:** `useRegisterSW({ immediate: !isNative })` NO previene el registro. En vite-plugin-pwa `immediate` solo controla **cuándo** registra (`true`=ya, `false`=en evento `load`), no **si** — `register()` se llama incondicional en el fuente del plugin (`node_modules/vite-plugin-pwa/dist/client/build/register.js`). Con `immediate:false` el SW se registra igual, diferido al `load`.
+
+**Fix (vivo en `src/components/layout/UpdateBanner.tsx`):** gatear el **mount** de la cadena que llama `useRegisterSW`. El outer (sin hooks) hace `if (isTauri() || isCapacitor()) return null`; un `WebUpdateBanner` inner tiene los hooks. En native el inner nunca monta → el SW nunca se registra. Toda instalación nueva queda limpia para siempre.
+
+**Curar instalaciones ya trabadas:** un SW trabado NO se cura desde el bundle JS — el SW sirve el bundle viejo, así que el código de cura nunca corre (por eso `useVersionCheck` era self-defeating: leía `__APP_VERSION__` del bundle que el SW mantenía viejo). La cura debe vivir en una capa que el SW no controle:
+
+- **Tauri:** `src-tauri/src/version_check.rs` corre `clear_all_browsing_data()` en Rust **pre-WebView**, gateado por `version.txt` en disco → un release con **version bump** cura los desktop trabados.
+- **Android:** sin equivalente nativo → las instalaciones trabadas necesitan uninstall+reinstall manual.
+- **self-destroying SW** cura vía el propio `sw.js` (se fetchea bypaseando el cache del SW viejo), pero `selfDestroying` es **global de build** → rompería el PWA web (exigiría un build nativo separado).
+
+Verificado on-device A/B (2026-06, release 0.4.6): Android (filesystem `Service Worker/` poblado pre-fix vs ausente post-fix) + Tauri (perfil WebView2 aislado con `WEBVIEW2_USER_DATA_FOLDER`).
