@@ -83,7 +83,7 @@ export default function DistillIndicator({ noteId, onOpenSummary }: DistillIndic
     <Popover.Root open={open} onOpenChange={handleOpenChange}>
       <Popover.Trigger
         aria-label={`Nivel de destilación: L${level} — ${meta.label}`}
-        className="inline-flex h-11 min-w-11 items-center justify-center rounded-full px-2 outline-none transition-colors hover:bg-accent/40"
+        className="inline-flex h-11 min-w-11 items-center justify-center rounded-full px-2 outline-none transition-colors hover:bg-accent/40 motion-safe:active:scale-95"
       >
         <span
           className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-semibold ${meta.badgeClass}`}
