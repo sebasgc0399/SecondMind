@@ -169,7 +169,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "case \"$CLAUDE_TOOL_INPUT_FILE_PATH\" in *\"Proyectos VS CODE\"*\"SecondMind\"*) [ \"$(git branch --show-current)\" != \"main\" ] || exit 2 ;; esac"
+            "command": "fp=$(jq -r '.tool_input.file_path // empty'); case \"$fp\" in *\"Proyectos VS CODE\"*\"SecondMind\"*) [ \"$(git branch --show-current)\" != \"main\" ] || exit 2 ;; esac"
           }
         ]
       }
