@@ -20,7 +20,6 @@ import useMountedTransition from '@/hooks/useMountedTransition';
 import usePreferences from '@/hooks/usePreferences';
 import useShareIntent from '@/hooks/useShareIntent';
 import useSidebarVisibilityShortcut from '@/hooks/useSidebarVisibilityShortcut';
-import useVersionCheck from '@/hooks/useVersionCheck';
 import AppBootSplash from '@/components/layout/AppBootSplash';
 import useStoreInit from '@/hooks/useStoreInit';
 import StoreHydrationProvider from '@/hooks/StoreHydrationProvider';
@@ -38,7 +37,6 @@ export default function Layout() {
   const { preferences } = usePreferences();
   useHideSplashWhenReady();
   useSidebarVisibilityShortcut();
-  useVersionCheck();
 
   // Mantiene AppBootSplash en pantalla al menos 800ms aunque el bootstrap
   // termine antes (sesión persistida + stores rápidos). Sin esto, en cold

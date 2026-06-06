@@ -2,6 +2,8 @@ import { Loader2, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import useFlushThenUpdate from '@/hooks/useFlushThenUpdate';
 import useMountedTransition from '@/hooks/useMountedTransition';
+import { isCapacitor } from '@/lib/capacitor';
+import { isTauri } from '@/lib/tauri';
 import { cn } from '@/lib/utils';
 
 const ANIMATION_DURATION_MS = 200;
@@ -10,7 +12,18 @@ const formatPending = (n: number) =>
   `${n} cambio${n !== 1 ? 's' : ''} pendiente${n !== 1 ? 's' : ''}`;
 const formatUnsynced = (n: number) => `${n} cambio${n !== 1 ? 's' : ''} sin sincronizar`;
 
+// Outer gate (sin hooks): el flujo de update SW es web-only. En native
+// (Tauri/Capacitor) la app no registra SW — montar la cadena de hooks de
+// WebUpdateBanner (useFlushThenUpdate → useSwUpdate → useRegisterSW) ES lo que
+// registraría el SW. Cortar el mount acá es el fix del cache stale en Android.
+// isTauri()/isCapacitor() son funciones puras: seguro llamarlas antes del
+// early-return sin violar reglas de hooks (este componente no usa ninguno).
 export default function UpdateBanner() {
+  if (isTauri() || isCapacitor()) return null;
+  return <WebUpdateBanner />;
+}
+
+function WebUpdateBanner() {
   const {
     needRefresh,
     status,
