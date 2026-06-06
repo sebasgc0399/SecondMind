@@ -89,8 +89,8 @@ export default function NoteEditor({
 
   return (
     <div className="flex flex-col">
-      <div className="mx-auto flex w-full max-w-180 items-center justify-end gap-3 px-4 py-3">
-        {headerSlot}
+      <div className="mx-auto flex w-full max-w-180 items-center justify-between gap-3 px-4 py-2">
+        <div className="flex min-w-0 items-center gap-2">{headerSlot}</div>
         <SaveIndicator status={status} />
       </div>
       <SummaryL3
@@ -126,5 +126,8 @@ function SaveIndicator({ status }: { status: SaveStatus }) {
   if (status === 'saved') {
     return <span className="text-xs text-primary">✓ Guardado</span>;
   }
-  return <span className="text-xs text-muted-foreground/60">Sin cambios</span>;
+  // idle: nada que sincronizar (sin entry en queue). Se oculta — mostrar "Sin
+  // cambios" permanente es ruido. El estado "pendiente/offline" vive en el
+  // indicador global <PendingSyncIndicator />, no acá.
+  return null;
 }
