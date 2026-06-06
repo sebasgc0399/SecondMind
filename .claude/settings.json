@@ -158,7 +158,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "case \"$CLAUDE_TOOL_INPUT_FILE_PATH\" in *\"Spec/gotchas/\"*\".md\"|*\"Spec\\\\gotchas\\\\\"*\".md\") python \"$USERPROFILE/.claude/skills/gotchas-search/reindex.py\" >/dev/null 2>&1 || true ;; esac"
+            "command": "fp=$(jq -r '.tool_input.file_path // empty'); case \"$fp\" in *\"Spec/gotchas/\"*\".md\"|*\"Spec\\\\gotchas\\\\\"*\".md\") python \"$USERPROFILE/.claude/skills/gotchas-search/reindex.py\" >/dev/null 2>&1 || true ;; esac"
           }
         ]
       }
