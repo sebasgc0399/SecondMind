@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import type { User } from 'firebase/auth/web-extension';
 import { signInWithChrome, observeAuth } from '../lib/auth.ts';
 import { saveToInbox } from '../lib/firestore.ts';
+import { formatName } from '../lib/formatName.ts';
 import { getSelection } from '../content/getSelection.ts';
 
 interface PageInfo {
@@ -110,7 +111,7 @@ export default function Popup() {
         {isAuthenticated ? (
           <span className="popup-status">
             <span className="popup-status-dot popup-status-dot--connected" />
-            <span className="popup-user">{user.displayName ?? user.email}</span>
+            <span className="popup-user">{formatName(user.displayName) || user.email}</span>
           </span>
         ) : (
           <span className="popup-status">
