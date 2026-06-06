@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { NavLink } from 'react-router';
 import { Settings, LogOut, Menu, Search } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { formatName } from '@/lib/formatName';
 import useCommandPalette from '@/hooks/useCommandPalette';
 import { usePendingInboxCount } from '@/hooks/useInbox';
 import PendingSyncIndicator from './PendingSyncIndicator';
@@ -74,7 +75,7 @@ export function SidebarContent({ user, onSignOut, collapsed, onNavigate }: Sideb
         {user.photoURL && !imgError ? (
           <img
             src={user.photoURL}
-            alt={user.displayName ?? 'Avatar'}
+            alt={formatName(user.displayName) || 'Avatar'}
             className="h-8 w-8 rounded-full"
             referrerPolicy="no-referrer"
             onError={() => setImgError(true)}
@@ -84,7 +85,7 @@ export function SidebarContent({ user, onSignOut, collapsed, onNavigate }: Sideb
         )}
         {!collapsed && (
           <span className="truncate text-sm font-medium text-sidebar-foreground">
-            {user.displayName ?? 'SecondMind'}
+            {formatName(user.displayName) || 'SecondMind'}
           </span>
         )}
       </div>
