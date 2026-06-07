@@ -76,6 +76,14 @@ export default function useStoreInit(userId: string | null): { isHydrating: bool
       })
       .catch((error) => {
         console.error('[useStoreInit] failed to init persisters', error);
+        // F1.1 (SPEC-56): no colgar el AppBootSplash. Resolver la hidratación con
+        // el store en su estado actual (vacío si no hay cache) ante CUALQUIER error
+        // — invariante "nunca colgar el splash" (Opción A, decisión del asesor). NO
+        // es retry; el error ya quedó en console.error para diagnóstico. Mismo guard
+        // de double-mount que el .then (cancelled + currentUserIdRef).
+        if (!cancelled && currentUserIdRef.current === userId) {
+          setHydratedUserId(userId);
+        }
       });
 
     return () => {

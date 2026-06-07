@@ -150,6 +150,13 @@ Cada feature comprimida a 1 línea con pointer al SPEC archivado. Para detalles 
 - [Rutas pre-auth: TinyBase no inicializado → `getDoc` directo del SDK web (post-F47)](gotchas/tinybase-firestore.md#rutas-pre-auth-tinybase-no-inicializado--getdoc-directo-del-sdk-web-post-f47)
 - [Schema versioning local de cache (post-F36.F8 — v0.2.4+)](gotchas/tinybase-firestore.md#schema-versioning-local-de-cache-post-f36f8-v024)
 - [El `progress` de hábitos se persiste pero es write-only — la UI recomputa](gotchas/tinybase-firestore.md#el-progress-de-hábitos-se-persiste-pero-ningún-componente-lo-lee-write-only)
+- [`persistentLocalCache` con `persistentMultipleTabManager`: cache offline del SDK (post-SPEC-56)](gotchas/tinybase-firestore.md#persistentlocalcache-con-persistentmultipletabmanager-cache-offline-del-sdk-post-spec-56)
+- [Read-through cache: la lectura offline requiere ≥1 arranque online previo (post-SPEC-56 D7)](gotchas/tinybase-firestore.md#read-through-cache-la-lectura-offline-requiere-1-arranque-online-previo-post-spec-56-d7)
+- [Guard offline en `useStoreInit`: defensa-en-profundidad para rechazos (post-SPEC-56 F1.1)](gotchas/tinybase-firestore.md#guard-offline-en-usestoreinit-defensa-en-profundidad-para-rechazos-post-spec-56-f11)
+- [Kill-switch de `persistentLocalCache`: revert de 1 commit (post-SPEC-56 C1)](gotchas/tinybase-firestore.md#kill-switch-de-persistentlocalcache-revert-de-1-commit-post-spec-56-c1)
+- [Android es best-effort estructural para la durabilidad offline (post-SPEC-56 D8)](gotchas/tinybase-firestore.md#android-es-best-effort-estructural-para-la-durabilidad-offline-post-spec-56-d8)
+- [Cache de Firestore corrupta → assertion `dd85` → AsyncQueue muerto → app no hidrata (post-SPEC-56 D12)](gotchas/tinybase-firestore.md#cache-de-firestore-corrupta--assertion-dd85--asyncqueue-muerto--app-no-hidrata-post-spec-56-d12)
+- [La rama `.catch` del guard de `useStoreInit` (F1.1) no se ejerce en init-failure ni cache-vacía (post-SPEC-56)](gotchas/tinybase-firestore.md#la-rama-catch-del-guard-de-usestoreinit-f11-no-se-ejerce-en-init-failure-ni-cache-vacía-post-spec-56)
 
 ### Relaciones entre entidades — [`gotchas/relaciones-entidades.md`](gotchas/relaciones-entidades.md)
 
@@ -363,6 +370,7 @@ Cada feature comprimida a 1 línea con pointer al SPEC archivado. Para detalles 
 - [Harness E2E de callables contra el emulador (post-SPEC-55)](gotchas/tooling-local.md#harness-e2e-de-callables-contra-el-emulador-post-spec-55)
 - [`defineSecret().value()` en el emulador lee `.secret.local`, no `process.env` (post-SPEC-55)](gotchas/tooling-local.md#definesecretvalue-en-el-emulador-lee-secretlocal-no-processenv-post-spec-55)
 - [CI: deps de `src/functions` y type-check con references (post-SPEC-55)](gotchas/tooling-local.md#ci-deps-de-srcfunctions-y-type-check-con-references-post-spec-55)
+- [Firebase MCP `firestore_query_collection` no acepta paths de subcolección con "/" (post-SPEC-56)](gotchas/tooling-local.md#firebase-mcp-firestore_query_collection-no-acepta-paths-de-subcolección-con--post-spec-56)
 
 ### Cloud Functions — Tool use con schema enforcement — [`gotchas/cloud-functions-schema.md`](gotchas/cloud-functions-schema.md)
 

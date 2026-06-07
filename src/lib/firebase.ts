@@ -1,6 +1,10 @@
 import { initializeApp } from 'firebase/app';
 import { getAuth } from 'firebase/auth';
-import { getFirestore } from 'firebase/firestore';
+import {
+  initializeFirestore,
+  persistentLocalCache,
+  persistentMultipleTabManager,
+} from 'firebase/firestore';
 import { getFunctions } from 'firebase/functions';
 
 const firebaseConfig = {
@@ -15,5 +19,16 @@ const firebaseConfig = {
 
 const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
-export const db = getFirestore(app);
+// Firestore con cache persistente (IndexedDB) + multi-tab manager (SPEC-56 F1).
+// El SDK asume durabilidad de writes (mutation-queue durable) y lectura offline
+// (rehidrata TinyBase tras reload). `persistentMultipleTabManager` es necesario
+// porque hay 2º webview del mismo origin (Tauri `capture`) + PWA multi-pestaña.
+// `cacheSizeBytes` va DENTRO de `persistentLocalCache` (pasarlo top-level junto a
+// `localCache` tira error de init). NUNCA `CACHE_SIZE_UNLIMITED` (D3).
+export const db = initializeFirestore(app, {
+  localCache: persistentLocalCache({
+    tabManager: persistentMultipleTabManager(),
+    cacheSizeBytes: 40 * 1024 * 1024,
+  }),
+});
 export const functions = getFunctions(app, 'us-central1');

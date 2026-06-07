@@ -13,6 +13,7 @@
     "windows": [
       {
         "label": "main",
+        "useHttpsScheme": false,
         "title": "SecondMind",
         "width": 1280,
         "height": 800,
@@ -24,6 +25,7 @@
       },
       {
         "label": "capture",
+        "useHttpsScheme": false,
         "title": "SecondMind — Captura rápida",
         "url": "/capture",
         "width": 480,

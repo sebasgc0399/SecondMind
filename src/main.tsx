@@ -7,6 +7,7 @@ import TauriIntegration from '@/app/TauriIntegration';
 import { isCapacitor } from '@/lib/capacitor';
 import { initCapacitorAuth } from '@/lib/capacitorAuth';
 import { hideSplash } from '@/lib/splash';
+import { requestPersistentStorage } from '@/lib/storagePersist';
 import { isTauri, showMainWindow } from '@/lib/tauri';
 import { migrateTinyBaseSchemaIfNeeded } from '@/lib/tinybase';
 import { notesStore } from '@/stores/notesStore';
@@ -53,6 +54,11 @@ migrateTinyBaseSchemaIfNeeded([
   objectivesStore,
   habitsStore,
 ]);
+
+// SPEC-56 F2: pedir storage persistente (best-effort) para escapar de la eviction
+// LRU del browser/OS. No bloquea el boot; loggea el retorno para el QA (consola
+// web/Tauri, logcat Android — gate F7).
+void requestPersistentStorage();
 
 // notesStore es el store default del Provider (acceso sin storeId).
 // Los demás stores se acceden con storeId en los hooks reactivos,
