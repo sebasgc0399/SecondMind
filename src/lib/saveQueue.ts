@@ -208,7 +208,14 @@ export function createSaveQueue<T>(): SaveQueue<T> {
       });
 
       notify();
-      if (!wasSyncing) void executeEntry(id);
+      // D13/SPEC-57: offline, la promesa del `setDoc` en vuelo no resuelve sin red,
+      // así que el version-check post-`await` que normalmente re-dispara el payload
+      // nuevo nunca corre → solo el primer write sería durable ante un kill. Re-disparar
+      // entrega el payload final a la mutation-queue durable del SDK ahora. Gate por
+      // `navigator.onLine` (mismo signal que useOnlineStatus): online se mantiene el
+      // comportamiento actual (el in-flight resuelve rápido y su version-check maneja).
+      const offline = typeof navigator !== 'undefined' && navigator.onLine === false;
+      if (!wasSyncing || offline) void executeEntry(id);
       return;
     }
 
