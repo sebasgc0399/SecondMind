@@ -157,6 +157,7 @@ Cada feature comprimida a 1 línea con pointer al SPEC archivado. Para detalles 
 - [Android es best-effort estructural para la durabilidad offline (post-SPEC-56 D8)](gotchas/tinybase-firestore.md#android-es-best-effort-estructural-para-la-durabilidad-offline-post-spec-56-d8)
 - [Cache de Firestore corrupta → assertion `dd85` → AsyncQueue muerto → app no hidrata (post-SPEC-56 D12)](gotchas/tinybase-firestore.md#cache-de-firestore-corrupta--assertion-dd85--asyncqueue-muerto--app-no-hidrata-post-spec-56-d12)
 - [La rama `.catch` del guard de `useStoreInit` (F1.1) no se ejerce en init-failure ni cache-vacía (post-SPEC-56)](gotchas/tinybase-firestore.md#la-rama-catch-del-guard-de-usestoreinit-f11-no-se-ejerce-en-init-failure-ni-cache-vacía-post-spec-56)
+- [Offline, solo el PRIMER `setDoc` de cada nota es durable ante un kill (post-SPEC-56 D13)](gotchas/tinybase-firestore.md#offline-solo-el-primer-setdoc-de-cada-nota-es-durable-ante-un-kill-post-spec-56-d13)
 
 ### Relaciones entre entidades — [`gotchas/relaciones-entidades.md`](gotchas/relaciones-entidades.md)
 
@@ -438,5 +439,6 @@ Lista curada sin compromiso de orden ni scope. La próxima feature se decide con
 - **Sync de preferencias cross-device** via Firestore `users/{uid}/preferences.theme` si demanda aparece.
 - **Visual regression baselines** con Playwright si se introduce screenshot testing.
 - **Decodificar HTML entities en share intent (Capacitor Android)** — Chrome Android envía títulos con `&#34;` en vez de `"`. Trivial: `DOMParser` o `textarea.innerHTML = title`. Pendiente hasta que moleste en uso real.
+- **z-index del popover de `PendingSyncIndicator` (detectado en SPEC-56 F6 Tauri)** — el popover de pending-sync se abre **detrás del sidebar** (stacking context / z-index insuficiente). Bug de UI puntual; no afecta durabilidad ni datos. Fix: subir el z-index del popover por encima del sidebar (o renderizar en portal). Trigger: pase de UI o cuando moleste.
 - **Mover OAuth token exchange a Rust-side (`src-tauri/src/oauth.rs`)** — `tauriAuth.ts:118` hace `POST oauth2.googleapis.com/token` con `client_secret` inlineado del bundle JS distribuido. Anti-pattern de seguridad incluso para Desktop con PKCE: el secret queda inspeccionable descomprimiendo el MSI/NSIS. Refactor: el frontend invoca `invoke('exchange_code_for_id_token', { code, codeVerifier })`; Rust hace el POST con `client_secret` embebido en el binary (todavía descompilable pero menos accesible que en bundle JS). Alternativa equivalente: migrar el OAuth client GCP de tipo "Web app" a "Desktop app" puro y usar solo PKCE sin secret (Google permite oficialmente). Trigger: auditoría de seguridad o compliance. Origen: F36.F9.B post-mortem.
 - **Distribución:** code signing Windows para MSI, Play Store publish (AAB + $25 one-time + privacy policy).
