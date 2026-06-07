@@ -15,6 +15,8 @@ describe('saveQueue', () => {
 
   afterEach(() => {
     vi.useRealTimers();
+    // Restaurar navigator.onLine (los tests D13/SPEC-57 lo fuerzan a false).
+    Object.defineProperty(navigator, 'onLine', { configurable: true, value: true });
   });
 
   it('1. éxito en intento 1 → synced y entry borrada tras GC', async () => {
@@ -362,6 +364,126 @@ describe('saveQueue', () => {
     expect(executor).toHaveBeenCalledWith(payload);
     expect(executor).toHaveBeenCalledWith(expect.objectContaining({ content: payload.content }));
     expect(queue.getEntry('note-1')).toBeUndefined();
+
+    queue.dispose();
+  });
+
+  // ── SPEC-57 (D13): re-disparo offline del upsert subsiguiente ──────────────
+
+  it('17. F2a offline: upsert durante syncing re-dispara setDoc inmediato → payload final durable', async () => {
+    Object.defineProperty(navigator, 'onLine', { configurable: true, value: false });
+    const queue = createSaveQueue<TestPayload>();
+    const deferreds: Array<() => void> = [];
+    const executor = vi
+      .fn()
+      .mockImplementationOnce(
+        () =>
+          new Promise<void>((resolve) => {
+            deferreds.push(resolve);
+          }),
+      )
+      .mockImplementationOnce(
+        () =>
+          new Promise<void>((resolve) => {
+            deferreds.push(resolve);
+          }),
+      )
+      .mockResolvedValue(undefined);
+
+    queue.enqueue('a', { data: 'v1' }, executor);
+    await vi.advanceTimersByTimeAsync(0);
+    expect(queue.getEntry('a')?.status).toBe('syncing');
+    expect(executor).toHaveBeenCalledTimes(1);
+
+    // upsert durante syncing OFFLINE → re-dispara YA (sin esperar al primer await,
+    // que offline no resolvería) → el payload final llega a la queue durable del SDK.
+    queue.enqueue('a', { data: 'v2' }, executor);
+    await vi.advanceTimersByTimeAsync(0);
+    expect(executor).toHaveBeenCalledTimes(2);
+    expect(executor).toHaveBeenNthCalledWith(2, { data: 'v2' });
+
+    // reconexión: ambos setDoc resuelven → estado final v2, synced + GC.
+    deferreds.forEach((resolve) => resolve());
+    await vi.advanceTimersByTimeAsync(FLUSH_GC_MS);
+    expect(executor).toHaveBeenLastCalledWith({ data: 'v2' });
+    expect(queue.getEntry('a')).toBeUndefined();
+
+    queue.dispose();
+  });
+
+  it('18. F2b offline: upsert durante syncing + ambos intentos permission-denied → error, sin retries (F29)', async () => {
+    Object.defineProperty(navigator, 'onLine', { configurable: true, value: false });
+    const queue = createSaveQueue<TestPayload>();
+    const fbError = new FirebaseError('permission-denied', 'denied');
+    const rejecters: Array<(e: unknown) => void> = [];
+    const executor = vi
+      .fn()
+      .mockImplementationOnce(
+        () =>
+          new Promise<void>((_, reject) => {
+            rejecters.push(reject);
+          }),
+      )
+      .mockImplementationOnce(
+        () =>
+          new Promise<void>((_, reject) => {
+            rejecters.push(reject);
+          }),
+      )
+      .mockRejectedValue(fbError);
+
+    queue.enqueue('a', { data: 'v1' }, executor);
+    await vi.advanceTimersByTimeAsync(0);
+    expect(executor).toHaveBeenCalledTimes(1);
+
+    queue.enqueue('a', { data: 'v2' }, executor);
+    await vi.advanceTimersByTimeAsync(0);
+    expect(executor).toHaveBeenCalledTimes(2);
+    expect(executor).toHaveBeenNthCalledWith(2, { data: 'v2' });
+
+    // reconexión: ambos rechazan permission-denied → fast-fail F29 por el path re-disparado.
+    rejecters.forEach((reject) => reject(fbError));
+    await vi.advanceTimersByTimeAsync(FLUSH_GC_MS);
+    expect(queue.getEntry('a')?.status).toBe('error');
+
+    // permanente → sin retries de backoff: avanzar el tiempo no re-ejecuta.
+    const callsAtError = executor.mock.calls.length;
+    await vi.advanceTimersByTimeAsync(10000);
+    expect(executor).toHaveBeenCalledTimes(callsAtError);
+
+    queue.dispose();
+  });
+
+  it('19. F2c online: upsert durante syncing NO re-dispara en enqueue (no-regresión)', async () => {
+    Object.defineProperty(navigator, 'onLine', { configurable: true, value: true });
+    const queue = createSaveQueue<TestPayload>();
+    let resolveFirst: (() => void) | null = null;
+    const executor = vi
+      .fn()
+      .mockImplementationOnce(
+        () =>
+          new Promise<void>((resolve) => {
+            resolveFirst = resolve;
+          }),
+      )
+      .mockResolvedValue(undefined);
+
+    queue.enqueue('a', { data: 'v1' }, executor);
+    await vi.advanceTimersByTimeAsync(0);
+    expect(queue.getEntry('a')?.status).toBe('syncing');
+    expect(executor).toHaveBeenCalledTimes(1);
+
+    // upsert durante syncing ONLINE → NO re-dispara en enqueue (comportamiento actual).
+    queue.enqueue('a', { data: 'v2' }, executor);
+    expect(executor).toHaveBeenCalledTimes(1);
+    expect(queue.getEntry('a')?.payload).toEqual({ data: 'v2' });
+
+    // el re-execute ocurre por el version-check post-await al resolver (igual que test 14).
+    resolveFirst!();
+    await vi.advanceTimersByTimeAsync(FLUSH_GC_MS);
+    expect(executor).toHaveBeenCalledTimes(2);
+    expect(executor).toHaveBeenLastCalledWith({ data: 'v2' });
+    expect(queue.getEntry('a')).toBeUndefined();
 
     queue.dispose();
   });
