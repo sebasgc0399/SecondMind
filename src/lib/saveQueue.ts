@@ -24,6 +24,10 @@ export interface QueueEntry<T> {
   lastError: Error | null;
   nextRetryAt: number;
   timerId: ReturnType<typeof setTimeout> | null;
+  // SPEC-57 D13: timer del re-disparo del upsert subsiguiente. SEPARADO de `timerId`
+  // (backoff de retry). Se arma en upsert-durante-syncing y se limpia SIEMPRE en
+  // synced/error/cancel/clear/dispose/eviction y al re-ejecutar (executeEntry).
+  resyncTimerId: ReturnType<typeof setTimeout> | null;
   cancelled: boolean;
   createdAt: number;
   version: number;
@@ -59,6 +63,17 @@ const PERMANENT_ERROR_CODES = new Set([
 const MAX_ENTRIES = 50;
 const SYNCED_GC_MS = 100;
 
+// SPEC-57 D13: offline, el `setDoc` in-flight no resuelve (su promesa espera el ack
+// del server), así que el version-check post-`await` que re-dispara el payload
+// subsiguiente nunca corre → solo el primer write sería durable ante un kill. En vez
+// de gatear por `navigator.onLine` (unreliable en el WebView de Android: queda `true`
+// offline — medido en el gate F3-Android de SPEC-57), si el entry sigue `syncing` tras
+// este timeout re-disparamos el payload final a la mutation-queue durable del SDK.
+// Online el ack llega < N → el version-check ya coalescó y el timer se limpió en
+// executeEntry → cero over-fire. N tunable, a VALIDAR en el re-gate Android (entre el
+// ack online p99 y el debounce de autosave de 2s).
+export const RESYNC_TIMEOUT_MS = 1500;
+
 export function createSaveQueue<T>(): SaveQueue<T> {
   const entries = new Map<string, QueueEntry<T>>();
   const subscribers = new Set<() => void>();
@@ -93,6 +108,11 @@ export function createSaveQueue<T>(): SaveQueue<T> {
     if (!oldestId) return;
     const stale = entries.get(oldestId);
     if (stale?.timerId != null) clearTimeout(stale.timerId);
+    // Defensivo: el loop de arriba saltea `status === 'syncing'` y un resyncTimerId
+    // solo existe mientras el entry está syncing → en la práctica nunca se desaloja un
+    // entry con resync pendiente (la durabilidad bajo presión de cap la cubre el test
+    // 21). Se limpia igual por si el invariante cambiara.
+    if (stale?.resyncTimerId != null) clearTimeout(stale.resyncTimerId);
     entries.delete(oldestId);
   }
 
@@ -101,8 +121,14 @@ export function createSaveQueue<T>(): SaveQueue<T> {
     const entry = entries.get(id);
     if (!entry || entry.cancelled) return;
 
+    // Arranca un intento in-flight nuevo: el resync de la ventana anterior (si lo
+    // había: re-dispatch via version-check, retry o timer) quedó obsoleto. Limpiarlo
+    // ANTES de awaitear es lo que garantiza cero over-fire online (el version-check
+    // re-ejecuta < N → cancela el timer antes de que dispare).
+    if (entry.resyncTimerId != null) clearTimeout(entry.resyncTimerId);
+
     const startVersion = entry.version;
-    patchEntry(id, { status: 'syncing', timerId: null });
+    patchEntry(id, { status: 'syncing', timerId: null, resyncTimerId: null });
     notify();
 
     try {
@@ -117,6 +143,12 @@ export function createSaveQueue<T>(): SaveQueue<T> {
         void executeEntry(id);
         return;
       }
+
+      // Este intento falló para el payload vigente: la ventana de in-flight terminó.
+      // Limpiar el resync timer (si un upsert lo armó) antes de decidir retry/error;
+      // los patchEntry de abajo heredan resyncTimerId=null por el spread de prev.
+      if (current.resyncTimerId != null) clearTimeout(current.resyncTimerId);
+      patchEntry(id, { resyncTimerId: null });
 
       const error = err instanceof Error ? err : new Error(String(err));
       const newAttempts = current.attempts + 1;
@@ -166,7 +198,8 @@ export function createSaveQueue<T>(): SaveQueue<T> {
       return;
     }
 
-    patchEntry(id, { status: 'synced', lastError: null });
+    if (current.resyncTimerId != null) clearTimeout(current.resyncTimerId);
+    patchEntry(id, { status: 'synced', lastError: null, resyncTimerId: null });
     notify();
 
     setTimeout(() => {
@@ -176,6 +209,23 @@ export function createSaveQueue<T>(): SaveQueue<T> {
         notify();
       }
     }, SYNCED_GC_MS);
+  }
+
+  // SPEC-57 D13: arma el timer de re-disparo si no hay uno pendiente (set-once por
+  // ventana de syncing — acota el delay de durabilidad a N tras el PRIMER write
+  // subsiguiente, sin debounce-chaining ante upserts rápidos). El callback re-dispara
+  // solo si el in-flight NO ackeó (sigue `syncing`); online el ack llega antes y el
+  // timer se limpia en executeEntry → no-opea.
+  function scheduleResync(id: string): void {
+    const entry = entries.get(id);
+    if (!entry || entry.resyncTimerId != null) return;
+    const resyncTimerId = setTimeout(() => {
+      const current = entries.get(id);
+      if (!current) return;
+      patchEntry(id, { resyncTimerId: null });
+      if (current.status === 'syncing') void executeEntry(id);
+    }, RESYNC_TIMEOUT_MS);
+    patchEntry(id, { resyncTimerId });
   }
 
   function enqueue(id: string, payload: T, executor: (payload: T) => Promise<void>): void {
@@ -208,14 +258,18 @@ export function createSaveQueue<T>(): SaveQueue<T> {
       });
 
       notify();
-      // D13/SPEC-57: offline, la promesa del `setDoc` en vuelo no resuelve sin red,
-      // así que el version-check post-`await` que normalmente re-dispara el payload
-      // nuevo nunca corre → solo el primer write sería durable ante un kill. Re-disparar
-      // entrega el payload final a la mutation-queue durable del SDK ahora. Gate por
-      // `navigator.onLine` (mismo signal que useOnlineStatus): online se mantiene el
-      // comportamiento actual (el in-flight resuelve rápido y su version-check maneja).
-      const offline = typeof navigator !== 'undefined' && navigator.onLine === false;
-      if (!wasSyncing || offline) void executeEntry(id);
+      // D13/SPEC-57: si el entry NO estaba syncing, no hay in-flight → kickear ya.
+      // Si SÍ estaba syncing, el setDoc in-flight re-ejecuta via version-check al
+      // resolver — pero offline nunca resuelve, así que ese path no corre y el write
+      // subsiguiente se perdería ante un kill. En vez de gatear por `navigator.onLine`
+      // (unreliable en Android: queda `true` offline), armar un timer (RESYNC_TIMEOUT_MS):
+      // si sigue syncing al cumplirse, re-disparar a la queue durable del SDK. Online el
+      // ack llega antes → version-check coalesce y el timer se limpia → cero over-fire.
+      if (!wasSyncing) {
+        void executeEntry(id);
+      } else {
+        scheduleResync(id);
+      }
       return;
     }
 
@@ -228,6 +282,7 @@ export function createSaveQueue<T>(): SaveQueue<T> {
       lastError: null,
       nextRetryAt: 0,
       timerId: null,
+      resyncTimerId: null,
       cancelled: false,
       createdAt: Date.now(),
       version: ++nextVersion,
@@ -240,6 +295,7 @@ export function createSaveQueue<T>(): SaveQueue<T> {
     const entry = entries.get(id);
     if (!entry) return;
     if (entry.timerId != null) clearTimeout(entry.timerId);
+    if (entry.resyncTimerId != null) clearTimeout(entry.resyncTimerId);
     // Mutar flag — si executor in-flight, lo lee al resolver y aborta el setStatus.
     entry.cancelled = true;
     entries.delete(id);
@@ -250,12 +306,14 @@ export function createSaveQueue<T>(): SaveQueue<T> {
     const entry = entries.get(id);
     if (!entry) return;
     if (entry.timerId != null) clearTimeout(entry.timerId);
+    if (entry.resyncTimerId != null) clearTimeout(entry.resyncTimerId);
     patchEntry(id, {
       attempts: 0,
       status: 'pending',
       lastError: null,
       nextRetryAt: 0,
       timerId: null,
+      resyncTimerId: null,
       cancelled: false,
       version: ++nextVersion,
     });
@@ -333,6 +391,7 @@ export function createSaveQueue<T>(): SaveQueue<T> {
   function clear(): void {
     for (const entry of entries.values()) {
       if (entry.timerId != null) clearTimeout(entry.timerId);
+      if (entry.resyncTimerId != null) clearTimeout(entry.resyncTimerId);
     }
     entries.clear();
     notify();
@@ -342,6 +401,7 @@ export function createSaveQueue<T>(): SaveQueue<T> {
     disposed = true;
     for (const entry of entries.values()) {
       if (entry.timerId != null) clearTimeout(entry.timerId);
+      if (entry.resyncTimerId != null) clearTimeout(entry.resyncTimerId);
     }
     entries.clear();
     subscribers.clear();
