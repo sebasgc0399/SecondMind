@@ -1,162 +1,59 @@
-# SPEC — Feature 57: Durabilidad de writes offline subsiguientes (D13 — re-disparo del `saveQueue`)
+# SPEC — Feature 57: Durabilidad de writes offline subsiguientes (D13 — gate timeout del `saveQueue`) (Registro de implementación)
 
-> **Alcance:** offline, el 2º+ `setDoc` de una entidad se vuelve durable (re-disparo al SDK) → la app sobrevive a un kill sin perder lo escrito **después** del primer write.
+> **Estado:** Implementada + **3 gates de QA GO** (web + Tauri + Android, verificados EN SERVER vía Firebase MCP) — junio 2026. **Pendiente:** merge `--no-ff` a `main` + release coordinado 3 frentes (fase aparte). Branch `feat/d13-offline-resync`.
+> **Commits clave:** `cf55105` F1 inicial (gate `navigator.onLine`) + `98141f7` F2 inicial → **re-gateado a TIMEOUT:** `ab7c4cb` `refactor(savequeue): gate por timeout en vez de navigator.onLine` + `d9efec1` `test(savequeue): lifecycle + eviction-survival del resync timer`.
 > **Dependencias:** SPEC-56 (`persistentLocalCache` provee la mutation-queue durable del SDK; sin ella este fix no tiene dónde persistir).
-> **🔴 Pre-requisito DURO de beta — bloquea v0.5.0.** La beta NO abre sin este fix + sus gates de QA verdes.
-> **Stack relevante:** `saveQueue` ([src/lib/saveQueue.ts](../../src/lib/saveQueue.ts)), Firestore SDK 12.x `persistentLocalCache`.
-> **Base de evidencia:** dos research-first con spikes descartables (browser real + `persistentLocalCache` + emulador, verificado en server). Hallazgos en el Decision Log + memorias `reference-offline-durability-spike` / `reference-firestore-write-rejection-observability`.
-
----
+> **🔴 Pre-requisito DURO de beta (v0.5.0):** levanta el último bloqueante de la apertura de beta.
+> **Gotchas vigentes** → `Spec/gotchas/tinybase-firestore.md` (D13 resuelto por gate timeout + `navigator.onLine` no confiable en Android + discriminador content/contentPlain).
 
 ## Objetivo
 
-Cerrar el residual **D13** de SPEC-56: hoy, offline, solo el **primer** `setDoc` de cada entidad es durable ante un kill — los cambios subsiguientes viven en la `saveQueue` en memoria y se pierden si la app muere antes de reconectar (force-stop, OS-kill del WebView en background, crash). Al terminar esta fase, tras editar una nota **varias veces offline** y morir la app antes de reconectar, al reabrir + reconectar el **server recibe el estado FINAL** (no solo el primer write). En móvil el OS-kill hace este escenario realista — es exactamente el daño que SPEC-56 existía para prevenir.
+Cerrar el residual **D13** de SPEC-56: offline, solo el **primer** `setDoc` de cada entidad era durable ante un kill — los cambios subsiguientes vivían en la `saveQueue` en memoria y se perdían si la app moría antes de reconectar (force-stop, OS-kill del WebView en background, crash). Tras esta fase, editar una entidad varias veces offline y morir la app antes de reconectar → al reabrir + reconectar, el server recibe el **estado FINAL**. En móvil el OS-kill hace el escenario realista — es el daño que SPEC-56 existía para prevenir.
 
----
+## Root cause
 
-## Qué resuelve — root cause de D13
+`saveQueue` ([saveQueue.ts](../../src/lib/saveQueue.ts)) serializa por entidad. En `enqueue`, rama upsert: cuando el entry ya está `syncing`, reemplaza el payload y bumpea `version` pero **NO re-dispara** `setDoc` — confía en el version-check post-`await` del `executeEntry` en vuelo. Pero offline ese `await setDoc` **nunca resuelve** (la promesa espera el ack del backend) → el version-check nunca corre → el payload nuevo nunca llega a la mutation-queue durable del SDK. Solo el primer `setDoc` (ya entregado al SDK antes de suspender el `await`) sobrevive a un kill.
 
-`saveQueue` serializa por entidad. En `enqueue` ([saveQueue.ts:181](../../src/lib/saveQueue.ts)), cuando llega un upsert y el entry ya está `syncing`, reemplaza el payload y bumpea `version` **pero NO re-dispara** `setDoc`:
+## Qué se implementó
 
-```ts
-// enqueue, rama upsert (L206-211)
-status: wasSyncing ? 'syncing' : 'pending',
-version: ++nextVersion,
-...
-if (!wasSyncing) void executeEntry(id);   // ← wasSyncing ⇒ NO re-dispara
-```
+- **F1 — Gate por TIMEOUT en `saveQueue.enqueue` (`ab7c4cb`):** en la rama upsert, si el entry sigue `syncing`, se arma un timer (`RESYNC_TIMEOUT_MS = 1500ms`, constante exportada); al cumplirse, si sigue `syncing`, re-dispara `executeEntry` → el payload final entra a la mutation-queue durable del SDK, **network-agnóstico**. Timer separado (`resyncTimerId`, distinto del de retry/backoff) limpiado en TODOS los endings (synced/error/cancel/clear/dispose/eviction + al re-ejecutar — el clear en `executeEntry` start es lo que garantiza cero over-fire online). Re-disparo **por el executor** (D2). Archivos: `src/lib/saveQueue.ts`.
+- **F2 — Unit tests (`saveQueue.test.ts`, `d9efec1`):** **F2a** durabilidad (re-disparo al cumplirse N), **F2b** F29 fast-fail por el path re-disparado (permission-denied → error sin backoff), **F2c** no-regresión online (ack < N → version-check coalesce, el timer NO re-dispara = cero over-fire — reemplaza el test del gate `navigator.onLine`), **F2d** lifecycle (dispose/clear/cancel limpian el resync, `vi.getTimerCount()` 1→0), + **test 21** eviction-survival (un entry syncing con resync pendiente sobrevive la presión de cap LRU, con aserción de que el desalojo realmente ocurrió). Suite completa 265/265, lint + build verdes.
+- **F3 — Gates de QA (3 frentes, verificados en server vía Firebase MCP):** ver matriz.
+- **F4 — Cierre de docs:** D13 → resuelto en gotchas (gate timeout, sin `navigator.onLine` como solución); residual online-degradado → resuelto; 2 lecciones nuevas escaladas (`navigator.onLine` no confiable en Android + discriminador content/contentPlain); este SPEC archivado; ESTADO-ACTUAL actualizado.
 
-Confía en el version-check post-`await` del `executeEntry` en vuelo ([saveQueue.ts:116](../../src/lib/saveQueue.ts), `if (current.version !== startVersion) void executeEntry(id)`). Pero **offline ese `await setDoc` nunca resuelve** (la promesa espera el ack del backend — Context7) → el version-check nunca corre → el payload nuevo nunca llega a la mutation-queue durable del SDK. **Solo el primer `setDoc`** (ya entregado al SDK antes de suspender el `await`) sobrevive a un kill.
+## Decisiones clave
 
-**Fix (Option A):** offline, que el upsert subsiguiente **re-dispare `executeEntry`** (= un `setDoc` con el payload final entregado a la queue durable del SDK ahora, sin esperar a que resuelva el primero).
+| #      | Decisión                                                                                                                                                          | Estado / Razón                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
+| ------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **D1** | **Dirección = FIX MÍNIMO (Option A):** re-disparar `setDoc`. Descartado: refactor a `hasPendingWrites` (eliminar la serialización del `saveQueue`).               | **Cerrada (research-first).** El refactor se descarta por DOS razones, no costo: **(a)** pierde el fast-fail de errores permanentes (el SDK reintenta indefinidamente un write rechazado en vez de marcarlo `error`); **(b)** el spike probó que el SDK **NO expone el rechazo de write por `onSnapshot`** (solo vía la promesa de `setDoc`) → sin el `.catch` del executor, F29 pasaría de "funciona same-session" a "nunca dispara". Regresión de capacidad.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
+| **D2** | **Re-disparo vía el EXECUTOR (`executeEntry`), NUNCA fire-and-forget.**                                                                                           | **Cerrada (no negociable).** El `.catch` del executor es el único punto donde `isPermanentError` ve el rechazo permanente same-session. Fire-and-forget daría durabilidad pero sacaría el re-disparo del executor → rompería F29.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
+| **D3** | **El re-disparo se gatea por TIMEOUT** (`RESYNC_TIMEOUT_MS = 1500ms`), network-agnóstico. ~~Gate inicial por `navigator.onLine===false`~~ — re-decidido.          | **Re-decidida en el re-gate de Android.** El gate inicial por `navigator.onLine` (`cf55105`) **falló en Android**: `navigator.onLine` queda `true` en el WebView Android aunque el device esté offline (medido: `Listen` da `ERR_ADDRESS_UNREACHABLE` pero `onLine=true`) → el gate nunca se activaba → D13 vivo en Android (1 sola mutación durable). El TIMEOUT es agnóstico al signal de red: **(1)** cubre el caso Android-miente-`true`; **(2)** cubre también el residual **online-degradado** (red lenta pero `onLine=true`: el `setDoc` no ackea, el timer re-dispara) → ese residual pasa de "aceptado" a **resuelto** (era el otro motivo del rediseño). **Preserva el coalescing online:** online el ack llega < N → el version-check re-ejecuta y `executeEntry` limpia el timer antes de que dispare → cero over-fire (verificado: 4 toggles rápidos = 2 writes, no 4). N=1500ms (entre el ack online p99 y el debounce de autosave de 2s); tunable, validado en el re-gate. |
+| **D4** | **Idempotencia por el version-check EXISTENTE, sin rediseño.** El re-disparo crea un executor concurrente al in-flight; al reconectar ambos resuelven y converge. | **Cerrada — lockeada con unit tests (F2), no con código nuevo.** Residual aceptado: un `setDoc` extra en la reconexión (write-amplification), acotado.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
+| **D5** | **El SDK NO colapsa su mutation-queue offline:** guarda N mutaciones, las replaya en orden (último gana, verificado en server).                                   | **Cerrada (YAGNI).** Correctness intacta. El coalescing que SÍ importa (online, a nivel `saveQueue`) lo preserva el gate timeout (D3). Agregar coalescencia a la mutation-queue del SDK es complejidad que la durabilidad no necesita.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
+| **D6** | **`@capacitor/network` evaluado y descartado** como signal del gate.                                                                                              | **Cerrada (re-gate).** No corre en Tauri → gate plataforma-dependiente (tendría que combinarse con `navigator.onLine` para desktop = doble fuente). Y responde **"¿hay red?"**, no **"¿el write resuelve?"** → no cubriría el online-degradado (red presente pero el `setDoc` no ackea). El timeout cubre los 3 frentes sin dependencia de plataforma ni de signal de red. Documentado para no re-evaluarlo en frío.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
 
----
+## Resultados de QA (3 gates, 2026-06-08)
 
-## Decision Log
+Verificados EN SERVER vía Firebase MCP, discriminador **`content`** (NUNCA `contentPlain` — lo escribe el persister por path-A optimista sin saveQueue → falso positivo). Método: BASE online → offline ALPHA (>2s) + BETA (>2s) + ~2s (> `RESYNC_TIMEOUT_MS`, para que el timer dispare) → dump IndexedDB store `mutations` (2 mutaciones `content` durables) → kill → reconectar → server = BETA.
 
-| #      | Decisión                                                                                                                                                                                                                                                                                                                                      | Estado / Razón                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
-| ------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **D1** | **Dirección = FIX MÍNIMO (Option A):** re-disparar `setDoc` offline. Descartado: refactor a `hasPendingWrites` (eliminar la serialización del `saveQueue`, SDK como fuente única de status).                                                                                                                                                  | **Cerrada (research-first).** El refactor se descarta por **DOS** razones, no solo costo: **(a)** pierde el fast-fail de errores permanentes — el SDK reintenta indefinidamente un write rechazado en vez de marcarlo `error`; **(b)** el spike probó que **el SDK NO expone el rechazo de write por `onSnapshot`** (solo vía la promesa de `setDoc` o un rollback silencioso) → sin el `.catch` del executor, F29 pasaría de "funciona same-session" a **"nunca dispara"**. Es **regresión de capacidad**, no solo más caro.                                                                                                                                                                                                                                                                                                                  |
-| **D2** | **Re-disparo vía el EXECUTOR (`executeEntry`), NUNCA fire-and-forget.**                                                                                                                                                                                                                                                                       | **Cerrada (no negociable).** El `.catch` del executor (`await entry.executor(payload)`) es el único punto donde `isPermanentError` ve el rechazo permanente same-session. Un `setDoc` fire-and-forget entregaría durabilidad pero **sacaría el re-disparo del executor → rompería F29**.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
-| **D3** | **El re-disparo se gatea a OFFLINE** (`navigator.onLine === false`, mismo signal que [useOnlineStatus.ts](../../src/hooks/useOnlineStatus.ts)). Online + `wasSyncing` mantiene el comportamiento actual (no re-dispara; el in-flight resuelve rápido y su version-check ya maneja).                                                           | **Cerrada (restricción 2).** No regresar el caso online + app-viva (ya funciona). **Residual conocido del gate (NO es "captive portal raro"):** cuando `navigator.onLine===true` pero el `setDoc` no ackea pronto (red móvil degradada, conexión sin salida real, captive portal), el fix NO se activa → los writes subsiguientes NO son durables; si la app muere en esa ventana (OS-kill en background) se pierden IGUAL que en D13. La ventana es estrecha (red-degradada-pero-online + edición múltiple + kill antes de que la red vuelva o el user reabra) PERO incluye el caso **Android red-lenta + OS-kill**, plausible para el target de la beta. Se acepta como residual pre-beta por simplicidad + el patrón de diferir-con-datos; se mide en beta y se cierra gateando por timeout (candidato post-beta — ver § Fuera de alcance). |
-| **D4** | **Idempotencia por el version-check EXISTENTE, sin rediseño.** El re-disparo crea un executor concurrente al in-flight; al reconectar ambos resuelven y el version-check ([saveQueue.ts:116](../../src/lib/saveQueue.ts), `:164`) converge (el de `startVersion` desactualizado re-ejecuta/retorna; el de versión actual finaliza el status). | **Cerrada — se LOCKEA con unit test (F2), no con código nuevo.** Residual aceptado: un `setDoc` extra en la reconexión (write-amplification), **acotado por el debounce de 2 s** (`AUTOSAVE_DEBOUNCE_MS`).                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
-| **D5** | **Overhead de N mutaciones = trade-off documentado, SIN coalescencia.** El SDK no colapsa: guarda N mutaciones (verificado — dos `setDoc` offline al mismo doc dejan dos mutaciones, ambas replayadas).                                                                                                                                       | **Cerrada (YAGNI).** El debounce de 2 s ya coalesce el typing rápido → solo tandas de edición separadas (>2 s) generan mutaciones distintas. Cada mutación es chica; el SDK las replaya **en orden, último gana** (verificado en server) → correctness intacta. Agregar coalescencia (cancelar el in-flight + reemplazar) es complejidad que la durabilidad no necesita.                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
+| Frente                                               | Part 1 — durabilidad offline + kill                                                                                                                                                                                          | Part 2 — coalescing online (no over-fire)                   |
+| ---------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------- |
+| **Web** (Playwright + Firebase MCP)                  | ✅ **GO** — 2 mutaciones `content` (ALPHA+BETA) durables offline; server=BETA tras reconnect. Kill probado por el dump del store persistente `mutations` (el `beforeunload` bloqueó el navigate-away).                       | ✅ **GO** — 2 writes path-B (no 4); cero path-B tras +1.5s. |
+| **Tauri** (Windows, build debug)                     | ✅ **GO** — **kill genuino** (Task Manager → `secondmind.exe`); queue durable intacta tras el kill (sin nuclear purge, version.txt intacto); server=BETA tras reconnect.                                                     | ✅ **GO** — idem, ventana extendida >1.5s.                  |
+| **Android** (device real `R5CW30T2FDV`, APK d9efec1) | ✅ **GO** — **kill genuino** (force-stop). **La tesis:** 2 mutaciones `content` durables offline **pese a `navigator.onLine=true`** (donde el gate viejo dejaba 1); server=BETA tras force-stop + reconnect (replay ~1 min). | ✅ **GO** — 2 writes path-B; cero tras +1.5s.               |
 
----
+**No-regresión online:** confirmada en los 3 frentes vía Part 2 (el coalescing del version-check se preserva — el timer no sobre-dispara).
 
-## Features
+## Lecciones
 
-### F1: Re-disparo offline del `setDoc` subsiguiente en `saveQueue.enqueue`
+- **`navigator.onLine` NO es confiable en el WebView de Android:** queda `true` aunque el device esté offline (`Listen` da `ERR_ADDRESS_UNREACHABLE` pero `onLine` no flippea). En web/Tauri sí flippea. → un gate de durabilidad offline debe ser **network-agnóstico** (timeout), nunca `navigator.onLine`. Escalado a gotcha.
+- **Discriminador content vs contentPlain (path-B vs path-A):** el `saveQueue` (path-B, gate-governed) escribe `content`/partial; el persister de TinyBase (path-A, optimista, SIN saveQueue) escribe `contentPlain`/row-completa. Un gate que mire `contentPlain` da falso positivo (no ejerce D13). En hábitos: contar writes de 3 campos (path-B), no de 18 (path-A). Escalado a gotcha.
+- **El timeout preserva el coalescing online "gratis":** el clear del resync timer en `executeEntry` start cancela el timer cuando el ack llega < N → el version-check coalesce como antes → cero over-fire. La preservación es estructural (no un caso especial), probada por F2c + los 3 Part-2.
+- **Probar el gate en el frente donde el signal miente, no asumir "pasa en 2/3 = pasa":** el gate `navigator.onLine` pasaba web+Tauri (ahí `onLine` flippea) y fallaba SOLO en Android — el frente que más importaba. El re-gate de Android fue el que validó el método correcto desde el código real.
 
-**Qué:** En la rama upsert de `enqueue`, además de re-disparar cuando `!wasSyncing` (hoy), re-disparar también cuando el entry estaba `syncing` **y** `navigator.onLine === false`. Entrega el payload final a la mutation-queue durable del SDK sin esperar al `setDoc` en vuelo.
+## Siguiente fase (pointers vivos)
 
-**Criterio de done:**
+Con D13 resuelto se levanta el **último bloqueante duro de la beta v0.5.0** (queda el merge `--no-ff` + release coordinado 3 frentes, fase aparte). Candidatos derivados (sin compromiso de scope) en `Spec/ESTADO-ACTUAL.md` § Candidatos próximos:
 
-- [ ] Offline, `enqueue(id, v2)` sobre un entry `syncing` invoca `executeEntry(id)` (re-dispara `setDoc(v2)`).
-- [ ] Online, `enqueue(id, v2)` sobre un entry `syncing` **NO** invoca `executeEntry(id)` (comportamiento idéntico al actual — restricción 2).
-- [ ] Sin upsert (entry nuevo) el comportamiento no cambia.
-- [ ] `npm run lint` + `npm run build` verdes.
-
-**Archivos a crear/modificar:**
-
-- `src/lib/saveQueue.ts` — condición de re-disparo en la rama upsert de `enqueue` (~L211).
-
-**Notas de implementación:**
-Cambio mínimo en una línea de decisión:
-
-```ts
-const offline = typeof navigator !== 'undefined' && navigator.onLine === false;
-notify();
-if (!wasSyncing || offline) void executeEntry(id);
-```
-
-Guard `typeof navigator` por seguridad en entornos sin DOM (tests/SSR). No tocar `executeEntry` ni el version-check — su lógica de convergencia (D4) ya es correcta; este fix solo cambia **cuándo** se re-dispara.
-
----
-
-### F2: Unit tests — F29 preservado + durabilidad + no-regresión online
-
-**Qué:** Tres tests en `saveQueue.test.ts` que cierran las restricciones 1 y 2 sobre el path nuevo (upsert-during-syncing), que hoy **ningún test cubre**.
-
-**Criterio de done:**
-
-- [ ] **F2a (durabilidad):** offline, `enqueue(id,v1)` (executor queda pending) → `enqueue(id,v2)` durante `syncing` (bump version + re-dispara) → al resolver ambos `setDoc` con éxito, el executor se llamó con `v2` y el status final es `synced` con el payload `v2`.
-- [ ] **F2b (F29 fast-fail por el path re-disparado):** offline, `enqueue(id,v1)` pending → `enqueue(id,v2)` durante `syncing` → **ambos** intentos rechazan `FirebaseError('permission-denied')` → status final `error`, **sin** retries de backoff, una sola transición final a `error`. (Valida que el version-check re-execute no se traga el permanente y que `isPermanentError` lo cosecha.)
-- [ ] **F2c (no-regresión online):** online (`navigator.onLine` mockeado `true`), `enqueue(id,v2)` durante `syncing` → `executeEntry` NO se invoca por el enqueue (el in-flight + su version-check manejan, como hoy).
-- [ ] Los 3 verdes con `npm test`.
-
-**Archivos a crear/modificar:**
-
-- `src/lib/saveQueue.test.ts` — 3 tests nuevos.
-
-**Notas de implementación:**
-Mockear `navigator.onLine` por test (jsdom default `true`). Reusar el patrón de executors controlables (promesa diferida) del suite existente (test 6 = permission-denied; test 14 = version-mismatch re-execute con éxito) — F2b combina ambos ejes, que es justo el gap.
-
----
-
-### F3: Gates de QA — 3 frentes, Caso A bloqueante
-
-**Qué:** Verificar el fix end-to-end en web → Tauri → Android, replicando el patrón de gates de SPEC-56 (F5/F6/F7).
-
-**Criterio de done (Caso A bloqueante por frente):**
-
-- [ ] **F3-web (Playwright + Firebase MCP):** editar una nota offline en **≥2 tandas separadas (>2 s)** → kill (reload/cerrar pestaña) **antes de reconectar** → reabrir → reconectar → **verificar EN SERVER (Firebase MCP)** que el doc tiene el **estado FINAL** (no solo el primer write). NO-GO si el server solo tiene el primer write.
-- [ ] **F3-tauri (Windows):** idem, cerrar + relanzar la app offline antes de reconectar.
-- [ ] **F3-android (device real):** idem con **OS-kill (force-stop)** offline + airplane mode; verificar server tras reconexión (replay puede tardar ~1 min en Android — esperar, no asumir inmediato).
-- [ ] **No-regresión online (los 3 frentes o al menos web):** editar online en varias tandas → el server converge al estado final igual que hoy, sin writes espurios observables.
-
-**Archivos a crear/modificar:** ninguno (QA). Dev server `npm run dev`; UID de QA de Sebastián (no borrar sus datos).
-
----
-
-### F4: Cierre de docs — escalar D13 a "resuelto"
-
-**Qué:** Actualizar el gotcha D13 de "límite conocido" a "resuelto en SPEC-57", el registro, y el tracking en ESTADO-ACTUAL.
-
-**Criterio de done:**
-
-- [ ] `Spec/gotchas/tinybase-firestore.md` — la entrada D13 marca el fix aplicado (re-disparo offline + gate `navigator.onLine`) y el residual cross-restart como **fuera de alcance** (ver abajo).
-- [ ] `Spec/ESTADO-ACTUAL.md` § Candidatos próximos — SPEC-57 movido a "en curso/cerrado" con pointer; registrados los 2 candidatos nuevos (cross-restart + adelgazar saveQueue).
-- [ ] Este SPEC convertido a registro de implementación al cerrar (SDD step 8, skill `archive-spec`).
-
-**Archivos a crear/modificar:**
-
-- `Spec/gotchas/tinybase-firestore.md`, `Spec/ESTADO-ACTUAL.md`, este archivo.
-
----
-
-## Orden de implementación
-
-1. **F1** → el fix. Sin él no hay nada que testear.
-2. **F2** → depende de F1; lockea la corrección (F29 + durabilidad + no-regresión) antes de QA manual.
-3. **F3** → gates E2E; corren con F1+F2 verdes. El Caso A bloqueante es el GO/NO-GO de la feature.
-4. **F4** → docs, al cerrar (tras gates verdes + release si aplica).
-
----
-
-## Fuera de alcance (explícito — que NO se cuele)
-
-- **Gap cross-restart de rollback silencioso.** Tras un kill, un write durable que el server **rechaza** (permission-denied) revierte el doc al valor server **sin aviso** (en doc existente, la edición del usuario desaparece y reaparece el valor viejo). Es **PRE-EXISTENTE** (nació con la durabilidad de SPEC-56, no con D13) y **ortogonal**: el fix no lo causa ni cambia su resultado **por-doc** (el rollback es uno por doc). El fix sí **amplía la cantidad** de mutaciones que pueden entrar al agujero (de 1 a N durables), pero esos writes estaban destinados al rechazo igual. **NO se aborda acá.** Candidato separado: reconciliación vía listener (detectar la row que rollbackeó). Trigger: frecuencia de errores permanentes en beta.
-- **Residual del gate `navigator.onLine` (online-degradado).** El gate no cubre la ventana red-degradada-pero-online (incl. **Android red-lenta + OS-kill**): si el `setDoc` no ackea y la app muere antes de reconectar, los writes subsiguientes se pierden como en D13 (caracterización completa en D3). **Distinto del cross-restart:** acá el write nunca llegó a la mutation-queue durable del SDK; allá llegó y fue rechazado. **NO se aborda acá.** Candidato separado: gatear por **timeout** (re-disparar si el `setDoc` lleva >N s en vuelo) en vez de `navigator.onLine`. Trigger: frecuencia de pérdidas por write-en-vuelo-no-durable observada en beta.
-- **Adelgazar / refactorizar el `saveQueue`** (endgame del refactor). Candidato separado — y NO puede ser `hasPendingWrites` puro (debe conservar el `.catch` del executor para F29; ver D1).
-- **Generalización a otros `PERMANENT_ERROR_CODES`** más allá de `permission-denied` (el código real de rechazo por security rules; `unauthenticated` suele disparar token-refresh + retry, no reject+rollback).
-- **P2 copy "Sin conexión", auto-recuperación `dd85`/D12, escalada Android al plugin nativo** — ya fuera por SPEC-56.
-
----
-
-## Checklist de completado
-
-Al cerrar SPEC-57, TODAS verdaderas:
-
-- [ ] F1 implementado; `npm run lint` + `npm run build` verdes.
-- [ ] F2a/F2b/F2c verdes (`npm test`).
-- [ ] **F3 Caso A bloqueante verde en los 3 frentes** (web + Tauri + Android), verificado EN SERVER vía Firebase MCP.
-- [ ] No-regresión online confirmada.
-- [ ] D13 escalado a "resuelto" en gotchas; cross-restart declarado fuera de alcance; ESTADO-ACTUAL actualizado.
-- [ ] (Si se libera) release coordinado 3 frentes vía skill `release-ecosystem`.
-
----
-
-## Siguiente fase
-
-Con D13 resuelto se levanta el **último bloqueante duro de la beta v0.5.0**. Los dos candidatos derivados (reconciliación cross-restart + adelgazar el `saveQueue`) quedan registrados en ESTADO-ACTUAL con trigger común = **frecuencia de errores permanentes observada en la beta** — se priorizan con datos, no antes.
+- **Reconciliación de rollback cross-restart** (gap PRE-EXISTENTE de SPEC-56, ortogonal a D13: un write durable rechazado por rules revierte el doc al valor server sin aviso; el fix de D13 no lo causa pero amplía cuántas mutaciones lo pueden cruzar). Trigger: frecuencia de errores permanentes en beta.
+- **Adelgazar el `saveQueue`** (endgame del refactor del sync layer; NO puede ser `hasPendingWrites` puro — debe conservar el `.catch` del executor para el fast-fail de F29, ver D1).
