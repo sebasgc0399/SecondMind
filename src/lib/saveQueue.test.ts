@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { FirebaseError } from 'firebase/app';
-import { createSaveQueue } from '@/lib/saveQueue';
+import { createSaveQueue, RESYNC_TIMEOUT_MS } from '@/lib/saveQueue';
 
 interface TestPayload {
   data: string;
@@ -15,8 +15,6 @@ describe('saveQueue', () => {
 
   afterEach(() => {
     vi.useRealTimers();
-    // Restaurar navigator.onLine (los tests D13/SPEC-57 lo fuerzan a false).
-    Object.defineProperty(navigator, 'onLine', { configurable: true, value: true });
   });
 
   it('1. éxito en intento 1 → synced y entry borrada tras GC', async () => {
@@ -368,10 +366,12 @@ describe('saveQueue', () => {
     queue.dispose();
   });
 
-  // ── SPEC-57 (D13): re-disparo offline del upsert subsiguiente ──────────────
+  // ── SPEC-57 (D13): re-disparo del upsert subsiguiente vía timeout ───────────
+  // Gate timeout (no navigator.onLine: queda true offline en el WebView Android).
+  // "offline" se simula con un executor que no resuelve (el setDoc espera el ack
+  // del server, que offline no llega). El re-disparo lo dispara RESYNC_TIMEOUT_MS.
 
-  it('17. F2a offline: upsert durante syncing re-dispara setDoc inmediato → payload final durable', async () => {
-    Object.defineProperty(navigator, 'onLine', { configurable: true, value: false });
+  it('17. F2a (durabilidad): offline, upsert durante syncing → al cumplirse el timeout re-dispara setDoc(v2)', async () => {
     const queue = createSaveQueue<TestPayload>();
     const deferreds: Array<() => void> = [];
     const executor = vi
@@ -395,10 +395,17 @@ describe('saveQueue', () => {
     expect(queue.getEntry('a')?.status).toBe('syncing');
     expect(executor).toHaveBeenCalledTimes(1);
 
-    // upsert durante syncing OFFLINE → re-dispara YA (sin esperar al primer await,
-    // que offline no resolvería) → el payload final llega a la queue durable del SDK.
+    // upsert durante syncing: NO re-dispara inmediato (el in-flight podría ackear);
+    // arma el resync timer.
     queue.enqueue('a', { data: 'v2' }, executor);
     await vi.advanceTimersByTimeAsync(0);
+    expect(executor).toHaveBeenCalledTimes(1);
+    expect(queue.getEntry('a')?.payload).toEqual({ data: 'v2' });
+    expect(queue.getEntry('a')?.resyncTimerId).not.toBeNull();
+
+    // offline: el in-flight nunca ackea. Al cumplirse RESYNC_TIMEOUT_MS, re-dispara v2
+    // a la mutation-queue durable del SDK.
+    await vi.advanceTimersByTimeAsync(RESYNC_TIMEOUT_MS);
     expect(executor).toHaveBeenCalledTimes(2);
     expect(executor).toHaveBeenNthCalledWith(2, { data: 'v2' });
 
@@ -411,8 +418,7 @@ describe('saveQueue', () => {
     queue.dispose();
   });
 
-  it('18. F2b offline: upsert durante syncing + ambos intentos permission-denied → error, sin retries (F29)', async () => {
-    Object.defineProperty(navigator, 'onLine', { configurable: true, value: false });
+  it('18. F2b (F29): offline, re-disparo por timeout + ambos intentos permission-denied → error, sin backoff', async () => {
     const queue = createSaveQueue<TestPayload>();
     const fbError = new FirebaseError('permission-denied', 'denied');
     const rejecters: Array<(e: unknown) => void> = [];
@@ -438,6 +444,10 @@ describe('saveQueue', () => {
 
     queue.enqueue('a', { data: 'v2' }, executor);
     await vi.advanceTimersByTimeAsync(0);
+    expect(executor).toHaveBeenCalledTimes(1);
+
+    // timeout → re-dispara v2 (segundo intento in-flight).
+    await vi.advanceTimersByTimeAsync(RESYNC_TIMEOUT_MS);
     expect(executor).toHaveBeenCalledTimes(2);
     expect(executor).toHaveBeenNthCalledWith(2, { data: 'v2' });
 
@@ -454,8 +464,7 @@ describe('saveQueue', () => {
     queue.dispose();
   });
 
-  it('19. F2c online: upsert durante syncing NO re-dispara en enqueue (no-regresión)', async () => {
-    Object.defineProperty(navigator, 'onLine', { configurable: true, value: true });
+  it('19. F2c (no-regresión online): ack < N → version-check coalesce, el timer NO re-dispara (cero over-fire)', async () => {
     const queue = createSaveQueue<TestPayload>();
     let resolveFirst: (() => void) | null = null;
     const executor = vi
@@ -473,17 +482,108 @@ describe('saveQueue', () => {
     expect(queue.getEntry('a')?.status).toBe('syncing');
     expect(executor).toHaveBeenCalledTimes(1);
 
-    // upsert durante syncing ONLINE → NO re-dispara en enqueue (comportamiento actual).
+    // upsert durante syncing: NO re-dispara inmediato; arma el resync timer.
     queue.enqueue('a', { data: 'v2' }, executor);
     expect(executor).toHaveBeenCalledTimes(1);
     expect(queue.getEntry('a')?.payload).toEqual({ data: 'v2' });
+    expect(queue.getEntry('a')?.resyncTimerId).not.toBeNull();
 
-    // el re-execute ocurre por el version-check post-await al resolver (igual que test 14).
+    // ONLINE: el in-flight ackea ANTES de N → el version-check re-ejecuta con v2
+    // (coalesce) y executeEntry limpia el resync timer.
     resolveFirst!();
     await vi.advanceTimersByTimeAsync(FLUSH_GC_MS);
     expect(executor).toHaveBeenCalledTimes(2);
     expect(executor).toHaveBeenLastCalledWith({ data: 'v2' });
     expect(queue.getEntry('a')).toBeUndefined();
+
+    // avanzar más allá de N NO dispara un re-disparo espurio: el timer fue cancelado.
+    await vi.advanceTimersByTimeAsync(RESYNC_TIMEOUT_MS);
+    expect(executor).toHaveBeenCalledTimes(2);
+
+    queue.dispose();
+  });
+
+  it('20. F2d (lifecycle): dispose/clear/cancel limpian el resync timer pendiente (sin leak ni re-disparo)', async () => {
+    // Executor que nunca resuelve: el entry queda en syncing con un resync timer vivo
+    // (el ÚNICO timer pendiente — sin GC ni backoff), que es justo el caso donde el
+    // timer dispararía si el ending no lo limpiara.
+    const never = () => new Promise<void>(() => {});
+
+    // dispose
+    const q1 = createSaveQueue<TestPayload>();
+    const e1 = vi.fn().mockImplementation(never);
+    q1.enqueue('a', { data: 'v1' }, e1);
+    await vi.advanceTimersByTimeAsync(0);
+    q1.enqueue('a', { data: 'v2' }, e1);
+    expect(q1.getEntry('a')?.resyncTimerId).not.toBeNull();
+    expect(vi.getTimerCount()).toBe(1);
+    q1.dispose();
+    expect(vi.getTimerCount()).toBe(0);
+    await vi.advanceTimersByTimeAsync(RESYNC_TIMEOUT_MS + 1000);
+    expect(e1).toHaveBeenCalledTimes(1);
+
+    // clear
+    const q2 = createSaveQueue<TestPayload>();
+    const e2 = vi.fn().mockImplementation(never);
+    q2.enqueue('b', { data: 'v1' }, e2);
+    await vi.advanceTimersByTimeAsync(0);
+    q2.enqueue('b', { data: 'v2' }, e2);
+    expect(vi.getTimerCount()).toBe(1);
+    q2.clear();
+    expect(vi.getTimerCount()).toBe(0);
+    await vi.advanceTimersByTimeAsync(RESYNC_TIMEOUT_MS + 1000);
+    expect(e2).toHaveBeenCalledTimes(1);
+    q2.dispose();
+
+    // cancel
+    const q3 = createSaveQueue<TestPayload>();
+    const e3 = vi.fn().mockImplementation(never);
+    q3.enqueue('c', { data: 'v1' }, e3);
+    await vi.advanceTimersByTimeAsync(0);
+    q3.enqueue('c', { data: 'v2' }, e3);
+    expect(vi.getTimerCount()).toBe(1);
+    q3.cancel('c');
+    expect(vi.getTimerCount()).toBe(0);
+    await vi.advanceTimersByTimeAsync(RESYNC_TIMEOUT_MS + 1000);
+    expect(e3).toHaveBeenCalledTimes(1);
+    q3.dispose();
+  });
+
+  it('21. eviction LRU NO desaloja un entry syncing con resync pendiente → durabilidad bajo presión de cap', async () => {
+    const queue = createSaveQueue<TestPayload>();
+    const never = () => new Promise<void>(() => {});
+
+    // 'a': syncing con resync armado (in-flight offline + upsert subsiguiente). Es la
+    // más vieja → sería la primera candidata a eviction de no ser por el guard
+    // `status === 'syncing'` (saveQueue.ts:102).
+    const aExec = vi.fn().mockImplementation(never);
+    queue.enqueue('a', { data: 'v1' }, aExec);
+    await vi.advanceTimersByTimeAsync(0);
+    queue.enqueue('a', { data: 'v2' }, aExec);
+    expect(queue.getEntry('a')?.resyncTimerId).not.toBeNull();
+    expect(aExec).toHaveBeenCalledTimes(1);
+
+    // Presión de cap: 60 entries evictables (rechazan → 'retrying', no syncing).
+    // evictOldestIfFull desaloja las más viejas NO-syncing, nunca 'a'.
+    const fillerExec = vi.fn().mockRejectedValue(new Error('transient'));
+    for (let i = 0; i < 60; i++) {
+      queue.enqueue(`filler-${i}`, { data: `f${i}` }, fillerExec);
+      await vi.advanceTimersByTimeAsync(0);
+    }
+
+    // La presión de cap fue real: el filler más viejo (no-syncing) sí fue desalojado.
+    // Sin esto, un cap > 60 dejaría pasar el test sin forzar ningún desalojo (falso verde).
+    expect(queue.getEntry('filler-0')).toBeUndefined();
+
+    // 'a' sobrevivió la presión de cap con su resync intacto.
+    expect(queue.getEntry('a')).toBeDefined();
+    expect(queue.getEntry('a')?.status).toBe('syncing');
+    expect(queue.getEntry('a')?.resyncTimerId).not.toBeNull();
+
+    // y el resync sigue funcional: al cumplirse N re-dispara v2 (durabilidad intacta).
+    await vi.advanceTimersByTimeAsync(RESYNC_TIMEOUT_MS);
+    expect(aExec).toHaveBeenCalledTimes(2);
+    expect(aExec).toHaveBeenNthCalledWith(2, { data: 'v2' });
 
     queue.dispose();
   });
