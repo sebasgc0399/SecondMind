@@ -8,6 +8,18 @@
 
 ---
 
+## Versionado y roadmap
+
+Fuente de verdad única del versionado (los demás docs referencian acá, no duplican):
+
+- **0.4.9** — release de SPEC-57 (D13, durabilidad de writes offline subsiguientes). **Próximo release** (3 frentes: hosting + Tauri + Android).
+- **0.5.0 – 0.5.x** — feature work + pendientes acumulados. **v0.5.0 ya NO está reservado para la beta.**
+- **0.6.0** — **apertura de beta** (~100 users, gateada por allowlist). Pre-requisitos de la fase: `allowBackup=false` en Android (pendiente) + allowlist enforced (ya LIVE). **Objetivo: finales junio / inicios julio 2026.**
+
+> Plan vigente desde junio 2026. Los SPECs archivados anteriores citan el plan previo, donde la beta salía en v0.5.0 — son snapshots históricos, no el estado actual.
+
+---
+
 ## Fases completadas
 
 Cada feature comprimida a 1 línea con pointer al SPEC archivado. Para detalles de implementación (decisiones, snippets, lecciones), abrir el SPEC referenciado.
@@ -95,7 +107,7 @@ Cada feature comprimida a 1 línea con pointer al SPEC archivado. Para detalles 
 
 - **Feature 56 — Durabilidad offline (`persistentLocalCache`):** reemplaza `getFirestore(app)` plano por `initializeFirestore` con `persistentLocalCache({ tabManager: persistentMultipleTabManager(), cacheSizeBytes: 40 MB })` → el SDK asume durabilidad de writes (mutation-queue durable + replay al reconectar) + lectura offline (rehidrata TinyBase tras reload), cerrando la doble pérdida offline (writes pendientes en memoria + app sin datos/splash colgado). F1.1 guard en `useStoreInit` (`.catch` resuelve la hidratación ante cualquier error → nunca cuelga el `AppBootSplash`). F2 `navigator.storage.persist()` best-effort en boot. F3 schemes nativos congelados verify-first (Tauri `useHttpsScheme: false` → `http://tauri.localhost`; Capacitor `androidScheme: 'https'` → `https://localhost`) como invariante anti data-loss. Gates F5 web + F6 Tauri + F7 Android device real **verdes** (Caso A bloqueante —write flusheado sobrevive un kill + replica a server— verificado en los 3 frentes). **Liberada en release coordinado v0.4.8** (hosting + Tauri GitHub Release + Android APK → App Distribution). Residual **D13** (offline solo el primer `setDoc` de cada nota es durable ante un kill; los subsiguientes viven en memoria hasta reconectar) → **SPEC-57, pre-requisito de beta** (ver Candidatos próximos). 8 gotchas de durabilidad escalados a `gotchas/tinybase-firestore.md`. → [SPEC](features/SPEC-feature-56-durabilidad-offline-persistentcache.md).
 
-- **Feature 57 — Durabilidad de writes offline subsiguientes (D13 resuelto, gate timeout):** cierra el residual D13 de SPEC-56 — offline, el 2º+ `setDoc` de cada entidad ahora es durable ante un kill. `saveQueue.enqueue` en upsert-durante-syncing arma un timer (`RESYNC_TIMEOUT_MS` 1500ms); si el `setDoc` sigue en vuelo al cumplirse, re-dispara `executeEntry` (el payload final entra a la mutation-queue durable del SDK), **network-agnóstico**. Reemplaza el gate inicial por `navigator.onLine` que **falló en Android** (`onLine` queda `true` offline en el WebView Android — quirk de plataforma). Preserva el coalescing online (ack < N → version-check coalesce, el timer se limpia en `executeEntry` → cero over-fire). 5 unit tests (F2a-d + eviction-survival; 265/265). Gates EN SERVER (Firebase MCP) verdes en los 3 frentes: web ✅ · Tauri ✅ (kill genuino Task Manager) · Android ✅ (kill genuino force-stop; 2 mutaciones `content` durables pese a `onLine=true`). Levanta el último bloqueante duro de la beta v0.5.0 (pendiente merge + release coordinado). 3 gotchas escalados a `gotchas/tinybase-firestore.md` (D13 resuelto; `navigator.onLine` no confiable en Android; discriminador content/contentPlain). → [SPEC](features/SPEC-feature-57-durabilidad-writes-offline-subsiguientes.md).
+- **Feature 57 — Durabilidad de writes offline subsiguientes (D13 resuelto, gate timeout):** cierra el residual D13 de SPEC-56 — offline, el 2º+ `setDoc` de cada entidad ahora es durable ante un kill. `saveQueue.enqueue` en upsert-durante-syncing arma un timer (`RESYNC_TIMEOUT_MS` 1500ms); si el `setDoc` sigue en vuelo al cumplirse, re-dispara `executeEntry` (el payload final entra a la mutation-queue durable del SDK), **network-agnóstico**. Reemplaza el gate inicial por `navigator.onLine` que **falló en Android** (`onLine` queda `true` offline en el WebView Android — quirk de plataforma). Preserva el coalescing online (ack < N → version-check coalesce, el timer se limpia en `executeEntry` → cero over-fire). 5 unit tests (F2a-d + eviction-survival; 265/265). Gates EN SERVER (Firebase MCP) verdes en los 3 frentes: web ✅ · Tauri ✅ (kill genuino Task Manager) · Android ✅ (kill genuino force-stop; 2 mutaciones `content` durables pese a `onLine=true`). Levanta el último bloqueante duro de la apertura de beta (se libera en 0.4.9; ver § Versionado y roadmap). 3 gotchas escalados a `gotchas/tinybase-firestore.md` (D13 resuelto; `navigator.onLine` no confiable en Android; discriminador content/contentPlain). → [SPEC](features/SPEC-feature-57-durabilidad-writes-offline-subsiguientes.md).
 
 ---
 
