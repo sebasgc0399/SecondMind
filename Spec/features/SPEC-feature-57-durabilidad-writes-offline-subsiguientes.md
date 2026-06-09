@@ -1,9 +1,9 @@
 # SPEC — Feature 57: Durabilidad de writes offline subsiguientes (D13 — gate timeout del `saveQueue`) (Registro de implementación)
 
-> **Estado:** Implementada + **3 gates de QA GO** (web + Tauri + Android, verificados EN SERVER vía Firebase MCP) — junio 2026. **Pendiente:** merge `--no-ff` a `main` + release coordinado 3 frentes (fase aparte). Branch `feat/d13-offline-resync`.
+> **Estado:** Implementada + **3 gates de QA GO** (web + Tauri + Android, verificados EN SERVER vía Firebase MCP) — junio 2026. **Mergeada a `main`** (`2a32395`). **Pendiente:** release coordinado 3 frentes (fase aparte; versión → `Spec/ESTADO-ACTUAL.md` § Versionado y roadmap).
 > **Commits clave:** `cf55105` F1 inicial (gate `navigator.onLine`) + `98141f7` F2 inicial → **re-gateado a TIMEOUT:** `ab7c4cb` `refactor(savequeue): gate por timeout en vez de navigator.onLine` + `d9efec1` `test(savequeue): lifecycle + eviction-survival del resync timer`.
 > **Dependencias:** SPEC-56 (`persistentLocalCache` provee la mutation-queue durable del SDK; sin ella este fix no tiene dónde persistir).
-> **🔴 Pre-requisito DURO de beta (v0.5.0):** levanta el último bloqueante de la apertura de beta.
+> **🔴 Pre-requisito DURO de la apertura de beta:** levanta su último bloqueante (número de versión → `Spec/ESTADO-ACTUAL.md` § Versionado y roadmap).
 > **Gotchas vigentes** → `Spec/gotchas/tinybase-firestore.md` (D13 resuelto por gate timeout + `navigator.onLine` no confiable en Android + discriminador content/contentPlain).
 
 ## Objetivo
@@ -53,7 +53,7 @@ Verificados EN SERVER vía Firebase MCP, discriminador **`content`** (NUNCA `con
 
 ## Siguiente fase (pointers vivos)
 
-Con D13 resuelto se levanta el **último bloqueante duro de la beta v0.5.0** (queda el merge `--no-ff` + release coordinado 3 frentes, fase aparte). Candidatos derivados (sin compromiso de scope) en `Spec/ESTADO-ACTUAL.md` § Candidatos próximos:
+Con D13 resuelto se levanta el **último bloqueante duro de la apertura de beta** (queda el release coordinado 3 frentes, fase aparte; número de versión → `Spec/ESTADO-ACTUAL.md` § Versionado y roadmap). Candidatos derivados (sin compromiso de scope) en `Spec/ESTADO-ACTUAL.md` § Candidatos próximos:
 
 - **Reconciliación de rollback cross-restart** (gap PRE-EXISTENTE de SPEC-56, ortogonal a D13: un write durable rechazado por rules revierte el doc al valor server sin aviso; el fix de D13 no lo causa pero amplía cuántas mutaciones lo pueden cruzar). Trigger: frecuencia de errores permanentes en beta.
 - **Adelgazar el `saveQueue`** (endgame del refactor del sync layer; NO puede ser `hasPendingWrites` puro — debe conservar el `.catch` del executor para el fast-fail de F29, ver D1).
