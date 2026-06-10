@@ -103,7 +103,7 @@ Cada feature del proyecto sigue este ciclo. No improvisar: si algo no cuadra, aj
    - **QA/E2E con Playwright contra producción** (cuenta personal real de Sebastián, `gYPP7NIo5JanxIbPqMe6nC3SQfE3`, proyecto `secondmindv1` — la única cuenta que existe, con sus notas de producción) está **PERMITIDO, incluyendo escrituras**, bajo este protocolo estricto:
      - **(a) Anunciar ANTES** qué datos se van a crear/mutar.
      - **(b) Revertir/limpiar TODO al terminar** y verificar la limpieza (server-side: `getDocFromServer` / Firebase MCP).
-     - **(c) Notas QA: hard-delete, nunca soft-delete** — el soft-delete (mover a Papelera) NO dispara `onNoteDeleted` y deja embeddings/links huérfanos (gotcha documentado).
+     - **(c) Notas QA: hard-delete, nunca soft-delete** — `onNoteDeleted` solo dispara con delete real del documento; el soft-delete deja embedding/links vivos por diseño (restore coherente) hasta que `autoPurgeTrash` venza el plazo. Hard-delete = Papelera → "Eliminar para siempre", en la propia app.
      - **(d) PROHIBIDO siempre:** borrados masivos, resets, operaciones irreversibles sobre datos reales, y tocar la configuración de la cuenta.
    - **El emulador** (harness de SPEC-55, [e2e/helpers/emulator.ts](e2e/helpers/emulator.ts)) **sigue siendo la vía preferida** cuando el caso no necesita la app completa con datos reales — menor riesgo, cero limpieza.
    - **SUNSET (al abrir la beta, v0.6.0):** este régimen expira. Desde entonces, **las escrituras automatizadas pasan a emulador exclusivamente** — sin excepción contra prod. No renegociar.
