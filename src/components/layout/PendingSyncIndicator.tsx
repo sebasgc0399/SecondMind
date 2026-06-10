@@ -1,16 +1,17 @@
 import { useState } from 'react';
 import { Popover } from '@base-ui/react/popover';
-import { CloudOff, RefreshCw, Trash2 } from 'lucide-react';
+import { CloudUpload, RefreshCw, Trash2 } from 'lucide-react';
 import { allQueues, createsQueueBindings, retryAllErrors } from '@/lib/saveQueue';
 import usePendingSyncCount from '@/hooks/usePendingSyncCount';
-import useOnlineStatus from '@/hooks/useOnlineStatus';
 import useExpandThenCollapse from '@/hooks/useExpandThenCollapse';
 import { cn } from '@/lib/utils';
 import DiscardPendingDialog from './DiscardPendingDialog';
 
 const COLLAPSE_DELAY_MS = 3000;
 
-type Severity = 'error' | 'offline' | 'pending';
+type Severity = 'error' | 'pending';
+
+type PopoverSide = 'top' | 'right' | 'bottom' | 'left';
 
 interface PendingSyncIndicatorProps {
   // Cuando true, el chip se mantiene siempre en estado compact (44x44 con dot)
@@ -18,52 +19,57 @@ interface PendingSyncIndicatorProps {
   // El label se expone vía title HTML nativo para hover-reveal en sidebar
   // colapsado / tablet — mismo patrón que los nav items.
   compact?: boolean;
+  // Lado de apertura del popover. Default 'bottom' (montajes en barra superior:
+  // MobileHeader, TopBar). El Sidebar pasa 'right' porque su trigger vive al
+  // fondo-izquierda; con 'bottom'/'top' el popover abriría ENCIMA del nav.
+  side?: PopoverSide;
 }
 
 // Wrapper que aísla el lifecycle del componente con animación. Sin esto, el
 // hook useExpandThenCollapse correría desde el primer render de la app y el
 // timer de collapse expiraría ANTES de que aparezca el primer pending.
 //
-// F42.3: además de hasAny, también renderiza si el usuario está offline
-// (anuncio persistente del estado de red). El IndicatorBody se monta fresh
-// cada vez que cambia "hay algo que mostrar", reactivando la expand-anim.
-export default function PendingSyncIndicator({ compact = false }: PendingSyncIndicatorProps = {}) {
+// Renderiza solo cuando hay algo que sincronizar (pending o error). El
+// IndicatorBody se monta fresh cada vez que "hay algo que mostrar" pasa de
+// false→true, reactivando la expand-anim.
+//
+// Ya NO anuncia "offline" como estado propio: el sistema es network-agnóstico
+// (gate por timeout del saveQueue, SPEC-57) y navigator.onLine no es confiable
+// cross-platform (miente en el WebView de Android), así que distinguir offline
+// de pending divergía el color por plataforma (azul desktop vs ámbar móvil).
+// Offline sin writes pendientes ya no muestra chip; offline CON writes los
+// encola y aparecen como "pendientes" (ámbar) igual en todas las plataformas.
+export default function PendingSyncIndicator({
+  compact = false,
+  side = 'bottom',
+}: PendingSyncIndicatorProps = {}) {
   const { hasAny } = usePendingSyncCount();
-  const isOnline = useOnlineStatus();
-  if (isOnline && !hasAny) return null;
-  return <IndicatorBody compact={compact} />;
+  if (!hasAny) return null;
+  return <IndicatorBody compact={compact} side={side} />;
 }
 
-function IndicatorBody({ compact }: { compact: boolean }) {
+function IndicatorBody({ compact, side }: { compact: boolean; side: PopoverSide }) {
   const { total, errorCount, byEntity } = usePendingSyncCount();
-  const isOnline = useOnlineStatus();
   const isError = errorCount > 0;
   const [discardOpen, setDiscardOpen] = useState(false);
 
-  // Severity con prioridad: error > offline > pending. triggerKey re-expande
-  // SOLO en transición de severity (no en cambios numéricos del mismo bucket).
-  const severity: Severity = isError ? 'error' : !isOnline ? 'offline' : 'pending';
+  // Severity con prioridad: error > pending. triggerKey re-expande SOLO en
+  // transición de severity (no en cambios numéricos del mismo bucket).
+  const severity: Severity = isError ? 'error' : 'pending';
   const rawExpanded = useExpandThenCollapse(severity, COLLAPSE_DELAY_MS);
   // En modo compact el chip queda siempre 44x44 con dot. La info detallada se
   // accede via tooltip on-hover (title) y popover on-click — sin overflow del
   // expand de 180px que rompería el sidebar w-16.
   const expanded = compact ? false : rawExpanded;
 
-  const label = (() => {
-    if (isError) return `${errorCount} sin guardar`;
-    if (!isOnline && total > 0) {
-      return `Sin conexión · ${total} pendiente${total !== 1 ? 's' : ''}`;
-    }
-    if (!isOnline) return 'Sin conexión';
-    return `${total} pendiente${total !== 1 ? 's' : ''}`;
-  })();
+  const label = isError
+    ? `${errorCount} sin guardar`
+    : `${total} pendiente${total !== 1 ? 's' : ''}`;
 
   const chipColors = (() => {
     switch (severity) {
       case 'error':
         return 'bg-destructive/15 text-destructive hover:bg-destructive/20';
-      case 'offline':
-        return 'bg-blue-500/15 text-blue-700 hover:bg-blue-500/20 dark:text-blue-400';
       case 'pending':
         return 'bg-amber-500/15 text-amber-700 hover:bg-amber-500/20 dark:text-amber-400';
     }
@@ -73,8 +79,6 @@ function IndicatorBody({ compact }: { compact: boolean }) {
     switch (severity) {
       case 'error':
         return 'bg-destructive';
-      case 'offline':
-        return 'bg-blue-500';
       case 'pending':
         return 'bg-amber-500';
     }
@@ -102,10 +106,10 @@ function IndicatorBody({ compact }: { compact: boolean }) {
     allQueues.forEach((q) => q.clear());
   }
 
-  // Reintentar tiene sentido solo si hay errors Y red disponible. Offline el
-  // network call falla igual; para pending sin error el queue ya retientea
-  // automático con backoff.
-  const retryDisabled = errorCount === 0 || !isOnline;
+  // Reintentar tiene sentido solo si hay errors; para pending sin error el queue
+  // ya retientea automático con backoff. Sin detección de red: si no hay
+  // conexión, el retry simplemente vuelve a fallar y re-encola.
+  const retryDisabled = errorCount === 0;
 
   return (
     <>
@@ -120,7 +124,7 @@ function IndicatorBody({ compact }: { compact: boolean }) {
             chipColors,
           )}
         >
-          <CloudOff className="h-3.5 w-3.5 shrink-0" />
+          <CloudUpload className="h-3.5 w-3.5 shrink-0" />
           <span
             className={cn(
               'overflow-hidden whitespace-nowrap text-xs font-medium',
@@ -141,16 +145,14 @@ function IndicatorBody({ compact }: { compact: boolean }) {
           />
         </Popover.Trigger>
         <Popover.Portal>
-          <Popover.Positioner sideOffset={8} align="end">
-            <Popover.Popup className="z-50 w-64 rounded-lg border border-border bg-popover p-3 text-sm text-popover-foreground shadow-xl outline-none transition-[opacity,transform,scale] duration-200 data-ending-style:scale-95 data-ending-style:opacity-0 data-starting-style:scale-95 data-starting-style:opacity-0">
+          {/* z-50 vive en el Positioner (positioned), NO en el Popup: el Popup
+              es position:static y ahí z-index no aplica. El Sidebar floating es
+              z-30, así que sin esto el popover queda DETRÁS del sidebar. */}
+          <Popover.Positioner side={side} sideOffset={8} align="end" className="z-50">
+            <Popover.Popup className="w-64 rounded-lg border border-border bg-popover p-3 text-sm text-popover-foreground shadow-xl outline-none transition-[opacity,transform,scale] duration-200 data-ending-style:scale-95 data-ending-style:opacity-0 data-starting-style:scale-95 data-starting-style:opacity-0">
               <Popover.Title className="text-xs font-semibold text-foreground">
-                {!isOnline ? 'Sin conexión' : 'Cambios pendientes de sincronizar'}
+                Cambios pendientes de sincronizar
               </Popover.Title>
-              {!isOnline && (
-                <p className="mt-1 text-[11px] text-muted-foreground">
-                  Los cambios se sincronizarán al reconectar.
-                </p>
-              )}
               {byEntity.length > 0 ? (
                 <ul className="mt-2 space-y-1 text-xs text-muted-foreground">
                   {byEntity.map((e) => (

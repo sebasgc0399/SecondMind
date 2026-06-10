@@ -153,7 +153,9 @@ export function SidebarContent({ user, onSignOut, collapsed, onNavigate }: Sideb
       </nav>
 
       <div className={cn('pb-1', collapsed ? 'flex justify-center' : 'px-2')}>
-        <PendingSyncIndicator compact={collapsed} />
+        {/* side="right": el trigger vive al fondo del sidebar; abrir el popover
+            hacia la derecha (al área de contenido) evita que tape el nav. */}
+        <PendingSyncIndicator compact={collapsed} side="right" />
       </div>
 
       <div className="space-y-1 border-t border-sidebar-border p-2">
