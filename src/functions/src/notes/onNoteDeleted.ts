@@ -20,7 +20,11 @@ export const onNoteDeleted = onDocumentDeleted(
     document: 'users/{userId}/notes/{noteId}',
     region: 'us-central1',
     timeoutSeconds: 60,
-    retry: false,
+    // retry: true es seguro: el cascade es idempotente (queries por noteId +
+    // deletes re-ejecutables, costo cero). Contraste con autoTagNote/
+    // generateEmbedding (retry: false consciente — API paga sin idempotencia).
+    // Sin retry, un fallo transitorio dejaba huérfanos que nada reconcilia.
+    retry: true,
   },
   async (event) => {
     const { userId, noteId } = event.params;
