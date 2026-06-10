@@ -117,7 +117,7 @@ git commit -m "chore(release): bump version X.Y.Z → A.B.C
 
 <1-2 líneas explicando qué incluye este release o si es de alineación>
 
-Co-Authored-By: Claude Opus 4.7 (1M context) <noreply@anthropic.com>"
+<trailer Co-Authored-By definido en CLAUDE.md § SDD step 4>"
 ```
 
 ### Paso 4 — Merge --no-ff a main
@@ -205,11 +205,22 @@ Informar al user:
 
 Estos gotchas ya están resueltos en el workflow actual. Los listo por si algo falla y hay que entender por qué el workflow está estructurado así.
 
-- **Capacitor 8 exige Node 22 + JDK 21.** El SPEC original decía Node 20 + JDK 17 y falló con `invalid source release: 21` en `compileReleaseJavaWithJavac` (Capacitor 8 genera `capacitor.build.gradle` con `sourceCompatibility=21`). Si algún día migramos Capacitor y falla el job Android, empezar por acá.
+- **Capacitor 8 exige Node 22 + JDK 21.** Canon en [Spec/gotchas/tauri-desktop.md](../../../Spec/gotchas/tauri-desktop.md) § "Capacitor 8 exige Node >=22 y JDK 21 en el runner Android". Si falla el job Android tras una migración de Capacitor, empezar por ahí.
 - **`gradlew` pierde bit executable tras git checkout en runners Linux.** El workflow hace `chmod +x gradlew` explícito antes de invocarlo. Si alguna vez ves `/bin/sh: ./gradlew: Permission denied`, es eso.
 - **`.env.production` se genera explícito en cada job** (no via `env:` de tauri-action). Porque las env vars del step `env:` no se propagan confiablemente al subprocess que corre `npm run build` en Windows runners → bundle queda con Firebase config undefined → OAuth roto en release. Síntoma: sign-in falla en desktop pero funciona en dev.
 - **Updater de Tauri trata HTTP 404 como error**, no como "sin update disponible". Antes del primer release `latest.json` no existía y el hook caía al catch. En producción con ≥1 release esto no se ve.
 - **Android `versionCode` semver-encoded**: 0.1.7 → 107, 1.2.5 → 10205. Legible, monotónico mientras subamos versiones en orden. Derivado del tag — no tocar `build.gradle` manualmente.
+
+## Mecanismo de versión/purga (cómo llega la versión nueva al usuario)
+
+Resumen mínimo — el canon vive en los gotchas, no acá:
+
+- **Web:** el SW de workbox (`vite-plugin-pwa`, `skipWaiting: false`) precachea el bundle; el usuario recibe la versión nueva vía prompt del `UpdateBanner`. En native el SW **no se registra** (gate por mount en `UpdateBanner.tsx`).
+- **Desktop (Tauri):** `src-tauri/src/version_check.rs` compara `version.txt` en `app_local_data_dir()` pre-WebView; en mismatch ejecuta la purga nuclear (`clear_all_browsing_data()`) → un release con version bump cura los desktops trabados con bundle viejo.
+- **Android:** **sin equivalente** — una instalación trabada con SW viejo solo se cura con uninstall+reinstall manual. Las instalaciones nuevas quedan limpias porque el SW nunca se registra en native.
+- Implicación de release: un cambio client-side necesita **rebuild nativo en los 3 frentes**, no solo deploy web — el bundle empacado de desktop/mobile no se actualiza con el hosting.
+
+Canon: [Spec/gotchas/pwa-offline.md](../../../Spec/gotchas/pwa-offline.md) § "El SW no debe registrarse en native" (mecanismo completo + curas por plataforma) y [Spec/gotchas/tauri-desktop.md](../../../Spec/gotchas/tauri-desktop.md) § "Tauri 2.10 clear_all_browsing_data() es nuclear sin parámetros".
 
 ## Troubleshooting
 
@@ -221,7 +232,7 @@ gh run view <run-id> --log-failed | tail -100
 
 Causas típicas:
 
-- **Secrets faltantes o expirados**: revisar `Settings → Secrets and variables → Actions` en GitHub. Lista de secrets requeridos abajo.
+- **Secrets faltantes o expirados**: revisar `Settings → Secrets and variables → Actions` en GitHub. La lista canónica está en `release.yml` (ver § "Secrets del repo" abajo).
 - **APK no se sube a Firebase App Distribution**: suele ser `FIREBASE_SERVICE_ACCOUNT_KEY` expirado. Regenerar en la consola de Firebase.
 - **Tauri signing falla**: verificar `TAURI_SIGNING_PRIVATE_KEY` y su password. Nunca cambiar la key generada — los updates existentes la verifican contra `pubkey` en `tauri.conf.json`. Si rotás la key, los updates ya desplegados no se podrán instalar (se quedan en la última versión).
 
@@ -241,22 +252,9 @@ Estado intermedio limpio: los usuarios web ya tienen la nueva versión, desktop/
 
 ## Secrets del repo (referencia)
 
-No hay que configurarlos en cada release — ya están. Solo para diagnóstico si algo falla:
+No hay que configurarlos en cada release — ya están. **La lista canónica es la que consume `.github/workflows/release.yml`** (steps `env:` + heredocs `.env.production` de cada job) — esta skill no mantiene una copia: al diagnosticar, leerla del workflow. Los valores viven en GitHub → Settings → Secrets and variables → Actions.
 
-**Firebase (web build):**
-`VITE_FIREBASE_API_KEY`, `VITE_FIREBASE_AUTH_DOMAIN`, `VITE_FIREBASE_PROJECT_ID`, `VITE_FIREBASE_STORAGE_BUCKET`, `VITE_FIREBASE_MESSAGING_SENDER_ID`, `VITE_FIREBASE_APP_ID`, `VITE_FIREBASE_MEASUREMENT_ID`
-
-**Google Sign-In (solo Android, capgo social-login):**
-`VITE_GOOGLE_WEB_CLIENT_ID`
-
-**Tauri signing:**
-`TAURI_SIGNING_PRIVATE_KEY`, `TAURI_SIGNING_PRIVATE_KEY_PASSWORD`
-
-**Android build & signing:**
-`ANDROID_GOOGLE_SERVICES_JSON_BASE64`, `ANDROID_KEYSTORE_BASE64`, `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS`, `ANDROID_KEY_PASSWORD`
-
-**Firebase App Distribution:**
-`FIREBASE_ANDROID_APP_ID`, `FIREBASE_SERVICE_ACCOUNT_KEY`
+Gotcha asociado: toda nueva `VITE_*` del frontend requiere bumpear el heredoc `.env.production` de cada job que la consume — [Spec/gotchas/tauri-desktop.md](../../../Spec/gotchas/tauri-desktop.md) § "Toda nueva `VITE_*` requiere bumpear el heredoc".
 
 ## Qué NO hace esta skill
 
