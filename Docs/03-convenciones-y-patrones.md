@@ -224,6 +224,8 @@ function NoteEditor({ noteId }: NoteEditorProps) {
 
 **Componente nuevo cuando cambia la responsabilidad, no cuando cambia el tamaño.** Un componente de 200 líneas que hace una sola cosa está bien. Un componente de 50 líneas que hace tres cosas necesita split.
 
+**Iconografía.** Los iconos de UI chrome (nav, botones, headers, estados, badges) usan `lucide-react` exclusivamente. Emojis solo como (a) contenido/dato de usuario (emoji identitario de hábito/área) o (b) copy decorativo dentro de frases (ej. empty states). Nunca un emoji haciendo trabajo de icono standalone. Excepción: logos de marca como SVG inline (Google sign-in).
+
 ---
 
 ## 4. State management — TinyBase
