@@ -16,6 +16,10 @@ NO `data-state` como Radix. Las clases `animate-in`/`animate-out` de `tw-animate
 
 Confirmado empírico en F18 con `alert-dialog`. `components.json:3` debe seguir con `"style": "base-nova"`. Si en algún futuro `add` produce un archivo con `import { ... } from '@radix-ui/...'`, descartarlo y construir manual sobre los primitives de `@base-ui/react/<componente>` siguiendo el patrón de `button.tsx`.
 
+## Base-UI Popover: el `z-index` va en `Popover.Positioner`, NO en `Popover.Popup`
+
+El `Popup` se renderiza con `position: static` → cualquier `z-50`/`z-index` en su className es **inerte** (z-index solo aplica a elementos positioned). El `Positioner` SÍ es `position: absolute` → ahí el z-index funciona. Síntoma si se pone mal: el popover (portaleado a body) queda **detrás** de cualquier chrome con stacking context propio y z-index real — ej. el Sidebar floating es `position:absolute z-30`, y el popover con z muerto pinta por debajo, asomando solo un sliver por el borde del sidebar. `elementFromPoint` sobre el popup devuelve el elemento de atrás, no el popup. Fix: poner la clase de stacking en el Positioner (`<Popover.Positioner className="z-50">`). Aplica a cualquier Popover/Menu/Tooltip de `@base-ui/react` montado sobre un layout con elementos positioned. Detectado y verificado con Playwright en `fix/sync-indicator`; patrón vivo en [src/components/layout/PendingSyncIndicator.tsx](../../src/components/layout/PendingSyncIndicator.tsx).
+
 ## `setIsOpen(true) → requestAnimationFrame → focus()` obligatorio para colapsables
 
 Si un handler externo pide expandir + enfocar un disclosure, el input aún no existe en DOM en el mismo tick. Sin rAF, `ref.current` es null.
