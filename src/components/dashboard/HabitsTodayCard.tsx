@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
 import { Link } from 'react-router';
+import { Repeat } from 'lucide-react';
 import useHabits, { formatDateKey, getWeekStart } from '@/hooks/useHabits';
 import { HABITS } from '@/types/habit';
 
@@ -16,7 +17,10 @@ export default function HabitsTodayCard() {
   return (
     <section className="rounded-lg border border-border bg-card p-5">
       <header className="mb-4 flex items-center justify-between">
-        <h2 className="text-base font-semibold text-foreground">☑️ Hábitos de hoy</h2>
+        <h2 className="flex items-center gap-2 text-base font-semibold text-foreground">
+          <Repeat className="h-4 w-4" aria-hidden />
+          Hábitos de hoy
+        </h2>
         <Link
           to="/habits"
           className="text-xs text-muted-foreground transition-colors hover:text-foreground"

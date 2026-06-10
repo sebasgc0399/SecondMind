@@ -299,7 +299,8 @@ function CommandPaletteContent({ onClose }: CommandPaletteContentProps) {
           <>
             {grouped.notes.length > 0 && (
               <ResultSection
-                label="📝 Notas"
+                label="Notas"
+                icon={FileText}
                 results={grouped.notes}
                 startIndex={((flatIndex = 0), flatIndex)}
                 selectedIndex={selectedIndex}
@@ -313,7 +314,8 @@ function CommandPaletteContent({ onClose }: CommandPaletteContentProps) {
             })()}
             {grouped.tasks.length > 0 && (
               <ResultSection
-                label="✅ Tareas"
+                label="Tareas"
+                icon={CheckSquare}
                 results={grouped.tasks}
                 startIndex={flatIndex}
                 selectedIndex={selectedIndex}
@@ -327,7 +329,8 @@ function CommandPaletteContent({ onClose }: CommandPaletteContentProps) {
             })()}
             {grouped.projects.length > 0 && (
               <ResultSection
-                label="🚀 Proyectos"
+                label="Proyectos"
+                icon={FolderKanban}
                 results={grouped.projects}
                 startIndex={flatIndex}
                 selectedIndex={selectedIndex}
@@ -411,6 +414,7 @@ function CommandPaletteContent({ onClose }: CommandPaletteContentProps) {
 
 interface ResultSectionProps {
   label: string;
+  icon: typeof FileText;
   results: SearchResult[];
   startIndex: number;
   selectedIndex: number;
@@ -420,6 +424,7 @@ interface ResultSectionProps {
 
 function ResultSection({
   label,
+  icon: SectionIcon,
   results,
   startIndex,
   selectedIndex,
@@ -428,7 +433,8 @@ function ResultSection({
 }: ResultSectionProps) {
   return (
     <div>
-      <p className="px-3 py-1 text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
+      <p className="flex items-center gap-1.5 px-3 py-1 text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
+        <SectionIcon className="h-3 w-3" aria-hidden />
         {label}
       </p>
       {results.map((r, i) => {

@@ -1,5 +1,6 @@
 import { useCallback } from 'react';
 import { useNavigate } from 'react-router';
+import { Check } from 'lucide-react';
 import { EditorContent, useEditor } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import Placeholder from '@tiptap/extension-placeholder';
@@ -124,7 +125,12 @@ function SaveIndicator({ status }: { status: SaveStatus }) {
     return <span className="text-xs text-destructive">Error al guardar</span>;
   }
   if (status === 'saved') {
-    return <span className="text-xs text-primary">✓ Guardado</span>;
+    return (
+      <span className="inline-flex items-center gap-1 text-xs text-primary">
+        <Check className="h-3 w-3" aria-hidden />
+        Guardado
+      </span>
+    );
   }
   // idle: nada que sincronizar (sin entry en queue). Se oculta — mostrar "Sin
   // cambios" permanente es ruido. El estado "pendiente/offline" vive en el

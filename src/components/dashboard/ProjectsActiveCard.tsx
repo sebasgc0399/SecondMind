@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
 import { Link } from 'react-router';
+import { FolderKanban } from 'lucide-react';
 import { useTable } from 'tinybase/ui-react';
 import useProjects from '@/hooks/useProjects';
 import type { Project } from '@/types/project';
@@ -30,7 +31,10 @@ export default function ProjectsActiveCard() {
   return (
     <section className="rounded-lg border border-border bg-card p-5">
       <header className="mb-4 flex items-center justify-between">
-        <h2 className="text-base font-semibold text-foreground">🚀 Proyectos activos</h2>
+        <h2 className="flex items-center gap-2 text-base font-semibold text-foreground">
+          <FolderKanban className="h-4 w-4" aria-hidden />
+          Proyectos activos
+        </h2>
         {activeProjects.length > 0 && (
           <Link
             to="/projects"

@@ -11,10 +11,10 @@ interface AiSuggestionCardProps {
 }
 
 const TYPE_LABELS: Record<InboxResultType, string> = {
-  note: '📝 Nota',
-  task: '✅ Tarea',
-  project: '🚀 Proyecto',
-  trash: '🗑️ Descartar',
+  note: 'Nota',
+  task: 'Tarea',
+  project: 'Proyecto',
+  trash: 'Descartar',
 };
 
 const PRIORITY_LABELS: Record<Priority, string> = {
@@ -101,10 +101,10 @@ export default function AiSuggestionCard({
                 }
                 className="mt-0.5 w-full rounded-md border border-border bg-background px-2 py-1 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
               >
-                <option value="note">📝 Nota</option>
-                <option value="task">✅ Tarea</option>
-                <option value="project">🚀 Proyecto</option>
-                <option value="trash">🗑️ Descartar</option>
+                <option value="note">Nota</option>
+                <option value="task">Tarea</option>
+                <option value="project">Proyecto</option>
+                <option value="trash">Descartar</option>
               </select>
             </label>
 
