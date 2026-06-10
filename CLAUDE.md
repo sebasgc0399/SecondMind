@@ -111,6 +111,7 @@ Cada feature del proyecto sigue este ciclo. No improvisar: si algo no cuadra, aj
    Cubrir golden path + edge cases + regresión. `TaskStop` al dev server al terminar.
 
 6. **Deploy pipeline** al cerrar feature (confirmar scope al final, no paso a paso):
+   - **Orden para código server-side (functions, rules, indexes): commit → review de Sebastián → merge → deploy.** Invertirlo (deploy antes del review) solo por decisión explícita de Sebastián (hotfix), nunca como default.
    - CFs si cambian: `npm run deploy:functions`.
    - Hosting: `npm run build && npm run deploy`.
    - Tauri: `npm run tauri:build` (MSI + NSIS) — **opcional** si el cambio es 100% client-side sin tocar `src-tauri/`.
