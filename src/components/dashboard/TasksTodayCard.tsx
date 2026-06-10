@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
 import { Link } from 'react-router';
+import { CheckSquare } from 'lucide-react';
 import useTasks from '@/hooks/useTasks';
 import { isSameDay } from '@/lib/formatDate';
 import type { Priority } from '@/types/common';
@@ -36,7 +37,10 @@ export default function TasksTodayCard() {
   return (
     <section className="rounded-lg border border-border bg-card p-5">
       <header className="mb-4 flex items-center justify-between">
-        <h2 className="text-base font-semibold text-foreground">✅ Tareas de hoy</h2>
+        <h2 className="flex items-center gap-2 text-base font-semibold text-foreground">
+          <CheckSquare className="h-4 w-4" aria-hidden />
+          Tareas de hoy
+        </h2>
         {todayTasks.length > 0 && (
           <Link
             to="/tasks"

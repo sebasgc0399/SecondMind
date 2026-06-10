@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { AlertTriangle, CalendarClock, type LucideIcon } from 'lucide-react';
 import { useTable } from 'tinybase/ui-react';
 import useTasks from '@/hooks/useTasks';
 import TaskInlineCreate from '@/components/tasks/TaskInlineCreate';
@@ -20,6 +21,7 @@ const COMPLETED_LIMIT = 20;
 
 interface TaskGroup {
   label: string;
+  icon?: LucideIcon;
   tasks: Task[];
 }
 
@@ -56,8 +58,8 @@ export default function TasksPage() {
         else if (isSameDay(t.dueDate, now)) todayList.push(t);
       }
       const out: TaskGroup[] = [];
-      if (overdue.length > 0) out.push({ label: '⚠️ Vencidas', tasks: overdue });
-      if (todayList.length > 0) out.push({ label: '📅 Hoy', tasks: todayList });
+      if (overdue.length > 0) out.push({ label: 'Vencidas', icon: AlertTriangle, tasks: overdue });
+      if (todayList.length > 0) out.push({ label: 'Hoy', icon: CalendarClock, tasks: todayList });
       return out;
     }
 
@@ -136,7 +138,8 @@ export default function TasksPage() {
           {groups.map((group, idx) => (
             <section key={`${activeTab}-${idx}-${group.label}`}>
               {group.label && (
-                <h2 className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                <h2 className="mb-2 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                  {group.icon && <group.icon className="h-3.5 w-3.5" aria-hidden />}
                   {group.label}
                 </h2>
               )}

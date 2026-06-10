@@ -299,7 +299,7 @@ function CommandPaletteContent({ onClose }: CommandPaletteContentProps) {
           <>
             {grouped.notes.length > 0 && (
               <ResultSection
-                label="📝 Notas"
+                label="Notas"
                 results={grouped.notes}
                 startIndex={((flatIndex = 0), flatIndex)}
                 selectedIndex={selectedIndex}
@@ -313,7 +313,7 @@ function CommandPaletteContent({ onClose }: CommandPaletteContentProps) {
             })()}
             {grouped.tasks.length > 0 && (
               <ResultSection
-                label="✅ Tareas"
+                label="Tareas"
                 results={grouped.tasks}
                 startIndex={flatIndex}
                 selectedIndex={selectedIndex}
@@ -327,7 +327,7 @@ function CommandPaletteContent({ onClose }: CommandPaletteContentProps) {
             })()}
             {grouped.projects.length > 0 && (
               <ResultSection
-                label="🚀 Proyectos"
+                label="Proyectos"
                 results={grouped.projects}
                 startIndex={flatIndex}
                 selectedIndex={selectedIndex}

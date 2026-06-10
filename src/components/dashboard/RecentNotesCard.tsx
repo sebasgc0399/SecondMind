@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
 import { Link } from 'react-router';
+import { FileText } from 'lucide-react';
 import { useTable } from 'tinybase/ui-react';
 import { rowToOramaDoc, type NoteOramaDoc } from '@/lib/orama';
 import { formatRelative } from '@/lib/formatDate';
@@ -22,7 +23,10 @@ export default function RecentNotesCard() {
   return (
     <section className="rounded-lg border border-border bg-card p-5">
       <header className="mb-4 flex items-center justify-between">
-        <h2 className="text-base font-semibold text-foreground">📝 Notas recientes</h2>
+        <h2 className="flex items-center gap-2 text-base font-semibold text-foreground">
+          <FileText className="h-4 w-4" aria-hidden />
+          Notas recientes
+        </h2>
         {recent.length > 0 && (
           <Link
             to="/notes"

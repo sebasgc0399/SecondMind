@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router';
-import { KeyRound, Play, Sparkles } from 'lucide-react';
+import { AlertTriangle, Check, KeyRound, Play, Sparkles } from 'lucide-react';
 import useInbox, { HIGH_CONFIDENCE_THRESHOLD } from '@/hooks/useInbox';
 import useOnlineStatus from '@/hooks/useOnlineStatus';
 import useApiKeys from '@/hooks/useApiKeys';
@@ -73,7 +73,7 @@ export default function InboxPage() {
 
   const [batchStatus, setBatchStatus] = useState<BatchStatus>({ kind: 'idle' });
 
-  // Auto-dismiss del label "✓ N aceptados" tras 3s. Patrón canónico (gotcha F22):
+  // Auto-dismiss del label "N aceptados" tras 3s. Patrón canónico (gotcha F22):
   // el timer va en su propio useEffect con cleanup, no en el callback que lo dispara.
   // Sin esto, navegar antes de los 3s causaba setState post-unmount.
   useEffect(() => {
@@ -89,13 +89,22 @@ export default function InboxPage() {
   }, [acceptHighConfidence]);
 
   const batchLabel =
-    batchStatus.kind === 'processing'
-      ? 'Procesando...'
-      : batchStatus.kind === 'done'
-      ? `✓ ${batchStatus.ok} aceptados${
-          batchStatus.failed ? ` · ⚠ ${batchStatus.failed} fallaron` : ''
-        }`
-      : `Aceptar ${high.length} ${high.length === 1 ? 'item' : 'items'}`;
+    batchStatus.kind === 'processing' ? (
+      'Procesando...'
+    ) : batchStatus.kind === 'done' ? (
+      <>
+        {batchStatus.ok} aceptados
+        {batchStatus.failed > 0 && (
+          <>
+            <span aria-hidden>·</span>
+            <AlertTriangle className="h-3.5 w-3.5" aria-hidden />
+            {batchStatus.failed} fallaron
+          </>
+        )}
+      </>
+    ) : (
+      `Aceptar ${high.length} ${high.length === 1 ? 'item' : 'items'}`
+    );
 
   const batchDisabled = batchStatus.kind === 'processing' || high.length === 0;
 
@@ -166,7 +175,11 @@ export default function InboxPage() {
                   disabled={batchDisabled}
                   className="inline-flex min-h-9 items-center gap-1.5 rounded-md bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:cursor-not-allowed disabled:bg-primary/40"
                 >
-                  <Sparkles className="h-3.5 w-3.5" />
+                  {batchStatus.kind === 'done' ? (
+                    <Check className="h-3.5 w-3.5" aria-hidden />
+                  ) : (
+                    <Sparkles className="h-3.5 w-3.5" />
+                  )}
                   {batchLabel}
                 </button>
               </div>

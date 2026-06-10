@@ -1,5 +1,5 @@
 import { useCallback, useState, useSyncExternalStore } from 'react';
-import { AlertTriangle } from 'lucide-react';
+import { AlertTriangle, Check } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { saveContentQueue } from '@/lib/saveQueue';
 
@@ -59,7 +59,14 @@ export default function SaveErrorBanner({ noteId, onDiscard }: SaveErrorBannerPr
         </div>
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-end">
           <Button size="sm" variant="ghost" onClick={handleCopy} disabled={copied}>
-            {copied ? '✓ Copiado' : 'Copiar contenido'}
+            {copied ? (
+              <>
+                <Check aria-hidden />
+                Copiado
+              </>
+            ) : (
+              'Copiar contenido'
+            )}
           </Button>
           <Button size="sm" variant="outline" onClick={handleDiscard}>
             Descartar cambios

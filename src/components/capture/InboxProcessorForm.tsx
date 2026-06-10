@@ -16,10 +16,10 @@ interface InboxProcessorFormProps {
 }
 
 const PROCESSED_LABELS: Record<ProcessedKind, string> = {
-  note: '✓ Ya procesado como nota',
-  task: '✓ Ya procesado como tarea',
-  project: '✓ Ya procesado como proyecto',
-  trash: '✓ Descartado',
+  note: 'Ya procesado como nota',
+  task: 'Ya procesado como tarea',
+  project: 'Ya procesado como proyecto',
+  trash: 'Descartado',
 };
 
 const PRIORITY_LABELS: Record<Priority, string> = {
@@ -56,8 +56,9 @@ export default function InboxProcessorForm({
   if (isProcessed) {
     return (
       <div className="rounded-lg border border-border bg-muted/20 p-6 text-center">
-        <p className="text-lg font-medium text-foreground">
-          {processedAs ? PROCESSED_LABELS[processedAs] : '✓ Ya procesado'}
+        <p className="flex items-center justify-center gap-1.5 text-lg font-medium text-foreground">
+          <Check className="h-5 w-5" aria-hidden />
+          {processedAs ? PROCESSED_LABELS[processedAs] : 'Ya procesado'}
         </p>
         <p className="mt-1 text-xs text-muted-foreground">
           Usá → Siguiente para volver a un item pendiente.
@@ -67,7 +68,7 @@ export default function InboxProcessorForm({
   }
 
   const canSubmit = draft.suggestedTitle.trim().length > 0;
-  const submitLabel = isLast ? '✓ Crear' : '✓ Crear y siguiente';
+  const submitLabel = isLast ? 'Crear' : 'Crear y siguiente';
 
   const handleSubmit = () => {
     const parsedTags = tagsRaw
@@ -112,10 +113,10 @@ export default function InboxProcessorForm({
               }
               className="mt-1 w-full rounded-md border border-border bg-background px-3 py-1.5 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40"
             >
-              <option value="note">📝 Nota</option>
-              <option value="task">✅ Tarea</option>
-              <option value="project">🚀 Proyecto</option>
-              <option value="trash">🗑️ Descartar</option>
+              <option value="note">Nota</option>
+              <option value="task">Tarea</option>
+              <option value="project">Proyecto</option>
+              <option value="trash">Descartar</option>
             </select>
           </label>
 
