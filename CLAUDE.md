@@ -98,7 +98,18 @@ Cada feature del proyecto sigue este ciclo. No improvisar: si algo no cuadra, aj
    - **Para bugs:** investigar y articular el root cause antes de codear cualquier fix. Nunca parchear síntomas.
 3. **Una rama por feature:** `feat/<nombre-corto>`. `main` está bloqueada por hook PreToolUse (`exit 2` si intentás Edit/Write sobre main). Features chicas: consultar antes de arrancar.
 4. **Commits atómicos Conventional Commits en español**, uno por sub-feature (`feat`, `fix`, `refactor`, `docs`, `chore`). `Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>` al final.
-5. **E2E con Playwright MCP + Firebase MCP** si aplica web. Dev server en background con `npm run dev` (puerto 5173 → 5174 si ocupado; matar el previo si bloquea). UID de Sebastián para QA/E2E (proyecto `secondmindv1`): `gYPP7NIo5JanxIbPqMe6nC3SQfE3` — **es su cuenta personal real (la única que existe, con sus notas de producción), NO una cuenta de prueba descartable**. Usar para verificar, pero NUNCA borrar ni resetear sus datos. Cubrir golden path + edge cases + regresión. `TaskStop` al dev server al terminar.
+5. **E2E con Playwright MCP + Firebase MCP** si aplica web. Dev server en background con `npm run dev` (puerto 5173 → 5174 si ocupado; matar el previo si bloquea). **Política de datos en QA (fase dev, hasta beta v0.6.0):**
+
+   - **QA/E2E con Playwright contra producción** (cuenta personal real de Sebastián, `gYPP7NIo5JanxIbPqMe6nC3SQfE3`, proyecto `secondmindv1` — la única cuenta que existe, con sus notas de producción) está **PERMITIDO, incluyendo escrituras**, bajo este protocolo estricto:
+     - **(a) Anunciar ANTES** qué datos se van a crear/mutar.
+     - **(b) Revertir/limpiar TODO al terminar** y verificar la limpieza (server-side: `getDocFromServer` / Firebase MCP).
+     - **(c) Notas QA: hard-delete, nunca soft-delete** — el soft-delete (mover a Papelera) NO dispara `onNoteDeleted` y deja embeddings/links huérfanos (gotcha documentado).
+     - **(d) PROHIBIDO siempre:** borrados masivos, resets, operaciones irreversibles sobre datos reales, y tocar la configuración de la cuenta.
+   - **El emulador** (harness de SPEC-55, [e2e/helpers/emulator.ts](e2e/helpers/emulator.ts)) **sigue siendo la vía preferida** cuando el caso no necesita la app completa con datos reales — menor riesgo, cero limpieza.
+   - **SUNSET (al abrir la beta, v0.6.0):** este régimen expira. Desde entonces, **las escrituras automatizadas pasan a emulador exclusivamente** — sin excepción contra prod. No renegociar.
+
+   Cubrir golden path + edge cases + regresión. `TaskStop` al dev server al terminar.
+
 6. **Deploy pipeline** al cerrar feature (confirmar scope al final, no paso a paso):
    - CFs si cambian: `npm run deploy:functions`.
    - Hosting: `npm run build && npm run deploy`.
