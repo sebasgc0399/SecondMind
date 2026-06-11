@@ -97,7 +97,7 @@ Cada feature del proyecto sigue este ciclo. No improvisar: si algo no cuadra, aj
    - `ExitPlanMode` una vez aprobado.
    - **Para bugs:** investigar y articular el root cause antes de codear cualquier fix. Nunca parchear síntomas.
 3. **Una rama por feature:** `feat/<nombre-corto>`. `main` está bloqueada por hook PreToolUse (`exit 2` si intentás Edit/Write sobre main). Features chicas: consultar antes de arrancar.
-4. **Commits atómicos Conventional Commits en español**, uno por sub-feature (`feat`, `fix`, `refactor`, `docs`, `chore`). `Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>` al final.
+4. **Commits atómicos Conventional Commits en español**, uno por sub-feature (`feat`, `fix`, `refactor`, `docs`, `chore`). Trailer al final: `Co-Authored-By: <modelo que ejecutó la sesión> <noreply@anthropic.com>` — el nombre del modelo es dinámico por sesión, nunca hardcodearlo (firmar como un modelo que no corrió la sesión es información falsa en el historial).
 5. **E2E con Playwright MCP + Firebase MCP** si aplica web. Dev server en background con `npm run dev` (puerto 5173 → 5174 si ocupado; matar el previo si bloquea). **Política de datos en QA (fase dev, hasta beta v0.6.0):**
 
    - **QA/E2E con Playwright contra producción** (cuenta personal real de Sebastián, `gYPP7NIo5JanxIbPqMe6nC3SQfE3`, proyecto `secondmindv1` — la única cuenta que existe, con sus notas de producción) está **PERMITIDO, incluyendo escrituras**, bajo este protocolo estricto:
