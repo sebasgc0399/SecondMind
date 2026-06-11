@@ -34,12 +34,12 @@ Fijadas por Sebastián en el discovery (D1–D6) y aprobadas en el GO (D7–D11)
 
 - **F1.1 Setup:** instalar i18next 26.3.1 + react-i18next 17.0.8 + i18next-cli 1.62.0 (dev). Crear `i18next.config.ts`: `locales: ['es','en']`, `extract.input src/**/*.{ts,tsx}` + ignore D9, output `src/locales/{{language}}/{{namespace}}.json`, `instrumentScorer` (D1), bloque `types`. ⚠️ Gotcha reincidente: npm install mueve el lockfile → verificar `resolve.dedupe` al reiniciar dev server.
 - **F1.2** `src/lib/i18n.ts`: imports **estáticos** de los 2 JSON (cambiar el lazy default del template del CLI), `initReactI18next`, `fallbackLng: 'es'`. Importado en `src/main.tsx` antes del render.
-- **F1.3 Locale en preferences:** `locale: 'es' | 'en'` en `UserPreferences` (`src/types/preferences.ts`) + `DEFAULT_PREFERENCES` + **bump `PREFERENCES_SCHEMA_VERSION` 1 → 2** (`src/lib/preferences.ts`, gotcha CLAUDE.md) + `parsePrefs()`. Detección inicial: `navigator.language` empieza con `es` → `'es'`, si no `'en'`. Subscribe → `i18n.changeLanguage` + `document.documentElement.lang` dinámico. `index.html` → `lang="es"` de base; `vite.config.ts` manifest: agregar `lang: 'es'` (coherencia — W3C no soporta multi-lang en manifest).
+- **F1.3 Locale en preferences:** `locale: 'es' | 'en' | null` en `UserPreferences` (`src/types/preferences.ts`, default `null` = "nunca elegido" → aplica detección y write eager para F3.1) + parse defensivo en `parsePrefs()` — **SIN bump de `PREFERENCES_SCHEMA_VERSION`** (campo aditivo; ver Desvíos del plan F1). Detección inicial: `navigator.language` empieza con `es` → `'es'`, si no `'en'`; hint localStorage `sm-locale` anti-flash (patrón F32.4). Subscribe (gate `isLoaded`) → `i18n.changeLanguage` + `document.documentElement.lang` dinámico. `index.html` → `lang="es"` de base; `vite.config.ts` manifest: agregar `lang: 'es'` (coherencia — W3C no soporta multi-lang en manifest).
 - **F1.4 Selector** de idioma en Settings (Español / English) vía `setPreferences`. Archivo: `src/components/settings/LanguageSelector.tsx` (mismo patrón que `ThemeSelector.tsx`).
-- **F1.5 Vertical slice = dominio settings/** (~10 strings): `instrument --dry-run` → revisión → aplicar → traducir a en a mano. Valida el patrón punta a punta (keys, tipos, fallback, switch runtime). Por qué Settings y no auth: chico, contiene el selector (feedback inmediato), sin exposición pública. Acá se confirma qué archivo(s) genera exactamente el bloque `types` (se commitean — CI no requiere el CLI).
+- **F1.5 Vertical slice = dominio settings/** (~25-30 strings, inventario exacto en el plan F1): `instrument --dry-run` → revisión → aplicar → traducir a en a mano. Valida el patrón punta a punta (keys, tipos, fallback, switch runtime). Por qué Settings y no auth: chico, contiene el selector (feedback inmediato), sin exposición pública. Acá se confirma qué archivo(s) genera exactamente el bloque `types` (se commitean — CI no requiere el CLI).
 - **F1.6 Tipos:** typo en key = error de `tsc` — verificado **rompiéndolo deliberadamente** (gotcha "probar el verificador").
 - **F1.7 Tests:** setup de Vitest con i18n inicializado (catálogo es estático); estrategia de asserts **contra el catálogo, no contra literales**. Tests afectados conocidos: `authErrors.test.ts` (~13 asserts), `loginError.test.ts`, `inboxRepo.test.ts`, `usePendingSyncCount.test.ts`, `PendingSyncIndicator.test.tsx`, `useNoteSuggestions.test.tsx`. Regla de gate: cada commit de dominio de F2 actualiza SUS tests en el mismo commit.
-- **F1.8 Baseline de capturas (gate de F2):** al cierre de F1, capturas Playwright 375/768/1280 de las pantallas clave de cada dominio de F2, guardadas en **`Spec/qa/i18n-baseline/`** (versionada en git, nombre `<dominio>-<pantalla>-<viewport>.png`). **F2.1 no arranca sin baseline.**
+- **F1.8 Baseline de capturas (gate de F2):** al cierre de F1, capturas Playwright 375/768/1280 de las pantallas clave de cada dominio de F2, guardadas en **`Spec/qa/i18n-baseline/`** (versionada en git, nombre `<dominio>-<pantalla>-<viewport>.png`, **comprimidas a viewport real — no retina 2x**). **F2.1 no arranca sin baseline.** El directorio es **artefacto temporal del arco i18n**: al cierre de F4.3 se decide explícitamente si se conserva o se borra (P9).
 
 **Done F1:** selector cambia idioma en runtime sin reload · preferencia persiste (Firestore + cross-restart) · Settings 100% por catálogo en ambos idiomas · `tsc` falla con key inválida (verificado) · setup de tests i18n operativo · baseline F1.8 committeada · lint+build+tests (262) verdes · resto de la app intacta en es.
 
@@ -76,9 +76,15 @@ Transversales en el dominio que toque: 15 plurales → `count` + `_one`/`_other`
 
 - **F4.1 Traducción en (D11):** (a) definir **guía de estilo del copy en** (registro, capitalización — equivalente del imperativo neutro es; se registra en este SPEC al producirse); (b) batch AI por dominio contra esa guía; (c) revisión de Sebastián por dominio (mismo corte que F2); (d) `i18next-cli status` limpio como gate.
 - **F4.2 QA 3 frentes** (web Playwright 375/768/1280, Tauri, Android) × 2 idiomas: switch runtime, **offline con locale en** (valida D2), fechas/plurales/relativos. Escrituras bajo protocolo step 5; emulador preferido donde no haga falta la app completa.
-- **F4.3 Cierre:** archivar SPEC · escalar gotchas · **actualizar ESTADO-ACTUAL § Versionado y roadmap (beta v0.6.0 desplazada — decisión tomada; i18n entra en la serie 0.5.x)** · release coordinado según pendientes acumulados de la serie al cierre.
+- **F4.3 Cierre:** archivar SPEC · escalar gotchas · **actualizar ESTADO-ACTUAL § Versionado y roadmap (beta v0.6.0 desplazada — decisión tomada; i18n entra en la serie 0.5.x)** · release coordinado según pendientes acumulados de la serie al cierre · **P9: decidir explícitamente si `Spec/qa/i18n-baseline/` se conserva o se borra** (artefacto temporal del arco).
 
 **Done F4:** catálogo en 100% (`i18next-cli status` limpio) · QA GO 3 frentes × 2 idiomas incl. offline en · ESTADO-ACTUAL actualizado.
+
+## Desvíos registrados (step 2 SDD — plan F1, aprobados por Sebastián 2026-06-11)
+
+1. **NO bumpear `PREFERENCES_SCHEMA_VERSION`** (el F1.3 original decía bump 1→2): `locale` es campo aditivo con default — el patrón del repo (precedente F46/F49, sentinel anti-bump en `preferences.test.ts`) es parse defensivo sin bump; bumpear purgaría las prefs reales (parsePrefs devuelve defaults ante mismatch). Gotcha precisado en su fuente: CLAUDE.md § Gotchas universales + `Spec/gotchas/tinybase-firestore.md` § "Schema versioning local de cache" — la regla ahora distingue aditivo (no bump) vs breaking (bump).
+2. **`locale` es `'es' | 'en' | null`** (no `'es' | 'en'`): `null` = "nunca elegido" — distingue elección de detección, y dispara el write eager de la detección al doc (F3.1 lee este campo server-side).
+3. **El slice settings son ~25-30 strings**, no ~10 (inventario exacto relevado en el plan F1).
 
 ## Orden de implementación
 
@@ -106,7 +112,7 @@ Spec/qa/i18n-baseline/                    (F1.8 — capturas baseline)
 4. **El CLI escribe por fuera de los hooks del entorno** (sin Prettier/ESLint automático, sin bloqueo de main, HMR) → protocolo por corrida (F2).
 5. **Tests que assertean español literal** rompen al migrar sus módulos → F1.7 + regla "mismo commit".
 6. AI: prompts/descriptions en en pueden cambiar la calidad del output → QA con capturas reales en ambos locales antes del deploy.
-7. `PREFERENCES_SCHEMA_VERSION` sin bump → prefs huérfanas (gotcha) — en F1.3.
+7. `PREFERENCES_SCHEMA_VERSION`: bumpearlo por error con el campo aditivo purgaría las prefs reales de todos los usuarios (parsePrefs purga ante mismatch) — NO bumpear, gotcha precisado en `Spec/gotchas/tinybase-firestore.md` § "Schema versioning local de cache".
 8. npm install nuevo → gotcha `resolve.dedupe` reincidente.
 9. Catálogo en incompleto en prod → `fallbackLng 'es'` (D8): nunca keys crudas.
 10. **Riesgo aceptado (GO):** los defaults en español dentro de `src/components/ui/` (ej. `confirm-dialog.tsx`) quedan como **residual consciente** — los call-sites pasan labels traducidos y el smoke por dominio caza cualquier default que se filtre.
