@@ -203,13 +203,13 @@ Informar al user:
 
 ## Gotchas del pipeline (no hace falta aplicarlos — ya están en `.github/workflows/release.yml`, pero saberlos ayuda a debuggear)
 
-Estos gotchas ya están resueltos en el workflow actual. Los listo por si algo falla y hay que entender por qué el workflow está estructurado así.
+Ya resueltos en el workflow actual. Canon de todos en [Spec/gotchas/tauri-desktop.md](../../../Spec/gotchas/tauri-desktop.md) — acá solo etiqueta + síntoma:
 
-- **Capacitor 8 exige Node 22 + JDK 21.** Canon en [Spec/gotchas/tauri-desktop.md](../../../Spec/gotchas/tauri-desktop.md) § "Capacitor 8 exige Node >=22 y JDK 21 en el runner Android". Si falla el job Android tras una migración de Capacitor, empezar por ahí.
-- **`gradlew` pierde bit executable tras git checkout en runners Linux.** El workflow hace `chmod +x gradlew` explícito antes de invocarlo. Si alguna vez ves `/bin/sh: ./gradlew: Permission denied`, es eso.
-- **`.env.production` se genera explícito en cada job** (no via `env:` de tauri-action). Porque las env vars del step `env:` no se propagan confiablemente al subprocess que corre `npm run build` en Windows runners → bundle queda con Firebase config undefined → OAuth roto en release. Síntoma: sign-in falla en desktop pero funciona en dev.
-- **Updater de Tauri trata HTTP 404 como error**, no como "sin update disponible". Antes del primer release `latest.json` no existía y el hook caía al catch. En producción con ≥1 release esto no se ve.
-- **Android `versionCode` semver-encoded**: 0.1.7 → 107, 1.2.5 → 10205. Legible, monotónico mientras subamos versiones en orden. Derivado del tag — no tocar `build.gradle` manualmente.
+- **Capacitor 8 exige Node 22 + JDK 21** — § "Capacitor 8 exige Node >=22 y JDK 21 en el runner Android". Si falla el job Android tras migrar Capacitor, empezar por ahí.
+- **`gradlew` sin bit executable** — § "`gradlew` pierde el bit executable tras `git checkout` en `ubuntu-latest`". Síntoma: `/bin/sh: ./gradlew: Permission denied`.
+- **`.env.production` explícito por job** — § "tauri-action NO propaga env vars del step `env:` al subprocess `beforeBuildCommand` en Windows runners". Síntoma: sign-in roto solo en bundles de CI.
+- **Updater trata HTTP 404 como error** — § "Tauri `plugin-updater` trata HTTP 404 como error". Solo visible pre-primer-release.
+- **`versionCode` semver-encoded derivado del tag** — § "`versionName`/`versionCode` del APK via Gradle props `-P` derivados del tag". No tocar `build.gradle` manualmente.
 
 ## Mecanismo de versión/purga (cómo llega la versión nueva al usuario)
 
