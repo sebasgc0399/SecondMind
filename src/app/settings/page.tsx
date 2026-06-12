@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { useLocation } from 'react-router';
 import ApiKeysSection from '@/components/settings/ApiKeysSection';
 import AppInfoSection from '@/components/settings/AppInfoSection';
+import LanguageSelector from '@/components/settings/LanguageSelector';
 import SidebarVisibilitySelector from '@/components/settings/SidebarVisibilitySelector';
 import ThemeSelector from '@/components/settings/ThemeSelector';
 import TrashAutoPurgeSelector from '@/components/settings/TrashAutoPurgeSelector';
@@ -34,6 +35,18 @@ export default function SettingsPage() {
           </p>
         </div>
         <ThemeSelector />
+      </section>
+
+      <section id="language" aria-labelledby="language-heading" className="scroll-mt-14">
+        <div className="mb-3">
+          <h2 id="language-heading" className="text-sm font-semibold text-foreground">
+            Idioma
+          </h2>
+          <p className="mt-0.5 text-xs text-muted-foreground">
+            Elegí el idioma de la interfaz. Los textos generados por la IA siguen esta preferencia.
+          </p>
+        </div>
+        <LanguageSelector />
       </section>
 
       <section aria-labelledby="sidebar-visibility-heading" className="hidden lg:block">

@@ -1,1 +1,17 @@
-{}
+{
+  "common": {
+    "activeBadge": "active"
+  },
+  "settings": {
+    "language": {
+      "en": {
+        "description": "Interface in English.",
+        "label": "English"
+      },
+      "es": {
+        "description": "La interfaz en español.",
+        "label": "Español"
+      }
+    }
+  }
+}
