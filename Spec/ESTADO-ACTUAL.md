@@ -253,6 +253,10 @@ Cada feature comprimida a 1 línea con pointer al SPEC archivado. Para detalles 
 - [Avatar `<img>` con URL remota: onError + state fallback obligatorio (post-F42.5)](gotchas/ui-componentes.md#avatar-img-con-url-remota-onerror--state-fallback-obligatorio-post-f425)
 - [Tokens `design-system/secondmind/MASTER.md` desincronizados del runtime `src/index.css` (post-F47)](gotchas/ui-componentes.md#tokens-design-systemsecondmindmastermd-desincronizados-del-runtime-srcindexcss-post-f47)
 
+### i18n — [`gotchas/i18n.md`](gotchas/i18n.md)
+
+- [`count` como variable de interpolación activa pluralización — clasificar el sitio ANTES de elegir el nombre](gotchas/i18n.md#count-como-variable-de-interpolación-activa-pluralización--clasificar-el-sitio-antes-de-elegir-el-nombre)
+
 ### Responsive & Mobile UX — [`gotchas/responsive-mobile-ux.md`](gotchas/responsive-mobile-ux.md)
 
 - [Breakpoint detection via `useSyncExternalStore` + `matchMedia`](gotchas/responsive-mobile-ux.md#breakpoint-detection-via-usesyncexternalstore-matchmedia)
