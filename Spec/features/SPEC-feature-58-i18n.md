@@ -1,6 +1,6 @@
 # SPEC — Feature 58: i18n (es + en)
 
-> **Estado:** GO de Sebastián (2026-06-10). En implementación — F1 en curso.
+> **Estado:** F1 **COMPLETADA** y mergeada a main (2026-06-11, Done E2E 9/9 incl. smoke Tauri verificado por Sebastián). Pre-requisitos deps-1/deps-2 incluidos en el mismo arco. **Siguiente: F2.1** (layout + navegación). GO original de Sebastián: 2026-06-10.
 > **Alcance:** UI completa de `src/` + outputs de AI + errores de CF localizables es/en, con locale por usuario.
 > **Dependencias:** discovery i18n (informe de sesión 2026-06-10, verificado por re-conteo independiente). Ninguna feature bloqueante. Release 0.5.0 publicado antes de arrancar.
 > **Estimado:** 2–3 semanas solo dev — estimación de este SPEC, no compromiso; incluye migración de tests; F4.1 dimensionado por D11.
@@ -41,7 +41,16 @@ Fijadas por Sebastián en el discovery (D1–D6) y aprobadas en el GO (D7–D11)
 - **F1.7 Tests:** setup de Vitest con i18n inicializado (catálogo es estático); estrategia de asserts **contra el catálogo, no contra literales**. Tests afectados conocidos: `authErrors.test.ts` (~13 asserts), `loginError.test.ts`, `inboxRepo.test.ts`, `usePendingSyncCount.test.ts`, `PendingSyncIndicator.test.tsx`, `useNoteSuggestions.test.tsx`. Regla de gate: cada commit de dominio de F2 actualiza SUS tests en el mismo commit.
 - **F1.8 Baseline de capturas (gate de F2):** al cierre de F1, capturas Playwright 375/768/1280 de las pantallas clave de cada dominio de F2, guardadas en **`Spec/qa/i18n-baseline/`** (versionada en git, nombre `<dominio>-<pantalla>-<viewport>.png`, **comprimidas a viewport real — no retina 2x**). **F2.1 no arranca sin baseline.** El directorio es **artefacto temporal del arco i18n**: al cierre de F4.3 se decide explícitamente si se conserva o se borra (P9).
 
-**Done F1:** selector cambia idioma en runtime sin reload · preferencia persiste (Firestore + cross-restart) · Settings 100% por catálogo en ambos idiomas · `tsc` falla con key inválida (verificado) · setup de tests i18n operativo · baseline F1.8 committeada · lint+build+tests (262) verdes · resto de la app intacta en es.
+**Done F1:** selector cambia idioma en runtime sin reload · preferencia persiste (Firestore + cross-restart) · Settings 100% por catálogo en ambos idiomas · `tsc` falla con key inválida (verificado) · setup de tests i18n operativo · baseline F1.8 committeada · lint+build+tests verdes (270/270 al cierre) · resto de la app intacta en es. **✅ CUMPLIDO 2026-06-11** (9/9 incl. `npm outdated` informativo; smoke Tauri verificado por Sebastián).
+
+**Hallazgos de implementación F1 (la realidad sobre el plan, registrados al cierre):**
+
+1. i18next 26 renombró `initImmediate` → **`initAsync: false`** (mismo init síncrono).
+2. El install de i18next desincronizó react/react-dom (19.2.7 vs 19.2.5 — React exige igualdad exacta) → alineados; tercera instancia del gotcha `deps-build`.
+3. `instrument` genera un `src/i18n.ts` template propio + import en `main.tsx` — descartarlo si ya existe el singleton (el template 1.62.0 ya usa imports estáticos).
+4. Tipos: el mecanismo real es **`npx i18next-cli types`** (comando aparte) → genera `src/types/i18next.d.ts` + `src/types/resources.d.ts`, ambos committeados.
+5. Recall del `instrument` confirmado ~80-90%: 4 false negatives (ternarios de estado, badges en JSX condicional) cazados en revisión manual — la revisión NO es opcional.
+6. Anti-patrón `labelKey` dinámico confirmado en la práctica: keys SIEMPRE literales dentro del componente (extract no ve strings dinámicos y los tipos rechazan `t(string)`).
 
 ### F2 — Extracción instrumentada por dominios
 
@@ -62,6 +71,8 @@ Transversales en el dominio que toque: 15 plurales → `count` + `_one`/`_other`
 **Protocolo por corrida de `instrument`** (el CLI escribe por fuera de los hooks del entorno): (1) `git branch --show-current` ≠ main ANTES de correr (PreToolUse no cubre Bash); (2) dev server apagado (evita tormenta HMR); (3) tras aplicar: `npx prettier --write` + `npx eslint --fix` sobre los archivos tocados (excepción acotada al "no correr manualmente" de CLAUDE.md — PostToolUse no ve escrituras del CLI).
 
 **Gate por dominio:** dry-run revisado → aplicar → smoke manual de las pantallas del dominio (protocolo step 5) comparando contra baseline F1.8 → tests del dominio actualizados en el mismo commit → suite+lint+build verdes → commit.
+
+**Excepciones APROBADAS a la invariante "es idéntico al baseline" (GO 2026-06-11):** los strings en INGLÉS pre-existentes en la UI es que el discovery identificó pasan a es vía catálogo en su dominio correspondiente — el diff contra baseline en ESOS puntos es esperado y deseable. **Lista cerrada:** (a) Sidebar "Settings" / "Sign out" (F2.1); (b) MobileHeader "Settings" (F2.1); (c) labels del slash menu en inglés con descriptions en español — "Heading 1", "Bullet List", etc. (F2.5). Cualquier otra diferencia visual sigue siendo NO-GO. Si aparece más inglés salpicado durante F2, se agrega a esta lista CON aviso explícito a Sebastián, nunca silenciosamente.
 
 **Done F2:** script `scripts/check-hardcoded-es.mjs` committeado (regex acentos + palabras frecuentes, excludes = D5/D9 + comentarios, allowlist versionada) con **salida vacía** · 15 plurales usan `count` · cero `'es'` hardcodeado en `Intl.*` · smoke por dominio sin diferencias vs baseline (capturas adjuntas al cierre de cada dominio) · suite verde.
 
