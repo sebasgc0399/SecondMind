@@ -1,4 +1,5 @@
 import { Monitor, Moon, Sun } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import useTheme from '@/hooks/useTheme';
 import { systemPrefersDark, type Theme } from '@/lib/theme';
 
@@ -8,12 +9,6 @@ interface Option {
   Icon: typeof Sun;
   preview: 'light' | 'dark' | 'auto';
 }
-
-const OPTIONS: readonly Option[] = [
-  { value: 'light', label: 'Claro', Icon: Sun, preview: 'light' },
-  { value: 'auto', label: 'Automático', Icon: Monitor, preview: 'auto' },
-  { value: 'dark', label: 'Oscuro', Icon: Moon, preview: 'dark' },
-] as const;
 
 function Preview({ variant }: { variant: 'light' | 'dark' | 'auto' }) {
   if (variant === 'auto') {
@@ -62,8 +57,27 @@ function Preview({ variant }: { variant: 'light' | 'dark' | 'auto' }) {
 }
 
 export default function ThemeSelector() {
+  const { t } = useTranslation();
   const { theme, setTheme, resolvedTheme } = useTheme();
-  const autoResolvedLabel = systemPrefersDark() ? 'oscuro' : 'claro';
+
+  // OPTIONS adentro del componente con t() y keys LITERALES: el switch de
+  // idioma re-renderiza (i18next.t a module-scope se evalúa una sola vez) y
+  // el extract del CLI ve cada key (un labelKey dinámico sería invisible
+  // para el escaneo y los tipos generados rechazan t(string)). F58 F1.5.
+  const OPTIONS: readonly Option[] = [
+    { value: 'light', label: t('settings.theme.light', 'Claro'), Icon: Sun, preview: 'light' },
+    {
+      value: 'auto',
+      label: t('settings.theme.auto', 'Automático'),
+      Icon: Monitor,
+      preview: 'auto',
+    },
+    { value: 'dark', label: t('settings.theme.dark', 'Oscuro'), Icon: Moon, preview: 'dark' },
+  ] as const;
+
+  const autoResolvedLabel = systemPrefersDark()
+    ? t('settings.theme.resolved.dark', 'oscuro')
+    : t('settings.theme.resolved.light', 'claro');
 
   return (
     <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
@@ -92,7 +106,7 @@ export default function ThemeSelector() {
               )}
               {isActive && value !== 'auto' && resolvedTheme && (
                 <span className="ml-auto text-[10px] uppercase tracking-wide text-primary">
-                  activo
+                  {t('common.activeBadge', 'activo')}
                 </span>
               )}
             </div>

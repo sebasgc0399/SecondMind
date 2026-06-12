@@ -3,7 +3,31 @@
     "activeBadge": "activo"
   },
   "settings": {
+    "apiKeys": {
+      "configured": "Configurada",
+      "description": "Configurá tu propia API key para habilitar la clasificación del inbox y el auto-tagging con IA. Se guarda cifrada y solo la usan tus Cloud Functions.",
+      "getKeyLink": "Obtené tu API key en console.anthropic.com",
+      "help": "Habilita la clasificación del inbox y el auto-tagging de notas con IA.",
+      "maskedKey": "sk-ant-…{{last4}}",
+      "provider": "Anthropic (Claude)",
+      "remove": "Borrar",
+      "save": "Guardar",
+      "title": "Proveedores de IA",
+      "validating": "Validando…"
+    },
+    "appearance": {
+      "description": "Elegí el modo de color. Automático sigue la preferencia del sistema.",
+      "title": "Apariencia"
+    },
+    "appInfo": {
+      "checkUpdates": "Buscar actualizaciones",
+      "description": "Versión actual y actualizaciones.",
+      "productName": "SecondMind Desktop",
+      "title": "Información de la app",
+      "version": "Versión {{version}}"
+    },
     "language": {
+      "description": "Elegí el idioma de la interfaz. Los textos generados por la IA siguen esta preferencia.",
       "en": {
         "description": "Interface in English.",
         "label": "English"
@@ -11,7 +35,51 @@
       "es": {
         "description": "La interfaz en español.",
         "label": "Español"
+      },
+      "title": "Idioma"
+    },
+    "sidebar": {
+      "description": "Elegí si el menú lateral aparece o se oculta para maximizar espacio. Aplica solo a pantallas grandes.",
+      "hidden": {
+        "description": "Maximiza espacio. Usá Cmd/Ctrl+B o Cmd/Ctrl+K para navegar.",
+        "label": "Oculto"
+      },
+      "title": "Visibilidad del menú",
+      "visible": {
+        "description": "El menú lateral aparece en pantallas grandes.",
+        "label": "Visible"
       }
+    },
+    "subtitle": "Configuración de cuenta y preferencias.",
+    "theme": {
+      "auto": "Automático",
+      "dark": "Oscuro",
+      "light": "Claro",
+      "resolved": {
+        "dark": "oscuro",
+        "light": "claro"
+      }
+    },
+    "title": "Ajustes",
+    "trash": {
+      "days15": {
+        "description": "Equilibrio entre tiempo y espacio.",
+        "label": "15 días"
+      },
+      "days30": {
+        "description": "Mantiene las notas el mayor tiempo posible.",
+        "label": "30 días"
+      },
+      "days7": {
+        "description": "Limpieza semanal automática.",
+        "label": "7 días"
+      },
+      "description": "Tiempo en la papelera antes de eliminar definitivamente. La limpieza ocurre una vez al día.",
+      "never": {
+        "description": "Las notas eliminadas no se borran nunca solas.",
+        "label": "Nunca"
+      },
+      "title": "Papelera de notas"
     }
   }
 }

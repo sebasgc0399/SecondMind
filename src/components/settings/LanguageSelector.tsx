@@ -5,21 +5,11 @@ import usePreferences from '@/hooks/usePreferences';
 import type { Locale } from '@/lib/i18n';
 import { setPreferences } from '@/lib/preferences';
 
-// Labels y descriptions son ENDÓNIMOS (cada idioma se muestra en sí mismo,
-// idéntica literal en ambos catálogos): quien no entiende el idioma actual
-// tiene que poder encontrar el suyo. Solo el badge "activo" se traduce.
-const OPTIONS: readonly { value: Locale; labelKey: string; descriptionKey: string }[] = [
-  {
-    value: 'es',
-    labelKey: 'settings.language.es.label',
-    descriptionKey: 'settings.language.es.description',
-  },
-  {
-    value: 'en',
-    labelKey: 'settings.language.en.label',
-    descriptionKey: 'settings.language.en.description',
-  },
-] as const;
+interface Option {
+  value: Locale;
+  label: string;
+  description: string;
+}
 
 export default function LanguageSelector() {
   const { t, i18n } = useTranslation();
@@ -28,6 +18,23 @@ export default function LanguageSelector() {
   // Antes del primer write eager (locale aún null en el doc) el selector ya
   // marca el idioma detectado, que es el que i18n está usando.
   const current: Locale = preferences.locale ?? (i18n.language as Locale);
+
+  // Keys LITERALES dentro del componente (visibles para extract + tipadas).
+  // Labels y descriptions son ENDÓNIMOS (cada idioma se muestra en sí mismo,
+  // idéntica literal en ambos catálogos): quien no entiende el idioma actual
+  // tiene que poder encontrar el suyo. Solo el badge "activo" se traduce.
+  const OPTIONS: readonly Option[] = [
+    {
+      value: 'es',
+      label: t('settings.language.es.label', 'Español'),
+      description: t('settings.language.es.description', 'La interfaz en español.'),
+    },
+    {
+      value: 'en',
+      label: t('settings.language.en.label', 'English'),
+      description: t('settings.language.en.description', 'Interface in English.'),
+    },
+  ] as const;
 
   function handleSelect(value: Locale) {
     if (!user || value === current) return;
@@ -38,7 +45,7 @@ export default function LanguageSelector() {
 
   return (
     <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-      {OPTIONS.map(({ value, labelKey, descriptionKey }) => {
+      {OPTIONS.map(({ value, label, description }) => {
         const isActive = current === value;
         return (
           <button
@@ -54,14 +61,14 @@ export default function LanguageSelector() {
           >
             <div className="flex items-center gap-2">
               <Languages className="h-4 w-4 text-muted-foreground" aria-hidden />
-              <span className="text-sm font-medium text-foreground">{t(labelKey)}</span>
+              <span className="text-sm font-medium text-foreground">{label}</span>
               {isActive && (
                 <span className="ml-auto text-[10px] uppercase tracking-wide text-primary">
-                  {t('common.activeBadge')}
+                  {t('common.activeBadge', 'activo')}
                 </span>
               )}
             </div>
-            <p className="text-xs text-muted-foreground">{t(descriptionKey)}</p>
+            <p className="text-xs text-muted-foreground">{description}</p>
           </button>
         );
       })}
