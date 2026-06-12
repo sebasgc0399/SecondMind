@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import usePendingSyncForEntity, {
   type PendingSyncEntityType,
 } from '@/hooks/usePendingSyncForEntity';
@@ -15,9 +16,12 @@ interface PendingSyncDotProps {
 // null si nada pending. Color amber para pending normal, destructive para
 // hasError. Paridad cromática con <PendingSyncIndicator /> (paleta global).
 export default function PendingSyncDot({ entityType, id, className }: PendingSyncDotProps) {
+  const { t } = useTranslation();
   const { isPending, hasError } = usePendingSyncForEntity(entityType, id);
   if (!isPending) return null;
-  const label = hasError ? 'Cambios sin guardar' : 'Cambios sin sincronizar';
+  const label = hasError
+    ? t('sync.changesUnsaved', 'Cambios sin guardar')
+    : t('sync.changesPending', 'Cambios sin sincronizar');
   return (
     <span
       className={cn(

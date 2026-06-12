@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Popover } from '@base-ui/react/popover';
 import { CloudUpload, RefreshCw, Trash2 } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { allQueues, createsQueueBindings, retryAllErrors } from '@/lib/saveQueue';
 import usePendingSyncCount from '@/hooks/usePendingSyncCount';
 import useExpandThenCollapse from '@/hooks/useExpandThenCollapse';
@@ -49,6 +50,7 @@ export default function PendingSyncIndicator({
 }
 
 function IndicatorBody({ compact, side }: { compact: boolean; side: PopoverSide }) {
+  const { t } = useTranslation();
   const { total, errorCount, byEntity } = usePendingSyncCount();
   const isError = errorCount > 0;
   const [discardOpen, setDiscardOpen] = useState(false);
@@ -63,8 +65,8 @@ function IndicatorBody({ compact, side }: { compact: boolean; side: PopoverSide 
   const expanded = compact ? false : rawExpanded;
 
   const label = isError
-    ? `${errorCount} sin guardar`
-    : `${total} pendiente${total !== 1 ? 's' : ''}`;
+    ? t('sync.unsaved', '{{count}} sin guardar', { count: errorCount })
+    : t('sync.pending', { count: total });
 
   const chipColors = (() => {
     switch (severity) {
@@ -115,7 +117,7 @@ function IndicatorBody({ compact, side }: { compact: boolean; side: PopoverSide 
     <>
       <Popover.Root>
         <Popover.Trigger
-          aria-label={`${label}: abrir detalle`}
+          aria-label={t('sync.openDetail', '{{label}}: abrir detalle', { label })}
           title={compact ? label : undefined}
           className={cn(
             'relative inline-flex h-11 min-w-11 items-center justify-center overflow-hidden rounded-md outline-none',
@@ -151,7 +153,7 @@ function IndicatorBody({ compact, side }: { compact: boolean; side: PopoverSide 
           <Popover.Positioner side={side} sideOffset={8} align="end" className="z-50">
             <Popover.Popup className="w-64 rounded-lg border border-border bg-popover p-3 text-sm text-popover-foreground shadow-xl outline-none transition-[opacity,transform,scale] duration-200 data-ending-style:scale-95 data-ending-style:opacity-0 data-starting-style:scale-95 data-starting-style:opacity-0">
               <Popover.Title className="text-xs font-semibold text-foreground">
-                Cambios pendientes de sincronizar
+                {t('sync.popoverTitle', 'Cambios pendientes de sincronizar')}
               </Popover.Title>
               {byEntity.length > 0 ? (
                 <ul className="mt-2 space-y-1 text-xs text-muted-foreground">
@@ -162,14 +164,16 @@ function IndicatorBody({ compact, side }: { compact: boolean; side: PopoverSide 
                       </span>
                       {e.hasError && (
                         <span className="text-[10px] font-semibold uppercase text-destructive">
-                          error
+                          {t('sync.errorBadge', 'error')}
                         </span>
                       )}
                     </li>
                   ))}
                 </ul>
               ) : (
-                <p className="mt-2 text-xs text-muted-foreground">Sin cambios pendientes.</p>
+                <p className="mt-2 text-xs text-muted-foreground">
+                  {t('sync.empty', 'Sin cambios pendientes.')}
+                </p>
               )}
               {byEntity.length > 0 && (
                 <div className="mt-3 flex gap-2">
@@ -179,14 +183,14 @@ function IndicatorBody({ compact, side }: { compact: boolean; side: PopoverSide 
                     disabled={retryDisabled}
                     className="inline-flex flex-1 items-center justify-center gap-1 rounded-md bg-primary px-2 py-1.5 text-xs font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-40"
                   >
-                    <RefreshCw className="h-3 w-3" /> Reintentar
+                    <RefreshCw className="h-3 w-3" /> {t('common.retry', 'Reintentar')}
                   </button>
                   <button
                     type="button"
                     onClick={handleDiscardClick}
                     className="inline-flex flex-1 items-center justify-center gap-1 rounded-md border border-border px-2 py-1.5 text-xs font-medium text-foreground transition-colors hover:bg-accent"
                   >
-                    <Trash2 className="h-3 w-3" /> Descartar
+                    <Trash2 className="h-3 w-3" /> {t('sync.discard', 'Descartar')}
                   </button>
                 </div>
               )}

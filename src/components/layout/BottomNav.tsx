@@ -1,5 +1,7 @@
+import { useMemo } from 'react';
 import { NavLink } from 'react-router';
 import { LayoutDashboard, FileText, CheckSquare, Inbox } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { cn } from '@/lib/utils';
 import { usePendingInboxCount } from '@/hooks/useInbox';
 import type { LucideIcon } from 'lucide-react';
@@ -12,28 +14,35 @@ interface BottomNavItem {
   withBadge?: boolean;
 }
 
-const items: BottomNavItem[] = [
-  { label: 'Dashboard', icon: LayoutDashboard, to: '/', end: true },
-  { label: 'Notas', icon: FileText, to: '/notes' },
-  { label: 'Tareas', icon: CheckSquare, to: '/tasks' },
-  { label: 'Inbox', icon: Inbox, to: '/inbox', withBadge: true },
-];
-
 const baseClass =
   'relative flex h-full flex-1 flex-col items-center justify-center gap-0.5 text-[10px] font-medium transition-colors';
 
 export default function BottomNav() {
+  const { t } = useTranslation();
   const pendingInboxCount = usePendingInboxCount();
+
+  // Subset propio de navItems (4 destinos mobile) — labels comparten keys
+  // nav.items.* con useNavSections; dentro del componente porque t() debe
+  // re-evaluarse al cambiar de idioma.
+  const items = useMemo<BottomNavItem[]>(
+    () => [
+      { label: t('nav.items.dashboard', 'Dashboard'), icon: LayoutDashboard, to: '/', end: true },
+      { label: t('nav.items.notes', 'Notas'), icon: FileText, to: '/notes' },
+      { label: t('nav.items.tasks', 'Tareas'), icon: CheckSquare, to: '/tasks' },
+      { label: t('nav.items.inbox', 'Inbox'), icon: Inbox, to: '/inbox', withBadge: true },
+    ],
+    [t],
+  );
 
   return (
     <nav
       className="fixed inset-x-0 bottom-0 z-40 flex border-t border-border bg-background"
       style={{ paddingBottom: 'var(--sai-bottom)', height: 'calc(64px + var(--sai-bottom))' }}
-      aria-label="Navegación principal"
+      aria-label={t('nav.ariaMain', 'Navegación principal')}
     >
       {items.map((item) => (
         <NavLink
-          key={item.label}
+          key={item.to}
           to={item.to}
           end={item.end}
           className={({ isActive }) =>

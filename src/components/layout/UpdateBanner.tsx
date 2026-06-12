@@ -1,4 +1,5 @@
 import { Loader2, RefreshCw } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 import useFlushThenUpdate from '@/hooks/useFlushThenUpdate';
 import useMountedTransition from '@/hooks/useMountedTransition';
@@ -7,10 +8,6 @@ import { isTauri } from '@/lib/tauri';
 import { cn } from '@/lib/utils';
 
 const ANIMATION_DURATION_MS = 200;
-
-const formatPending = (n: number) =>
-  `${n} cambio${n !== 1 ? 's' : ''} pendiente${n !== 1 ? 's' : ''}`;
-const formatUnsynced = (n: number) => `${n} cambio${n !== 1 ? 's' : ''} sin sincronizar`;
 
 // Outer gate (sin hooks): el flujo de update SW es web-only. En native
 // (Tauri/Capacitor) la app no registra SW — montar la cadena de hooks de
@@ -24,6 +21,7 @@ export default function UpdateBanner() {
 }
 
 function WebUpdateBanner() {
+  const { t } = useTranslation();
   const {
     needRefresh,
     status,
@@ -51,7 +49,9 @@ function WebUpdateBanner() {
         <>
           <Loader2 className="h-4 w-4 shrink-0 animate-spin" />
           <p className="flex-1 text-sm">
-            {status === 'flushing' ? 'Sincronizando antes de actualizar…' : 'Actualizando…'}
+            {status === 'flushing'
+              ? t('updateBanner.flushing', 'Sincronizando antes de actualizar…')
+              : t('updateBanner.updating', 'Actualizando…')}
           </p>
         </>
       )}
@@ -59,16 +59,18 @@ function WebUpdateBanner() {
       {status === 'partial-failure' && (
         <>
           <RefreshCw className="h-4 w-4 shrink-0" />
-          <p className="flex-1 text-sm">{formatUnsynced(pendingErrorCount)}.</p>
+          <p className="flex-1 text-sm">
+            {t('updateBanner.unsynced', { count: pendingErrorCount })}
+          </p>
           <div className="flex shrink-0 items-center gap-1.5">
             <Button size="sm" variant="secondary" onClick={() => void startFlushAndUpdate()}>
-              Reintentar
+              {t('common.retry', 'Reintentar')}
             </Button>
             <Button size="sm" variant="ghost" onClick={() => void forceUpdateIgnoringFailures()}>
-              Actualizar igual
+              {t('updateBanner.forceUpdate', 'Actualizar igual')}
             </Button>
             <Button size="sm" variant="ghost" onClick={cancel}>
-              Cancelar
+              {t('common.cancel', 'Cancelar')}
             </Button>
           </div>
         </>
@@ -78,11 +80,12 @@ function WebUpdateBanner() {
         <>
           <RefreshCw className="h-4 w-4 shrink-0" />
           <p className="flex-1 text-sm">
-            Hay una nueva versión disponible
-            {pendingTotal > 0 && ` (${formatPending(pendingTotal)})`}.
+            {pendingTotal > 0
+              ? t('updateBanner.newVersionPending', { count: pendingTotal })
+              : t('updateBanner.newVersion', 'Hay una nueva versión disponible.')}
           </p>
           <Button size="sm" variant="secondary" onClick={() => void startFlushAndUpdate()}>
-            Actualizar ahora
+            {t('updateBanner.updateNow', 'Actualizar ahora')}
           </Button>
         </>
       )}

@@ -1,6 +1,58 @@
 {
+  "capture": {
+    "fabLabel": "Captura rápida"
+  },
+  "commandPalette": {
+    "actions": "Acciones",
+    "closeSplit": "Cerrar panel derecho",
+    "groups": {
+      "notes": "Notas",
+      "projects": "Proyectos",
+      "tasks": "Tareas"
+    },
+    "hideSidebar": "Ocultar sidebar",
+    "noResults": "Sin resultados para “{{query}}”",
+    "open": "Abrir buscador",
+    "openSplit": "Abrir nota lado a lado",
+    "placeholder": "Buscar notas, tareas, proyectos...",
+    "recent": "Recientes",
+    "showSidebar": "Mostrar sidebar",
+    "title": "Buscar",
+    "trigger": "Buscar…"
+  },
   "common": {
-    "activeBadge": "activo"
+    "activeBadge": "activo",
+    "avatar": "Avatar",
+    "cancel": "Cancelar",
+    "close": "Cerrar",
+    "retry": "Reintentar"
+  },
+  "installPrompt": {
+    "install": "Instalar",
+    "message": "Instalar SecondMind para acceso directo desde tu dispositivo."
+  },
+  "nav": {
+    "ariaMain": "Navegación principal",
+    "closeMenu": "Cerrar menú",
+    "expandMenu": "Expandir menú",
+    "items": {
+      "dashboard": "Dashboard",
+      "graph": "Grafo",
+      "habits": "Hábitos",
+      "inbox": "Inbox",
+      "notes": "Notas",
+      "objectives": "Objetivos",
+      "projects": "Proyectos",
+      "settings": "Ajustes",
+      "tasks": "Tareas"
+    },
+    "openMenu": "Abrir menú",
+    "sections": {
+      "execution": "Ejecución",
+      "knowledge": "Conocimiento"
+    },
+    "showMenu": "Mostrar menú",
+    "signOut": "Cerrar sesión"
   },
   "settings": {
     "apiKeys": {
@@ -81,5 +133,39 @@
       },
       "title": "Papelera de notas"
     }
+  },
+  "sync": {
+    "changesPending": "Cambios sin sincronizar",
+    "changesUnsaved": "Cambios sin guardar",
+    "discard": "Descartar",
+    "discardDialog": {
+      "confirm": "Descartar todo",
+      "description": "Estos cambios se perderán y no se podrán recuperar.",
+      "title": "¿Descartar cambios pendientes?"
+    },
+    "empty": "Sin cambios pendientes.",
+    "errorBadge": "error",
+    "openDetail": "{{label}}: abrir detalle",
+    "pending_one": "{{count}} pendiente",
+    "pending_many": "{{count}} pendientes",
+    "pending_other": "{{count}} pendientes",
+    "popoverTitle": "Cambios pendientes de sincronizar",
+    "unsaved": "{{count}} sin guardar",
+    "unsaved_one": "{{count}} sin guardar",
+    "unsaved_many": "{{count}} sin guardar",
+    "unsaved_other": "{{count}} sin guardar"
+  },
+  "updateBanner": {
+    "flushing": "Sincronizando antes de actualizar…",
+    "forceUpdate": "Actualizar igual",
+    "newVersion": "Hay una nueva versión disponible.",
+    "newVersionPending_one": "Hay una nueva versión disponible ({{count}} cambio pendiente).",
+    "newVersionPending_many": "Hay una nueva versión disponible ({{count}} cambios pendientes).",
+    "newVersionPending_other": "Hay una nueva versión disponible ({{count}} cambios pendientes).",
+    "unsynced_one": "{{count}} cambio sin sincronizar.",
+    "unsynced_many": "{{count}} cambios sin sincronizar.",
+    "unsynced_other": "{{count}} cambios sin sincronizar.",
+    "updateNow": "Actualizar ahora",
+    "updating": "Actualizando…"
   }
 }

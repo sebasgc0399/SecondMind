@@ -1,6 +1,58 @@
 {
+  "capture": {
+    "fabLabel": ""
+  },
+  "commandPalette": {
+    "actions": "",
+    "closeSplit": "",
+    "groups": {
+      "notes": "",
+      "projects": "",
+      "tasks": ""
+    },
+    "hideSidebar": "",
+    "noResults": "",
+    "open": "",
+    "openSplit": "",
+    "placeholder": "",
+    "recent": "",
+    "showSidebar": "",
+    "title": "",
+    "trigger": ""
+  },
   "common": {
-    "activeBadge": "active"
+    "activeBadge": "active",
+    "avatar": "",
+    "cancel": "",
+    "close": "",
+    "retry": ""
+  },
+  "installPrompt": {
+    "install": "",
+    "message": ""
+  },
+  "nav": {
+    "ariaMain": "",
+    "closeMenu": "",
+    "expandMenu": "",
+    "items": {
+      "dashboard": "",
+      "graph": "",
+      "habits": "",
+      "inbox": "",
+      "notes": "",
+      "objectives": "",
+      "projects": "",
+      "settings": "",
+      "tasks": ""
+    },
+    "openMenu": "",
+    "sections": {
+      "execution": "",
+      "knowledge": ""
+    },
+    "showMenu": "",
+    "signOut": ""
   },
   "settings": {
     "apiKeys": {
@@ -81,5 +133,35 @@
       },
       "title": "Notes trash"
     }
+  },
+  "sync": {
+    "changesPending": "",
+    "changesUnsaved": "",
+    "discard": "",
+    "discardDialog": {
+      "confirm": "",
+      "description": "",
+      "title": ""
+    },
+    "empty": "",
+    "errorBadge": "",
+    "openDetail": "",
+    "pending_one": "",
+    "pending_other": "",
+    "popoverTitle": "",
+    "unsaved": "",
+    "unsaved_one": "",
+    "unsaved_other": ""
+  },
+  "updateBanner": {
+    "flushing": "",
+    "forceUpdate": "",
+    "newVersion": "",
+    "newVersionPending_one": "",
+    "newVersionPending_other": "",
+    "unsynced_one": "",
+    "unsynced_other": "",
+    "updateNow": "",
+    "updating": ""
   }
 }
