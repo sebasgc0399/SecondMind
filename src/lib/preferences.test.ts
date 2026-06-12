@@ -72,6 +72,7 @@ describe('parsePrefs', () => {
       splitPaneLayout: { left: 50, right: 50 },
       onboardingWelcomeSeen: false,
       onboardingChecklistDismissed: false,
+      locale: null,
     });
   });
 
@@ -193,6 +194,7 @@ describe('parsePrefs schema versioning (F36.F8)', () => {
       splitPaneLayout: { left: 50, right: 50 },
       onboardingWelcomeSeen: false,
       onboardingChecklistDismissed: false,
+      locale: null,
     });
   });
 
@@ -217,7 +219,28 @@ describe('parsePrefs schema versioning (F36.F8)', () => {
       splitPaneLayout: { left: 50, right: 50 },
       onboardingWelcomeSeen: false,
       onboardingChecklistDismissed: false,
+      locale: null,
     });
+  });
+});
+
+// F58: locale — campo aditivo (sin bump, mismo criterio que splitPaneLayout/F49).
+// null = "nunca elegido" → useLocaleSync detecta y persiste eager.
+describe('parsePrefs locale (F58)', () => {
+  it('locale no persistido → null (nunca elegido, aplica detección)', () => {
+    expect(parsePrefs({}).locale).toBeNull();
+  });
+
+  it("locale 'es' / 'en' válidos → se exponen tal cual", () => {
+    expect(parsePrefs({ locale: 'es' }).locale).toBe('es');
+    expect(parsePrefs({ locale: 'en' }).locale).toBe('en');
+  });
+
+  it('locale inválido (otro idioma, número, boolean, objeto) → null defensivo', () => {
+    expect(parsePrefs({ locale: 'fr' }).locale).toBeNull();
+    expect(parsePrefs({ locale: 1 }).locale).toBeNull();
+    expect(parsePrefs({ locale: true }).locale).toBeNull();
+    expect(parsePrefs({ locale: { lang: 'es' } }).locale).toBeNull();
   });
 });
 

@@ -90,6 +90,9 @@ export function parsePrefs(data: Record<string, unknown> | undefined): UserPrefe
     // splitPaneLayout). Ausente → false = default correcto (no ver onboarding).
     onboardingWelcomeSeen: data?.onboardingWelcomeSeen === true,
     onboardingChecklistDismissed: data?.onboardingChecklistDismissed === true,
+    // F58: campo aditivo, sin bump. Ausente/inválido → null = "nunca elegido"
+    // (useLocaleSync detecta y persiste eager).
+    locale: data?.locale === 'es' || data?.locale === 'en' ? data.locale : null,
   };
 }
 

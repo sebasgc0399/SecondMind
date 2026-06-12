@@ -28,6 +28,12 @@ export interface UserPreferences {
   // Flag one-time (F49): el usuario descartó explícitamente el checklist de
   // Primeros pasos del dashboard. Campo aditivo — NO bumpear schema.
   onboardingChecklistDismissed: boolean;
+  // Idioma de la UI (F58). null = nunca elegido → aplica detección por
+  // navigator.language y se persiste eager (F3.1 lo lee server-side para el
+  // idioma del output de AI). Campo aditivo F58 — NO bumpear
+  // PREFERENCES_SCHEMA_VERSION (desvío 1 del plan F1; gotcha precisado en
+  // Spec/gotchas/tinybase-firestore.md § Schema versioning).
+  locale: 'es' | 'en' | null;
 }
 
 export const DEFAULT_PREFERENCES: UserPreferences = {
@@ -38,4 +44,5 @@ export const DEFAULT_PREFERENCES: UserPreferences = {
   splitPaneLayout: { left: 50, right: 50 },
   onboardingWelcomeSeen: false,
   onboardingChecklistDismissed: false,
+  locale: null,
 };
