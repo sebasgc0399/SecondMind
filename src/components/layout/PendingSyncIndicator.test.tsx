@@ -2,6 +2,7 @@
 import { act, render } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { PendingSyncSummary } from '@/hooks/usePendingSyncCount';
+import { initTestI18n, tEs } from '@/test/i18n';
 import PendingSyncIndicator from './PendingSyncIndicator';
 
 let mockSummary: PendingSyncSummary = {
@@ -19,8 +20,18 @@ function setSummary(partial: Partial<PendingSyncSummary>) {
   mockSummary = { ...mockSummary, ...partial };
 }
 
+// Asserts contra catálogo (estrategia tEs, F1.7). Las keys plurales se
+// resuelven acá con el sufijo explícito + replace del placeholder — el
+// componente interpola vía i18next, el test contra el JSON importado.
+function tEsCount(path: string, count: number): string {
+  return tEs(path).replace('{{count}}', String(count));
+}
+
 describe('PendingSyncIndicator', () => {
-  beforeEach(() => {
+  beforeEach(async () => {
+    // initTestI18n ANTES de fake timers: changeLanguage es async y no debe
+    // quedar atrapado en timers mockeados.
+    await initTestI18n();
     vi.useFakeTimers();
     setSummary({ total: 0, errorCount: 0, byEntity: [], hasAny: false });
   });
@@ -42,13 +53,14 @@ describe('PendingSyncIndicator', () => {
       hasAny: true,
     });
     const { container } = render(<PendingSyncIndicator />);
-    const trigger = container.querySelector('button[aria-label*="3 pendientes"]');
+    const pendingLabel = tEsCount('sync.pending_other', 3);
+    const trigger = container.querySelector(`button[aria-label*="${pendingLabel}"]`);
     expect(trigger).not.toBeNull();
     expect(trigger?.className).toContain('max-w-[220px]');
     expect(trigger?.className).toContain('bg-amber-500/15');
 
     const label = trigger?.querySelector('span:not([aria-hidden])');
-    expect(label?.textContent).toBe('3 pendientes');
+    expect(label?.textContent).toBe(pendingLabel);
 
     const dot = trigger?.querySelector('span[aria-hidden]');
     expect(dot?.className).toContain('bg-amber-500');
@@ -65,7 +77,9 @@ describe('PendingSyncIndicator', () => {
     act(() => {
       vi.advanceTimersByTime(3000);
     });
-    const trigger = container.querySelector('button[aria-label*="pendiente"]');
+    const trigger = container.querySelector(
+      `button[aria-label*="${tEsCount('sync.pending_one', 1)}"]`,
+    );
     expect(trigger?.className).toContain('max-w-11');
 
     const label = trigger?.querySelector('span:not([aria-hidden])');
@@ -83,7 +97,9 @@ describe('PendingSyncIndicator', () => {
       hasAny: true,
     });
     const { container } = render(<PendingSyncIndicator />);
-    const trigger = container.querySelector('button[aria-label*="sin guardar"]');
+    const trigger = container.querySelector(
+      `button[aria-label*="${tEsCount('sync.unsaved_one', 1)}"]`,
+    );
     expect(trigger).not.toBeNull();
     expect(trigger?.className).toContain('bg-destructive/15');
 
@@ -103,6 +119,10 @@ describe('PendingSyncIndicator', () => {
     });
     const { container } = render(<PendingSyncIndicator />);
     const trigger = container.querySelector('button');
-    expect(trigger?.getAttribute('aria-label')).toBe('2 sin guardar: abrir detalle');
+    const expectedAria = tEs('sync.openDetail').replace(
+      '{{label}}',
+      tEsCount('sync.unsaved_other', 2),
+    );
+    expect(trigger?.getAttribute('aria-label')).toBe(expectedAria);
   });
 });

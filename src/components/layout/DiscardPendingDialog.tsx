@@ -1,6 +1,7 @@
 import { useEffect, useMemo } from 'react';
 import { Dialog } from '@base-ui/react/dialog';
 import { Trash2 } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import {
   getDiscardableEntries,
   type DiscardableEntityType,
@@ -27,6 +28,7 @@ export default function DiscardPendingDialog({
   onOpenChange,
   onConfirm,
 }: DiscardPendingDialogProps) {
+  const { t } = useTranslation();
   // Snapshot one-shot al abrir. NO reactivo a cambios mid-open: si el usuario
   // descartó algo en otro lado mientras el dialog estaba abierto, el guard
   // de "lista vacía → auto-cierre" abajo lo cubre.
@@ -63,10 +65,13 @@ export default function DiscardPendingDialog({
         <Dialog.Backdrop className="fixed inset-0 z-40 bg-black/40 backdrop-blur-sm transition-opacity duration-200 data-ending-style:opacity-0 data-starting-style:opacity-0" />
         <Dialog.Popup className="fixed left-1/2 top-1/2 z-50 w-[min(92vw,28rem)] -translate-x-1/2 -translate-y-1/2 rounded-lg border border-border bg-popover p-5 text-popover-foreground shadow-xl outline-none transition-[opacity,transform,scale] duration-200 data-ending-style:scale-95 data-ending-style:opacity-0 data-starting-style:scale-95 data-starting-style:opacity-0">
           <Dialog.Title className="text-base font-semibold text-foreground">
-            ¿Descartar cambios pendientes?
+            {t('sync.discardDialog.title', '¿Descartar cambios pendientes?')}
           </Dialog.Title>
           <Dialog.Description className="mt-1 text-sm text-muted-foreground">
-            Estos cambios se perderán y no se podrán recuperar.
+            {t(
+              'sync.discardDialog.description',
+              'Estos cambios se perderán y no se podrán recuperar.',
+            )}
           </Dialog.Description>
           <div className="mt-4 max-h-72 overflow-y-auto rounded-md border border-border bg-card">
             {grouped.map((g) => (
@@ -90,7 +95,7 @@ export default function DiscardPendingDialog({
               onClick={() => onOpenChange(false)}
               className="inline-flex items-center justify-center rounded-md border border-border px-3 py-2 text-sm font-medium text-foreground transition-colors hover:bg-accent"
             >
-              Cancelar
+              {t('common.cancel', 'Cancelar')}
             </button>
             <button
               type="button"
@@ -98,7 +103,7 @@ export default function DiscardPendingDialog({
               className="inline-flex items-center justify-center gap-1.5 rounded-md bg-destructive/10 px-3 py-2 text-sm font-medium text-destructive transition-colors hover:bg-destructive/20 dark:bg-destructive/20 dark:hover:bg-destructive/30"
             >
               <Trash2 className="h-3.5 w-3.5" />
-              Descartar todo
+              {t('sync.discardDialog.confirm', 'Descartar todo')}
             </button>
           </div>
         </Dialog.Popup>

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { useLocation, useNavigate, useSearchParams } from 'react-router';
+import { useTranslation } from 'react-i18next';
 import { Dialog } from '@base-ui/react';
 import {
   CheckSquare,
@@ -69,34 +70,13 @@ function isInNoteDetailPage(pathname: string): boolean {
   return true;
 }
 
-// --- Quick actions (static, shown when query is empty) ---
+// --- Quick actions (shown when query is empty) ---
+// F58: el array vive dentro del useMemo de quickActions (no a module-scope)
+// porque los labels salen del catálogo y deben re-evaluarse al cambiar idioma.
 
 type QuickAction =
   | { id: string; label: string; icon: typeof FileText; kind: 'navigate'; url: string }
   | { id: string; label: string; icon: typeof FileText; kind: 'handler'; handler: () => void };
-
-const QUICK_ACTIONS: QuickAction[] = [
-  { id: 'action-dashboard', kind: 'navigate', label: 'Dashboard', icon: LayoutDashboard, url: '/' },
-  { id: 'action-inbox', kind: 'navigate', label: 'Inbox', icon: Inbox, url: '/inbox' },
-  { id: 'action-notes', kind: 'navigate', label: 'Notas', icon: FileText, url: '/notes' },
-  { id: 'action-tasks', kind: 'navigate', label: 'Tareas', icon: CheckSquare, url: '/tasks' },
-  {
-    id: 'action-projects',
-    kind: 'navigate',
-    label: 'Proyectos',
-    icon: FolderKanban,
-    url: '/projects',
-  },
-  {
-    id: 'action-objectives',
-    kind: 'navigate',
-    label: 'Objetivos',
-    icon: Target,
-    url: '/objectives',
-  },
-  { id: 'action-habits', kind: 'navigate', label: 'Hábitos', icon: Repeat, url: '/habits' },
-  { id: 'action-settings', kind: 'navigate', label: 'Settings', icon: Settings, url: '/settings' },
-];
 
 // --- Palette item type (unified for keyboard nav) ---
 
@@ -123,6 +103,7 @@ interface CommandPaletteContentProps {
 }
 
 function CommandPaletteContent({ onClose }: CommandPaletteContentProps) {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const location = useLocation();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -147,14 +128,72 @@ function CommandPaletteContent({ onClose }: CommandPaletteContentProps) {
   // Handler para "abrir" delega al SplitPaneLayout via CustomEvent
   // (mismo patrón que TopBar y el botón del header del NoteEditor).
   const quickActions = useMemo<QuickAction[]>(() => {
-    if (breakpoint !== 'desktop' || !user) return QUICK_ACTIONS;
+    const baseActions: QuickAction[] = [
+      {
+        id: 'action-dashboard',
+        kind: 'navigate',
+        label: t('nav.items.dashboard', 'Dashboard'),
+        icon: LayoutDashboard,
+        url: '/',
+      },
+      {
+        id: 'action-inbox',
+        kind: 'navigate',
+        label: t('nav.items.inbox', 'Inbox'),
+        icon: Inbox,
+        url: '/inbox',
+      },
+      {
+        id: 'action-notes',
+        kind: 'navigate',
+        label: t('nav.items.notes', 'Notas'),
+        icon: FileText,
+        url: '/notes',
+      },
+      {
+        id: 'action-tasks',
+        kind: 'navigate',
+        label: t('nav.items.tasks', 'Tareas'),
+        icon: CheckSquare,
+        url: '/tasks',
+      },
+      {
+        id: 'action-projects',
+        kind: 'navigate',
+        label: t('nav.items.projects', 'Proyectos'),
+        icon: FolderKanban,
+        url: '/projects',
+      },
+      {
+        id: 'action-objectives',
+        kind: 'navigate',
+        label: t('nav.items.objectives', 'Objetivos'),
+        icon: Target,
+        url: '/objectives',
+      },
+      {
+        id: 'action-habits',
+        kind: 'navigate',
+        label: t('nav.items.habits', 'Hábitos'),
+        icon: Repeat,
+        url: '/habits',
+      },
+      {
+        id: 'action-settings',
+        kind: 'navigate',
+        label: t('nav.items.settings', 'Ajustes'),
+        icon: Settings,
+        url: '/settings',
+      },
+    ];
+    if (breakpoint !== 'desktop' || !user) return baseActions;
     const uid = user.uid;
     const sidebarHidden = preferences.sidebarHidden;
     const sidebarToggle: QuickAction = sidebarHidden
       ? {
           id: 'action-show-sidebar',
           kind: 'handler',
-          label: 'Mostrar sidebar',
+          label: t('commandPalette.showSidebar', 'Mostrar sidebar'),
           icon: PanelLeftOpen,
           handler: () => {
             void setPreferences(uid, { sidebarHidden: false });
@@ -163,7 +202,7 @@ function CommandPaletteContent({ onClose }: CommandPaletteContentProps) {
       : {
           id: 'action-hide-sidebar',
           kind: 'handler',
-          label: 'Ocultar sidebar',
+          label: t('commandPalette.hideSidebar', 'Ocultar sidebar'),
           icon: PanelLeftClose,
           handler: () => {
             void setPreferences(uid, { sidebarHidden: true });
@@ -171,7 +210,7 @@ function CommandPaletteContent({ onClose }: CommandPaletteContentProps) {
         };
 
     if (!isInNoteDetailPage(location.pathname)) {
-      return [...QUICK_ACTIONS, sidebarToggle];
+      return [...baseActions, sidebarToggle];
     }
 
     const splitOpen = searchParams.has('split');
@@ -179,7 +218,7 @@ function CommandPaletteContent({ onClose }: CommandPaletteContentProps) {
       ? {
           id: 'action-close-split',
           kind: 'handler',
-          label: 'Cerrar panel derecho',
+          label: t('commandPalette.closeSplit', 'Cerrar panel derecho'),
           icon: PanelRightClose,
           handler: () => {
             const next = new URLSearchParams(searchParams);
@@ -190,15 +229,16 @@ function CommandPaletteContent({ onClose }: CommandPaletteContentProps) {
       : {
           id: 'action-open-split',
           kind: 'handler',
-          label: 'Abrir nota lado a lado',
+          label: t('commandPalette.openSplit', 'Abrir nota lado a lado'),
           icon: PanelRightOpen,
           handler: () => {
             window.dispatchEvent(new CustomEvent('secondmind:split-open-picker'));
           },
         };
 
-    return [...QUICK_ACTIONS, sidebarToggle, splitToggle];
+    return [...baseActions, sidebarToggle, splitToggle];
   }, [
+    t,
     breakpoint,
     user,
     preferences.sidebarHidden,
@@ -287,7 +327,7 @@ function CommandPaletteContent({ onClose }: CommandPaletteContentProps) {
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           onKeyDown={handleKeyDown}
-          placeholder="Buscar notas, tareas, proyectos..."
+          placeholder={t('commandPalette.placeholder', 'Buscar notas, tareas, proyectos...')}
           className="w-full bg-transparent text-sm text-foreground placeholder:text-muted-foreground focus:outline-none"
           autoFocus
         />
@@ -299,7 +339,7 @@ function CommandPaletteContent({ onClose }: CommandPaletteContentProps) {
           <>
             {grouped.notes.length > 0 && (
               <ResultSection
-                label="Notas"
+                label={t('commandPalette.groups.notes', 'Notas')}
                 results={grouped.notes}
                 startIndex={((flatIndex = 0), flatIndex)}
                 selectedIndex={selectedIndex}
@@ -313,7 +353,7 @@ function CommandPaletteContent({ onClose }: CommandPaletteContentProps) {
             })()}
             {grouped.tasks.length > 0 && (
               <ResultSection
-                label="Tareas"
+                label={t('commandPalette.groups.tasks', 'Tareas')}
                 results={grouped.tasks}
                 startIndex={flatIndex}
                 selectedIndex={selectedIndex}
@@ -327,7 +367,7 @@ function CommandPaletteContent({ onClose }: CommandPaletteContentProps) {
             })()}
             {grouped.projects.length > 0 && (
               <ResultSection
-                label="Proyectos"
+                label={t('commandPalette.groups.projects', 'Proyectos')}
                 results={grouped.projects}
                 startIndex={flatIndex}
                 selectedIndex={selectedIndex}
@@ -341,7 +381,7 @@ function CommandPaletteContent({ onClose }: CommandPaletteContentProps) {
         {/* No results */}
         {trimmed && items.length === 0 && (
           <p className="px-3 py-6 text-center text-sm text-muted-foreground">
-            Sin resultados para &ldquo;{trimmed}&rdquo;
+            {t('commandPalette.noResults', 'Sin resultados para “{{query}}”', { query: trimmed })}
           </p>
         )}
 
@@ -351,7 +391,7 @@ function CommandPaletteContent({ onClose }: CommandPaletteContentProps) {
             {results.length > 0 && (
               <div>
                 <p className="px-3 py-1 text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
-                  Recientes
+                  {t('commandPalette.recent', 'Recientes')}
                 </p>
                 {results.map((r, i) => {
                   const Icon = TYPE_ICONS[r.type] ?? FileText;
@@ -377,7 +417,7 @@ function CommandPaletteContent({ onClose }: CommandPaletteContentProps) {
 
             <div className="mt-1">
               <p className="px-3 py-1 text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
-                Acciones
+                {t('commandPalette.actions', 'Acciones')}
               </p>
               {quickActions.map((action, i) => {
                 const globalIndex = results.length + i;
@@ -461,6 +501,7 @@ function ResultSection({
 // --- Main export: Dialog ---
 
 export default function CommandPalette() {
+  const { t } = useTranslation();
   const { isOpen, close } = useCommandPalette();
 
   function handleOpenChange(nextOpen: boolean) {
@@ -472,7 +513,7 @@ export default function CommandPalette() {
       <Dialog.Portal>
         <Dialog.Backdrop className="fixed inset-0 z-40 bg-background-deep/80 backdrop-blur-sm transition-opacity duration-200 ease-[cubic-bezier(0.16,1,0.3,1)] data-ending-style:opacity-0 data-starting-style:opacity-0" />
         <Dialog.Popup className="fixed top-[15vh] left-1/2 z-50 w-[90vw] max-w-lg -translate-x-1/2 scale-100 rounded-xl border border-border-strong bg-card p-3 opacity-100 shadow-modal outline-none transition-all duration-200 ease-[cubic-bezier(0.16,1,0.3,1)] data-ending-style:scale-95 data-ending-style:opacity-0 data-starting-style:scale-95 data-starting-style:opacity-0">
-          <Dialog.Title className="sr-only">Buscar</Dialog.Title>
+          <Dialog.Title className="sr-only">{t('commandPalette.title', 'Buscar')}</Dialog.Title>
           {isOpen && <CommandPaletteContent onClose={close} />}
         </Dialog.Popup>
       </Dialog.Portal>

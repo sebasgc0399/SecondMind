@@ -1,5 +1,6 @@
 import { Dialog } from '@base-ui/react/dialog';
 import { X } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { SidebarContent } from './Sidebar';
 import type { User } from 'firebase/auth';
 
@@ -16,6 +17,7 @@ export default function NavigationDrawer({
   user,
   onSignOut,
 }: NavigationDrawerProps) {
+  const { t } = useTranslation();
   return (
     <Dialog.Root open={open} onOpenChange={onOpenChange}>
       <Dialog.Portal>
@@ -29,7 +31,7 @@ export default function NavigationDrawer({
           }}
         >
           <Dialog.Close
-            aria-label="Cerrar menú"
+            aria-label={t('nav.closeMenu', 'Cerrar menú')}
             className="absolute right-3 top-3 z-10 flex h-9 w-9 items-center justify-center rounded-md text-sidebar-foreground hover:bg-sidebar-accent"
             style={{ top: 'calc(var(--sai-top) + 12px)' }}
           >
