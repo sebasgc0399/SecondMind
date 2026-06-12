@@ -10,9 +10,11 @@ vi.mock('@/hooks/useAuth', () => ({
   default: () => ({ user: { uid: 'test-uid' } }),
 }));
 
-const usePreferencesMock = vi.fn();
+// Sin prefijo `use` — es un vi.fn(), no un hook; el prefijo dispara
+// react-hooks/rules-of-hooks dentro del mock factory.
+const preferencesMock = vi.fn();
 vi.mock('@/hooks/usePreferences', () => ({
-  default: () => usePreferencesMock() as unknown,
+  default: () => preferencesMock() as unknown,
 }));
 
 vi.mock('@/lib/preferences', async (importOriginal) => {
@@ -31,7 +33,7 @@ describe('LanguageSelector (F58 F1.4/F1.7)', () => {
   });
 
   it('renderiza los endónimos del catálogo y marca el locale persistido como activo', () => {
-    usePreferencesMock.mockReturnValue({
+    preferencesMock.mockReturnValue({
       preferences: { locale: 'es' },
       isLoaded: true,
     });
@@ -50,7 +52,7 @@ describe('LanguageSelector (F58 F1.4/F1.7)', () => {
   });
 
   it('click en el otro idioma → setPreferences(uid, { locale })', () => {
-    usePreferencesMock.mockReturnValue({
+    preferencesMock.mockReturnValue({
       preferences: { locale: 'es' },
       isLoaded: true,
     });
@@ -63,7 +65,7 @@ describe('LanguageSelector (F58 F1.4/F1.7)', () => {
   });
 
   it('click en el idioma ya activo → no escribe', () => {
-    usePreferencesMock.mockReturnValue({
+    preferencesMock.mockReturnValue({
       preferences: { locale: 'es' },
       isLoaded: true,
     });
@@ -76,7 +78,7 @@ describe('LanguageSelector (F58 F1.4/F1.7)', () => {
   });
 
   it('locale null (pre write-eager) → marca activo el idioma corriente de i18n', () => {
-    usePreferencesMock.mockReturnValue({
+    preferencesMock.mockReturnValue({
       preferences: { locale: null },
       isLoaded: true,
     });
