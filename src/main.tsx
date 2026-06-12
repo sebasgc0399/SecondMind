@@ -6,6 +6,10 @@ import router from '@/app/router';
 import TauriIntegration from '@/app/TauriIntegration';
 import { isCapacitor } from '@/lib/capacitor';
 import { initCapacitorAuth } from '@/lib/capacitorAuth';
+// i18n: side-effect import — init síncrono del singleton ANTES del render
+// (hint localStorage ?? navigator.language; el snapshot de preferences
+// converge después vía useLocaleSync). SPEC-58 F1.2.
+import '@/lib/i18n';
 import { hideSplash } from '@/lib/splash';
 import { requestPersistentStorage } from '@/lib/storagePersist';
 import { isTauri, showMainWindow } from '@/lib/tauri';
