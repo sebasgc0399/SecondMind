@@ -1,0 +1,85 @@
+{
+  "common": {
+    "activeBadge": "active"
+  },
+  "settings": {
+    "apiKeys": {
+      "configured": "Configured",
+      "description": "Set up your own API key to enable inbox classification and AI auto-tagging. It is stored encrypted and only your Cloud Functions use it.",
+      "getKeyLink": "Get your API key at console.anthropic.com",
+      "help": "Enables inbox classification and AI note auto-tagging.",
+      "maskedKey": "sk-ant-…{{last4}}",
+      "provider": "Anthropic (Claude)",
+      "remove": "Remove",
+      "save": "Save",
+      "title": "AI providers",
+      "validating": "Validating…"
+    },
+    "appearance": {
+      "description": "Choose the color mode. Auto follows your system preference.",
+      "title": "Appearance"
+    },
+    "appInfo": {
+      "checkUpdates": "Check for updates",
+      "description": "Current version and updates.",
+      "productName": "SecondMind Desktop",
+      "title": "App info",
+      "version": "Version {{version}}"
+    },
+    "language": {
+      "description": "Choose the interface language. AI-generated text follows this preference.",
+      "en": {
+        "description": "Interface in English.",
+        "label": "English"
+      },
+      "es": {
+        "description": "La interfaz en español.",
+        "label": "Español"
+      },
+      "title": "Language"
+    },
+    "sidebar": {
+      "description": "Choose whether the sidebar shows or hides to maximize space. Applies to large screens only.",
+      "hidden": {
+        "description": "Maximizes space. Use Cmd/Ctrl+B or Cmd/Ctrl+K to navigate.",
+        "label": "Hidden"
+      },
+      "title": "Sidebar visibility",
+      "visible": {
+        "description": "The sidebar shows on large screens.",
+        "label": "Visible"
+      }
+    },
+    "subtitle": "Account settings and preferences.",
+    "theme": {
+      "auto": "Auto",
+      "dark": "Dark",
+      "light": "Light",
+      "resolved": {
+        "dark": "dark",
+        "light": "light"
+      }
+    },
+    "title": "Settings",
+    "trash": {
+      "days15": {
+        "description": "A balance between time and space.",
+        "label": "15 days"
+      },
+      "days30": {
+        "description": "Keeps notes for as long as possible.",
+        "label": "30 days"
+      },
+      "days7": {
+        "description": "Automatic weekly cleanup.",
+        "label": "7 days"
+      },
+      "description": "Time in the trash before permanent deletion. Cleanup runs once a day.",
+      "never": {
+        "description": "Deleted notes are never removed automatically.",
+        "label": "Never"
+      },
+      "title": "Notes trash"
+    }
+  }
+}

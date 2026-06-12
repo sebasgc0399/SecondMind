@@ -1,4 +1,5 @@
 import { PanelLeft, PanelLeftClose } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import useAuth from '@/hooks/useAuth';
 import usePreferences from '@/hooks/usePreferences';
 import { setPreferences } from '@/lib/preferences';
@@ -10,25 +11,34 @@ interface Option {
   Icon: typeof PanelLeft;
 }
 
-const OPTIONS: readonly Option[] = [
-  {
-    value: false,
-    label: 'Visible',
-    description: 'El menú lateral aparece en pantallas grandes.',
-    Icon: PanelLeft,
-  },
-  {
-    value: true,
-    label: 'Oculto',
-    description: 'Maximiza espacio. Usá Cmd/Ctrl+B o Cmd/Ctrl+K para navegar.',
-    Icon: PanelLeftClose,
-  },
-] as const;
-
 export default function SidebarVisibilitySelector() {
+  const { t } = useTranslation();
   const { user } = useAuth();
   const { preferences } = usePreferences();
   const current = preferences.sidebarHidden;
+
+  // OPTIONS adentro del componente con keys literales (re-render en el switch
+  // + visibles para el extract). F58 F1.5.
+  const OPTIONS: readonly Option[] = [
+    {
+      value: false,
+      label: t('settings.sidebar.visible.label', 'Visible'),
+      description: t(
+        'settings.sidebar.visible.description',
+        'El menú lateral aparece en pantallas grandes.',
+      ),
+      Icon: PanelLeft,
+    },
+    {
+      value: true,
+      label: t('settings.sidebar.hidden.label', 'Oculto'),
+      description: t(
+        'settings.sidebar.hidden.description',
+        'Maximiza espacio. Usá Cmd/Ctrl+B o Cmd/Ctrl+K para navegar.',
+      ),
+      Icon: PanelLeftClose,
+    },
+  ] as const;
 
   function handleSelect(value: boolean) {
     if (!user || value === current) return;
@@ -56,7 +66,7 @@ export default function SidebarVisibilitySelector() {
               <span className="text-sm font-medium text-foreground">{label}</span>
               {isActive && (
                 <span className="ml-auto text-[10px] uppercase tracking-wide text-primary">
-                  activo
+                  {t('common.activeBadge', 'activo')}
                 </span>
               )}
             </div>

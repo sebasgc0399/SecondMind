@@ -20,6 +20,9 @@ export default defineConfig({
         name: 'SecondMind',
         short_name: 'SecondMind',
         description: 'Tu segundo cerebro digital',
+        // F58: coherencia con la description (el estándar W3C no soporta
+        // manifest multi-idioma — esto NO es i18n del manifest).
+        lang: 'es',
         start_url: '/',
         display: 'standalone',
         theme_color: '#878bf9',

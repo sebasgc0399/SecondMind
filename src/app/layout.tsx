@@ -15,6 +15,7 @@ import EmailVerificationBanner from '@/components/auth/EmailVerificationBanner';
 import WelcomeModal from '@/components/onboarding/WelcomeModal';
 import useAuth from '@/hooks/useAuth';
 import useHideSplashWhenReady from '@/hooks/useHideSplashWhenReady';
+import useLocaleSync from '@/hooks/useLocaleSync';
 import { useBreakpoint } from '@/hooks/useMediaQuery';
 import useMountedTransition from '@/hooks/useMountedTransition';
 import usePreferences from '@/hooks/usePreferences';
@@ -37,6 +38,9 @@ export default function Layout() {
   const { preferences } = usePreferences();
   useHideSplashWhenReady();
   useSidebarVisibilityShortcut();
+  // F58: converge i18n con preferences.locale (corre también durante el
+  // splash — los hooks ejecutan aunque el return temprano muestre AppBootSplash).
+  useLocaleSync();
 
   // Mantiene AppBootSplash en pantalla al menos 800ms aunque el bootstrap
   // termine antes (sesión persistida + stores rápidos). Sin esto, en cold

@@ -1,4 +1,5 @@
 import { Trash2 } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import useAuth from '@/hooks/useAuth';
 import usePreferences from '@/hooks/usePreferences';
 import { setPreferences } from '@/lib/preferences';
@@ -10,17 +11,43 @@ interface Option {
   description: string;
 }
 
-const OPTIONS: readonly Option[] = [
-  { value: 0, label: 'Nunca', description: 'Las notas eliminadas no se borran nunca solas.' },
-  { value: 7, label: '7 días', description: 'Limpieza semanal automática.' },
-  { value: 15, label: '15 días', description: 'Equilibrio entre tiempo y espacio.' },
-  { value: 30, label: '30 días', description: 'Mantiene las notas el mayor tiempo posible.' },
-] as const;
-
 export default function TrashAutoPurgeSelector() {
+  const { t } = useTranslation();
   const { user } = useAuth();
   const { preferences } = usePreferences();
   const current = preferences.trashAutoPurgeDays;
+
+  // OPTIONS adentro del componente con keys literales (re-render en el switch
+  // + visibles para el extract). Los "7/15/30 días" son labels de opción
+  // estáticos, NO plurales con count. F58 F1.5.
+  const OPTIONS: readonly Option[] = [
+    {
+      value: 0,
+      label: t('settings.trash.never.label', 'Nunca'),
+      description: t(
+        'settings.trash.never.description',
+        'Las notas eliminadas no se borran nunca solas.',
+      ),
+    },
+    {
+      value: 7,
+      label: t('settings.trash.days7.label', '7 días'),
+      description: t('settings.trash.days7.description', 'Limpieza semanal automática.'),
+    },
+    {
+      value: 15,
+      label: t('settings.trash.days15.label', '15 días'),
+      description: t('settings.trash.days15.description', 'Equilibrio entre tiempo y espacio.'),
+    },
+    {
+      value: 30,
+      label: t('settings.trash.days30.label', '30 días'),
+      description: t(
+        'settings.trash.days30.description',
+        'Mantiene las notas el mayor tiempo posible.',
+      ),
+    },
+  ] as const;
 
   function handleSelect(value: UserPreferences['trashAutoPurgeDays']) {
     if (!user || value === current) return;
@@ -48,7 +75,7 @@ export default function TrashAutoPurgeSelector() {
               <span className="text-sm font-medium text-foreground">{label}</span>
               {isActive && (
                 <span className="ml-auto text-[10px] uppercase tracking-wide text-primary">
-                  activo
+                  {t('common.activeBadge', 'activo')}
                 </span>
               )}
             </div>
