@@ -1,0 +1,18 @@
+# Gotchas — Dependencias y build (npm, lockfile, peers)
+
+## El lockfile puede contener peers insatisfechos silenciosos — npm install los detona
+
+`npm version` no re-resuelve peers, y cualquier `npm install` posterior re-resuelve TODO el árbol y los detona. Dos casos reales destapados en F58 (2026-06-11), ambos latentes durante semanas:
+
+1. **vite-plugin-pwa tras el bump a Vite 8**: pwa 1.2.0 declaraba peer `vite ^3–^7` con `vite@8.0.8` instalado → `npm ci` rechazaba el lockfile entero y cualquier `npm install` de CUALQUIER paquete moría con ERESOLVE. El CI de release no lo detectó porque el lockfile congelaba el estado y nadie corrió un install limpio. Fix: bump a pwa 1.3.0 (peer vite 8).
+2. **@tiptap/core tras F45**: `extension-code-block-lowlight@3.23.6` exigía `core: 3.23.6` EXACTO con core 3.22.3 instalado (funcionaba porque core/react eran consistentes entre sí). El primer install que re-resolvió subió core para satisfacer el peer → `@tiptap/react@3.22.3` quedó importando símbolos inexistentes → build roto.
+
+**Reglas operativas:**
+
+- Tras un bump de dependencia core (vite, react, firebase, tiptap): `npm install --dry-run` de prueba en rama para validar que el árbol resuelve limpio — el lockfile verde NO lo garantiza.
+- `--legacy-peer-deps` solo como paso transitorio documentado en el commit que lo necesita, NUNCA estado permanente (ni `.npmrc` ni receta en docs).
+- Un `npm ls <paquete>` con líneas `invalid` es la bomba visible: tratarla al verla, no convivir con ella.
+
+## TipTap solo converge en LATEST — nunca fijar versión intermedia
+
+Los paquetes `@tiptap/*` declaran sus dependencias internas con rangos `^` → al instalar las directas en una versión que no es la última, npm resuelve las ~24 extensiones transitivas (las de `starter-kit`) a la última disponible y el set queda partido (core en una versión, extensiones en otra, peers `invalid` en cascada). **El set solo converge naturalmente en LATEST**: bumps futuros de TipTap = set completo de las 10 directas a la última versión, nunca intermedia (fijar intermedia exige ~25 `overrides` exactos mantenidos a mano — deuda permanente). Verificado en F58: el intento de lockstep a 3.23.6 dejó 22 `invalid`; el lockstep a 3.26.1 (latest del día) dejó 0. Gate de cualquier bump de TipTap: build + suite + smoke del editor completo (wikilink `@`/autocompletar/navegar, slash menu, template, bubble toolbar, round-trip de serialización, backlinks).

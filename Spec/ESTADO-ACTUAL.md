@@ -391,6 +391,11 @@ Cada feature comprimida a 1 línea con pointer al SPEC archivado. Para detalles 
 - [CI: deps de `src/functions` y type-check con references (post-SPEC-55)](gotchas/tooling-local.md#ci-deps-de-srcfunctions-y-type-check-con-references-post-spec-55)
 - [Firebase MCP `firestore_query_collection` no acepta paths de subcolección con "/" (post-SPEC-56)](gotchas/tooling-local.md#firebase-mcp-firestore_query_collection-no-acepta-paths-de-subcolección-con--post-spec-56)
 
+### Dependencias y build — [`gotchas/deps-build.md`](gotchas/deps-build.md)
+
+- [El lockfile puede contener peers insatisfechos silenciosos — npm install los detona](gotchas/deps-build.md#el-lockfile-puede-contener-peers-insatisfechos-silenciosos--npm-install-los-detona)
+- [TipTap solo converge en LATEST — nunca fijar versión intermedia](gotchas/deps-build.md#tiptap-solo-converge-en-latest--nunca-fijar-versión-intermedia)
+
 ### Cloud Functions — Tool use con schema enforcement — [`gotchas/cloud-functions-schema.md`](gotchas/cloud-functions-schema.md)
 
 - [Anthropic enforce `enum` en JSON Schema, NO `minimum`/`maximum`](gotchas/cloud-functions-schema.md#anthropic-enforce-enum-en-json-schema-no-minimummaximum)

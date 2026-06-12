@@ -191,6 +191,8 @@ Además verificar manualmente:
 - GitHub Release creado: `https://github.com/sebasgc0399/SecondMind/releases/tag/v<X.Y.Z>` — debe tener los .msi, .nsis, y `latest.json`.
 - Firebase App Distribution: el user debería recibir notificación. Si no, revisar la consola de Firebase.
 
+> **⏳ Vigilancia one-time (remover al cumplirse):** primer deploy web que empaquete **workbox 7.4.1** (bump de vite-plugin-pwa 1.3.0 en `feat/i18n-f1`, 2026-06-11) → smoke del flujo de update en prod: `UpdateBanner` → aceptar → `SKIP_WAITING` → reload limpio con la versión nueva. No fue gate de la rama del bump — es verificación diferida a este primer release.
+
 ### Paso 10 — Cerrar
 
 Informar al user:
