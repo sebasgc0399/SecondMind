@@ -1,3 +1,5 @@
+import { useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import { HABITS, type HabitEntry, type HabitKey } from '@/types/habit';
 import { addDays } from '@/hooks/useHabits';
 import HabitRow from './HabitRow';
@@ -11,8 +13,6 @@ interface HabitGridProps {
   onToggle: (dateKey: string, habitKey: HabitKey) => void;
 }
 
-const WEEKDAY_FORMAT = new Intl.DateTimeFormat('es', { weekday: 'narrow' });
-
 export default function HabitGrid({
   weekStart,
   weekEntries,
@@ -21,6 +21,13 @@ export default function HabitGrid({
   todayMs,
   onToggle,
 }: HabitGridProps) {
+  const { t, i18n } = useTranslation();
+  // F58: formatter por idioma activo — a module-scope se evaluaría una sola
+  // vez al cargar el bundle y congelaría el locale del boot.
+  const weekdayFormat = useMemo(
+    () => new Intl.DateTimeFormat(i18n.language || 'es', { weekday: 'narrow' }),
+    [i18n.language],
+  );
   // Construimos los 7 headers desde weekStart
   const days = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
 
@@ -30,12 +37,12 @@ export default function HabitGrid({
         <thead>
           <tr className="border-b border-border">
             <th className="sticky left-0 z-10 bg-background py-2 pr-3 pl-2 text-left text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-              Hábito
+              {t('habits.gridHeader', 'Hábito')}
             </th>
             {days.map((d) => {
               const dKey = weekEntries.find((_, idx) => idx === days.indexOf(d))?.id ?? '';
               const isToday = dKey === todayKey;
-              const weekday = WEEKDAY_FORMAT.format(d).toUpperCase();
+              const weekday = weekdayFormat.format(d).toUpperCase();
               return (
                 <th
                   key={d.toISOString()}

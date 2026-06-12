@@ -1,5 +1,6 @@
 import { Link } from 'react-router';
 import { Brain } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import useReviewQueue from '@/hooks/useReviewQueue';
 import type { ReviewItem } from '@/hooks/useReviewQueue';
 import { formatRelative } from '@/lib/formatDate';
@@ -7,21 +8,31 @@ import { formatRelative } from '@/lib/formatDate';
 const MAX_VISIBLE = 5;
 
 export default function ReviewCard() {
+  const { t } = useTranslation();
   const { items, total, isLoading } = useReviewQueue();
   const visible = items.slice(0, MAX_VISIBLE);
+
+  // Plural real (toca/tocan) → formas _one/_many/_other del catálogo.
+  const headerCopy =
+    total === 0
+      ? t('dashboard.review.titleEmpty', 'Por revisar')
+      : t('dashboard.review.title', { count: total });
 
   return (
     <section className="rounded-lg border border-border bg-card p-5">
       <header className="mb-4 flex items-center gap-2">
         <Brain className="h-4 w-4 text-muted-foreground" />
-        <h2 className="text-base font-semibold text-foreground">{headerCopy(total)}</h2>
+        <h2 className="text-base font-semibold text-foreground">{headerCopy}</h2>
       </header>
 
       {isLoading && total === 0 ? (
         <CardSkeleton />
       ) : total === 0 ? (
         <p className="text-sm text-muted-foreground">
-          Nada que repasar hoy. Vuelve mañana o crea más notas para activar la revisión.
+          {t(
+            'dashboard.review.empty',
+            'Nada que repasar hoy. Vuelve mañana o crea más notas para activar la revisión.',
+          )}
         </p>
       ) : (
         <>
@@ -37,19 +48,13 @@ export default function ReviewCard() {
               to="/notes?filter=review"
               className="mt-3 block text-xs font-medium text-primary hover:underline"
             >
-              Ver todas las {total}
+              {t('dashboard.review.seeAll', 'Ver todas las {{total}}', { total })}
             </Link>
           )}
         </>
       )}
     </section>
   );
-}
-
-function headerCopy(total: number): string {
-  if (total === 0) return 'Por revisar';
-  if (total === 1) return 'Te toca 1 nota hoy.';
-  return `Te tocan ${total} notas hoy.`;
 }
 
 function ReviewRow({ item }: { item: ReviewItem }) {

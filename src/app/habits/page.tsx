@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { useTable } from 'tinybase/ui-react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import useHabits, { addDays, formatDateKey, getWeekStart } from '@/hooks/useHabits';
 import HabitGrid from '@/components/habits/HabitGrid';
 import { HABITS } from '@/types/habit';
@@ -10,6 +11,7 @@ function capitalize(s: string): string {
 }
 
 export default function HabitsPage() {
+  const { t, i18n } = useTranslation();
   const [weekStart, setWeekStart] = useState<Date>(() => getWeekStart(new Date()));
   const { weekEntries, isInitializing, toggleHabit } = useHabits(weekStart);
 
@@ -41,9 +43,12 @@ export default function HabitsPage() {
     };
   }, [habitsTable, todayKey]);
 
+  // F58: locale dinámico. capitalize es no-op en en (mes ya capitalizado).
   const monthYearLabel = useMemo(() => {
-    return capitalize(weekStart.toLocaleDateString('es', { month: 'long', year: 'numeric' }));
-  }, [weekStart]);
+    return capitalize(
+      weekStart.toLocaleDateString(i18n.language || 'es', { month: 'long', year: 'numeric' }),
+    );
+  }, [weekStart, i18n.language]);
 
   const goPrevWeek = () => setWeekStart((prev) => addDays(prev, -7));
   const goNextWeek = () => setWeekStart((prev) => addDays(prev, 7));
@@ -51,13 +56,15 @@ export default function HabitsPage() {
   return (
     <div className="mx-auto max-w-3xl">
       <header className="mb-6 flex flex-wrap items-center justify-between gap-4">
-        <h1 className="hidden text-2xl font-bold tracking-tight md:block">Hábitos</h1>
+        <h1 className="hidden text-2xl font-bold tracking-tight md:block">
+          {t('habits.title', 'Hábitos')}
+        </h1>
         <div className="flex items-center gap-2">
           <button
             type="button"
             onClick={goPrevWeek}
             className="rounded-md border border-border bg-card p-1.5 text-muted-foreground transition-colors hover:bg-accent/40 hover:text-foreground"
-            aria-label="Semana anterior"
+            aria-label={t('habits.prevWeek', 'Semana anterior')}
           >
             <ChevronLeft className="h-4 w-4" />
           </button>
@@ -68,7 +75,7 @@ export default function HabitsPage() {
             type="button"
             onClick={goNextWeek}
             className="rounded-md border border-border bg-card p-1.5 text-muted-foreground transition-colors hover:bg-accent/40 hover:text-foreground"
-            aria-label="Semana siguiente"
+            aria-label={t('habits.nextWeek', 'Semana siguiente')}
           >
             <ChevronRight className="h-4 w-4" />
           </button>
@@ -77,7 +84,7 @@ export default function HabitsPage() {
 
       <div className="mb-6">
         <div className="mb-2 flex items-center justify-between text-xs text-muted-foreground">
-          <span>Hoy</span>
+          <span>{t('habits.today', 'Hoy')}</span>
           <span>
             {todayStats.done}/{HABITS.length} ({todayStats.percent}%)
           </span>

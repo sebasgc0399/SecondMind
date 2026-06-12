@@ -29,6 +29,67 @@ export default interface Resources {
       close: 'Cerrar';
       retry: 'Reintentar';
     };
+    dashboard: {
+      greeting: {
+        afternoon: 'Buenas tardes, {{name}}';
+        fallbackName: 'hola';
+        morning: 'Buenos días, {{name}}';
+        night: 'Buenas noches, {{name}}';
+      };
+      habitsToday: {
+        progress: 'Progreso';
+        seeWeek: 'Ver semana →';
+        title: 'Hábitos de hoy';
+      };
+      hubs: {
+        connections: 'Hub: {{total}} conexiones';
+        empty: 'Linkea notas escribiendo @ — los hubs aparecerán acá.';
+        title: 'Hubs activos';
+      };
+      inbox: {
+        empty: 'Inbox limpio 🎉';
+        process: 'Procesar →';
+        requiresConnection: 'Requiere conexión a internet';
+        title: 'Inbox';
+      };
+      projects: {
+        empty: 'Sin proyectos activos';
+        noPendingTasks: 'Sin tareas pendientes';
+        pendingTasks_many: '{{count}} tareas pendientes';
+        pendingTasks_one: '{{count}} tarea pendiente';
+        pendingTasks_other: '{{count}} tareas pendientes';
+        seeAll: 'Ver todos →';
+        seeProjects: 'Ver proyectos →';
+        title: 'Proyectos activos';
+      };
+      recentNotes: {
+        createFirst: 'Crear primera nota →';
+        empty: 'No tenés notas todavía.';
+        seeAll: 'Ver todas →';
+        title: 'Notas recientes';
+      };
+      review: {
+        empty: 'Nada que repasar hoy. Vuelve mañana o crea más notas para activar la revisión.';
+        seeAll: 'Ver todas las {{total}}';
+        titleEmpty: 'Por revisar';
+        title_many: 'Te tocan {{count}} notas hoy.';
+        title_one: 'Te toca {{count}} nota hoy.';
+        title_other: 'Te tocan {{count}} notas hoy.';
+      };
+      tasks: {
+        completeAria: 'Completar {{name}}';
+        empty: 'Nada para hoy 🎉';
+        seeAll: 'Ver todas →';
+        title: 'Tareas de hoy';
+      };
+    };
+    habits: {
+      gridHeader: 'Hábito';
+      nextWeek: 'Semana siguiente';
+      prevWeek: 'Semana anterior';
+      title: 'Hábitos';
+      today: 'Hoy';
+    };
     installPrompt: {
       install: 'Instalar';
       message: 'Instalar SecondMind para acceso directo desde tu dispositivo.';
@@ -148,7 +209,7 @@ export default interface Resources {
       empty: 'Sin cambios pendientes.';
       errorBadge: 'error';
       openDetail: '{{label}}: abrir detalle';
-      pending_many: '';
+      pending_many: '{{count}} pendientes';
       pending_one: '{{count}} pendiente';
       pending_other: '{{count}} pendientes';
       popoverTitle: 'Cambios pendientes de sincronizar';
@@ -157,14 +218,17 @@ export default interface Resources {
       unsaved_one: '{{count}} sin guardar';
       unsaved_other: '{{count}} sin guardar';
     };
+    time: {
+      justNow: 'hace instantes';
+    };
     updateBanner: {
       flushing: 'Sincronizando antes de actualizar…';
       forceUpdate: 'Actualizar igual';
       newVersion: 'Hay una nueva versión disponible.';
-      newVersionPending_many: '';
+      newVersionPending_many: 'Hay una nueva versión disponible ({{count}} cambios pendientes).';
       newVersionPending_one: 'Hay una nueva versión disponible ({{count}} cambio pendiente).';
       newVersionPending_other: 'Hay una nueva versión disponible ({{count}} cambios pendientes).';
-      unsynced_many: '';
+      unsynced_many: '{{count}} cambios sin sincronizar.';
       unsynced_one: '{{count}} cambio sin sincronizar.';
       unsynced_other: '{{count}} cambios sin sincronizar.';
       updateNow: 'Actualizar ahora';

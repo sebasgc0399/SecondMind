@@ -27,6 +27,67 @@
     "close": "Cerrar",
     "retry": "Reintentar"
   },
+  "dashboard": {
+    "greeting": {
+      "afternoon": "Buenas tardes, {{name}}",
+      "fallbackName": "hola",
+      "morning": "Buenos días, {{name}}",
+      "night": "Buenas noches, {{name}}"
+    },
+    "habitsToday": {
+      "progress": "Progreso",
+      "seeWeek": "Ver semana →",
+      "title": "Hábitos de hoy"
+    },
+    "hubs": {
+      "connections": "Hub: {{total}} conexiones",
+      "empty": "Linkea notas escribiendo @ — los hubs aparecerán acá.",
+      "title": "Hubs activos"
+    },
+    "inbox": {
+      "empty": "Inbox limpio 🎉",
+      "process": "Procesar →",
+      "requiresConnection": "Requiere conexión a internet",
+      "title": "Inbox"
+    },
+    "projects": {
+      "empty": "Sin proyectos activos",
+      "noPendingTasks": "Sin tareas pendientes",
+      "pendingTasks_one": "{{count}} tarea pendiente",
+      "pendingTasks_many": "{{count}} tareas pendientes",
+      "pendingTasks_other": "{{count}} tareas pendientes",
+      "seeAll": "Ver todos →",
+      "seeProjects": "Ver proyectos →",
+      "title": "Proyectos activos"
+    },
+    "recentNotes": {
+      "createFirst": "Crear primera nota →",
+      "empty": "No tenés notas todavía.",
+      "seeAll": "Ver todas →",
+      "title": "Notas recientes"
+    },
+    "review": {
+      "empty": "Nada que repasar hoy. Vuelve mañana o crea más notas para activar la revisión.",
+      "seeAll": "Ver todas las {{total}}",
+      "title_one": "Te toca {{count}} nota hoy.",
+      "title_many": "Te tocan {{count}} notas hoy.",
+      "title_other": "Te tocan {{count}} notas hoy.",
+      "titleEmpty": "Por revisar"
+    },
+    "tasks": {
+      "completeAria": "Completar {{name}}",
+      "empty": "Nada para hoy 🎉",
+      "seeAll": "Ver todas →",
+      "title": "Tareas de hoy"
+    }
+  },
+  "habits": {
+    "gridHeader": "Hábito",
+    "nextWeek": "Semana siguiente",
+    "prevWeek": "Semana anterior",
+    "title": "Hábitos",
+    "today": "Hoy"
+  },
   "installPrompt": {
     "install": "Instalar",
     "message": "Instalar SecondMind para acceso directo desde tu dispositivo."
@@ -154,6 +215,9 @@
     "unsaved_one": "{{count}} sin guardar",
     "unsaved_many": "{{count}} sin guardar",
     "unsaved_other": "{{count}} sin guardar"
+  },
+  "time": {
+    "justNow": "hace instantes"
   },
   "updateBanner": {
     "flushing": "Sincronizando antes de actualizar…",

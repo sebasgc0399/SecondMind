@@ -1,5 +1,6 @@
 import { Link } from 'react-router';
 import { Inbox } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import useInbox from '@/hooks/useInbox';
 import useOnlineStatus from '@/hooks/useOnlineStatus';
 import { formatRelative } from '@/lib/formatDate';
@@ -8,6 +9,7 @@ import type { InboxItem } from '@/types/inbox';
 const PREVIEW_LIMIT = 3;
 
 export default function InboxCard() {
+  const { t } = useTranslation();
   const { items, isInitializing } = useInbox();
   const isOnline = useOnlineStatus();
   const preview = items.slice(0, PREVIEW_LIMIT);
@@ -17,7 +19,7 @@ export default function InboxCard() {
       <header className="mb-4 flex items-center justify-between">
         <h2 className="flex items-center gap-2 text-base font-semibold text-foreground">
           <Inbox className="h-4 w-4" aria-hidden />
-          Inbox
+          {t('dashboard.inbox.title', 'Inbox')}
         </h2>
         {items.length > 0 &&
           (isOnline ? (
@@ -25,14 +27,14 @@ export default function InboxCard() {
               to="/inbox/process"
               className="text-xs text-muted-foreground transition-colors hover:text-foreground"
             >
-              Procesar →
+              {t('dashboard.inbox.process', 'Procesar →')}
             </Link>
           ) : (
             <span
-              title="Requiere conexión a internet"
+              title={t('dashboard.inbox.requiresConnection', 'Requiere conexión a internet')}
               className="cursor-not-allowed text-xs text-muted-foreground/50"
             >
-              Procesar →
+              {t('dashboard.inbox.process', 'Procesar →')}
             </span>
           ))}
       </header>
@@ -40,7 +42,9 @@ export default function InboxCard() {
       {isInitializing && preview.length === 0 ? (
         <CardSkeleton rows={3} />
       ) : preview.length === 0 ? (
-        <p className="text-sm text-muted-foreground">Inbox limpio 🎉</p>
+        <p className="text-sm text-muted-foreground">
+          {t('dashboard.inbox.empty', 'Inbox limpio 🎉')}
+        </p>
       ) : (
         <ul className="flex flex-col gap-3">
           {preview.map((item) => (

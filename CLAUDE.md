@@ -105,6 +105,7 @@ Cada feature del proyecto sigue este ciclo. No improvisar: si algo no cuadra, aj
      - **(b) Revertir/limpiar TODO al terminar** y verificar la limpieza (server-side: `getDocFromServer` / Firebase MCP).
      - **(c) Notas QA: hard-delete, nunca soft-delete** — `onNoteDeleted` solo dispara con delete real del documento; el soft-delete deja embedding/links vivos por diseño (restore coherente) hasta que `autoPurgeTrash` venza el plazo. Hard-delete = Papelera → "Eliminar para siempre", en la propia app.
      - **(d) PROHIBIDO siempre:** borrados masivos, resets, operaciones irreversibles sobre datos reales, y tocar la configuración de la cuenta.
+     - **(e) Los smokes MANUALES también revierten sus escrituras al cerrar** (Tauri/Android/web a mano, incluidos los de Sebastián) — mismo estándar que el QA automatizado. Las verificaciones de limpieza valen solo hasta el ÚLTIMO acto de la sesión: un smoke manual posterior puede invalidarlas. Precedente: residuo `locale: 'en'` del smoke Tauri de F1 (SPEC-58), detectado y revertido en F2.1.
    - **El emulador** (harness de SPEC-55, [e2e/helpers/emulator.ts](e2e/helpers/emulator.ts)) **sigue siendo la vía preferida** cuando el caso no necesita la app completa con datos reales — menor riesgo, cero limpieza.
    - **SUNSET (al abrir la beta, v0.6.0):** este régimen expira. Desde entonces, **las escrituras automatizadas pasan a emulador exclusivamente** — sin excepción contra prod. No renegociar.
 
