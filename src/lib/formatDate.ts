@@ -1,14 +1,19 @@
 // Helpers compartidos de fecha. Usa Intl nativo — sin deps de date-fns.
-// Consumidores: NoteCard (F6), InboxItem (F8), useTasks/TasksPage (F3 fase 2).
+// Consumidores: NoteCard (F6), InboxItem (F8), useTasks/TasksPage (F3 fase 2),
+// cards del dashboard (ReviewCard/InboxCard/RecentNotesCard).
+import i18n from '@/lib/i18n';
 
+// F58 (transversal F2.2): locale dinámico — se lee POR LLAMADA, no a
+// module-scope; los componentes re-renderizan al cambiar idioma (useTranslation)
+// y re-invocan esta función, que toma el idioma vigente.
 export function formatRelative(ms: number): string {
   if (!ms) return '';
-  const rtf = new Intl.RelativeTimeFormat('es', { numeric: 'auto' });
+  const rtf = new Intl.RelativeTimeFormat(i18n.language || 'es', { numeric: 'auto' });
   const diff = Date.now() - ms;
   const min = Math.floor(diff / 60000);
   const hr = Math.floor(min / 60);
   const day = Math.floor(hr / 24);
-  if (min < 1) return 'hace instantes';
+  if (min < 1) return i18n.t('time.justNow', 'hace instantes');
   if (min < 60) return rtf.format(-min, 'minute');
   if (hr < 24) return rtf.format(-hr, 'hour');
   if (day < 7) return rtf.format(-day, 'day');

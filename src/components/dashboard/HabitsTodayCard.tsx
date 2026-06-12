@@ -1,10 +1,12 @@
 import { useMemo } from 'react';
 import { Link } from 'react-router';
 import { Repeat } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import useHabits, { formatDateKey, getWeekStart } from '@/hooks/useHabits';
 import { HABITS } from '@/types/habit';
 
 export default function HabitsTodayCard() {
+  const { t } = useTranslation();
   const weekStart = useMemo(() => getWeekStart(new Date()), []);
   const todayKey = useMemo(() => formatDateKey(new Date()), []);
   const { weekEntries, isInitializing, toggleHabit } = useHabits(weekStart);
@@ -19,19 +21,19 @@ export default function HabitsTodayCard() {
       <header className="mb-4 flex items-center justify-between">
         <h2 className="flex items-center gap-2 text-base font-semibold text-foreground">
           <Repeat className="h-4 w-4" aria-hidden />
-          Hábitos de hoy
+          {t('dashboard.habitsToday.title', 'Hábitos de hoy')}
         </h2>
         <Link
           to="/habits"
           className="text-xs text-muted-foreground transition-colors hover:text-foreground"
         >
-          Ver semana →
+          {t('dashboard.habitsToday.seeWeek', 'Ver semana →')}
         </Link>
       </header>
 
       <div className="mb-4">
         <div className="mb-2 flex items-center justify-between text-xs text-muted-foreground">
-          <span>Progreso</span>
+          <span>{t('dashboard.habitsToday.progress', 'Progreso')}</span>
           <span>
             {doneCount}/{HABITS.length} ({percent}%)
           </span>

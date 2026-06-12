@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import { Link } from 'react-router';
 import { CheckSquare } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import useTasks from '@/hooks/useTasks';
 import { isSameDay } from '@/lib/formatDate';
 import type { Priority } from '@/types/common';
@@ -23,6 +24,7 @@ const PRIORITY_LABEL: Record<Priority, string> = {
 };
 
 export default function TasksTodayCard() {
+  const { t } = useTranslation();
   const { tasks, isInitializing, completeTask } = useTasks();
 
   const todayTasks = useMemo<Task[]>(() => {
@@ -39,14 +41,14 @@ export default function TasksTodayCard() {
       <header className="mb-4 flex items-center justify-between">
         <h2 className="flex items-center gap-2 text-base font-semibold text-foreground">
           <CheckSquare className="h-4 w-4" aria-hidden />
-          Tareas de hoy
+          {t('dashboard.tasks.title', 'Tareas de hoy')}
         </h2>
         {todayTasks.length > 0 && (
           <Link
             to="/tasks"
             className="text-xs text-muted-foreground transition-colors hover:text-foreground"
           >
-            Ver todas →
+            {t('dashboard.tasks.seeAll', 'Ver todas →')}
           </Link>
         )}
       </header>
@@ -54,7 +56,9 @@ export default function TasksTodayCard() {
       {isInitializing && todayTasks.length === 0 ? (
         <CardSkeleton rows={3} />
       ) : todayTasks.length === 0 ? (
-        <p className="text-sm text-muted-foreground">Nada para hoy 🎉</p>
+        <p className="text-sm text-muted-foreground">
+          {t('dashboard.tasks.empty', 'Nada para hoy 🎉')}
+        </p>
       ) : (
         <ul className="flex flex-col gap-2">
           {todayTasks.map((task) => (
@@ -67,7 +71,9 @@ export default function TasksTodayCard() {
                 checked={false}
                 onChange={() => void completeTask(task.id)}
                 className="h-4 w-4 shrink-0 cursor-pointer accent-primary"
-                aria-label={`Completar ${task.name}`}
+                aria-label={t('dashboard.tasks.completeAria', 'Completar {{name}}', {
+                  name: task.name,
+                })}
               />
               <Link
                 to="/tasks"

@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import { Link } from 'react-router';
 import { FileText } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { useTable } from 'tinybase/ui-react';
 import { rowToOramaDoc, type NoteOramaDoc } from '@/lib/orama';
 import { formatRelative } from '@/lib/formatDate';
@@ -9,6 +10,7 @@ import { useStoreHydration } from '@/hooks/useStoreHydration';
 const RECENT_LIMIT = 5;
 
 export default function RecentNotesCard() {
+  const { t } = useTranslation();
   const table = useTable('notes');
   const { isHydrating } = useStoreHydration();
 
@@ -25,14 +27,14 @@ export default function RecentNotesCard() {
       <header className="mb-4 flex items-center justify-between">
         <h2 className="flex items-center gap-2 text-base font-semibold text-foreground">
           <FileText className="h-4 w-4" aria-hidden />
-          Notas recientes
+          {t('dashboard.recentNotes.title', 'Notas recientes')}
         </h2>
         {recent.length > 0 && (
           <Link
             to="/notes"
             className="text-xs text-muted-foreground transition-colors hover:text-foreground"
           >
-            Ver todas →
+            {t('dashboard.recentNotes.seeAll', 'Ver todas →')}
           </Link>
         )}
       </header>
@@ -71,14 +73,17 @@ function RecentNoteItem({ note }: { note: NoteOramaDoc }) {
 }
 
 function EmptyState() {
+  const { t } = useTranslation();
   return (
     <div className="flex flex-col items-start gap-2">
-      <p className="text-sm text-muted-foreground">No tenés notas todavía.</p>
+      <p className="text-sm text-muted-foreground">
+        {t('dashboard.recentNotes.empty', 'No tenés notas todavía.')}
+      </p>
       <Link
         to="/notes"
         className="text-xs font-medium text-primary transition-colors hover:text-primary/80"
       >
-        Crear primera nota →
+        {t('dashboard.recentNotes.createFirst', 'Crear primera nota →')}
       </Link>
     </div>
   );

@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import { Link } from 'react-router';
 import { FolderKanban } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { useTable } from 'tinybase/ui-react';
 import useProjects from '@/hooks/useProjects';
 import type { Project } from '@/types/project';
@@ -8,6 +9,7 @@ import type { Project } from '@/types/project';
 const PREVIEW_LIMIT = 5;
 
 export default function ProjectsActiveCard() {
+  const { t } = useTranslation();
   const { projects, isInitializing } = useProjects();
   const tasksTable = useTable('tasks', 'tasks');
 
@@ -33,14 +35,14 @@ export default function ProjectsActiveCard() {
       <header className="mb-4 flex items-center justify-between">
         <h2 className="flex items-center gap-2 text-base font-semibold text-foreground">
           <FolderKanban className="h-4 w-4" aria-hidden />
-          Proyectos activos
+          {t('dashboard.projects.title', 'Proyectos activos')}
         </h2>
         {activeProjects.length > 0 && (
           <Link
             to="/projects"
             className="text-xs text-muted-foreground transition-colors hover:text-foreground"
           >
-            Ver todos →
+            {t('dashboard.projects.seeAll', 'Ver todos →')}
           </Link>
         )}
       </header>
@@ -49,12 +51,14 @@ export default function ProjectsActiveCard() {
         <CardSkeleton rows={3} />
       ) : activeProjects.length === 0 ? (
         <div className="flex flex-col items-start gap-1">
-          <p className="text-sm text-muted-foreground">Sin proyectos activos</p>
+          <p className="text-sm text-muted-foreground">
+            {t('dashboard.projects.empty', 'Sin proyectos activos')}
+          </p>
           <Link
             to="/projects"
             className="text-xs font-medium text-primary transition-colors hover:text-primary/80"
           >
-            Ver proyectos →
+            {t('dashboard.projects.seeProjects', 'Ver proyectos →')}
           </Link>
         </div>
       ) : (
@@ -72,8 +76,8 @@ export default function ProjectsActiveCard() {
                   </span>
                   <span className="shrink-0 text-[11px] text-muted-foreground">
                     {count > 0
-                      ? `${count} ${count === 1 ? 'tarea pendiente' : 'tareas pendientes'}`
-                      : 'Sin tareas pendientes'}
+                      ? t('dashboard.projects.pendingTasks', { count })
+                      : t('dashboard.projects.noPendingTasks', 'Sin tareas pendientes')}
                   </span>
                 </Link>
               </li>

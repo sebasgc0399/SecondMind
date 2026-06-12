@@ -1,22 +1,26 @@
 import { Link } from 'react-router';
 import { Network } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import useKnowledgeHubs from '@/hooks/useKnowledgeHubs';
 import type { HubItem } from '@/hooks/useKnowledgeHubs';
 
 export default function HubsCard() {
+  const { t } = useTranslation();
   const { items, isInitializing } = useKnowledgeHubs();
 
   return (
     <section className="rounded-lg border border-border bg-card p-5">
       <header className="mb-4">
-        <h2 className="text-base font-semibold text-foreground">Hubs activos</h2>
+        <h2 className="text-base font-semibold text-foreground">
+          {t('dashboard.hubs.title', 'Hubs activos')}
+        </h2>
       </header>
 
       {isInitializing && items.length === 0 ? (
         <CardSkeleton />
       ) : items.length === 0 ? (
         <p className="text-sm text-muted-foreground">
-          Linkea notas escribiendo @ — los hubs aparecerán acá.
+          {t('dashboard.hubs.empty', 'Linkea notas escribiendo @ — los hubs aparecerán acá.')}
         </p>
       ) : (
         <ul className="flex flex-col gap-1">
@@ -32,6 +36,7 @@ export default function HubsCard() {
 }
 
 function HubRow({ item }: { item: HubItem }) {
+  const { t } = useTranslation();
   return (
     <Link
       to={`/notes/${item.noteId}`}
@@ -42,7 +47,8 @@ function HubRow({ item }: { item: HubItem }) {
         {item.title}
       </span>
       <span className="shrink-0 text-[11px] text-muted-foreground">
-        Hub: {item.linkCount} conexiones
+        {/* {{total}} a propósito (no count): el copy actual es plural fijo — count activaría pluralización i18next */}
+        {t('dashboard.hubs.connections', 'Hub: {{total}} conexiones', { total: item.linkCount })}
       </span>
     </Link>
   );

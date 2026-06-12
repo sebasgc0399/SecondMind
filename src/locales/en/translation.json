@@ -27,6 +27,65 @@
     "close": "",
     "retry": ""
   },
+  "dashboard": {
+    "greeting": {
+      "afternoon": "",
+      "fallbackName": "",
+      "morning": "",
+      "night": ""
+    },
+    "habitsToday": {
+      "progress": "",
+      "seeWeek": "",
+      "title": ""
+    },
+    "hubs": {
+      "connections": "",
+      "empty": "",
+      "title": ""
+    },
+    "inbox": {
+      "empty": "",
+      "process": "",
+      "requiresConnection": "",
+      "title": ""
+    },
+    "projects": {
+      "empty": "",
+      "noPendingTasks": "",
+      "pendingTasks_one": "",
+      "pendingTasks_other": "",
+      "seeAll": "",
+      "seeProjects": "",
+      "title": ""
+    },
+    "recentNotes": {
+      "createFirst": "",
+      "empty": "",
+      "seeAll": "",
+      "title": ""
+    },
+    "review": {
+      "empty": "",
+      "seeAll": "",
+      "title_one": "",
+      "title_other": "",
+      "titleEmpty": ""
+    },
+    "tasks": {
+      "completeAria": "",
+      "empty": "",
+      "seeAll": "",
+      "title": ""
+    }
+  },
+  "habits": {
+    "gridHeader": "",
+    "nextWeek": "",
+    "prevWeek": "",
+    "title": "",
+    "today": ""
+  },
   "installPrompt": {
     "install": "",
     "message": ""
@@ -152,6 +211,9 @@
     "unsaved": "",
     "unsaved_one": "",
     "unsaved_other": ""
+  },
+  "time": {
+    "justNow": ""
   },
   "updateBanner": {
     "flushing": "",
