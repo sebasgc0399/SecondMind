@@ -1,6 +1,18 @@
 {
   "capture": {
-    "fabLabel": ""
+    "fabLabel": "",
+    "hint": {
+      "cancel": "",
+      "close": "",
+      "newLine": "",
+      "save": ""
+    },
+    "placeholder": "",
+    "title": "",
+    "unauth": {
+      "message": "",
+      "open": ""
+    }
   },
   "commandPalette": {
     "actions": "",
@@ -28,6 +40,7 @@
     "create": "",
     "creating": "",
     "retry": "",
+    "save": "",
     "unlink": "",
     "untitled": ""
   },
@@ -89,6 +102,94 @@
     "prevWeek": "",
     "title": "",
     "today": ""
+  },
+  "inbox": {
+    "aiDisabled": "",
+    "batch": {
+      "acceptAll_one": "",
+      "acceptAll_other": "",
+      "accepted_one": "",
+      "accepted_other": "",
+      "failed_one": "",
+      "failed_other": "",
+      "processing": ""
+    },
+    "configure": "",
+    "empty": {
+      "hint": "",
+      "title": ""
+    },
+    "form": {
+      "area": "",
+      "createAndNext": "",
+      "priority": "",
+      "tags": "",
+      "tagsPlaceholder": "",
+      "title": "",
+      "type": ""
+    },
+    "highConfidence": "",
+    "item": {
+      "dismiss": "",
+      "processing": "",
+      "queued": "",
+      "toNote": ""
+    },
+    "pending_one": "",
+    "pending_other": "",
+    "process": "",
+    "processed": {
+      "generic": "",
+      "hint": "",
+      "note": "",
+      "project": "",
+      "task": "",
+      "trash": ""
+    },
+    "processView": {
+      "back": "",
+      "counter": "",
+      "done": {
+        "backToDashboard": "",
+        "captureHint": "",
+        "noItems": "",
+        "title": ""
+      },
+      "dotAria": "",
+      "exit": "",
+      "next": "",
+      "originalContent": "",
+      "title": ""
+    },
+    "requiresConnection": "",
+    "review": "",
+    "source": {
+      "email": "",
+      "quickCapture": "",
+      "shareIntent": "",
+      "voice": "",
+      "webClip": ""
+    },
+    "suggestion": {
+      "accept": "",
+      "edit": "",
+      "editTitle": "",
+      "title": ""
+    },
+    "summary": {
+      "discarded_one": "",
+      "discarded_other": "",
+      "done": "",
+      "doneItems_one": "",
+      "doneItems_other": "",
+      "notes_one": "",
+      "notes_other": "",
+      "projects_one": "",
+      "projects_other": "",
+      "tasks_one": "",
+      "tasks_other": ""
+    },
+    "title": ""
   },
   "installPrompt": {
     "install": "",

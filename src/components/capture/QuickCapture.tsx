@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Dialog } from '@base-ui/react/dialog';
 import { Check } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import useQuickCapture from '@/hooks/useQuickCapture';
 
 type Status = 'editing' | 'saved';
@@ -12,6 +13,7 @@ interface QuickCaptureContentProps {
 }
 
 function QuickCaptureContent({ initialContent, onSave, onClose }: QuickCaptureContentProps) {
+  const { t } = useTranslation();
   const [rawContent, setRawContent] = useState(initialContent);
   const [status, setStatus] = useState<Status>('editing');
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -60,7 +62,7 @@ function QuickCaptureContent({ initialContent, onSave, onClose }: QuickCaptureCo
         value={rawContent}
         onChange={(event) => setRawContent(event.target.value)}
         onKeyDown={handleKeyDown}
-        placeholder="Escribe una idea..."
+        placeholder={t('capture.placeholder', 'Escribe una idea...')}
         rows={4}
         className="min-h-30 w-full resize-none border-none bg-transparent text-base leading-relaxed text-foreground outline-none placeholder:text-muted-foreground"
       />
@@ -69,15 +71,15 @@ function QuickCaptureContent({ initialContent, onSave, onClose }: QuickCaptureCo
           <kbd className="rounded bg-muted px-1.5 py-0.5 font-mono text-[10px] text-foreground">
             Enter
           </kbd>{' '}
-          guardar ·{' '}
+          {t('capture.hint.save', 'guardar')} ·{' '}
           <kbd className="rounded bg-muted px-1.5 py-0.5 font-mono text-[10px] text-foreground">
             Shift+Enter
           </kbd>{' '}
-          línea nueva ·{' '}
+          {t('capture.hint.newLine', 'línea nueva')} ·{' '}
           <kbd className="rounded bg-muted px-1.5 py-0.5 font-mono text-[10px] text-foreground">
             Esc
           </kbd>{' '}
-          cancelar
+          {t('capture.hint.cancel', 'cancelar')}
         </span>
         <div className="ml-auto flex gap-2 md:hidden">
           <button
@@ -85,7 +87,7 @@ function QuickCaptureContent({ initialContent, onSave, onClose }: QuickCaptureCo
             onClick={onClose}
             className="rounded-md border border-border bg-card px-4 py-2 text-sm font-medium text-muted-foreground hover:bg-accent/40 hover:text-foreground"
           >
-            Cancelar
+            {t('common.cancel', 'Cancelar')}
           </button>
           <button
             type="button"
@@ -93,7 +95,7 @@ function QuickCaptureContent({ initialContent, onSave, onClose }: QuickCaptureCo
             disabled={!rawContent.trim()}
             className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50"
           >
-            Guardar
+            {t('common.save', 'Guardar')}
           </button>
         </div>
       </div>
@@ -102,6 +104,7 @@ function QuickCaptureContent({ initialContent, onSave, onClose }: QuickCaptureCo
 }
 
 export default function QuickCapture() {
+  const { t } = useTranslation();
   const { isOpen, initialContent, close, save } = useQuickCapture();
 
   function handleOpenChange(nextOpen: boolean) {
@@ -113,7 +116,7 @@ export default function QuickCapture() {
       <Dialog.Portal>
         <Dialog.Backdrop className="fixed inset-0 z-40 bg-background-deep/80 backdrop-blur-sm transition-opacity duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] data-ending-style:opacity-0 data-starting-style:opacity-0" />
         <Dialog.Popup className="fixed top-1/2 left-1/2 z-50 w-[90vw] max-w-xl -translate-x-1/2 -translate-y-1/2 scale-100 rounded-2xl border border-border-strong bg-card p-6 opacity-100 shadow-modal outline-none transition-all duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] data-ending-style:scale-95 data-ending-style:opacity-0 data-starting-style:scale-95 data-starting-style:opacity-0">
-          <Dialog.Title className="sr-only">Captura rápida</Dialog.Title>
+          <Dialog.Title className="sr-only">{t('capture.title', 'Captura rápida')}</Dialog.Title>
           {isOpen && (
             <QuickCaptureContent initialContent={initialContent} onSave={save} onClose={close} />
           )}

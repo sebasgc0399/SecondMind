@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Check, Trash2 } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { AREAS, type AreaKey } from '@/types/area';
 import type { Priority } from '@/types/common';
 import type { InboxAiResult, InboxItem, InboxResultType } from '@/types/inbox';
@@ -15,13 +16,9 @@ interface InboxProcessorFormProps {
   onDismiss: () => void;
 }
 
-const PROCESSED_LABELS: Record<ProcessedKind, string> = {
-  note: 'Ya procesado como nota',
-  task: 'Ya procesado como tarea',
-  project: 'Ya procesado como proyecto',
-  trash: 'Descartado',
-};
-
+// PRIORITY_LABELS (valores del select de prioridad) queda en es: enum de
+// entidad compartido cross-dominio → diferido a F2.7 (entityLabels central),
+// igual que en TaskCard/AiSuggestionCard. Idem las <option> de tipo.
 const PRIORITY_LABELS: Record<Priority, string> = {
   low: 'Baja',
   medium: 'Media',
@@ -50,25 +47,36 @@ export default function InboxProcessorForm({
   onCreate,
   onDismiss,
 }: InboxProcessorFormProps) {
+  const { t } = useTranslation();
   const [draft, setDraft] = useState<InboxAiResult>(() => buildInitialDraft(item));
   const [tagsRaw, setTagsRaw] = useState(() => buildInitialDraft(item).suggestedTags.join(', '));
 
   if (isProcessed) {
+    const processedLabels: Record<ProcessedKind, string> = {
+      note: t('inbox.processed.note', 'Ya procesado como nota'),
+      task: t('inbox.processed.task', 'Ya procesado como tarea'),
+      project: t('inbox.processed.project', 'Ya procesado como proyecto'),
+      trash: t('inbox.processed.trash', 'Descartado'),
+    };
     return (
       <div className="rounded-lg border border-border bg-muted/20 p-6 text-center">
         <p className="flex items-center justify-center gap-1.5 text-lg font-medium text-foreground">
           <Check className="h-5 w-5" aria-hidden />
-          {processedAs ? PROCESSED_LABELS[processedAs] : 'Ya procesado'}
+          {processedAs
+            ? processedLabels[processedAs]
+            : t('inbox.processed.generic', 'Ya procesado')}
         </p>
         <p className="mt-1 text-xs text-muted-foreground">
-          Usá → Siguiente para volver a un item pendiente.
+          {t('inbox.processed.hint', 'Usá → Siguiente para volver a un item pendiente.')}
         </p>
       </div>
     );
   }
 
   const canSubmit = draft.suggestedTitle.trim().length > 0;
-  const submitLabel = isLast ? 'Crear' : 'Crear y siguiente';
+  const submitLabel = isLast
+    ? t('common.create', 'Crear')
+    : t('inbox.form.createAndNext', 'Crear y siguiente');
 
   const handleSubmit = () => {
     const parsedTags = tagsRaw
@@ -90,7 +98,7 @@ export default function InboxProcessorForm({
       <div className="space-y-3">
         <label className="block">
           <span className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
-            Título
+            {t('inbox.form.title', 'Título')}
           </span>
           <input
             type="text"
@@ -104,7 +112,7 @@ export default function InboxProcessorForm({
         <div className="grid grid-cols-2 gap-3">
           <label className="block">
             <span className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
-              Tipo
+              {t('inbox.form.type', 'Tipo')}
             </span>
             <select
               value={draft.suggestedType}
@@ -122,7 +130,7 @@ export default function InboxProcessorForm({
 
           <label className="block">
             <span className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
-              Área
+              {t('inbox.form.area', 'Área')}
             </span>
             <select
               value={draft.suggestedArea}
@@ -141,7 +149,7 @@ export default function InboxProcessorForm({
         {draft.suggestedType === 'task' && (
           <label className="block">
             <span className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
-              Prioridad
+              {t('inbox.form.priority', 'Prioridad')}
             </span>
             <select
               value={draft.priority}
@@ -159,13 +167,13 @@ export default function InboxProcessorForm({
 
         <label className="block">
           <span className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
-            Tags (separados por coma)
+            {t('inbox.form.tags', 'Tags (separados por coma)')}
           </span>
           <input
             type="text"
             value={tagsRaw}
             onChange={(e) => setTagsRaw(e.target.value)}
-            placeholder="tag1, tag2, tag3"
+            placeholder={t('inbox.form.tagsPlaceholder', 'tag1, tag2, tag3')}
             className="mt-1 w-full rounded-md border border-border bg-background px-3 py-1.5 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40"
           />
         </label>
@@ -186,7 +194,7 @@ export default function InboxProcessorForm({
           className="inline-flex items-center gap-1.5 rounded-md border border-border bg-card px-3 py-1.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent/40 hover:text-foreground"
         >
           <Trash2 className="h-3.5 w-3.5" />
-          Descartar
+          {t('inbox.item.dismiss', 'Descartar')}
         </button>
       </div>
     </form>

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Check, Loader2 } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import useAuth from '@/hooks/useAuth';
 import { inboxRepo } from '@/infra/repos/inboxRepo';
 import { hideCurrentWindow, showMainWindow } from '@/lib/tauri';
@@ -7,6 +8,7 @@ import { hideCurrentWindow, showMainWindow } from '@/lib/tauri';
 type Status = 'editing' | 'saving' | 'saved' | 'closing';
 
 export default function CapturePage() {
+  const { t } = useTranslation();
   const { user, isLoading } = useAuth();
   const [rawContent, setRawContent] = useState('');
   const [status, setStatus] = useState<Status>('editing');
@@ -85,7 +87,9 @@ export default function CapturePage() {
       <div className="flex h-screen w-screen flex-col bg-background text-foreground">
         <div className="h-8 shrink-0 border-b border-border bg-card" />
         <div className="flex flex-1 flex-col items-center justify-center gap-3 px-6 text-center">
-          <p className="text-sm text-muted-foreground">Abrí SecondMind para iniciar sesión.</p>
+          <p className="text-sm text-muted-foreground">
+            {t('capture.unauth.message', 'Abrí SecondMind para iniciar sesión.')}
+          </p>
           <button
             type="button"
             onClick={() => {
@@ -94,7 +98,7 @@ export default function CapturePage() {
             }}
             className="rounded-md bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground transition hover:bg-primary/90"
           >
-            Abrir SecondMind
+            {t('capture.unauth.open', 'Abrir SecondMind')}
           </button>
         </div>
       </div>
@@ -104,7 +108,7 @@ export default function CapturePage() {
   return (
     <div className="flex h-screen w-screen flex-col bg-card text-foreground">
       <div className="flex h-8 shrink-0 items-center border-b border-border-strong bg-card/60 px-3 text-xs text-muted-foreground">
-        Captura rápida
+        {t('capture.title', 'Captura rápida')}
       </div>
       <div className="flex flex-1 flex-col p-4">
         {status === 'saved' ? (
@@ -118,7 +122,7 @@ export default function CapturePage() {
               value={rawContent}
               onChange={(event) => setRawContent(event.target.value)}
               onKeyDown={handleKeyDown}
-              placeholder="Escribe una idea..."
+              placeholder={t('capture.placeholder', 'Escribe una idea...')}
               rows={4}
               disabled={status === 'saving'}
               className="flex-1 resize-none border-none bg-transparent text-sm leading-relaxed text-foreground outline-none placeholder:text-muted-foreground"
@@ -128,11 +132,11 @@ export default function CapturePage() {
                 <kbd className="rounded bg-muted px-1 py-0.5 font-mono text-[10px] text-foreground">
                   Enter
                 </kbd>{' '}
-                guardar ·{' '}
+                {t('capture.hint.save', 'guardar')} ·{' '}
                 <kbd className="rounded bg-muted px-1 py-0.5 font-mono text-[10px] text-foreground">
                   Esc
                 </kbd>{' '}
-                cerrar
+                {t('capture.hint.close', 'cerrar')}
               </span>
               {status === 'saving' ? <Loader2 className="h-3 w-3 animate-spin" /> : null}
             </div>
