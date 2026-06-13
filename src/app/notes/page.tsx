@@ -1,6 +1,7 @@
 import { useCallback, useMemo, useState } from 'react';
 import { useNavigate, Link, useSearchParams } from 'react-router';
 import { Plus, Search, Network, Sparkles, Trash2, Settings, Brain } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { notesRepo } from '@/infra/repos/notesRepo';
 import useAuth from '@/hooks/useAuth';
 import useHybridSearch, { type SemanticResult } from '@/hooks/useHybridSearch';
@@ -13,13 +14,6 @@ import type { NoteOramaDoc } from '@/lib/orama';
 import type { TrashNote } from '@/types/note';
 
 type Filter = 'all' | 'favorites' | 'review' | 'trash';
-
-const TABS: { key: Filter; label: string }[] = [
-  { key: 'all', label: 'Todas' },
-  { key: 'favorites', label: 'Favoritas' },
-  { key: 'review', label: 'Por revisar' },
-  { key: 'trash', label: 'Papelera' },
-];
 
 // TrashNote tiene los mismos campos que NoteOramaDoc excepto isArchived
 // (que en papelera es siempre false implícito). Mapeo trivial para que
@@ -42,9 +36,20 @@ function trashNoteToOramaDoc(t: TrashNote): NoteOramaDoc {
 }
 
 export default function NotesListPage() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const { user } = useAuth();
   const [searchParams] = useSearchParams();
+
+  const tabs = useMemo<{ key: Filter; label: string }[]>(
+    () => [
+      { key: 'all', label: t('notes.tabs.all', 'Todas') },
+      { key: 'favorites', label: t('notes.tabs.favorites', 'Favoritas') },
+      { key: 'review', label: t('notes.tabs.review', 'Por revisar') },
+      { key: 'trash', label: t('notes.tabs.trash', 'Papelera') },
+    ],
+    [t],
+  );
   // Deep-link `?filter=review` lee el param solo en el primer render via lazy
   // initializer. Cambios manuales de tab no actualizan la URL (sync unidireccional)
   // — UX más limpia, evita push history en cada click.
@@ -136,8 +141,8 @@ export default function NotesListPage() {
   const purgeDays = preferences.trashAutoPurgeDays;
   const trashCaption =
     purgeDays === 0
-      ? 'Las notas en papelera no se eliminan automáticamente.'
-      : `Las notas se eliminan definitivamente a los ${purgeDays} días.`;
+      ? t('notes.trash.captionNever', 'Las notas en papelera no se eliminan automáticamente.')
+      : t('notes.trash.captionDays', { count: purgeDays });
 
   function handleConfirmPurge() {
     if (trashCount === 0) return;
@@ -147,15 +152,17 @@ export default function NotesListPage() {
   return (
     <div className="mx-auto max-w-3xl">
       <header className="mb-6 flex flex-wrap items-center justify-between gap-3">
-        <h1 className="hidden text-2xl font-bold tracking-tight md:block">Notas</h1>
+        <h1 className="hidden text-2xl font-bold tracking-tight md:block">
+          {t('nav.items.notes', 'Notas')}
+        </h1>
         <div className="flex items-center gap-2">
           <Link
             to="/notes/graph"
-            aria-label="Ver como grafo"
+            aria-label={t('notes.viewAsGraph', 'Ver como grafo')}
             className="inline-flex items-center gap-1.5 rounded-md border border-border px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
           >
             <Network className="h-4 w-4" />
-            <span className="hidden sm:inline">Ver como grafo</span>
+            <span className="hidden sm:inline">{t('notes.viewAsGraph', 'Ver como grafo')}</span>
           </Link>
           <button
             type="button"
@@ -163,14 +170,14 @@ export default function NotesListPage() {
             className="inline-flex items-center gap-1.5 rounded-md bg-primary px-3 py-2 text-sm font-medium text-primary-foreground shadow-sm transition-colors hover:bg-primary/90"
           >
             <Plus className="h-4 w-4" />
-            <span className="hidden sm:inline">Nueva nota</span>
-            <span className="sm:hidden">Nueva</span>
+            <span className="hidden sm:inline">{t('notes.newNote', 'Nueva nota')}</span>
+            <span className="sm:hidden">{t('notes.newShort', 'Nueva')}</span>
           </button>
         </div>
       </header>
 
       <nav className="mb-4 flex gap-1 overflow-x-auto overflow-y-hidden border-b border-border">
-        {TABS.map((tab) => {
+        {tabs.map((tab) => {
           const isActive = tab.key === filter;
           const showCount =
             (tab.key === 'trash' && trashCount > 0) || (tab.key === 'review' && reviewTotal > 0);
@@ -217,10 +224,10 @@ export default function NotesListPage() {
             }
             placeholder={
               isTrashView
-                ? 'Buscar en papelera...'
+                ? t('notes.search.trash', 'Buscar en papelera...')
                 : isReviewView
-                ? 'Buscar en notas por revisar...'
-                : 'Buscar notas...'
+                ? t('notes.search.review', 'Buscar en notas por revisar...')
+                : t('notes.search.all', 'Buscar notas...')
             }
             className="w-full rounded-md border border-border bg-card py-2 pr-3 pl-9 text-sm text-foreground outline-none placeholder:text-muted-foreground focus:border-border/80"
           />
@@ -236,7 +243,7 @@ export default function NotesListPage() {
               className="inline-flex items-center gap-1 underline-offset-2 hover:text-foreground hover:underline"
             >
               <Settings className="h-3 w-3" />
-              Cambiar
+              {t('notes.trash.change', 'Cambiar')}
             </Link>
           </div>
           <button
@@ -246,7 +253,7 @@ export default function NotesListPage() {
             className="inline-flex items-center gap-1.5 rounded-md border border-border bg-card px-2.5 py-1.5 text-xs font-medium text-foreground transition-colors hover:bg-destructive/10 hover:text-destructive disabled:cursor-not-allowed disabled:opacity-50"
           >
             <Trash2 className="h-3.5 w-3.5" />
-            Vaciar papelera
+            {t('notes.trash.empty', 'Vaciar papelera')}
           </button>
         </div>
       )}
@@ -306,11 +313,9 @@ export default function NotesListPage() {
       <ConfirmDialog
         open={isPurgeOpen}
         onOpenChange={setIsPurgeOpen}
-        title="¿Vaciar la papelera?"
-        description={`Se eliminarán para siempre ${trashCount} ${
-          trashCount === 1 ? 'nota' : 'notas'
-        }, sus embeddings y los links que las mencionan. Esta acción no se puede deshacer.`}
-        confirmLabel="Vaciar papelera"
+        title={t('notes.purgeDialog.title', '¿Vaciar la papelera?')}
+        description={t('notes.purgeDialog.description', { count: trashCount })}
+        confirmLabel={t('notes.trash.empty', 'Vaciar papelera')}
         variant="destructive"
         onConfirm={handleConfirmPurge}
       />
@@ -331,11 +336,14 @@ function SemanticSection({
   hasKeywordResults,
   showKeywordEmpty,
 }: SemanticSectionProps) {
+  const { t } = useTranslation();
   if (!isLoading && results.length === 0) {
     if (showKeywordEmpty) {
       return (
         <div className="rounded-lg border border-dashed border-border p-8 text-center">
-          <p className="text-sm text-muted-foreground">Sin resultados.</p>
+          <p className="text-sm text-muted-foreground">
+            {t('notes.semantic.noResults', 'Sin resultados.')}
+          </p>
         </div>
       );
     }
@@ -347,12 +355,17 @@ function SemanticSection({
       <div className="mb-3 flex items-center gap-2">
         <Sparkles className="h-4 w-4 text-violet-500" />
         <h2 className="text-sm font-semibold text-foreground">
-          {hasKeywordResults ? 'Semánticamente similares' : 'Notas temáticamente similares'}
+          {hasKeywordResults
+            ? t('notes.semantic.titleWithKeyword', 'Semánticamente similares')
+            : t('notes.semantic.titleNoKeyword', 'Notas temáticamente similares')}
         </h2>
       </div>
       {!hasKeywordResults && !isLoading && results.length > 0 && (
         <p className="mb-3 text-xs text-muted-foreground">
-          No hay coincidencias exactas, pero estas notas son temáticamente similares.
+          {t(
+            'notes.semantic.noExactMatch',
+            'No hay coincidencias exactas, pero estas notas son temáticamente similares.',
+          )}
         </p>
       )}
       {isLoading && <SemanticSkeleton />}
@@ -398,95 +411,113 @@ function NoteListSkeleton() {
 }
 
 function EmptyNotesState({ onCreate }: { onCreate: () => void }) {
+  const { t } = useTranslation();
   return (
     <div className="rounded-lg border border-dashed border-border p-10 text-center">
-      <p className="text-sm text-muted-foreground">No tenés notas todavía.</p>
+      <p className="text-sm text-muted-foreground">
+        {t('notes.empty.all', 'No tenés notas todavía.')}
+      </p>
       <button
         type="button"
         onClick={onCreate}
         className="mt-4 inline-flex items-center gap-1.5 rounded-md bg-primary px-3 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
       >
         <Plus className="h-4 w-4" />
-        Crear primera nota
+        {t('notes.empty.createFirst', 'Crear primera nota')}
       </button>
     </div>
   );
 }
 
 function EmptyFavoritesState({ onClear }: { onClear: () => void }) {
+  const { t } = useTranslation();
   return (
     <div className="rounded-lg border border-dashed border-border p-10 text-center">
-      <p className="text-sm text-muted-foreground">No tenés notas favoritas todavía.</p>
+      <p className="text-sm text-muted-foreground">
+        {t('notes.empty.favorites', 'No tenés notas favoritas todavía.')}
+      </p>
       <button
         type="button"
         onClick={onClear}
         className="mt-4 inline-flex items-center gap-1.5 rounded-md border border-border bg-card px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
       >
-        Mostrar todas las notas
+        {t('notes.empty.showAll', 'Mostrar todas las notas')}
       </button>
     </div>
   );
 }
 
 function EmptyTrashState({ onClear }: { onClear: () => void }) {
+  const { t } = useTranslation();
   return (
     <div className="rounded-lg border border-dashed border-border p-10 text-center">
       <Trash2 className="mx-auto mb-3 h-8 w-8 text-muted-foreground" />
-      <p className="text-sm text-muted-foreground">Tu papelera está vacía.</p>
+      <p className="text-sm text-muted-foreground">
+        {t('notes.empty.trash', 'Tu papelera está vacía.')}
+      </p>
       <button
         type="button"
         onClick={onClear}
         className="mt-4 inline-flex items-center gap-1.5 rounded-md border border-border bg-card px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
       >
-        Volver a todas las notas
+        {t('notes.empty.backToAll', 'Volver a todas las notas')}
       </button>
     </div>
   );
 }
 
 function EmptyTrashFilterState({ onClear }: { onClear: () => void }) {
+  const { t } = useTranslation();
   return (
     <div className="rounded-lg border border-dashed border-border p-10 text-center">
       <Search className="mx-auto mb-3 h-8 w-8 text-muted-foreground" />
-      <p className="text-sm text-muted-foreground">No se encontraron notas en la papelera.</p>
+      <p className="text-sm text-muted-foreground">
+        {t('notes.empty.trashFilter', 'No se encontraron notas en la papelera.')}
+      </p>
       <button
         type="button"
         onClick={onClear}
         className="mt-4 inline-flex items-center gap-1.5 rounded-md border border-border bg-card px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
       >
-        Limpiar búsqueda
+        {t('notes.empty.clearSearch', 'Limpiar búsqueda')}
       </button>
     </div>
   );
 }
 
 function EmptyReviewState({ onClear }: { onClear: () => void }) {
+  const { t } = useTranslation();
   return (
     <div className="rounded-lg border border-dashed border-border p-10 text-center">
       <Brain className="mx-auto mb-3 h-8 w-8 text-muted-foreground" />
-      <p className="text-sm text-muted-foreground">Nada por revisar hoy.</p>
+      <p className="text-sm text-muted-foreground">
+        {t('notes.empty.review', 'Nada por revisar hoy.')}
+      </p>
       <button
         type="button"
         onClick={onClear}
         className="mt-4 inline-flex items-center gap-1.5 rounded-md border border-border bg-card px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
       >
-        Volver a todas las notas
+        {t('notes.empty.backToAll', 'Volver a todas las notas')}
       </button>
     </div>
   );
 }
 
 function EmptyReviewFilterState({ onClear }: { onClear: () => void }) {
+  const { t } = useTranslation();
   return (
     <div className="rounded-lg border border-dashed border-border p-10 text-center">
       <Search className="mx-auto mb-3 h-8 w-8 text-muted-foreground" />
-      <p className="text-sm text-muted-foreground">No se encontraron notas en revisión.</p>
+      <p className="text-sm text-muted-foreground">
+        {t('notes.empty.reviewFilter', 'No se encontraron notas en revisión.')}
+      </p>
       <button
         type="button"
         onClick={onClear}
         className="mt-4 inline-flex items-center gap-1.5 rounded-md border border-border bg-card px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
       >
-        Limpiar búsqueda
+        {t('notes.empty.clearSearch', 'Limpiar búsqueda')}
       </button>
     </div>
   );

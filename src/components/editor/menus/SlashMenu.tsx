@@ -1,19 +1,35 @@
-import { useMemo } from 'react';
+import { useCallback, useMemo } from 'react';
 import { createPortal } from 'react-dom';
+import { useTranslation } from 'react-i18next';
 import { setSlashMenuListener } from '@/components/editor/extensions/slash-command-suggestion';
 import { useEditorPopup } from '@/components/editor/hooks/useEditorPopup';
 import {
   CATEGORY_ORDER,
   filterSlashMenuItems,
+  useSlashMenuItems,
   type SlashMenuCategory,
   type SlashMenuItem,
 } from '@/components/editor/menus/slashMenuItems';
 
 export default function SlashMenu() {
+  const { t } = useTranslation();
+  const slashItems = useSlashMenuItems();
+  const queryItems = useCallback((q: string) => filterSlashMenuItems(slashItems, q), [slashItems]);
+  const categoryLabels = useMemo<Record<SlashMenuCategory, string>>(
+    () => ({
+      text: t('editor.slash.category.text', 'Texto'),
+      lists: t('editor.slash.category.lists', 'Listas'),
+      blocks: t('editor.slash.category.blocks', 'Bloques'),
+      mentions: t('editor.slash.category.mentions', 'Menciones'),
+      templates: t('editor.slash.category.templates', 'Plantillas'),
+    }),
+    [t],
+  );
+
   const { isOpen, items, query, selectedIndex, setSelectedIndex, position, menuRef, selectItem } =
     useEditorPopup<SlashMenuItem>({
       setListener: setSlashMenuListener,
-      queryItems: filterSlashMenuItems,
+      queryItems,
       executeCommand: (item, props) => props.command(item),
     });
 
@@ -49,14 +65,16 @@ export default function SlashMenu() {
     >
       {items.length === 0 ? (
         <div className="px-3 py-2 text-xs text-muted-foreground">
-          Sin resultados{query ? ` para "${query}"` : ''}
+          {query
+            ? t('editor.menu.noResultsQuery', 'Sin resultados para "{{query}}"', { query })
+            : t('editor.menu.noResults', 'Sin resultados')}
         </div>
       ) : (
         <div className="max-h-80 overflow-y-auto py-1">
           {groupedItems.map(({ category, entries }) => (
             <div key={category}>
               <div className="px-3 pt-2 pb-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-                {category}
+                {categoryLabels[category]}
               </div>
               <ul>
                 {entries.map(({ item, index }) => {

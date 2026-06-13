@@ -96,6 +96,193 @@
       "title": ""
     }
   },
+  "editor": {
+    "backlinks": {
+      "empty": "",
+      "hide": ""
+    },
+    "codeBlock": {
+      "copied": "",
+      "copy": ""
+    },
+    "distill": {
+      "banner": {
+        "l1": "",
+        "l2": "",
+        "l3": ""
+      },
+      "indicatorLabel": "",
+      "l0": {
+        "label": "",
+        "tip": ""
+      },
+      "l1": {
+        "label": "",
+        "tip": ""
+      },
+      "l2": {
+        "label": "",
+        "tip": ""
+      },
+      "l3": {
+        "label": "",
+        "tip": ""
+      },
+      "writeL3": ""
+    },
+    "link": {
+      "confirm": "",
+      "edit": "",
+      "openNewTab": ""
+    },
+    "menu": {
+      "noResults": "",
+      "noResultsQuery": ""
+    },
+    "placeholder": "",
+    "review": {
+      "activate": "",
+      "again": "",
+      "good": "",
+      "next": "",
+      "prompt": "",
+      "relative": {
+        "days_one": "",
+        "days_other": "",
+        "months_one": "",
+        "months_other": "",
+        "today": "",
+        "tomorrow": "",
+        "weeks_one": "",
+        "weeks_other": ""
+      },
+      "reviewed": "",
+      "soon": ""
+    },
+    "save": {
+      "error": "",
+      "retrying": "",
+      "saved": "",
+      "saving": ""
+    },
+    "saveError": {
+      "copied": "",
+      "copy": "",
+      "detail": "",
+      "discard": "",
+      "title": ""
+    },
+    "similar": {
+      "empty": "",
+      "noEmbedding": "",
+      "offline": "",
+      "title": ""
+    },
+    "slash": {
+      "category": {
+        "blocks": "",
+        "lists": "",
+        "mentions": "",
+        "templates": "",
+        "text": ""
+      },
+      "items": {
+        "blockquote": {
+          "description": "",
+          "label": ""
+        },
+        "bulletList": {
+          "description": "",
+          "label": ""
+        },
+        "codeBlock": {
+          "description": "",
+          "label": ""
+        },
+        "divider": {
+          "description": "",
+          "label": ""
+        },
+        "heading1": {
+          "description": "",
+          "label": ""
+        },
+        "heading2": {
+          "description": "",
+          "label": ""
+        },
+        "heading3": {
+          "description": "",
+          "label": ""
+        },
+        "mentionNote": {
+          "description": "",
+          "label": ""
+        },
+        "orderedList": {
+          "description": "",
+          "label": ""
+        },
+        "taskList": {
+          "description": "",
+          "label": ""
+        },
+        "templateLiterature": {
+          "description": "",
+          "label": ""
+        },
+        "templatePermanent": {
+          "description": "",
+          "label": ""
+        }
+      }
+    },
+    "suggestion": {
+      "regionLabel": ""
+    },
+    "summaryL3": {
+      "placeholder": "",
+      "title": ""
+    },
+    "toolbar": {
+      "bold": "",
+      "code": "",
+      "highlight": "",
+      "italic": "",
+      "link": "",
+      "strike": ""
+    },
+    "wikilink": {
+      "untitled": ""
+    }
+  },
+  "graph": {
+    "createNotes": "",
+    "empty": {
+      "filtered": "",
+      "noData": ""
+    },
+    "exitFullscreen": "",
+    "filters": {
+      "active": "",
+      "area": "",
+      "minLinks": "",
+      "reset": "",
+      "title": "",
+      "type": ""
+    },
+    "fullscreen": "",
+    "node": {
+      "openNote": ""
+    },
+    "resetFilters": "",
+    "stats": {
+      "connections_one": "",
+      "connections_other": "",
+      "notes_one": "",
+      "notes_other": ""
+    }
+  },
   "habits": {
     "gridHeader": "",
     "nextWeek": "",
@@ -217,6 +404,84 @@
     },
     "showMenu": "",
     "signOut": ""
+  },
+  "notes": {
+    "card": {
+      "aiSummaryLabel": "",
+      "delete": "",
+      "deleteForever": "",
+      "favorite": "",
+      "hardDelete": {
+        "description": "",
+        "title": ""
+      },
+      "purgeDays_one": "",
+      "purgeDays_other": "",
+      "purgePending": "",
+      "restore": "",
+      "softDelete": {
+        "confirm": "",
+        "description": "",
+        "title": ""
+      },
+      "unfavorite": ""
+    },
+    "detail": {
+      "loadError": "",
+      "notFound": ""
+    },
+    "empty": {
+      "all": "",
+      "backToAll": "",
+      "clearSearch": "",
+      "createFirst": "",
+      "favorites": "",
+      "review": "",
+      "reviewFilter": "",
+      "showAll": "",
+      "trash": "",
+      "trashFilter": ""
+    },
+    "newNote": "",
+    "newShort": "",
+    "purgeDialog": {
+      "description_one": "",
+      "description_other": "",
+      "title": ""
+    },
+    "search": {
+      "all": "",
+      "review": "",
+      "trash": ""
+    },
+    "semantic": {
+      "noExactMatch": "",
+      "noResults": "",
+      "titleNoKeyword": "",
+      "titleWithKeyword": ""
+    },
+    "split": {
+      "closePaneAria": "",
+      "closePaneTitle": "",
+      "closeTitle": "",
+      "noOtherNotes": "",
+      "openTitle": "",
+      "searchPlaceholder": ""
+    },
+    "tabs": {
+      "all": "",
+      "favorites": "",
+      "review": "",
+      "trash": ""
+    },
+    "trash": {
+      "captionDays_one": "",
+      "captionDays_other": "",
+      "captionNever": "",
+      "change": "",
+      "empty": ""
+    },
+    "viewAsGraph": ""
   },
   "objectives": {
     "area": "",

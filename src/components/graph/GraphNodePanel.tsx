@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { Link } from 'react-router';
+import { useTranslation } from 'react-i18next';
 import type { ParaType, NoteType } from '@/types/common';
 
 interface GraphNodePanelProps {
@@ -11,6 +12,8 @@ interface GraphNodePanelProps {
   onClose: () => void;
 }
 
+// PARA_LABELS / NOTE_TYPE_LABELS: enums diferidos a F2.7 (entityLabels central,
+// mismos que NoteCard/GraphFilters). Quedan en es = idéntico al baseline.
 const PARA_LABELS: Record<ParaType, string> = {
   project: 'Proyecto',
   area: 'Area',
@@ -39,6 +42,7 @@ export default function GraphNodePanel({
   linkCount,
   onClose,
 }: GraphNodePanelProps) {
+  const { t } = useTranslation();
   const panelRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -78,14 +82,14 @@ export default function GraphNodePanel({
       </div>
 
       <p className="mb-3 text-xs text-muted-foreground">
-        {linkCount} {linkCount === 1 ? 'conexión' : 'conexiones'}
+        {t('graph.stats.connections', { count: linkCount })}
       </p>
 
       <Link
         to={`/notes/${nodeId}`}
         className="inline-flex items-center gap-1 text-sm font-medium text-primary hover:underline"
       >
-        Abrir nota &rarr;
+        {t('graph.node.openNote', 'Abrir nota →')}
       </Link>
     </div>
   );

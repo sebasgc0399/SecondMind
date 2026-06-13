@@ -1,4 +1,5 @@
 import { createPortal } from 'react-dom';
+import { useTranslation } from 'react-i18next';
 import {
   queryWikilinkItems,
   setWikilinkMenuListener,
@@ -11,6 +12,7 @@ interface WikilinkMenuProps {
 }
 
 export default function WikilinkMenu({ noteId }: WikilinkMenuProps) {
+  const { t } = useTranslation();
   const { isOpen, items, query, selectedIndex, setSelectedIndex, position, menuRef, selectItem } =
     useEditorPopup<WikilinkSuggestionItem>({
       setListener: setWikilinkMenuListener,
@@ -37,7 +39,9 @@ export default function WikilinkMenu({ noteId }: WikilinkMenuProps) {
     >
       {items.length === 0 ? (
         <div className="px-3 py-2 text-xs text-muted-foreground">
-          Sin resultados{query ? ` para "${query}"` : ''}
+          {query
+            ? t('editor.menu.noResultsQuery', 'Sin resultados para "{{query}}"', { query })
+            : t('editor.menu.noResults', 'Sin resultados')}
         </div>
       ) : (
         <ul className="max-h-64 overflow-y-auto py-1">

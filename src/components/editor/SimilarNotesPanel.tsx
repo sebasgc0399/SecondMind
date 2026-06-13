@@ -1,5 +1,6 @@
 import { Link } from 'react-router';
 import { Sparkles } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import useOnlineStatus from '@/hooks/useOnlineStatus';
 import useSimilarNotes from '@/hooks/useSimilarNotes';
 
@@ -8,6 +9,7 @@ interface SimilarNotesPanelProps {
 }
 
 export default function SimilarNotesPanel({ noteId }: SimilarNotesPanelProps) {
+  const { t } = useTranslation();
   const { notes, isLoading, noEmbedding } = useSimilarNotes(noteId);
   const isOnline = useOnlineStatus();
 
@@ -15,24 +17,30 @@ export default function SimilarNotesPanel({ noteId }: SimilarNotesPanelProps) {
     <div className="mt-4 border-t border-border pt-4">
       <h2 className="mb-2 flex items-center gap-2 text-sm font-semibold text-foreground">
         <Sparkles className="h-4 w-4 text-muted-foreground" />
-        Notas similares
+        {t('editor.similar.title', 'Notas similares')}
         {notes.length > 0 && (
           <span className="text-xs font-normal text-muted-foreground">({notes.length})</span>
         )}
       </h2>
 
       {!isOnline && (
-        <p className="text-xs text-muted-foreground">Disponible cuando vuelva la conexión.</p>
+        <p className="text-xs text-muted-foreground">
+          {t('editor.similar.offline', 'Disponible cuando vuelva la conexión.')}
+        </p>
       )}
 
       {isOnline && isLoading && <SimilarNotesSkeleton />}
 
       {isOnline && !isLoading && noEmbedding && (
-        <p className="text-xs text-muted-foreground">Guarda la nota para ver sugerencias.</p>
+        <p className="text-xs text-muted-foreground">
+          {t('editor.similar.noEmbedding', 'Guarda la nota para ver sugerencias.')}
+        </p>
       )}
 
       {isOnline && !isLoading && !noEmbedding && notes.length === 0 && (
-        <p className="text-xs text-muted-foreground">Sin notas similares aún.</p>
+        <p className="text-xs text-muted-foreground">
+          {t('editor.similar.empty', 'Sin notas similares aún.')}
+        </p>
       )}
 
       {isOnline && !isLoading && notes.length > 0 && (

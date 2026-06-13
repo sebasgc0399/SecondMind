@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { NodeViewContent, NodeViewWrapper, type ReactNodeViewProps } from '@tiptap/react';
 import { Select } from '@base-ui/react/select';
 import { Check, ChevronDown, Copy } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import {
   CODE_LANGUAGES,
   findLanguageLabel,
@@ -10,6 +11,7 @@ import {
 const AUTO_VALUE = '__auto__';
 
 export default function CodeBlockNodeView({ node, updateAttributes }: ReactNodeViewProps) {
+  const { t } = useTranslation();
   const language = (node.attrs.language as string | null | undefined) ?? null;
   const selectValue = language ?? AUTO_VALUE;
   const currentLabel = findLanguageLabel(language);
@@ -89,7 +91,11 @@ export default function CodeBlockNodeView({ node, updateAttributes }: ReactNodeV
         <button
           type="button"
           onClick={handleCopy}
-          aria-label={copyState === 'copied' ? 'Código copiado' : 'Copiar código'}
+          aria-label={
+            copyState === 'copied'
+              ? t('editor.codeBlock.copied', 'Código copiado')
+              : t('editor.codeBlock.copy', 'Copiar código')
+          }
           className="inline-flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground outline-none transition-colors hover:bg-accent/40"
         >
           {copyState === 'copied' ? (

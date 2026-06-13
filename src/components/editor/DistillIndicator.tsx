@@ -1,7 +1,8 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Popover } from '@base-ui/react/popover';
 import { Sparkles } from 'lucide-react';
 import { useCell } from 'tinybase/ui-react';
+import { useTranslation } from 'react-i18next';
 import useAuth from '@/hooks/useAuth';
 import usePreferences from '@/hooks/usePreferences';
 import { setPreferences } from '@/lib/preferences';
@@ -13,34 +14,46 @@ interface DistillIndicatorProps {
 
 type Level = 0 | 1 | 2 | 3;
 
-const LEVEL_META: Record<Level, { label: string; tip: string; badgeClass: string }> = {
-  0: {
-    label: 'Sin destilación',
-    tip: 'Selecciona los pasajes clave y aplícales negrita (Ctrl+B) para marcarlos como L1.',
-    badgeClass:
-      'border border-dashed border-violet-400/60 bg-violet-500/5 text-violet-700 dark:border-violet-300/40 dark:text-violet-300',
-  },
-  1: {
-    label: 'Pasajes clave marcados',
-    tip: 'De lo que marcaste, resalta lo verdaderamente esencial con Ctrl+Shift+H para subir a L2.',
-    badgeClass: 'bg-blue-500/15 text-blue-700 dark:text-blue-400',
-  },
-  2: {
-    label: 'Esenciales resaltados',
-    tip: 'Escribe un resumen ejecutivo en tus palabras para subir a L3 — la nota queda lista para tu yo del futuro, sin tener que releer todo.',
-    badgeClass: 'bg-yellow-500/15 text-yellow-700 dark:text-yellow-400',
-  },
-  3: {
-    label: 'Resumen escrito',
-    tip: 'Destilación completa. La nota está lista para tu yo del futuro.',
-    badgeClass: 'bg-green-500/15 text-green-700 dark:text-green-400',
-  },
+// Solo badgeClass a module-scope (no traducible). label/tip se resuelven con
+// t() dentro del componente (re-evaluados al cambiar idioma).
+const LEVEL_BADGE_CLASS: Record<Level, string> = {
+  0: 'border border-dashed border-violet-400/60 bg-violet-500/5 text-violet-700 dark:border-violet-300/40 dark:text-violet-300',
+  1: 'bg-blue-500/15 text-blue-700 dark:text-blue-400',
+  2: 'bg-yellow-500/15 text-yellow-700 dark:text-yellow-400',
+  3: 'bg-green-500/15 text-green-700 dark:text-green-400',
 };
 
 export default function DistillIndicator({ noteId, onOpenSummary }: DistillIndicatorProps) {
+  const { t } = useTranslation();
   const raw = useCell('notes', noteId, 'distillLevel');
   const level = (Number(raw) || 0) as Level;
-  const meta = LEVEL_META[level];
+  const meta = useMemo(() => {
+    const labels: Record<Level, string> = {
+      0: t('editor.distill.l0.label', 'Sin destilación'),
+      1: t('editor.distill.l1.label', 'Pasajes clave marcados'),
+      2: t('editor.distill.l2.label', 'Esenciales resaltados'),
+      3: t('editor.distill.l3.label', 'Resumen escrito'),
+    };
+    const tips: Record<Level, string> = {
+      0: t(
+        'editor.distill.l0.tip',
+        'Selecciona los pasajes clave y aplícales negrita (Ctrl+B) para marcarlos como L1.',
+      ),
+      1: t(
+        'editor.distill.l1.tip',
+        'De lo que marcaste, resalta lo verdaderamente esencial con Ctrl+Shift+H para subir a L2.',
+      ),
+      2: t(
+        'editor.distill.l2.tip',
+        'Escribe un resumen ejecutivo en tus palabras para subir a L3 — la nota queda lista para tu yo del futuro, sin tener que releer todo.',
+      ),
+      3: t(
+        'editor.distill.l3.tip',
+        'Destilación completa. La nota está lista para tu yo del futuro.',
+      ),
+    };
+    return { label: labels[level], tip: tips[level], badgeClass: LEVEL_BADGE_CLASS[level] };
+  }, [t, level]);
 
   const { user } = useAuth();
   const { preferences, isLoaded } = usePreferences();
@@ -82,7 +95,14 @@ export default function DistillIndicator({ noteId, onOpenSummary }: DistillIndic
   return (
     <Popover.Root open={open} onOpenChange={handleOpenChange}>
       <Popover.Trigger
-        aria-label={`Nivel de destilación: L${level} — ${meta.label}`}
+        aria-label={t(
+          'editor.distill.indicatorLabel',
+          'Nivel de destilación: L{{level}} — {{label}}',
+          {
+            level,
+            label: meta.label,
+          },
+        )}
         className="inline-flex h-11 min-w-11 items-center justify-center rounded-full px-2 outline-none transition-colors hover:bg-accent/40 motion-safe:active:scale-95"
       >
         <span
@@ -111,7 +131,7 @@ export default function DistillIndicator({ noteId, onOpenSummary }: DistillIndic
                 onClick={handleOpenSummaryClick}
                 className="mt-3 inline-flex min-h-9 w-full items-center justify-center rounded-md bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground transition-colors hover:bg-primary/90"
               >
-                Escribir resumen L3
+                {t('editor.distill.writeL3', 'Escribir resumen L3')}
               </button>
             )}
           </Popover.Popup>

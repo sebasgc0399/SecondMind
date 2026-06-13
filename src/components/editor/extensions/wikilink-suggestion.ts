@@ -1,5 +1,6 @@
 import { PluginKey } from '@tiptap/pm/state';
 import { notesStore } from '@/stores/notesStore';
+import i18n from '@/lib/i18n';
 import type { PopupListener } from '@/components/editor/hooks/useEditorPopup';
 import type { Editor, Range } from '@tiptap/core';
 import type { SuggestionOptions } from '@tiptap/suggestion';
@@ -26,7 +27,7 @@ export function queryWikilinkItems(query: string, excludeId?: string): WikilinkS
   const queryLower = query.trim().toLowerCase();
   const rows = Object.entries(table).map(([id, row]) => ({
     id,
-    title: ((row.title as string) || '').trim() || 'Sin título',
+    title: ((row.title as string) || '').trim() || i18n.t('common.untitled', 'Sin título'),
     updatedAt: (row.updatedAt as number) || 0,
     isArchived: Boolean(row.isArchived),
     deletedAt: Number(row.deletedAt) || 0,

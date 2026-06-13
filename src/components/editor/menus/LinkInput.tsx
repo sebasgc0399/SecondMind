@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { Check, Unlink, X } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
 interface LinkInputProps {
   initialUrl?: string;
@@ -14,6 +15,7 @@ export default function LinkInput({
   onCancel,
   onUnlink,
 }: LinkInputProps) {
+  const { t } = useTranslation();
   const [url, setUrl] = useState(initialUrl);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -48,7 +50,7 @@ export default function LinkInput({
       <button
         type="button"
         onClick={() => onConfirm(normalizeUrl(url))}
-        aria-label="Confirmar link"
+        aria-label={t('editor.link.confirm', 'Confirmar link')}
         className="inline-flex h-11 w-11 items-center justify-center rounded-md text-foreground transition-colors hover:bg-accent/60"
       >
         <Check className="h-4 w-4" />
@@ -57,7 +59,7 @@ export default function LinkInput({
         <button
           type="button"
           onClick={onUnlink}
-          aria-label="Desvincular"
+          aria-label={t('common.unlink', 'Desvincular')}
           className="inline-flex h-11 w-11 items-center justify-center rounded-md text-foreground transition-colors hover:bg-accent/60"
         >
           <Unlink className="h-4 w-4" />
@@ -66,7 +68,7 @@ export default function LinkInput({
       <button
         type="button"
         onClick={onCancel}
-        aria-label="Cancelar"
+        aria-label={t('common.cancel', 'Cancelar')}
         className="inline-flex h-11 w-11 items-center justify-center rounded-md text-foreground transition-colors hover:bg-accent/60"
       >
         <X className="h-4 w-4" />

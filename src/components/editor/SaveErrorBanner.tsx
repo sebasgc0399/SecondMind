@@ -1,5 +1,6 @@
 import { useCallback, useState, useSyncExternalStore } from 'react';
 import { AlertTriangle, Check } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 import { saveContentQueue } from '@/lib/saveQueue';
 
@@ -15,6 +16,7 @@ function subscribeToQueue(cb: () => void): () => void {
 }
 
 export default function SaveErrorBanner({ noteId, onDiscard }: SaveErrorBannerProps) {
+  const { t } = useTranslation();
   const getEntry = useCallback(() => saveContentQueue.getEntry(noteId), [noteId]);
   const entry = useSyncExternalStore(subscribeToQueue, getEntry, () => undefined);
   const [copied, setCopied] = useState(false);
@@ -50,10 +52,14 @@ export default function SaveErrorBanner({ noteId, onDiscard }: SaveErrorBannerPr
         <div className="mb-2.5 flex items-start gap-2">
           <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-destructive" />
           <div className="min-w-0 flex-1">
-            <div className="font-medium text-destructive">No pudimos guardar tu última edición</div>
+            <div className="font-medium text-destructive">
+              {t('editor.saveError.title', 'No pudimos guardar tu última edición')}
+            </div>
             <div className="mt-0.5 text-xs text-destructive/80">
-              Reintentamos 3 veces sin éxito. Reintentar guarda el contenido completo. Descartar
-              revierte el título visible.
+              {t(
+                'editor.saveError.detail',
+                'Reintentamos 3 veces sin éxito. Reintentar guarda el contenido completo. Descartar revierte el título visible.',
+              )}
             </div>
           </div>
         </div>
@@ -62,17 +68,17 @@ export default function SaveErrorBanner({ noteId, onDiscard }: SaveErrorBannerPr
             {copied ? (
               <>
                 <Check aria-hidden />
-                Copiado
+                {t('editor.saveError.copied', 'Copiado')}
               </>
             ) : (
-              'Copiar contenido'
+              t('editor.saveError.copy', 'Copiar contenido')
             )}
           </Button>
           <Button size="sm" variant="outline" onClick={handleDiscard}>
-            Descartar cambios
+            {t('editor.saveError.discard', 'Descartar cambios')}
           </Button>
           <Button size="sm" variant="destructive" onClick={handleRetry}>
-            Reintentar
+            {t('common.retry', 'Reintentar')}
           </Button>
         </div>
       </div>

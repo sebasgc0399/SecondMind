@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { BubbleMenu } from '@tiptap/react/menus';
 import { useEditorState, type Editor } from '@tiptap/react';
+import { useTranslation } from 'react-i18next';
 import {
   Bold,
   Italic,
@@ -30,6 +31,7 @@ interface BubbleToolbarProps {
 }
 
 export default function BubbleToolbar({ editor }: BubbleToolbarProps) {
+  const { t } = useTranslation();
   const [mode, setMode] = useState<ToolbarMode>('default');
 
   const state = useEditorState({
@@ -117,28 +119,28 @@ export default function BubbleToolbar({ editor }: BubbleToolbarProps) {
           <ToolbarButton
             active={state.isBold}
             onClick={() => editor.chain().focus().toggleBold().run()}
-            label="Negrita"
+            label={t('editor.toolbar.bold', 'Negrita')}
           >
             <Bold className="h-4 w-4" />
           </ToolbarButton>
           <ToolbarButton
             active={state.isItalic}
             onClick={() => editor.chain().focus().toggleItalic().run()}
-            label="Cursiva"
+            label={t('editor.toolbar.italic', 'Cursiva')}
           >
             <Italic className="h-4 w-4" />
           </ToolbarButton>
           <ToolbarButton
             active={state.isStrike}
             onClick={() => editor.chain().focus().toggleStrike().run()}
-            label="Tachado"
+            label={t('editor.toolbar.strike', 'Tachado')}
           >
             <Strikethrough className="h-4 w-4" />
           </ToolbarButton>
           <ToolbarButton
             active={state.isCode}
             onClick={() => editor.chain().focus().toggleCode().run()}
-            label="Código inline"
+            label={t('editor.toolbar.code', 'Código inline')}
           >
             <Code className="h-4 w-4" />
           </ToolbarButton>
@@ -146,11 +148,15 @@ export default function BubbleToolbar({ editor }: BubbleToolbarProps) {
           <ToolbarButton
             active={state.isHighlight}
             onClick={() => editor.chain().focus().toggleHighlight().run()}
-            label="Resaltar"
+            label={t('editor.toolbar.highlight', 'Resaltar')}
           >
             <Highlighter className="h-4 w-4" />
           </ToolbarButton>
-          <ToolbarButton active={state.isLink} onClick={() => setMode('link-edit')} label="Link">
+          <ToolbarButton
+            active={state.isLink}
+            onClick={() => setMode('link-edit')}
+            label={t('editor.toolbar.link', 'Link')}
+          >
             <LinkIcon className="h-4 w-4" />
           </ToolbarButton>
         </div>
@@ -167,6 +173,7 @@ interface LinkHoverViewProps {
 }
 
 function LinkHoverView({ href, onEdit, onOpen, onUnlink }: LinkHoverViewProps) {
+  const { t } = useTranslation();
   const displayHref = truncateHref(href);
   return (
     <div className="flex items-center gap-0.5 rounded-lg border border-border bg-popover p-1 text-popover-foreground shadow-xl">
@@ -180,7 +187,7 @@ function LinkHoverView({ href, onEdit, onOpen, onUnlink }: LinkHoverViewProps) {
       <button
         type="button"
         onClick={onOpen}
-        aria-label="Abrir link en nueva pestaña"
+        aria-label={t('editor.link.openNewTab', 'Abrir link en nueva pestaña')}
         className="inline-flex h-11 w-11 items-center justify-center rounded-md text-foreground transition-colors hover:bg-accent/60"
       >
         <ExternalLink className="h-4 w-4" />
@@ -188,7 +195,7 @@ function LinkHoverView({ href, onEdit, onOpen, onUnlink }: LinkHoverViewProps) {
       <button
         type="button"
         onClick={onEdit}
-        aria-label="Editar link"
+        aria-label={t('editor.link.edit', 'Editar link')}
         className="inline-flex h-11 w-11 items-center justify-center rounded-md text-foreground transition-colors hover:bg-accent/60"
       >
         <Pencil className="h-4 w-4" />
@@ -196,7 +203,7 @@ function LinkHoverView({ href, onEdit, onOpen, onUnlink }: LinkHoverViewProps) {
       <button
         type="button"
         onClick={onUnlink}
-        aria-label="Desvincular"
+        aria-label={t('common.unlink', 'Desvincular')}
         className="inline-flex h-11 w-11 items-center justify-center rounded-md text-foreground transition-colors hover:bg-accent/60"
       >
         <Unlink className="h-4 w-4" />
