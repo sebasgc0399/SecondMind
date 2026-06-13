@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useTable } from 'tinybase/ui-react';
 import { Plus } from 'lucide-react';
 import useProjects from '@/hooks/useProjects';
@@ -24,6 +25,7 @@ interface ProjectGroup {
 }
 
 export default function ProjectsPage() {
+  const { t } = useTranslation();
   const { projects, isInitializing, createProject } = useProjects();
   const [modalOpen, setModalOpen] = useState(false);
 
@@ -61,14 +63,14 @@ export default function ProjectsPage() {
   return (
     <div className="mx-auto max-w-3xl">
       <header className="mb-6 hidden items-center justify-between gap-4 md:flex">
-        <h1 className="text-2xl font-bold tracking-tight">Proyectos</h1>
+        <h1 className="text-2xl font-bold tracking-tight">{t('projects.title', 'Proyectos')}</h1>
         <button
           type="button"
           onClick={() => setModalOpen(true)}
           className="inline-flex items-center gap-1.5 rounded-md bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
         >
           <Plus className="h-4 w-4" />
-          Nuevo proyecto
+          {t('projects.new', 'Nuevo proyecto')}
         </button>
       </header>
 
@@ -76,9 +78,14 @@ export default function ProjectsPage() {
 
       {showEmpty && (
         <div className="rounded-lg border border-dashed border-border p-10 text-center">
-          <p className="text-base font-medium text-foreground">Sin proyectos aún</p>
+          <p className="text-base font-medium text-foreground">
+            {t('projects.empty', 'Sin proyectos aún')}
+          </p>
           <p className="mt-2 text-sm text-muted-foreground">
-            Crea tu primer proyecto para empezar a agrupar tareas y notas.
+            {t(
+              'projects.emptyHint',
+              'Crea tu primer proyecto para empezar a agrupar tareas y notas.',
+            )}
           </p>
           <button
             type="button"
@@ -86,7 +93,7 @@ export default function ProjectsPage() {
             className="mt-4 inline-flex items-center gap-1.5 rounded-md bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
           >
             <Plus className="h-4 w-4" />
-            Crear primer proyecto
+            {t('projects.createFirst', 'Crear primer proyecto')}
           </button>
         </div>
       )}

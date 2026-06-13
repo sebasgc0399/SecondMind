@@ -1,9 +1,12 @@
 import { useState, type ChangeEvent } from 'react';
 import { Link } from 'react-router';
 import { MoreHorizontal, ChevronUp, X } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
+import i18n from '@/lib/i18n';
 import PendingSyncDot from '@/components/layout/PendingSyncDot';
 import type { Objective } from '@/types/objective';
 import type { ObjectiveStatus } from '@/types/common';
+import type { TFunction } from 'i18next';
 
 export interface ProjectMini {
   id: string;
@@ -32,20 +35,22 @@ const STATUS_LABELS: Record<ObjectiveStatus, string> = {
   completed: 'Completado',
 };
 
-function formatDeadline(deadline: number): string {
-  if (!deadline) return 'Sin deadline';
+// F58: localizado in-place, NO unificado en formatRelative — la unificación
+// habría cambiado el copy visible ("faltan 5 días" → "dentro de 5 días"),
+// violando la invariante "es idéntico al baseline". Recibe t (no a module-eval).
+function formatDeadline(deadline: number, t: TFunction): string {
+  if (!deadline) return t('objectives.deadline.none', 'Sin deadline');
   const diffMs = deadline - Date.now();
   const diffDays = Math.ceil(diffMs / (24 * 60 * 60 * 1000));
-  const dateStr = new Date(deadline).toLocaleDateString('es', {
+  const date = new Date(deadline).toLocaleDateString(i18n.language || 'es', {
     day: 'numeric',
     month: 'short',
     year: 'numeric',
   });
-  if (diffDays > 1) return `${dateStr} · faltan ${diffDays} días`;
-  if (diffDays === 1) return `${dateStr} · mañana`;
-  if (diffDays === 0) return `${dateStr} · hoy`;
-  const abs = Math.abs(diffDays);
-  return `${dateStr} · vencido hace ${abs} ${abs === 1 ? 'día' : 'días'}`;
+  if (diffDays > 1) return t('objectives.deadline.upcoming', { count: diffDays, date });
+  if (diffDays === 1) return t('objectives.deadline.tomorrow', '{{date}} · mañana', { date });
+  if (diffDays === 0) return t('objectives.deadline.today', '{{date}} · hoy', { date });
+  return t('objectives.deadline.overdue', { count: Math.abs(diffDays), date });
 }
 
 export default function ObjectiveCard({
@@ -56,6 +61,7 @@ export default function ObjectiveCard({
   onLinkProject,
   onUnlinkProject,
 }: ObjectiveCardProps) {
+  const { t } = useTranslation();
   const [isExpanded, setIsExpanded] = useState(false);
 
   const handleLinkChange = (e: ChangeEvent<HTMLSelectElement>) => {
@@ -81,13 +87,19 @@ export default function ObjectiveCard({
               {STATUS_LABELS[objective.status]}
             </span>
           </div>
-          <p className="mt-1 text-xs text-muted-foreground">{formatDeadline(objective.deadline)}</p>
+          <p className="mt-1 text-xs text-muted-foreground">
+            {formatDeadline(objective.deadline, t)}
+          </p>
         </div>
         <button
           type="button"
           onClick={() => setIsExpanded((v) => !v)}
           className="shrink-0 rounded-md p-1 text-muted-foreground transition-colors hover:bg-accent/40 hover:text-foreground"
-          aria-label={isExpanded ? 'Ocultar detalles' : 'Expandir objetivo'}
+          aria-label={
+            isExpanded
+              ? t('objectives.card.hideDetailsAria', 'Ocultar detalles')
+              : t('objectives.card.expandAria', 'Expandir objetivo')
+          }
         >
           {isExpanded ? <ChevronUp className="h-4 w-4" /> : <MoreHorizontal className="h-4 w-4" />}
         </button>
@@ -96,8 +108,10 @@ export default function ObjectiveCard({
       <div className="mt-3">
         <div className="mb-1 flex items-center justify-between text-[11px] text-muted-foreground">
           <span>
-            {overallPercent}% completado · {linkedProjects.length}{' '}
-            {linkedProjects.length === 1 ? 'proyecto' : 'proyectos'}
+            {t('objectives.card.progress', {
+              count: linkedProjects.length,
+              percent: overallPercent,
+            })}
           </span>
         </div>
         <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted">
@@ -111,7 +125,9 @@ export default function ObjectiveCard({
       {isExpanded && (
         <div className="mt-4 flex flex-col gap-3 border-t border-border pt-4">
           {linkedProjects.length === 0 ? (
-            <p className="text-xs text-muted-foreground">Sin proyectos vinculados aún.</p>
+            <p className="text-xs text-muted-foreground">
+              {t('objectives.card.noLinkedProjects', 'Sin proyectos vinculados aún.')}
+            </p>
           ) : (
             <ul className="flex flex-col gap-2">
               {linkedProjects.map((p) => (
@@ -134,8 +150,8 @@ export default function ObjectiveCard({
                       onUnlinkProject(p.id);
                     }}
                     className="shrink-0 rounded-md p-1 text-muted-foreground transition-colors hover:bg-accent/60 hover:text-destructive"
-                    aria-label="Desvincular proyecto"
-                    title="Desvincular"
+                    aria-label={t('objectives.card.unlinkAria', 'Desvincular proyecto')}
+                    title={t('common.unlink', 'Desvincular')}
                   >
                     <X className="h-3 w-3" />
                   </button>
@@ -146,7 +162,7 @@ export default function ObjectiveCard({
 
           <label className="flex flex-col gap-1">
             <span className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
-              Vincular proyecto
+              {t('objectives.card.linkProject', 'Vincular proyecto')}
             </span>
             <select
               value=""
@@ -156,8 +172,8 @@ export default function ObjectiveCard({
             >
               <option value="">
                 {availableProjects.length === 0
-                  ? '(sin proyectos disponibles)'
-                  : '+ Vincular proyecto...'}
+                  ? t('objectives.card.noAvailableProjects', '(sin proyectos disponibles)')
+                  : t('objectives.card.linkProjectOption', '+ Vincular proyecto...')}
               </option>
               {availableProjects.map((p) => (
                 <option key={p.id} value={p.id}>

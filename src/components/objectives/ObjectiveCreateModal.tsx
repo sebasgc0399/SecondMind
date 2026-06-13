@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Dialog } from '@base-ui/react/dialog';
+import { useTranslation } from 'react-i18next';
 import { AREAS, type AreaKey } from '@/types/area';
 
 interface CreateObjectiveInput {
@@ -32,6 +33,7 @@ export default function ObjectiveCreateModal({
   onOpenChange,
   onCreate,
 }: ObjectiveCreateModalProps) {
+  const { t } = useTranslation();
   const [name, setName] = useState('');
   const [areaId, setAreaId] = useState<AreaKey>(DEFAULT_AREA);
   const [deadlineInput, setDeadlineInput] = useState('');
@@ -67,7 +69,7 @@ export default function ObjectiveCreateModal({
         <Dialog.Backdrop className="fixed inset-0 z-40 bg-background-deep/80 backdrop-blur-sm transition-opacity duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] data-ending-style:opacity-0 data-starting-style:opacity-0" />
         <Dialog.Popup className="fixed top-1/2 left-1/2 z-50 w-[90vw] max-w-lg -translate-x-1/2 -translate-y-1/2 scale-100 rounded-2xl border border-border-strong bg-card p-6 opacity-100 shadow-modal outline-none transition-all duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] data-ending-style:scale-95 data-ending-style:opacity-0 data-starting-style:scale-95 data-starting-style:opacity-0">
           <Dialog.Title className="text-lg font-semibold text-foreground">
-            Nuevo objetivo
+            {t('objectives.new', 'Nuevo objetivo')}
           </Dialog.Title>
           <form
             onSubmit={(event) => {
@@ -78,13 +80,13 @@ export default function ObjectiveCreateModal({
           >
             <label className="flex flex-col gap-1">
               <span className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
-                Nombre
+                {t('objectives.name', 'Nombre')}
               </span>
               <input
                 type="text"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                placeholder="Lanzar MVP..."
+                placeholder={t('objectives.namePlaceholder', 'Lanzar MVP...')}
                 autoFocus
                 className="rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary/50"
               />
@@ -92,7 +94,7 @@ export default function ObjectiveCreateModal({
 
             <label className="flex flex-col gap-1">
               <span className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
-                Área
+                {t('objectives.area', 'Área')}
               </span>
               <select
                 value={areaId}
@@ -109,7 +111,7 @@ export default function ObjectiveCreateModal({
 
             <label className="flex flex-col gap-1">
               <span className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
-                Deadline (opcional)
+                {t('objectives.deadlineOptional', 'Deadline (opcional)')}
               </span>
               <input
                 type="date"
@@ -125,14 +127,14 @@ export default function ObjectiveCreateModal({
                 onClick={() => onOpenChange(false)}
                 className="rounded-md border border-border bg-card px-3 py-1.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent/40 hover:text-foreground"
               >
-                Cancelar
+                {t('common.cancel', 'Cancelar')}
               </button>
               <button
                 type="submit"
                 disabled={!name.trim() || isSubmitting}
                 className="rounded-md bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50"
               >
-                {isSubmitting ? 'Creando...' : 'Crear'}
+                {isSubmitting ? t('common.creating', 'Creando...') : t('common.create', 'Crear')}
               </button>
             </div>
           </form>

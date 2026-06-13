@@ -1,4 +1,5 @@
 import { Link } from 'react-router';
+import { useTranslation } from 'react-i18next';
 import { AREAS, type AreaKey } from '@/types/area';
 import PendingSyncDot from '@/components/layout/PendingSyncDot';
 import type { Project } from '@/types/project';
@@ -24,6 +25,7 @@ const PRIORITY_LABELS: Record<Priority, string> = {
 };
 
 export default function ProjectCard({ project, pendingTaskCount }: ProjectCardProps) {
+  const { t } = useTranslation();
   const area = AREAS[project.areaId as AreaKey];
 
   return (
@@ -50,10 +52,8 @@ export default function ProjectCard({ project, pendingTaskCount }: ProjectCardPr
         )}
         <span>
           {pendingTaskCount > 0
-            ? `${pendingTaskCount} ${
-                pendingTaskCount === 1 ? 'tarea pendiente' : 'tareas pendientes'
-              }`
-            : 'Sin tareas pendientes'}
+            ? t('projects.pendingTasks', { count: pendingTaskCount })
+            : t('projects.noPendingTasks', 'Sin tareas pendientes')}
         </span>
       </div>
     </Link>

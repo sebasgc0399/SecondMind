@@ -1,6 +1,7 @@
 import { useState, type ChangeEvent } from 'react';
 import { Link } from 'react-router';
 import { MoreHorizontal, ChevronUp } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { formatRelative } from '@/lib/formatDate';
 import PendingSyncDot from '@/components/layout/PendingSyncDot';
 import type { Task } from '@/types/task';
@@ -59,6 +60,7 @@ export default function TaskCard({
   onToggleComplete,
   onUpdate,
 }: TaskCardProps) {
+  const { t } = useTranslation();
   const [isExpanded, setIsExpanded] = useState(false);
   const [descDraft, setDescDraft] = useState(task.description);
 
@@ -88,7 +90,11 @@ export default function TaskCard({
       <div className="flex items-start gap-2">
         <label
           className="-my-2 -ml-2 flex h-11 w-11 shrink-0 cursor-pointer items-center justify-center"
-          aria-label={isCompleted ? 'Marcar pendiente' : 'Completar tarea'}
+          aria-label={
+            isCompleted
+              ? t('tasks.card.markPendingAria', 'Marcar pendiente')
+              : t('tasks.card.completeAria', 'Completar tarea')
+          }
         >
           <input
             type="checkbox"
@@ -129,7 +135,11 @@ export default function TaskCard({
           type="button"
           onClick={() => setIsExpanded((v) => !v)}
           className="-my-2 -mr-2 flex h-11 w-11 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent/40 hover:text-foreground"
-          aria-label={isExpanded ? 'Ocultar detalles' : 'Editar tarea'}
+          aria-label={
+            isExpanded
+              ? t('tasks.card.hideDetailsAria', 'Ocultar detalles')
+              : t('tasks.card.editAria', 'Editar tarea')
+          }
         >
           {isExpanded ? <ChevronUp className="h-4 w-4" /> : <MoreHorizontal className="h-4 w-4" />}
         </button>
@@ -139,13 +149,13 @@ export default function TaskCard({
         <div className="mt-4 flex flex-col gap-3 border-t border-border pt-4">
           <label className="flex flex-col gap-1">
             <span className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
-              Descripción
+              {t('tasks.card.description', 'Descripción')}
             </span>
             <textarea
               value={descDraft}
               onChange={(e) => setDescDraft(e.target.value)}
               onBlur={handleDescriptionBlur}
-              placeholder="Agregá notas o detalles..."
+              placeholder={t('tasks.card.descriptionPlaceholder', 'Agregá notas o detalles...')}
               rows={3}
               className="rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary/50"
             />
@@ -154,7 +164,7 @@ export default function TaskCard({
           <div className="grid gap-3 sm:grid-cols-3">
             <label className="flex flex-col gap-1">
               <span className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
-                Prioridad
+                {t('tasks.card.priority', 'Prioridad')}
               </span>
               <select
                 value={task.priority}
@@ -170,14 +180,14 @@ export default function TaskCard({
 
             <label className="flex flex-col gap-1">
               <span className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
-                Proyecto
+                {t('tasks.card.project', 'Proyecto')}
               </span>
               <select
                 value={task.projectId}
                 onChange={handleProjectChange}
                 className="rounded-md border border-border bg-background px-2 py-1.5 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary/50"
               >
-                <option value="">(sin proyecto)</option>
+                <option value="">{t('tasks.card.noProject', '(sin proyecto)')}</option>
                 {projectOptions.map((p) => (
                   <option key={p.id} value={p.id}>
                     {p.name}
@@ -188,7 +198,7 @@ export default function TaskCard({
 
             <label className="flex flex-col gap-1">
               <span className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
-                Fecha
+                {t('tasks.card.date', 'Fecha')}
               </span>
               <input
                 type="date"
