@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router';
 import { AlertTriangle, Check, KeyRound, Play, Sparkles } from 'lucide-react';
+import { Trans, useTranslation } from 'react-i18next';
 import useInbox, { HIGH_CONFIDENCE_THRESHOLD } from '@/hooks/useInbox';
 import useOnlineStatus from '@/hooks/useOnlineStatus';
 import useApiKeys from '@/hooks/useApiKeys';
@@ -13,6 +14,7 @@ type BatchStatus =
   | { kind: 'done'; ok: number; failed: number };
 
 export default function InboxPage() {
+  const { t } = useTranslation();
   const {
     items,
     isInitializing,
@@ -90,20 +92,20 @@ export default function InboxPage() {
 
   const batchLabel =
     batchStatus.kind === 'processing' ? (
-      'Procesando...'
+      t('inbox.batch.processing', 'Procesando...')
     ) : batchStatus.kind === 'done' ? (
       <>
-        {batchStatus.ok} aceptados
+        {t('inbox.batch.accepted', { count: batchStatus.ok })}
         {batchStatus.failed > 0 && (
           <>
             <span aria-hidden>·</span>
             <AlertTriangle className="h-3.5 w-3.5" aria-hidden />
-            {batchStatus.failed} fallaron
+            {t('inbox.batch.failed', { count: batchStatus.failed })}
           </>
         )}
       </>
     ) : (
-      `Aceptar ${high.length} ${high.length === 1 ? 'item' : 'items'}`
+      t('inbox.batch.acceptAll', { count: high.length })
     );
 
   const batchDisabled = batchStatus.kind === 'processing' || high.length === 0;
@@ -112,10 +114,10 @@ export default function InboxPage() {
     <div className="mx-auto max-w-3xl">
       <header className="mb-6 flex flex-wrap items-end justify-between gap-3">
         <div className="hidden items-end gap-3 md:flex">
-          <h1 className="text-2xl font-bold tracking-tight">Inbox</h1>
+          <h1 className="text-2xl font-bold tracking-tight">{t('inbox.title', 'Inbox')}</h1>
           {items.length > 0 && (
             <span className="text-sm text-muted-foreground">
-              {items.length} {items.length === 1 ? 'pendiente' : 'pendientes'}
+              {t('inbox.pending', { count: items.length })}
             </span>
           )}
         </div>
@@ -125,16 +127,20 @@ export default function InboxPage() {
             className="inline-flex items-center gap-1.5 rounded-md bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
           >
             <Play className="h-3.5 w-3.5" />
-            Procesar
+            {t('inbox.process', 'Procesar')}
           </Link>
         ) : (
           <span
             aria-disabled="true"
-            title={items.length > 0 && !isOnline ? 'Requiere conexión a internet' : undefined}
+            title={
+              items.length > 0 && !isOnline
+                ? t('inbox.requiresConnection', 'Requiere conexión a internet')
+                : undefined
+            }
             className="inline-flex cursor-not-allowed items-center gap-1.5 rounded-md bg-primary/30 px-3 py-1.5 text-sm font-medium text-primary-foreground/60"
           >
             <Play className="h-3.5 w-3.5" />
-            Procesar
+            {t('inbox.process', 'Procesar')}
           </span>
         )}
       </header>
@@ -144,15 +150,17 @@ export default function InboxPage() {
           <div className="flex items-start gap-2">
             <KeyRound className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" aria-hidden />
             <p className="text-sm text-muted-foreground">
-              La clasificación con IA está desactivada. Configurá tu API key de Anthropic para que
-              el inbox sugiera título, tipo y área automáticamente.
+              {t(
+                'inbox.aiDisabled',
+                'La clasificación con IA está desactivada. Configurá tu API key de Anthropic para que el inbox sugiera título, tipo y área automáticamente.',
+              )}
             </p>
           </div>
           <Link
             to="/settings#api-keys"
             className="inline-flex shrink-0 items-center gap-1.5 rounded-md border border-border bg-card px-3 py-1.5 text-xs font-medium text-foreground transition-colors hover:bg-accent/40"
           >
-            Configurar
+            {t('inbox.configure', 'Configurar')}
           </Link>
         </div>
       )}
@@ -167,7 +175,8 @@ export default function InboxPage() {
             <section>
               <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
                 <h2 className="text-sm font-semibold text-foreground">
-                  Alta confianza <span className="text-muted-foreground">· {high.length}</span>
+                  {t('inbox.highConfidence', 'Alta confianza')}{' '}
+                  <span className="text-muted-foreground">· {high.length}</span>
                 </h2>
                 <button
                   type="button"
@@ -205,7 +214,8 @@ export default function InboxPage() {
             <section>
               <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
                 <h2 className="text-sm font-semibold text-foreground">
-                  Revisar <span className="text-muted-foreground">· {review.length}</span>
+                  {t('inbox.review', 'Revisar')}{' '}
+                  <span className="text-muted-foreground">· {review.length}</span>
                 </h2>
               </div>
               <ul className="flex flex-col gap-3">
@@ -245,15 +255,22 @@ function InboxSkeleton() {
 }
 
 function EmptyInboxState() {
+  const { t } = useTranslation();
   return (
     <div className="rounded-lg border border-dashed border-border p-10 text-center">
-      <p className="text-base font-medium text-foreground">Inbox limpio 🎉</p>
+      <p className="text-base font-medium text-foreground">
+        {t('inbox.empty.title', 'Inbox limpio 🎉')}
+      </p>
       <p className="mt-2 text-sm text-muted-foreground">
-        Captura una idea nueva con{' '}
-        <kbd className="rounded bg-muted px-1.5 py-0.5 font-mono text-[10px] text-foreground">
-          Alt+N
-        </kbd>{' '}
-        desde cualquier pantalla.
+        <Trans
+          i18nKey="inbox.empty.hint"
+          defaults="Captura una idea nueva con <kbd>Alt+N</kbd> desde cualquier pantalla."
+          components={{
+            kbd: (
+              <kbd className="rounded bg-muted px-1.5 py-0.5 font-mono text-[10px] text-foreground" />
+            ),
+          }}
+        />
       </p>
     </div>
   );

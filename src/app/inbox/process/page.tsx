@@ -1,9 +1,11 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router';
 import { ArrowLeft, ArrowRight, X } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import useInbox from '@/hooks/useInbox';
 import InboxProcessorForm from '@/components/capture/InboxProcessorForm';
 import type { ConvertOverrides, InboxAiResult, InboxItem } from '@/types/inbox';
+import type { TFunction } from 'i18next';
 
 type ProcessedKind = 'note' | 'task' | 'project' | 'trash';
 
@@ -12,6 +14,7 @@ type ProcessedKind = 'note' | 'task' | 'project' | 'trash';
 const HYDRATION_GRACE_MS = 1500;
 
 export default function InboxProcessorPage() {
+  const { t } = useTranslation();
   const { items, convertToNote, convertToTask, convertToProject, dismiss } = useInbox();
   const navigate = useNavigate();
 
@@ -155,9 +158,12 @@ export default function InboxProcessorPage() {
     <div className="mx-auto max-w-2xl">
       <header className="mb-6 flex items-center justify-between gap-4">
         <h1 className="text-xl font-semibold tracking-tight text-foreground">
-          Procesando Inbox ·{' '}
+          {t('inbox.processView.title', 'Procesando Inbox')} ·{' '}
           <span className="text-muted-foreground">
-            {currentIndex + 1} de {batch.length}
+            {t('inbox.processView.counter', '{{current}} de {{total}}', {
+              current: currentIndex + 1,
+              total: batch.length,
+            })}
           </span>
         </h1>
         <button
@@ -166,13 +172,13 @@ export default function InboxProcessorPage() {
           className="inline-flex items-center gap-1.5 rounded-md border border-border bg-card px-2.5 py-1 text-xs font-medium text-muted-foreground transition-colors hover:bg-accent/40 hover:text-foreground"
         >
           <X className="h-3 w-3" />
-          Salir
+          {t('inbox.processView.exit', 'Salir')}
         </button>
       </header>
 
       <div className="mb-4 rounded-lg border border-border bg-muted/20 p-4">
         <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-          Contenido original
+          {t('inbox.processView.originalContent', 'Contenido original')}
         </p>
         <p className="mt-2 text-sm whitespace-pre-wrap text-foreground">{currentItem.rawContent}</p>
       </div>
@@ -195,7 +201,7 @@ export default function InboxProcessorPage() {
           className="inline-flex items-center gap-1.5 rounded-md border border-border bg-card px-2.5 py-1 text-xs font-medium text-muted-foreground transition-colors hover:bg-accent/40 hover:text-foreground disabled:cursor-not-allowed disabled:opacity-40"
         >
           <ArrowLeft className="h-3 w-3" />
-          Atrás
+          {t('inbox.processView.back', 'Atrás')}
         </button>
 
         <ProgressDots
@@ -212,7 +218,7 @@ export default function InboxProcessorPage() {
           disabled={!canGoForward}
           className="inline-flex items-center gap-1.5 rounded-md border border-border bg-card px-2.5 py-1 text-xs font-medium text-muted-foreground transition-colors hover:bg-accent/40 hover:text-foreground disabled:cursor-not-allowed disabled:opacity-40"
         >
-          Siguiente
+          {t('inbox.processView.next', 'Siguiente')}
           <ArrowRight className="h-3 w-3" />
         </button>
       </nav>
@@ -229,6 +235,7 @@ interface ProgressDotsProps {
 }
 
 function ProgressDots({ total, current, processedIds, batch, onSelect }: ProgressDotsProps) {
+  const { t } = useTranslation();
   return (
     <div className="flex items-center gap-1.5">
       {Array.from({ length: total }).map((_, i) => {
@@ -245,7 +252,10 @@ function ProgressDots({ total, current, processedIds, batch, onSelect }: Progres
             key={i}
             type="button"
             onClick={() => onSelect(i)}
-            aria-label={`Item ${i + 1} de ${total}`}
+            aria-label={t('inbox.processView.dotAria', 'Item {{current}} de {{total}}', {
+              current: i + 1,
+              total,
+            })}
             className={className}
           />
         );
@@ -261,35 +271,49 @@ interface DoneScreenProps {
 }
 
 function DoneScreen({ counts, batchSize, initialEmpty }: DoneScreenProps) {
+  const { t } = useTranslation();
   const summary =
     batchSize === 0
-      ? 'No tenés items pendientes.'
-      : buildSummary(counts as Record<string, ProcessedKind> | Record<string, number>, batchSize);
+      ? t('inbox.processView.done.noItems', 'No tenés items pendientes.')
+      : buildSummary(
+          counts as Record<string, ProcessedKind> | Record<string, number>,
+          batchSize,
+          t,
+        );
 
   return (
     <div className="mx-auto max-w-xl">
       <div className="rounded-lg border border-dashed border-border bg-card p-10 text-center">
-        <p className="text-3xl font-semibold text-foreground">¡Inbox limpio! 🎉</p>
+        <p className="text-3xl font-semibold text-foreground">
+          {t('inbox.processView.done.title', '¡Inbox limpio! 🎉')}
+        </p>
         <p className="mt-3 text-sm text-muted-foreground">{summary}</p>
         {initialEmpty && (
           <p className="mt-2 text-xs text-muted-foreground">
-            Captura una idea con Alt+N desde cualquier pantalla.
+            {t(
+              'inbox.processView.done.captureHint',
+              'Captura una idea con Alt+N desde cualquier pantalla.',
+            )}
           </p>
         )}
         <Link
           to="/"
           className="mt-6 inline-flex items-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
         >
-          Volver al Dashboard
+          {t('inbox.processView.done.backToDashboard', 'Volver al Dashboard')}
         </Link>
       </div>
     </div>
   );
 }
 
+// Resumen del batch. t inyectado (no module-eval). Cada parte se pluraliza por
+// catálogo y se unen con ", " (separador universal es/en). El join es chrome de
+// UX, no output AI.
 function buildSummary(
   markers: Record<string, ProcessedKind> | Record<string, number>,
   batchSize: number,
+  t: TFunction,
 ): string {
   const counts: Record<ProcessedKind, number> = {
     note: 0,
@@ -314,11 +338,11 @@ function buildSummary(
   }
 
   const parts: string[] = [];
-  if (counts.note > 0) parts.push(`${counts.note} nota${counts.note > 1 ? 's' : ''}`);
-  if (counts.task > 0) parts.push(`${counts.task} tarea${counts.task > 1 ? 's' : ''}`);
-  if (counts.project > 0) parts.push(`${counts.project} proyecto${counts.project > 1 ? 's' : ''}`);
-  if (counts.trash > 0) parts.push(`${counts.trash} descartado${counts.trash > 1 ? 's' : ''}`);
+  if (counts.note > 0) parts.push(t('inbox.summary.notes', { count: counts.note }));
+  if (counts.task > 0) parts.push(t('inbox.summary.tasks', { count: counts.task }));
+  if (counts.project > 0) parts.push(t('inbox.summary.projects', { count: counts.project }));
+  if (counts.trash > 0) parts.push(t('inbox.summary.discarded', { count: counts.trash }));
 
-  if (parts.length === 0) return `Procesaste ${batchSize} item${batchSize > 1 ? 's' : ''}.`;
-  return `Procesaste ${parts.join(', ')}.`;
+  if (parts.length === 0) return t('inbox.summary.doneItems', { count: batchSize });
+  return t('inbox.summary.done', 'Procesaste {{list}}.', { list: parts.join(', ') });
 }

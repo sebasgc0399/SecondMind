@@ -3,6 +3,18 @@ export default interface Resources {
   translation: {
     capture: {
       fabLabel: 'Captura rápida';
+      hint: {
+        cancel: 'cancelar';
+        close: 'cerrar';
+        newLine: 'línea nueva';
+        save: 'guardar';
+      };
+      placeholder: 'Escribe una idea...';
+      title: 'Captura rápida';
+      unauth: {
+        message: 'Abrí SecondMind para iniciar sesión.';
+        open: 'Abrir SecondMind';
+      };
     };
     commandPalette: {
       actions: 'Acciones';
@@ -30,6 +42,7 @@ export default interface Resources {
       create: 'Crear';
       creating: 'Creando...';
       retry: 'Reintentar';
+      save: 'Guardar';
       unlink: 'Desvincular';
       untitled: 'Sin título';
     };
@@ -93,6 +106,103 @@ export default interface Resources {
       prevWeek: 'Semana anterior';
       title: 'Hábitos';
       today: 'Hoy';
+    };
+    inbox: {
+      aiDisabled: 'La clasificación con IA está desactivada. Configurá tu API key de Anthropic para que el inbox sugiera título, tipo y área automáticamente.';
+      batch: {
+        acceptAll_many: 'Aceptar {{count}} items';
+        acceptAll_one: 'Aceptar {{count}} item';
+        acceptAll_other: 'Aceptar {{count}} items';
+        accepted_many: '{{count}} aceptados';
+        accepted_one: '{{count}} aceptado';
+        accepted_other: '{{count}} aceptados';
+        failed_many: '{{count}} fallaron';
+        failed_one: '{{count}} falló';
+        failed_other: '{{count}} fallaron';
+        processing: 'Procesando...';
+      };
+      configure: 'Configurar';
+      empty: {
+        hint: 'Captura una idea nueva con <kbd>Alt+N</kbd> desde cualquier pantalla.';
+        title: 'Inbox limpio 🎉';
+      };
+      form: {
+        area: 'Área';
+        createAndNext: 'Crear y siguiente';
+        priority: 'Prioridad';
+        tags: 'Tags (separados por coma)';
+        tagsPlaceholder: 'tag1, tag2, tag3';
+        title: 'Título';
+        type: 'Tipo';
+      };
+      highConfidence: 'Alta confianza';
+      item: {
+        dismiss: 'Descartar';
+        processing: 'Procesando con AI...';
+        queued: 'En cola — se procesará al reconectar';
+        toNote: 'Nota';
+      };
+      pending_many: '{{count}} pendientes';
+      pending_one: '{{count}} pendiente';
+      pending_other: '{{count}} pendientes';
+      process: 'Procesar';
+      processView: {
+        back: 'Atrás';
+        counter: '{{current}} de {{total}}';
+        done: {
+          backToDashboard: 'Volver al Dashboard';
+          captureHint: 'Captura una idea con Alt+N desde cualquier pantalla.';
+          noItems: 'No tenés items pendientes.';
+          title: '¡Inbox limpio! 🎉';
+        };
+        dotAria: 'Item {{current}} de {{total}}';
+        exit: 'Salir';
+        next: 'Siguiente';
+        originalContent: 'Contenido original';
+        title: 'Procesando Inbox';
+      };
+      processed: {
+        generic: 'Ya procesado';
+        hint: 'Usá → Siguiente para volver a un item pendiente.';
+        note: 'Ya procesado como nota';
+        project: 'Ya procesado como proyecto';
+        task: 'Ya procesado como tarea';
+        trash: 'Descartado';
+      };
+      requiresConnection: 'Requiere conexión a internet';
+      review: 'Revisar';
+      source: {
+        email: 'Email';
+        quickCapture: 'Captura rápida';
+        shareIntent: 'Compartido';
+        voice: 'Voz';
+        webClip: 'Web clip';
+      };
+      suggestion: {
+        accept: 'Aceptar';
+        edit: 'Editar';
+        editTitle: 'Editar sugerencia';
+        title: 'Sugerencia AI';
+      };
+      summary: {
+        discarded_many: '{{count}} descartados';
+        discarded_one: '{{count}} descartado';
+        discarded_other: '{{count}} descartados';
+        done: 'Procesaste {{list}}.';
+        doneItems_many: 'Procesaste {{count}} items.';
+        doneItems_one: 'Procesaste {{count}} item.';
+        doneItems_other: 'Procesaste {{count}} items.';
+        notes_many: '{{count}} notas';
+        notes_one: '{{count}} nota';
+        notes_other: '{{count}} notas';
+        projects_many: '{{count}} proyectos';
+        projects_one: '{{count}} proyecto';
+        projects_other: '{{count}} proyectos';
+        tasks_many: '{{count}} tareas';
+        tasks_one: '{{count}} tarea';
+        tasks_other: '{{count}} tareas';
+      };
+      title: 'Inbox';
     };
     installPrompt: {
       install: 'Instalar';

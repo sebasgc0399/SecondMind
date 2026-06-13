@@ -1,5 +1,6 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { CloudOff, FileText, Loader2, Trash2 } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import AiSuggestionCard from '@/components/capture/AiSuggestionCard';
 import PendingSyncDot from '@/components/layout/PendingSyncDot';
 import useOnlineStatus from '@/hooks/useOnlineStatus';
@@ -14,14 +15,6 @@ interface InboxItemCardProps {
   onAcceptSuggestion: (edited: InboxAiResult) => void;
 }
 
-const SOURCE_LABELS: Record<string, string> = {
-  'quick-capture': 'Captura rápida',
-  'web-clip': 'Web clip',
-  voice: 'Voz',
-  'share-intent': 'Compartido',
-  email: 'Email',
-};
-
 export default function InboxItemCard({
   item,
   aiEnabled,
@@ -29,7 +22,21 @@ export default function InboxItemCard({
   onDismiss,
   onAcceptSuggestion,
 }: InboxItemCardProps) {
+  const { t } = useTranslation();
   const isOnline = useOnlineStatus();
+  // SOURCE_LABELS dentro del componente (t no existe a module-scope). "Web clip"
+  // es término técnico EN pre-existente → pasa a es vía catálogo (su valor es lo
+  // que el discovery marcó; el copy queda en el catálogo, traducible en F4.1).
+  const sourceLabels = useMemo<Record<string, string>>(
+    () => ({
+      'quick-capture': t('inbox.source.quickCapture', 'Captura rápida'),
+      'web-clip': t('inbox.source.webClip', 'Web clip'),
+      voice: t('inbox.source.voice', 'Voz'),
+      'share-intent': t('inbox.source.shareIntent', 'Compartido'),
+      email: t('inbox.source.email', 'Email'),
+    }),
+    [t],
+  );
   // El trigger processInboxItem (onDocumentCreated) solo corre al crear el
   // item y NO se re-dispara al configurar la key después (D7: sin reproceso
   // retroactivo). Para items viejos sin procesar el spinner sería perpetuo;
@@ -51,12 +58,12 @@ export default function InboxItemCard({
         (isOnline ? (
           <div className="mt-2 flex items-center gap-1.5 text-xs text-muted-foreground">
             <Loader2 className="h-3 w-3 animate-spin" />
-            <span>Procesando con AI...</span>
+            <span>{t('inbox.item.processing', 'Procesando con AI...')}</span>
           </div>
         ) : (
           <div className="mt-2 flex items-center gap-1.5 text-xs text-muted-foreground">
             <CloudOff className="h-3 w-3" />
-            <span>En cola — se procesará al reconectar</span>
+            <span>{t('inbox.item.queued', 'En cola — se procesará al reconectar')}</span>
           </div>
         ))}
 
@@ -81,7 +88,7 @@ export default function InboxItemCard({
           </span>
         )}
         <span className="rounded-full border border-border bg-muted/40 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide">
-          {SOURCE_LABELS[item.source] ?? item.source}
+          {sourceLabels[item.source] ?? item.source}
         </span>
         <span>{formatRelative(item.createdAt)}</span>
         <div className="ml-auto flex items-center gap-2">
@@ -91,7 +98,7 @@ export default function InboxItemCard({
             className="inline-flex min-h-11 items-center gap-1.5 rounded-md border border-border bg-card px-3 py-2 text-xs font-medium text-muted-foreground transition-colors hover:bg-accent/40 hover:text-foreground"
           >
             <FileText className="h-3 w-3" />
-            Nota
+            {t('inbox.item.toNote', 'Nota')}
           </button>
           <button
             type="button"
@@ -99,7 +106,7 @@ export default function InboxItemCard({
             className="inline-flex min-h-11 items-center gap-1.5 rounded-md border border-border bg-card px-3 py-2 text-xs font-medium text-muted-foreground transition-colors hover:bg-accent/40 hover:text-foreground"
           >
             <Trash2 className="h-3 w-3" />
-            Descartar
+            {t('inbox.item.dismiss', 'Descartar')}
           </button>
         </div>
       </div>
