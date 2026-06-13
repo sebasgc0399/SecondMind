@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Sparkles } from 'lucide-react';
 import { useCell } from 'tinybase/ui-react';
+import { useTranslation } from 'react-i18next';
 import useAuth from '@/hooks/useAuth';
 import usePreferences from '@/hooks/usePreferences';
 import { markDistillBannerSeen } from '@/lib/preferences';
@@ -8,12 +9,6 @@ import { markDistillBannerSeen } from '@/lib/preferences';
 interface DistillLevelBannerProps {
   noteId: string;
 }
-
-const COPY: Record<1 | 2 | 3, string> = {
-  1: 'Subiste a L1 · Pasajes clave marcados',
-  2: 'Subiste a L2 · Esenciales resaltados',
-  3: 'Llegaste a L3 · Nota destilada',
-};
 
 // Mini-banner inline que se muestra durante 3s cuando distillLevel sube de
 // un nivel a otro mas alto. Persistencia per-nivel cross-device en
@@ -32,6 +27,7 @@ const COPY: Record<1 | 2 | 3, string> = {
 // - User navega <2s tras Ctrl+B: NoteEditor desmonta antes de que el cell
 //   actualice. Banner anclado al editor — comportamiento esperado.
 export default function DistillLevelBanner({ noteId }: DistillLevelBannerProps) {
+  const { t } = useTranslation();
   const raw = useCell('notes', noteId, 'distillLevel');
   const level = (Number(raw) || 0) as 0 | 1 | 2 | 3;
   const { user } = useAuth();
@@ -73,11 +69,17 @@ export default function DistillLevelBanner({ noteId }: DistillLevelBannerProps) 
 
   if (visibleLevel === null) return null;
 
+  const copy: Record<1 | 2 | 3, string> = {
+    1: t('editor.distill.banner.l1', 'Subiste a L1 · Pasajes clave marcados'),
+    2: t('editor.distill.banner.l2', 'Subiste a L2 · Esenciales resaltados'),
+    3: t('editor.distill.banner.l3', 'Llegaste a L3 · Nota destilada'),
+  };
+
   return (
     <div className="mx-auto w-full max-w-180 px-4 pt-3" role="status" aria-live="polite">
       <div className="flex animate-in items-center gap-2 rounded-r-md border-l-2 border-violet-500 bg-violet-500/10 px-3 py-2 text-xs font-medium text-violet-700 duration-200 fade-in slide-in-from-top-1 dark:text-violet-300">
         <Sparkles className="h-3.5 w-3.5" />
-        <span>{COPY[visibleLevel]}</span>
+        <span>{copy[visibleLevel]}</span>
       </div>
     </div>
   );

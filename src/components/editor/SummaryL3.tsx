@@ -1,5 +1,6 @@
 import { useLayoutEffect } from 'react';
 import { ChevronDown, ChevronRight, Sparkles } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
 interface SummaryL3Props {
   value: string;
@@ -16,6 +17,7 @@ export default function SummaryL3({
   isOpen,
   onToggle,
 }: SummaryL3Props) {
+  const { t } = useTranslation();
   // Auto-resize: setear height a '0px' antes de leer scrollHeight es el
   // workaround confiable para iOS Safari (no 'auto').
   useLayoutEffect(() => {
@@ -48,7 +50,9 @@ export default function SummaryL3({
             <ChevronRight className="h-3.5 w-3.5 text-green-700 dark:text-green-400" />
           )}
           <Sparkles className="h-3.5 w-3.5 text-green-700 dark:text-green-400" />
-          <span className="uppercase tracking-wide">Resumen ejecutivo (L3)</span>
+          <span className="uppercase tracking-wide">
+            {t('editor.summaryL3.title', 'Resumen ejecutivo (L3)')}
+          </span>
           {!isOpen && value.trim().length > 0 && (
             <span className="ml-auto truncate text-[10px] font-normal text-muted-foreground">
               {value.trim().slice(0, 60)}
@@ -61,7 +65,10 @@ export default function SummaryL3({
               ref={textareaRef}
               value={value}
               onChange={handleChange}
-              placeholder="¿Qué le explicarías a tu yo del futuro sobre esto? 1-2 frases."
+              placeholder={t(
+                'editor.summaryL3.placeholder',
+                '¿Qué le explicarías a tu yo del futuro sobre esto? 1-2 frases.',
+              )}
               rows={2}
               className="w-full resize-none border-none bg-transparent text-sm leading-relaxed text-foreground outline-none placeholder:text-muted-foreground"
             />

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router';
 import { PanelRightClose, PanelRightOpen } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import NoteEditor from '@/components/editor/NoteEditor';
 import BacklinksPanel, { BacklinksToggle } from '@/components/editor/BacklinksPanel';
 import DistillIndicator from '@/components/editor/DistillIndicator';
@@ -36,6 +37,7 @@ export default function NoteEditorContainer({
   showSidePanel,
   showSplitButton,
 }: NoteEditorContainerProps) {
+  const { t } = useTranslation();
   const [discardCount, setDiscardCount] = useState(0);
   const { initialContent, initialSummaryL3, isLoading, error, notFound } = useNote(
     noteId,
@@ -115,7 +117,11 @@ export default function NoteEditorContainer({
   if (error) {
     return (
       <div className="mx-auto max-w-180 px-4 py-8">
-        <p className="text-sm text-destructive">Error al cargar la nota: {error.message}</p>
+        <p className="text-sm text-destructive">
+          {t('notes.detail.loadError', 'Error al cargar la nota: {{message}}', {
+            message: error.message,
+          })}
+        </p>
       </div>
     );
   }
@@ -123,7 +129,9 @@ export default function NoteEditorContainer({
   if (notFound) {
     return (
       <div className="mx-auto max-w-180 px-4 py-8">
-        <p className="text-sm text-muted-foreground">Esta nota ya no existe.</p>
+        <p className="text-sm text-muted-foreground">
+          {t('notes.detail.notFound', 'Esta nota ya no existe.')}
+        </p>
       </div>
     );
   }
@@ -151,8 +159,16 @@ export default function NoteEditorContainer({
                 <button
                   type="button"
                   onClick={handleSplitToggle}
-                  aria-label={splitOpen ? 'Cerrar panel derecho' : 'Abrir nota lado a lado'}
-                  title={splitOpen ? 'Cerrar panel derecho (⌘\\)' : 'Abrir nota lado a lado (⌘\\)'}
+                  aria-label={
+                    splitOpen
+                      ? t('commandPalette.closeSplit', 'Cerrar panel derecho')
+                      : t('commandPalette.openSplit', 'Abrir nota lado a lado')
+                  }
+                  title={
+                    splitOpen
+                      ? t('notes.split.closeTitle', 'Cerrar panel derecho (⌘\\)')
+                      : t('notes.split.openTitle', 'Abrir nota lado a lado (⌘\\)')
+                  }
                   className="inline-flex items-center justify-center rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
                 >
                   {splitOpen ? (

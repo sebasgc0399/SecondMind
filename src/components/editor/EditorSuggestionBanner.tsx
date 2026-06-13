@@ -1,4 +1,5 @@
 import { Check, Sparkles } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { useNoteSuggestions } from '@/hooks/useNoteSuggestions';
 
 interface EditorSuggestionBannerProps {
@@ -12,6 +13,7 @@ interface EditorSuggestionBannerProps {
 //
 // Stateless: el optimistic dismiss vive en useNoteSuggestions, no acá.
 export default function EditorSuggestionBanner({ noteId }: EditorSuggestionBannerProps) {
+  const { t } = useTranslation();
   const { suggestions, accept, dismiss } = useNoteSuggestions(noteId);
 
   if (suggestions.length === 0) return null;
@@ -19,13 +21,13 @@ export default function EditorSuggestionBanner({ noteId }: EditorSuggestionBanne
   return (
     <div
       role="region"
-      aria-label="Sugerencias de la AI"
+      aria-label={t('editor.suggestion.regionLabel', 'Sugerencias de la AI')}
       className="mx-auto w-full max-w-180 px-4 pt-3"
     >
       <div className="rounded-md border border-primary/30 bg-primary/5 p-3">
         <div className="mb-2 flex items-center gap-1.5 text-xs font-medium text-primary">
           <Sparkles className="h-3 w-3" />
-          Sugerencia AI
+          {t('inbox.suggestion.title', 'Sugerencia AI')}
         </div>
 
         {suggestions.map((suggestion, idx) => (
@@ -42,14 +44,14 @@ export default function EditorSuggestionBanner({ noteId }: EditorSuggestionBanne
                 className="inline-flex items-center gap-1.5 rounded-md bg-primary px-2.5 py-1 text-xs font-medium text-primary-foreground transition-colors hover:bg-primary/90"
               >
                 <Check className="h-3 w-3" />
-                Aceptar
+                {t('inbox.suggestion.accept', 'Aceptar')}
               </button>
               <button
                 type="button"
                 onClick={() => dismiss(suggestion)}
                 className="inline-flex items-center rounded-md border border-border bg-card px-2.5 py-1 text-xs font-medium text-muted-foreground transition-colors hover:bg-accent/40 hover:text-foreground"
               >
-                Descartar
+                {t('inbox.item.dismiss', 'Descartar')}
               </button>
             </div>
           </div>

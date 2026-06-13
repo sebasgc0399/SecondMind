@@ -1,6 +1,7 @@
 import { useCallback } from 'react';
 import { useNavigate } from 'react-router';
 import { Check } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { EditorContent, useEditor } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import Placeholder from '@tiptap/extension-placeholder';
@@ -41,6 +42,7 @@ export default function NoteEditor({
   headerSlot,
   onDiscardSaveError,
 }: NoteEditorProps) {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const editor = useEditor({
     extensions: [
@@ -63,7 +65,7 @@ export default function NoteEditor({
       TaskItem.configure({ nested: true }),
       Highlight,
       CodeBlockLowlight,
-      Placeholder.configure({ placeholder: 'Escribe una idea...' }),
+      Placeholder.configure({ placeholder: t('editor.placeholder', 'Escribe una idea...') }),
       Wikilink.configure({ noteId }),
       SlashCommand.configure({ noteId }),
     ],
@@ -115,20 +117,31 @@ export default function NoteEditor({
 }
 
 function SaveIndicator({ status }: { status: SaveStatus }) {
+  const { t } = useTranslation();
   if (status === 'saving') {
-    return <span className="text-xs text-muted-foreground">Guardando...</span>;
+    return (
+      <span className="text-xs text-muted-foreground">
+        {t('editor.save.saving', 'Guardando...')}
+      </span>
+    );
   }
   if (status === 'retrying') {
-    return <span className="text-xs text-amber-600 dark:text-amber-400">Reintentando...</span>;
+    return (
+      <span className="text-xs text-amber-600 dark:text-amber-400">
+        {t('editor.save.retrying', 'Reintentando...')}
+      </span>
+    );
   }
   if (status === 'error') {
-    return <span className="text-xs text-destructive">Error al guardar</span>;
+    return (
+      <span className="text-xs text-destructive">{t('editor.save.error', 'Error al guardar')}</span>
+    );
   }
   if (status === 'saved') {
     return (
       <span className="inline-flex items-center gap-1 text-xs text-primary">
         <Check className="h-3 w-3" aria-hidden />
-        Guardado
+        {t('editor.save.saved', 'Guardado')}
       </span>
     );
   }

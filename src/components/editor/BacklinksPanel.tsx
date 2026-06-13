@@ -1,5 +1,6 @@
 import { Link } from 'react-router';
 import { Link2, X } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import useBacklinks from '@/hooks/useBacklinks';
 
 interface BacklinksPanelProps {
@@ -8,6 +9,7 @@ interface BacklinksPanelProps {
 }
 
 export default function BacklinksPanel({ noteId, onClose }: BacklinksPanelProps) {
+  const { t } = useTranslation();
   const backlinks = useBacklinks(noteId);
 
   return (
@@ -19,7 +21,7 @@ export default function BacklinksPanel({ noteId, onClose }: BacklinksPanelProps)
         <button
           type="button"
           onClick={onClose}
-          aria-label="Ocultar backlinks"
+          aria-label={t('editor.backlinks.hide', 'Ocultar backlinks')}
           className="rounded-md p-1 text-muted-foreground transition-colors hover:bg-accent/60 hover:text-foreground"
         >
           <X className="h-4 w-4" />
@@ -29,7 +31,10 @@ export default function BacklinksPanel({ noteId, onClose }: BacklinksPanelProps)
       {backlinks.length === 0 ? (
         <div className="px-4 py-6">
           <p className="text-xs leading-relaxed text-muted-foreground">
-            Sin backlinks aún. Las notas que enlacen a esta aparecerán acá.
+            {t(
+              'editor.backlinks.empty',
+              'Sin backlinks aún. Las notas que enlacen a esta aparecerán acá.',
+            )}
           </p>
         </div>
       ) : (

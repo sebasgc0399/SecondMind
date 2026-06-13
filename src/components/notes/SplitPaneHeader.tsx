@@ -1,5 +1,6 @@
 import { X } from 'lucide-react';
 import { useCell } from 'tinybase/ui-react';
+import { useTranslation } from 'react-i18next';
 
 interface SplitPaneHeaderProps {
   noteId: string;
@@ -12,8 +13,9 @@ interface SplitPaneHeaderProps {
 // obligatorio en el span del título (gotcha CLAUDE.md) para que truncate
 // funcione dentro del flex container.
 export default function SplitPaneHeader({ noteId, onClose }: SplitPaneHeaderProps) {
+  const { t } = useTranslation();
   const titleCell = useCell('notes', noteId, 'title') as string | undefined;
-  const title = (titleCell ?? '').trim() || 'Sin título';
+  const title = (titleCell ?? '').trim() || t('common.untitled', 'Sin título');
 
   return (
     <div className="flex h-10 shrink-0 items-center gap-2 border-b border-border bg-muted/30 px-3">
@@ -21,8 +23,8 @@ export default function SplitPaneHeader({ noteId, onClose }: SplitPaneHeaderProp
       <button
         type="button"
         onClick={onClose}
-        aria-label="Cerrar este panel"
-        title="Cerrar panel"
+        aria-label={t('notes.split.closePaneAria', 'Cerrar este panel')}
+        title={t('notes.split.closePaneTitle', 'Cerrar panel')}
         className="inline-flex shrink-0 items-center justify-center rounded-md p-1 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
       >
         <X className="h-3.5 w-3.5" aria-hidden />

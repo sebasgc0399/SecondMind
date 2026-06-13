@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { ChevronDown, ChevronUp, RotateCcw } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import type { GraphFilters as GraphFiltersType } from '@/hooks/useGraph';
 import { DEFAULT_FILTERS } from '@/hooks/useGraph';
 import type { ParaType, NoteType } from '@/types/common';
@@ -9,6 +10,9 @@ interface GraphFiltersProps {
   onChange: (filters: GraphFiltersType) => void;
 }
 
+// PARA_OPTIONS / NOTE_TYPE_OPTIONS: labels de enum (Proyecto/Recurso…,
+// Fleeting/Literature…) + "Todas" → diferidos a F2.7 (entityLabels central,
+// mismo enum que NoteCard/GraphNodePanel). Quedan en es = idéntico al baseline.
 const PARA_OPTIONS: { value: ParaType | 'all'; label: string }[] = [
   { value: 'all', label: 'Todas' },
   { value: 'project', label: 'Proyecto' },
@@ -33,6 +37,7 @@ function isFiltered(filters: GraphFiltersType): boolean {
 }
 
 export default function GraphFilters({ filters, onChange }: GraphFiltersProps) {
+  const { t } = useTranslation();
   const [isOpen, setIsOpen] = useState(false);
   const hasFilters = isFiltered(filters);
 
@@ -44,10 +49,10 @@ export default function GraphFilters({ filters, onChange }: GraphFiltersProps) {
         className="flex w-full items-center gap-2 px-4 py-2 text-sm text-muted-foreground hover:text-foreground md:px-6"
       >
         {isOpen ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
-        Filtros
+        {t('graph.filters.title', 'Filtros')}
         {hasFilters && (
           <span className="rounded-full bg-primary px-1.5 py-0.5 text-[10px] font-semibold text-primary-foreground">
-            activos
+            {t('graph.filters.active', 'activos')}
           </span>
         )}
       </button>
@@ -55,7 +60,7 @@ export default function GraphFilters({ filters, onChange }: GraphFiltersProps) {
       {isOpen && (
         <div className="flex flex-wrap items-end gap-3 px-4 pb-3 md:gap-4 md:px-6">
           <label className="flex flex-col gap-1">
-            <span className="text-xs text-muted-foreground">Area</span>
+            <span className="text-xs text-muted-foreground">{t('graph.filters.area', 'Area')}</span>
             <select
               value={filters.paraType}
               onChange={(e) =>
@@ -72,7 +77,7 @@ export default function GraphFilters({ filters, onChange }: GraphFiltersProps) {
           </label>
 
           <label className="flex flex-col gap-1">
-            <span className="text-xs text-muted-foreground">Tipo</span>
+            <span className="text-xs text-muted-foreground">{t('graph.filters.type', 'Tipo')}</span>
             <select
               value={filters.noteType}
               onChange={(e) =>
@@ -89,7 +94,9 @@ export default function GraphFilters({ filters, onChange }: GraphFiltersProps) {
           </label>
 
           <label className="flex flex-col gap-1">
-            <span className="text-xs text-muted-foreground">Links min</span>
+            <span className="text-xs text-muted-foreground">
+              {t('graph.filters.minLinks', 'Links min')}
+            </span>
             <input
               type="number"
               min={0}
@@ -108,7 +115,7 @@ export default function GraphFilters({ filters, onChange }: GraphFiltersProps) {
               className="inline-flex items-center gap-1 rounded-md px-2 py-1.5 text-sm text-muted-foreground hover:text-foreground"
             >
               <RotateCcw className="h-3.5 w-3.5" />
-              Resetear
+              {t('graph.filters.reset', 'Resetear')}
             </button>
           )}
         </div>

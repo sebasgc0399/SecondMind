@@ -1,6 +1,7 @@
 import { PluginKey } from '@tiptap/pm/state';
 import {
   filterSlashMenuItems,
+  getSlashMenuItems,
   type SlashCommandContext,
   type SlashMenuItem,
 } from '@/components/editor/menus/slashMenuItems';
@@ -35,7 +36,7 @@ export function slashCommandSuggestion(
       return !ALPHANUMERIC.test(prevChar);
     },
 
-    items: ({ query }) => filterSlashMenuItems(query),
+    items: ({ query }) => filterSlashMenuItems(getSlashMenuItems(), query),
 
     command: ({ editor, range, props }: { editor: Editor; range: Range; props: SlashMenuItem }) => {
       editor.chain().focus().deleteRange(range).run();

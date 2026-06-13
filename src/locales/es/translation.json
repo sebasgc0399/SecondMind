@@ -98,6 +98,198 @@
       "title": "Tareas de hoy"
     }
   },
+  "editor": {
+    "backlinks": {
+      "empty": "Sin backlinks aún. Las notas que enlacen a esta aparecerán acá.",
+      "hide": "Ocultar backlinks"
+    },
+    "codeBlock": {
+      "copied": "Código copiado",
+      "copy": "Copiar código"
+    },
+    "distill": {
+      "banner": {
+        "l1": "Subiste a L1 · Pasajes clave marcados",
+        "l2": "Subiste a L2 · Esenciales resaltados",
+        "l3": "Llegaste a L3 · Nota destilada"
+      },
+      "indicatorLabel": "Nivel de destilación: L{{level}} — {{label}}",
+      "l0": {
+        "label": "Sin destilación",
+        "tip": "Selecciona los pasajes clave y aplícales negrita (Ctrl+B) para marcarlos como L1."
+      },
+      "l1": {
+        "label": "Pasajes clave marcados",
+        "tip": "De lo que marcaste, resalta lo verdaderamente esencial con Ctrl+Shift+H para subir a L2."
+      },
+      "l2": {
+        "label": "Esenciales resaltados",
+        "tip": "Escribe un resumen ejecutivo en tus palabras para subir a L3 — la nota queda lista para tu yo del futuro, sin tener que releer todo."
+      },
+      "l3": {
+        "label": "Resumen escrito",
+        "tip": "Destilación completa. La nota está lista para tu yo del futuro."
+      },
+      "writeL3": "Escribir resumen L3"
+    },
+    "link": {
+      "confirm": "Confirmar link",
+      "edit": "Editar link",
+      "openNewTab": "Abrir link en nueva pestaña"
+    },
+    "menu": {
+      "noResults": "Sin resultados",
+      "noResultsQuery": "Sin resultados para \"{{query}}\""
+    },
+    "placeholder": "Escribe una idea...",
+    "review": {
+      "activate": "Activar revisión periódica",
+      "again": "Necesito repasarla",
+      "good": "La recuerdo bien",
+      "next": "Próxima revisión: {{when}}",
+      "prompt": "¿La recordás?",
+      "relative": {
+        "days_one": "en {{count}} día",
+        "days_many": "en {{count}} días",
+        "days_other": "en {{count}} días",
+        "months_one": "en {{count}} mes",
+        "months_many": "en {{count}} meses",
+        "months_other": "en {{count}} meses",
+        "today": "hoy",
+        "tomorrow": "mañana",
+        "weeks_one": "en {{count}} semana",
+        "weeks_many": "en {{count}} semanas",
+        "weeks_other": "en {{count}} semanas"
+      },
+      "reviewed": "Revisado. Próxima revisión: {{when}}",
+      "soon": "pronto"
+    },
+    "save": {
+      "error": "Error al guardar",
+      "retrying": "Reintentando...",
+      "saved": "Guardado",
+      "saving": "Guardando..."
+    },
+    "saveError": {
+      "copied": "Copiado",
+      "copy": "Copiar contenido",
+      "detail": "Reintentamos 3 veces sin éxito. Reintentar guarda el contenido completo. Descartar revierte el título visible.",
+      "discard": "Descartar cambios",
+      "title": "No pudimos guardar tu última edición"
+    },
+    "similar": {
+      "empty": "Sin notas similares aún.",
+      "noEmbedding": "Guarda la nota para ver sugerencias.",
+      "offline": "Disponible cuando vuelva la conexión.",
+      "title": "Notas similares"
+    },
+    "slash": {
+      "category": {
+        "blocks": "Bloques",
+        "lists": "Listas",
+        "mentions": "Menciones",
+        "templates": "Plantillas",
+        "text": "Texto"
+      },
+      "items": {
+        "blockquote": {
+          "description": "Cita textual",
+          "label": "Blockquote"
+        },
+        "bulletList": {
+          "description": "Lista con viñetas",
+          "label": "Bullet List"
+        },
+        "codeBlock": {
+          "description": "Bloque de código",
+          "label": "Code Block"
+        },
+        "divider": {
+          "description": "Línea horizontal",
+          "label": "Divider"
+        },
+        "heading1": {
+          "description": "Título principal",
+          "label": "Heading 1"
+        },
+        "heading2": {
+          "description": "Subtítulo",
+          "label": "Heading 2"
+        },
+        "heading3": {
+          "description": "Subtítulo menor",
+          "label": "Heading 3"
+        },
+        "mentionNote": {
+          "description": "Insertar @ para autocompletar",
+          "label": "Mencionar nota"
+        },
+        "orderedList": {
+          "description": "Lista numerada",
+          "label": "Numbered List"
+        },
+        "taskList": {
+          "description": "Lista con checkboxes",
+          "label": "Task List"
+        },
+        "templateLiterature": {
+          "description": "Template para notas de fuentes",
+          "label": "Nota Literature"
+        },
+        "templatePermanent": {
+          "description": "Template para ideas permanentes",
+          "label": "Nota Permanent"
+        }
+      }
+    },
+    "suggestion": {
+      "regionLabel": "Sugerencias de la AI"
+    },
+    "summaryL3": {
+      "placeholder": "¿Qué le explicarías a tu yo del futuro sobre esto? 1-2 frases.",
+      "title": "Resumen ejecutivo (L3)"
+    },
+    "toolbar": {
+      "bold": "Negrita",
+      "code": "Código inline",
+      "highlight": "Resaltar",
+      "italic": "Cursiva",
+      "link": "Link",
+      "strike": "Tachado"
+    },
+    "wikilink": {
+      "untitled": "Nota sin título"
+    }
+  },
+  "graph": {
+    "createNotes": "Crear notas →",
+    "empty": {
+      "filtered": "Ningún nodo coincide con los filtros.",
+      "noData": "El grafo cobra vida con más notas y conexiones."
+    },
+    "exitFullscreen": "Salir de pantalla completa",
+    "filters": {
+      "active": "activos",
+      "area": "Area",
+      "minLinks": "Links min",
+      "reset": "Resetear",
+      "title": "Filtros",
+      "type": "Tipo"
+    },
+    "fullscreen": "Pantalla completa",
+    "node": {
+      "openNote": "Abrir nota →"
+    },
+    "resetFilters": "Resetear filtros",
+    "stats": {
+      "connections_one": "{{count}} conexión",
+      "connections_many": "{{count}} conexiones",
+      "connections_other": "{{count}} conexiones",
+      "notes_one": "{{count}} nota",
+      "notes_many": "{{count}} notas",
+      "notes_other": "{{count}} notas"
+    }
+  },
   "habits": {
     "gridHeader": "Hábito",
     "nextWeek": "Semana siguiente",
@@ -228,6 +420,87 @@
     },
     "showMenu": "Mostrar menú",
     "signOut": "Cerrar sesión"
+  },
+  "notes": {
+    "card": {
+      "aiSummaryLabel": "Resumen generado por IA",
+      "delete": "Eliminar nota",
+      "deleteForever": "Eliminar para siempre",
+      "favorite": "Marcar como favorita",
+      "hardDelete": {
+        "description": "Esta acción no se puede deshacer. La nota, sus embeddings y los links que la mencionan se eliminan para siempre.",
+        "title": "¿Eliminar esta nota para siempre?"
+      },
+      "purgeDays_one": "{{count}} día",
+      "purgeDays_many": "{{count}} días",
+      "purgeDays_other": "{{count}} días",
+      "purgePending": "Pendiente",
+      "restore": "Restaurar nota",
+      "softDelete": {
+        "confirm": "Mover a papelera",
+        "description": "Puedes restaurarla desde Notas → Papelera o eliminarla definitivamente desde ahí.",
+        "title": "¿Mover esta nota a la papelera?"
+      },
+      "unfavorite": "Quitar de favoritas"
+    },
+    "detail": {
+      "loadError": "Error al cargar la nota: {{message}}",
+      "notFound": "Esta nota ya no existe."
+    },
+    "empty": {
+      "all": "No tenés notas todavía.",
+      "backToAll": "Volver a todas las notas",
+      "clearSearch": "Limpiar búsqueda",
+      "createFirst": "Crear primera nota",
+      "favorites": "No tenés notas favoritas todavía.",
+      "review": "Nada por revisar hoy.",
+      "reviewFilter": "No se encontraron notas en revisión.",
+      "showAll": "Mostrar todas las notas",
+      "trash": "Tu papelera está vacía.",
+      "trashFilter": "No se encontraron notas en la papelera."
+    },
+    "newNote": "Nueva nota",
+    "newShort": "Nueva",
+    "purgeDialog": {
+      "description_one": "Se eliminarán para siempre {{count}} nota, sus embeddings y los links que las mencionan. Esta acción no se puede deshacer.",
+      "description_many": "Se eliminarán para siempre {{count}} notas, sus embeddings y los links que las mencionan. Esta acción no se puede deshacer.",
+      "description_other": "Se eliminarán para siempre {{count}} notas, sus embeddings y los links que las mencionan. Esta acción no se puede deshacer.",
+      "title": "¿Vaciar la papelera?"
+    },
+    "search": {
+      "all": "Buscar notas...",
+      "review": "Buscar en notas por revisar...",
+      "trash": "Buscar en papelera..."
+    },
+    "semantic": {
+      "noExactMatch": "No hay coincidencias exactas, pero estas notas son temáticamente similares.",
+      "noResults": "Sin resultados.",
+      "titleNoKeyword": "Notas temáticamente similares",
+      "titleWithKeyword": "Semánticamente similares"
+    },
+    "split": {
+      "closePaneAria": "Cerrar este panel",
+      "closePaneTitle": "Cerrar panel",
+      "closeTitle": "Cerrar panel derecho (⌘\\)",
+      "noOtherNotes": "Sin otras notas disponibles",
+      "openTitle": "Abrir nota lado a lado (⌘\\)",
+      "searchPlaceholder": "Buscar nota para abrir lado a lado..."
+    },
+    "tabs": {
+      "all": "Todas",
+      "favorites": "Favoritas",
+      "review": "Por revisar",
+      "trash": "Papelera"
+    },
+    "trash": {
+      "captionDays_one": "Las notas se eliminan definitivamente a {{count}} día.",
+      "captionDays_many": "Las notas se eliminan definitivamente a los {{count}} días.",
+      "captionDays_other": "Las notas se eliminan definitivamente a los {{count}} días.",
+      "captionNever": "Las notas en papelera no se eliminan automáticamente.",
+      "change": "Cambiar",
+      "empty": "Vaciar papelera"
+    },
+    "viewAsGraph": "Ver como grafo"
   },
   "objectives": {
     "area": "Área",

@@ -1,11 +1,13 @@
 import { useState, type MouseEvent } from 'react';
 import { Link } from 'react-router';
 import { Link2, Sparkles, Star, Trash2, Undo2 } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import type { NoteOramaDoc } from '@/lib/orama';
 import { formatRelative } from '@/lib/formatDate';
 import { notesRepo } from '@/infra/repos/notesRepo';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import PendingSyncDot from '@/components/layout/PendingSyncDot';
+import type { TFunction } from 'i18next';
 
 interface NoteCardProps {
   note: NoteOramaDoc;
@@ -17,6 +19,9 @@ interface NoteCardProps {
   daysUntilPurge?: number | null;
 }
 
+// NOTE_TYPE_LABELS / PARA_TYPE_LABELS: enums de entidad compartidos
+// cross-dominio → diferidos a F2.7 (entityLabels central, junto con los de
+// AiSuggestionCard/GraphFilters). Quedan en es = idéntico al baseline.
 const NOTE_TYPE_LABELS: Record<string, string> = {
   fleeting: 'Fugaz',
   literature: 'Literatura',
@@ -44,11 +49,10 @@ const DISTILL_BADGE_STYLES: Record<1 | 2 | 3, string> = {
 const HOVER_REVEAL =
   'md:opacity-0 md:group-hover:opacity-100 md:focus-visible:opacity-100 motion-safe:transition-opacity';
 
-function purgeBadgeLabel(daysUntilPurge: number | null | undefined): string | null {
+function purgeBadgeLabel(daysUntilPurge: number | null | undefined, t: TFunction): string | null {
   if (daysUntilPurge === undefined || daysUntilPurge === null) return null;
-  if (daysUntilPurge === 0) return 'Pendiente';
-  if (daysUntilPurge === 1) return '1 día';
-  return `${daysUntilPurge} días`;
+  if (daysUntilPurge === 0) return t('notes.card.purgePending', 'Pendiente');
+  return t('notes.card.purgeDays', { count: daysUntilPurge });
 }
 
 export default function NoteCard({
@@ -57,12 +61,13 @@ export default function NoteCard({
   mode = 'normal',
   daysUntilPurge,
 }: NoteCardProps) {
+  const { t } = useTranslation();
   const snippet = note.contentPlain.trim().slice(0, 200);
   const showSnippet = snippet.length > 0;
   const [isSoftDeleteOpen, setIsSoftDeleteOpen] = useState(false);
   const [isHardDeleteOpen, setIsHardDeleteOpen] = useState(false);
   const isTrashMode = mode === 'trash';
-  const purgeBadge = isTrashMode ? purgeBadgeLabel(daysUntilPurge) : null;
+  const purgeBadge = isTrashMode ? purgeBadgeLabel(daysUntilPurge, t) : null;
 
   function stop(event: MouseEvent) {
     event.preventDefault();
@@ -120,7 +125,7 @@ export default function NoteCard({
                 <button
                   type="button"
                   onClick={handleRestore}
-                  aria-label="Restaurar nota"
+                  aria-label={t('notes.card.restore', 'Restaurar nota')}
                   className="inline-flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
                 >
                   <Undo2 className="h-4 w-4" />
@@ -128,7 +133,7 @@ export default function NoteCard({
                 <button
                   type="button"
                   onClick={handleOpenHardDelete}
-                  aria-label="Eliminar para siempre"
+                  aria-label={t('notes.card.deleteForever', 'Eliminar para siempre')}
                   className="inline-flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
                 >
                   <Trash2 className="h-4 w-4" />
@@ -139,7 +144,11 @@ export default function NoteCard({
                 <button
                   type="button"
                   onClick={handleToggleFavorite}
-                  aria-label={note.isFavorite ? 'Quitar de favoritas' : 'Marcar como favorita'}
+                  aria-label={
+                    note.isFavorite
+                      ? t('notes.card.unfavorite', 'Quitar de favoritas')
+                      : t('notes.card.favorite', 'Marcar como favorita')
+                  }
                   aria-pressed={note.isFavorite}
                   className={
                     note.isFavorite
@@ -156,7 +165,7 @@ export default function NoteCard({
                 <button
                   type="button"
                   onClick={handleOpenSoftDelete}
-                  aria-label="Eliminar nota"
+                  aria-label={t('notes.card.delete', 'Eliminar nota')}
                   className={`inline-flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive ${HOVER_REVEAL}`}
                 >
                   <Trash2 className="h-4 w-4" />
@@ -171,7 +180,7 @@ export default function NoteCard({
         {note.aiSummary && mode !== 'trash' && (
           <p
             className="mt-1 flex items-start gap-1.5 text-xs italic text-muted-foreground/80"
-            aria-label="Resumen generado por IA"
+            aria-label={t('notes.card.aiSummaryLabel', 'Resumen generado por IA')}
           >
             <Sparkles className="mt-0.5 h-3 w-3 shrink-0 text-violet-500" aria-hidden />
             <span className="line-clamp-2">{note.aiSummary}</span>
@@ -199,9 +208,12 @@ export default function NoteCard({
         <ConfirmDialog
           open={isSoftDeleteOpen}
           onOpenChange={setIsSoftDeleteOpen}
-          title="¿Mover esta nota a la papelera?"
-          description="Puedes restaurarla desde Notas → Papelera o eliminarla definitivamente desde ahí."
-          confirmLabel="Mover a papelera"
+          title={t('notes.card.softDelete.title', '¿Mover esta nota a la papelera?')}
+          description={t(
+            'notes.card.softDelete.description',
+            'Puedes restaurarla desde Notas → Papelera o eliminarla definitivamente desde ahí.',
+          )}
+          confirmLabel={t('notes.card.softDelete.confirm', 'Mover a papelera')}
           variant="destructive"
           onConfirm={handleConfirmSoftDelete}
         />
@@ -210,9 +222,12 @@ export default function NoteCard({
         <ConfirmDialog
           open={isHardDeleteOpen}
           onOpenChange={setIsHardDeleteOpen}
-          title="¿Eliminar esta nota para siempre?"
-          description="Esta acción no se puede deshacer. La nota, sus embeddings y los links que la mencionan se eliminan para siempre."
-          confirmLabel="Eliminar para siempre"
+          title={t('notes.card.hardDelete.title', '¿Eliminar esta nota para siempre?')}
+          description={t(
+            'notes.card.hardDelete.description',
+            'Esta acción no se puede deshacer. La nota, sus embeddings y los links que la mencionan se eliminan para siempre.',
+          )}
+          confirmLabel={t('notes.card.deleteForever', 'Eliminar para siempre')}
           variant="destructive"
           onConfirm={handleConfirmHardDelete}
         />

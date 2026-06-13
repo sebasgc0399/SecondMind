@@ -1,5 +1,6 @@
 import { Node, mergeAttributes } from '@tiptap/core';
 import Suggestion from '@tiptap/suggestion';
+import i18n from '@/lib/i18n';
 import { wikilinkSuggestion } from '@/components/editor/extensions/wikilink-suggestion';
 
 export interface WikilinkAttrs {
@@ -63,7 +64,9 @@ export const Wikilink = Node.create<WikilinkOptions>({
   },
 
   renderHTML({ HTMLAttributes, node }) {
-    const title = (node.attrs as WikilinkAttrs).noteTitle || 'Nota sin título';
+    const title =
+      (node.attrs as WikilinkAttrs).noteTitle ||
+      i18n.t('editor.wikilink.untitled', 'Nota sin título');
     return [
       'a',
       mergeAttributes(HTMLAttributes, {

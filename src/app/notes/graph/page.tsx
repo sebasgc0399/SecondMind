@@ -1,6 +1,7 @@
 import { useState, useCallback } from 'react';
 import { Link } from 'react-router';
 import { ArrowLeft, Maximize2, Minimize2 } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import KnowledgeGraph from '@/components/graph/KnowledgeGraph';
 import GraphNodePanel from '@/components/graph/GraphNodePanel';
 import GraphFiltersPanel from '@/components/graph/GraphFilters';
@@ -10,6 +11,7 @@ import type { ParaType, NoteType } from '@/types/common';
 import type { GraphNode } from 'reagraph';
 
 export default function GraphPage() {
+  const { t } = useTranslation();
   const [filters, setFilters] = useState<GraphFilters>(DEFAULT_FILTERS);
   const { nodes, edges, isEmpty } = useGraph(filters);
   const [selectedNode, setSelectedNode] = useState<GraphNode | null>(null);
@@ -34,20 +36,24 @@ export default function GraphPage() {
           className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
         >
           <ArrowLeft className="h-4 w-4" />
-          Notas
+          {t('nav.items.notes', 'Notas')}
         </Link>
         <h1 className="hidden text-base font-semibold text-foreground md:inline md:text-lg">
-          Grafo
+          {t('nav.items.graph', 'Grafo')}
         </h1>
         <span className="text-xs text-muted-foreground md:text-sm">
-          {nodes.length} {nodes.length === 1 ? 'nota' : 'notas'} &middot; {edges.length}{' '}
-          {edges.length === 1 ? 'conexión' : 'conexiones'}
+          {t('graph.stats.notes', { count: nodes.length })} &middot;{' '}
+          {t('graph.stats.connections', { count: edges.length })}
         </span>
         <button
           type="button"
           onClick={() => setIsFullscreen((prev) => !prev)}
           className="ml-auto flex h-9 w-9 items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-foreground"
-          title={isFullscreen ? 'Salir de pantalla completa' : 'Pantalla completa'}
+          title={
+            isFullscreen
+              ? t('graph.exitFullscreen', 'Salir de pantalla completa')
+              : t('graph.fullscreen', 'Pantalla completa')
+          }
         >
           {isFullscreen ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
         </button>
@@ -59,8 +65,8 @@ export default function GraphPage() {
         <div className="flex flex-1 flex-col items-center justify-center gap-2 text-center">
           <p className="text-muted-foreground">
             {hasActiveFilters
-              ? 'Ningún nodo coincide con los filtros.'
-              : 'El grafo cobra vida con más notas y conexiones.'}
+              ? t('graph.empty.filtered', 'Ningún nodo coincide con los filtros.')
+              : t('graph.empty.noData', 'El grafo cobra vida con más notas y conexiones.')}
           </p>
           {hasActiveFilters ? (
             <button
@@ -68,11 +74,11 @@ export default function GraphPage() {
               onClick={() => setFilters(DEFAULT_FILTERS)}
               className="text-sm font-medium text-primary hover:underline"
             >
-              Resetear filtros
+              {t('graph.resetFilters', 'Resetear filtros')}
             </button>
           ) : (
             <Link to="/notes" className="text-sm font-medium text-primary hover:underline">
-              Crear notas &rarr;
+              {t('graph.createNotes', 'Crear notas →')}
             </Link>
           )}
         </div>
