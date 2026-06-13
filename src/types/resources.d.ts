@@ -27,7 +27,11 @@ export default interface Resources {
       avatar: 'Avatar';
       cancel: 'Cancelar';
       close: 'Cerrar';
+      create: 'Crear';
+      creating: 'Creando...';
       retry: 'Reintentar';
+      unlink: 'Desvincular';
+      untitled: 'Sin título';
     };
     dashboard: {
       greeting: {
@@ -116,6 +120,79 @@ export default interface Resources {
       };
       showMenu: 'Mostrar menú';
       signOut: 'Cerrar sesión';
+    };
+    objectives: {
+      area: 'Área';
+      card: {
+        expandAria: 'Expandir objetivo';
+        hideDetailsAria: 'Ocultar detalles';
+        linkProject: 'Vincular proyecto';
+        linkProjectOption: '+ Vincular proyecto...';
+        noAvailableProjects: '(sin proyectos disponibles)';
+        noLinkedProjects: 'Sin proyectos vinculados aún.';
+        progress_many: '{{percent}}% completado · {{count}} proyectos';
+        progress_one: '{{percent}}% completado · {{count}} proyecto';
+        progress_other: '{{percent}}% completado · {{count}} proyectos';
+        unlinkAria: 'Desvincular proyecto';
+      };
+      createFirst: 'Crear primer objetivo';
+      deadline: {
+        none: 'Sin deadline';
+        overdue_many: '{{date}} · vencido hace {{count}} días';
+        overdue_one: '{{date}} · vencido hace {{count}} día';
+        overdue_other: '{{date}} · vencido hace {{count}} días';
+        today: '{{date}} · hoy';
+        tomorrow: '{{date}} · mañana';
+        upcoming_many: '{{date}} · faltan {{count}} días';
+        upcoming_one: '{{date}} · falta {{count}} día';
+        upcoming_other: '{{date}} · faltan {{count}} días';
+      };
+      deadlineOptional: 'Deadline (opcional)';
+      empty: 'Sin objetivos aún';
+      emptyHint: 'Crea tu primer objetivo para empezar a medir progreso.';
+      name: 'Nombre';
+      namePlaceholder: 'Lanzar MVP...';
+      new: 'Nuevo objetivo';
+      noArea: 'Sin área';
+      title: 'Objetivos';
+    };
+    projects: {
+      area: 'Área';
+      createFirst: 'Crear primer proyecto';
+      detail: {
+        linkNote: 'Vincular nota';
+        linkNoteDisabledTitle: 'Crea una nota primero';
+        linkNoteEnabledTitle: 'Vincular nota existente';
+        linkedNotesHeader: 'Notas vinculadas ({{total}})';
+        noTasks: 'Sin tareas aún';
+        noTasksHint: 'Crea una tarea arriba para empezar.';
+        progress: 'Progreso';
+        progressDetail: '{{completed}} de {{total}} tareas completadas ({{percent}}%)';
+        tasksHeader: 'Tareas ({{total}})';
+      };
+      empty: 'Sin proyectos aún';
+      emptyHint: 'Crea tu primer proyecto para empezar a agrupar tareas y notas.';
+      linkModal: {
+        noNotes: 'Sin notas disponibles para vincular';
+        noResults: 'Sin resultados';
+        searchPlaceholder: 'Buscar notas...';
+      };
+      name: 'Nombre';
+      namePlaceholder: 'Sitio web personal...';
+      new: 'Nuevo proyecto';
+      noName: '(sin nombre)';
+      noPendingTasks: 'Sin tareas pendientes';
+      noteList: {
+        empty: 'Sin notas vinculadas aún';
+        emptyHint: 'Vinculá notas existentes desde el botón de arriba.';
+        unlinkAria: 'Desvincular nota';
+      };
+      pendingTasks_many: '{{count}} tareas pendientes';
+      pendingTasks_one: '{{count}} tarea pendiente';
+      pendingTasks_other: '{{count}} tareas pendientes';
+      priority: 'Prioridad';
+      status: 'Estado';
+      title: 'Proyectos';
     };
     settings: {
       apiKeys: {
@@ -217,6 +294,39 @@ export default interface Resources {
       unsaved_many: '{{count}} sin guardar';
       unsaved_one: '{{count}} sin guardar';
       unsaved_other: '{{count}} sin guardar';
+    };
+    tasks: {
+      card: {
+        completeAria: 'Completar tarea';
+        date: 'Fecha';
+        description: 'Descripción';
+        descriptionPlaceholder: 'Agregá notas o detalles...';
+        editAria: 'Editar tarea';
+        hideDetailsAria: 'Ocultar detalles';
+        markPendingAria: 'Marcar pendiente';
+        noProject: '(sin proyecto)';
+        priority: 'Prioridad';
+        project: 'Proyecto';
+      };
+      empty: {
+        completedHint: '¡A darle! Las últimas 20 completadas aparecerán acá.';
+        completedTitle: 'Aún no completaste tareas';
+        soonHint: 'Las tareas con fecha en los próximos 7 días aparecerán acá.';
+        soonTitle: 'Sin tareas próximas';
+        todayHint: 'Crea una tarea arriba o revisa el tab “Pronto”.';
+        todayTitle: 'Nada para hoy 🎉';
+      };
+      groups: {
+        overdue: 'Vencidas';
+        today: 'Hoy';
+      };
+      newPlaceholder: 'Nueva tarea... (Enter para crear)';
+      tabs: {
+        completed: 'Completadas';
+        soon: 'Pronto';
+        today: 'Hoy';
+      };
+      title: 'Tareas';
     };
     time: {
       justNow: 'hace instantes';

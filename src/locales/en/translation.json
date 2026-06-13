@@ -25,7 +25,11 @@
     "avatar": "",
     "cancel": "",
     "close": "",
-    "retry": ""
+    "create": "",
+    "creating": "",
+    "retry": "",
+    "unlink": "",
+    "untitled": ""
   },
   "dashboard": {
     "greeting": {
@@ -112,6 +116,75 @@
     },
     "showMenu": "",
     "signOut": ""
+  },
+  "objectives": {
+    "area": "",
+    "card": {
+      "expandAria": "",
+      "hideDetailsAria": "",
+      "linkProject": "",
+      "linkProjectOption": "",
+      "noAvailableProjects": "",
+      "noLinkedProjects": "",
+      "progress_one": "",
+      "progress_other": "",
+      "unlinkAria": ""
+    },
+    "createFirst": "",
+    "deadline": {
+      "none": "",
+      "overdue_one": "",
+      "overdue_other": "",
+      "today": "",
+      "tomorrow": "",
+      "upcoming_one": "",
+      "upcoming_other": ""
+    },
+    "deadlineOptional": "",
+    "empty": "",
+    "emptyHint": "",
+    "name": "",
+    "namePlaceholder": "",
+    "new": "",
+    "noArea": "",
+    "title": ""
+  },
+  "projects": {
+    "area": "",
+    "createFirst": "",
+    "detail": {
+      "linkedNotesHeader": "",
+      "linkNote": "",
+      "linkNoteDisabledTitle": "",
+      "linkNoteEnabledTitle": "",
+      "noTasks": "",
+      "noTasksHint": "",
+      "progress": "",
+      "progressDetail": "",
+      "tasksHeader": ""
+    },
+    "empty": "",
+    "emptyHint": "",
+    "linkModal": {
+      "noNotes": "",
+      "noResults": "",
+      "searchPlaceholder": ""
+    },
+    "name": "",
+    "namePlaceholder": "",
+    "new": "",
+    "noName": "",
+    "noPendingTasks": "",
+    "noteList": {
+      "empty": "",
+      "emptyHint": "",
+      "unlinkAria": ""
+    },
+    "pendingTasks_one": "",
+    "pendingTasks_other": "",
+    "priority": "",
+    "status": "",
+    "title": ""
   },
   "settings": {
     "apiKeys": {
@@ -211,6 +284,39 @@
     "unsaved": "",
     "unsaved_one": "",
     "unsaved_other": ""
+  },
+  "tasks": {
+    "card": {
+      "completeAria": "",
+      "date": "",
+      "description": "",
+      "descriptionPlaceholder": "",
+      "editAria": "",
+      "hideDetailsAria": "",
+      "markPendingAria": "",
+      "noProject": "",
+      "priority": "",
+      "project": ""
+    },
+    "empty": {
+      "completedHint": "",
+      "completedTitle": "",
+      "soonHint": "",
+      "soonTitle": "",
+      "todayHint": "",
+      "todayTitle": ""
+    },
+    "groups": {
+      "overdue": "",
+      "today": ""
+    },
+    "newPlaceholder": "",
+    "tabs": {
+      "completed": "",
+      "soon": "",
+      "today": ""
+    },
+    "title": ""
   },
   "time": {
     "justNow": ""

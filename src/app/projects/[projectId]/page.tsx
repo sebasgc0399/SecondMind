@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router';
+import { useTranslation } from 'react-i18next';
 import { useTable } from 'tinybase/ui-react';
 import { ArrowLeft, Plus } from 'lucide-react';
 import { notesStore } from '@/stores/notesStore';
@@ -31,6 +32,7 @@ const PRIORITY_OPTIONS: { value: Priority; label: string }[] = [
 ];
 
 export default function ProjectDetailPage() {
+  const { t, i18n } = useTranslation();
   const { projectId } = useParams<{ projectId: string }>();
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -62,9 +64,12 @@ export default function ProjectDetailPage() {
   // Opciones de proyecto para el select en TaskCard expand
   const projectOptions = useMemo(() => {
     return Object.entries(projectsTable)
-      .map(([id, row]) => ({ id, name: (row.name as string) || '(sin nombre)' }))
-      .sort((a, b) => a.name.localeCompare(b.name));
-  }, [projectsTable]);
+      .map(([id, row]) => ({
+        id,
+        name: (row.name as string) || t('projects.noName', '(sin nombre)'),
+      }))
+      .sort((a, b) => a.name.localeCompare(b.name, i18n.language || 'es'));
+  }, [projectsTable, t, i18n.language]);
   const projectsById = useMemo(() => {
     const map: Record<string, string> = {};
     for (const p of projectOptions) map[p.id] = p.name;
@@ -80,14 +85,14 @@ export default function ProjectDetailPage() {
       if (!projectIds.includes(projectId)) continue;
       out.push({
         id,
-        title: ((row.title as string) || '').trim() || 'Sin título',
+        title: ((row.title as string) || '').trim() || t('common.untitled', 'Sin título'),
         paraType: (row.paraType as string) || 'resource',
         noteType: (row.noteType as string) || 'fleeting',
         updatedAt: Number(row.updatedAt) || 0,
       });
     }
     return out.sort((a, b) => b.updatedAt - a.updatedAt);
-  }, [notesTable, projectId]);
+  }, [notesTable, projectId, t]);
 
   const linkedNoteIds = useMemo(() => linkedNotes.map((n) => n.id), [linkedNotes]);
 
@@ -172,13 +177,13 @@ export default function ProjectDetailPage() {
           className="inline-flex items-center gap-1 text-sm text-muted-foreground transition-colors hover:text-foreground"
         >
           <ArrowLeft className="h-4 w-4" />
-          Proyectos
+          {t('projects.title', 'Proyectos')}
         </Link>
         <h1 className="mt-2 text-2xl font-bold tracking-tight">{project.name}</h1>
         <div className="mt-4 flex flex-wrap gap-3">
           <label className="flex flex-col gap-1">
             <span className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
-              Status
+              {t('projects.status', 'Estado')}
             </span>
             <select
               value={project.status}
@@ -194,7 +199,7 @@ export default function ProjectDetailPage() {
           </label>
           <label className="flex flex-col gap-1">
             <span className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
-              Prioridad
+              {t('projects.priority', 'Prioridad')}
             </span>
             <select
               value={project.priority}
@@ -213,9 +218,13 @@ export default function ProjectDetailPage() {
 
       <div className="mb-8">
         <div className="mb-2 flex items-center justify-between text-xs text-muted-foreground">
-          <span>Progreso</span>
+          <span>{t('projects.detail.progress', 'Progreso')}</span>
           <span>
-            {completed} de {total} tareas completadas ({percent}%)
+            {t(
+              'projects.detail.progressDetail',
+              '{{completed}} de {{total}} tareas completadas ({{percent}}%)',
+              { completed, total, percent },
+            )}
           </span>
         </div>
         <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
@@ -228,16 +237,18 @@ export default function ProjectDetailPage() {
 
       <section className="mb-8">
         <h2 className="mb-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-          Tareas ({total})
+          {t('projects.detail.tasksHeader', 'Tareas ({{total}})', { total })}
         </h2>
         <div className="mb-3">
           <TaskInlineCreate onCreate={handleCreateTask} />
         </div>
         {projectTasks.length === 0 ? (
           <div className="rounded-lg border border-dashed border-border p-6 text-center">
-            <p className="text-sm text-muted-foreground">Sin tareas aún</p>
+            <p className="text-sm text-muted-foreground">
+              {t('projects.detail.noTasks', 'Sin tareas aún')}
+            </p>
             <p className="mt-1 text-xs text-muted-foreground">
-              Crea una tarea arriba para empezar.
+              {t('projects.detail.noTasksHint', 'Crea una tarea arriba para empezar.')}
             </p>
           </div>
         ) : (
@@ -260,17 +271,23 @@ export default function ProjectDetailPage() {
       <section>
         <div className="mb-3 flex items-center justify-between">
           <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-            Notas vinculadas ({linkedNotes.length})
+            {t('projects.detail.linkedNotesHeader', 'Notas vinculadas ({{total}})', {
+              total: linkedNotes.length,
+            })}
           </h2>
           <button
             type="button"
             onClick={() => setLinkModalOpen(true)}
             disabled={!hasAnyNotes}
-            title={hasAnyNotes ? 'Vincular nota existente' : 'Crea una nota primero'}
+            title={
+              hasAnyNotes
+                ? t('projects.detail.linkNoteEnabledTitle', 'Vincular nota existente')
+                : t('projects.detail.linkNoteDisabledTitle', 'Crea una nota primero')
+            }
             className="inline-flex items-center gap-1.5 rounded-md border border-border bg-card px-2.5 py-1 text-xs font-medium text-foreground transition-colors hover:bg-accent/40 disabled:cursor-not-allowed disabled:opacity-50"
           >
             <Plus className="h-3 w-3" />
-            Vincular nota
+            {t('projects.detail.linkNote', 'Vincular nota')}
           </button>
         </div>
         <ProjectNoteList notes={linkedNotes} onUnlink={(id) => void handleUnlinkNote(id)} />

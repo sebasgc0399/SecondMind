@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import { AlertTriangle, CalendarClock, type LucideIcon } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { useTable } from 'tinybase/ui-react';
 import useTasks from '@/hooks/useTasks';
 import TaskInlineCreate from '@/components/tasks/TaskInlineCreate';
@@ -9,12 +10,6 @@ import { isSameDay, startOfDay } from '@/lib/formatDate';
 import type { Task } from '@/types/task';
 
 type TabKey = 'today' | 'soon' | 'completed';
-
-const TABS: { key: TabKey; label: string }[] = [
-  { key: 'today', label: 'Hoy' },
-  { key: 'soon', label: 'Pronto' },
-  { key: 'completed', label: 'Completadas' },
-];
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 const COMPLETED_LIMIT = 20;
@@ -26,16 +21,29 @@ interface TaskGroup {
 }
 
 export default function TasksPage() {
+  const { t, i18n } = useTranslation();
   const { tasks, isInitializing, createTask, updateTask, completeTask } = useTasks();
   const [activeTab, setActiveTab] = useState<TabKey>('today');
+
+  const tabs = useMemo<{ key: TabKey; label: string }[]>(
+    () => [
+      { key: 'today', label: t('tasks.tabs.today', 'Hoy') },
+      { key: 'soon', label: t('tasks.tabs.soon', 'Pronto') },
+      { key: 'completed', label: t('tasks.tabs.completed', 'Completadas') },
+    ],
+    [t],
+  );
 
   // Lookup de proyectos para resolver nombres y para el selector del expand
   const projectsTable = useTable('projects', 'projects');
   const projectOptions = useMemo(() => {
     return Object.entries(projectsTable)
-      .map(([id, row]) => ({ id, name: (row.name as string) || '(sin nombre)' }))
-      .sort((a, b) => a.name.localeCompare(b.name));
-  }, [projectsTable]);
+      .map(([id, row]) => ({
+        id,
+        name: (row.name as string) || t('projects.noName', '(sin nombre)'),
+      }))
+      .sort((a, b) => a.name.localeCompare(b.name, i18n.language || 'es'));
+  }, [projectsTable, t, i18n.language]);
   const projectsById = useMemo(() => {
     const map: Record<string, string> = {};
     for (const p of projectOptions) map[p.id] = p.name;
@@ -58,8 +66,14 @@ export default function TasksPage() {
         else if (isSameDay(t.dueDate, now)) todayList.push(t);
       }
       const out: TaskGroup[] = [];
-      if (overdue.length > 0) out.push({ label: 'Vencidas', icon: AlertTriangle, tasks: overdue });
-      if (todayList.length > 0) out.push({ label: 'Hoy', icon: CalendarClock, tasks: todayList });
+      if (overdue.length > 0)
+        out.push({
+          label: t('tasks.groups.overdue', 'Vencidas'),
+          icon: AlertTriangle,
+          tasks: overdue,
+        });
+      if (todayList.length > 0)
+        out.push({ label: t('tasks.groups.today', 'Hoy'), icon: CalendarClock, tasks: todayList });
       return out;
     }
 
@@ -77,7 +91,7 @@ export default function TasksPage() {
         else byDay.set(key, [t]);
       }
       const sortedKeys = Array.from(byDay.keys()).sort((a, b) => a - b);
-      const dayFormatter = new Intl.DateTimeFormat('es', {
+      const dayFormatter = new Intl.DateTimeFormat(i18n.language || 'es', {
         weekday: 'long',
         day: 'numeric',
         month: 'short',
@@ -94,7 +108,7 @@ export default function TasksPage() {
       .sort((a, b) => b.completedAt - a.completedAt)
       .slice(0, COMPLETED_LIMIT);
     return completed.length > 0 ? [{ label: '', tasks: completed }] : [];
-  }, [tasks, activeTab]);
+  }, [tasks, activeTab, t, i18n.language]);
 
   const totalInActiveTab = groups.reduce((sum, g) => sum + g.tasks.length, 0);
   const showSkeleton = isInitializing && totalInActiveTab === 0;
@@ -103,7 +117,7 @@ export default function TasksPage() {
   return (
     <div className="mx-auto max-w-3xl">
       <header className="mb-6 hidden md:block">
-        <h1 className="text-2xl font-bold tracking-tight">Tareas</h1>
+        <h1 className="text-2xl font-bold tracking-tight">{t('tasks.title', 'Tareas')}</h1>
       </header>
 
       <div className="mb-4">
@@ -111,7 +125,7 @@ export default function TasksPage() {
       </div>
 
       <nav className="mb-6 flex gap-1 overflow-x-auto overflow-y-hidden border-b border-border">
-        {TABS.map((tab) => {
+        {tabs.map((tab) => {
           const isActive = tab.key === activeTab;
           return (
             <button
@@ -178,18 +192,22 @@ function TasksSkeleton() {
 }
 
 function EmptyState({ tab }: { tab: TabKey }) {
+  const { t } = useTranslation();
   const copy: Record<TabKey, { title: string; hint: string }> = {
     today: {
-      title: 'Nada para hoy 🎉',
-      hint: 'Crea una tarea arriba o revisa el tab “Pronto”.',
+      title: t('tasks.empty.todayTitle', 'Nada para hoy 🎉'),
+      hint: t('tasks.empty.todayHint', 'Crea una tarea arriba o revisa el tab “Pronto”.'),
     },
     soon: {
-      title: 'Sin tareas próximas',
-      hint: 'Las tareas con fecha en los próximos 7 días aparecerán acá.',
+      title: t('tasks.empty.soonTitle', 'Sin tareas próximas'),
+      hint: t(
+        'tasks.empty.soonHint',
+        'Las tareas con fecha en los próximos 7 días aparecerán acá.',
+      ),
     },
     completed: {
-      title: 'Aún no completaste tareas',
-      hint: '¡A darle! Las últimas 20 completadas aparecerán acá.',
+      title: t('tasks.empty.completedTitle', 'Aún no completaste tareas'),
+      hint: t('tasks.empty.completedHint', '¡A darle! Las últimas 20 completadas aparecerán acá.'),
     },
   };
   return (

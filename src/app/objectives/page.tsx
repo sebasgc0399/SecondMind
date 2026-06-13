@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useTable } from 'tinybase/ui-react';
 import { Plus } from 'lucide-react';
 import useObjectives from '@/hooks/useObjectives';
@@ -25,6 +26,7 @@ interface ObjectiveGroup {
 }
 
 export default function ObjectivesPage() {
+  const { t } = useTranslation();
   const { objectives, isInitializing, createObjective, updateObjective } = useObjectives();
   const { projects, updateProject } = useProjects();
   const tasksTable = useTable('tasks', 'tasks');
@@ -73,10 +75,15 @@ export default function ObjectivesPage() {
     // Objetivos con areaId vacío o no reconocido
     const orphans = visible.filter((o) => !o.areaId || !AREAS[o.areaId as AreaKey]);
     if (orphans.length > 0) {
-      out.push({ key: '__orphans', label: 'Sin área', emoji: '', objectives: orphans });
+      out.push({
+        key: '__orphans',
+        label: t('objectives.noArea', 'Sin área'),
+        emoji: '',
+        objectives: orphans,
+      });
     }
     return out;
-  }, [visible]);
+  }, [visible, t]);
 
   async function handleLinkProject(objectiveId: string, projectId: string) {
     const objective = objectives.find((o) => o.id === objectiveId);
@@ -103,14 +110,14 @@ export default function ObjectivesPage() {
   return (
     <div className="mx-auto max-w-3xl">
       <header className="mb-6 hidden items-center justify-between gap-4 md:flex">
-        <h1 className="text-2xl font-bold tracking-tight">Objetivos</h1>
+        <h1 className="text-2xl font-bold tracking-tight">{t('objectives.title', 'Objetivos')}</h1>
         <button
           type="button"
           onClick={() => setModalOpen(true)}
           className="inline-flex items-center gap-1.5 rounded-md bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
         >
           <Plus className="h-4 w-4" />
-          Nuevo objetivo
+          {t('objectives.new', 'Nuevo objetivo')}
         </button>
       </header>
 
@@ -118,9 +125,11 @@ export default function ObjectivesPage() {
 
       {showEmpty && (
         <div className="rounded-lg border border-dashed border-border p-10 text-center">
-          <p className="text-base font-medium text-foreground">Sin objetivos aún</p>
+          <p className="text-base font-medium text-foreground">
+            {t('objectives.empty', 'Sin objetivos aún')}
+          </p>
           <p className="mt-2 text-sm text-muted-foreground">
-            Crea tu primer objetivo para empezar a medir progreso.
+            {t('objectives.emptyHint', 'Crea tu primer objetivo para empezar a medir progreso.')}
           </p>
           <button
             type="button"
@@ -128,7 +137,7 @@ export default function ObjectivesPage() {
             className="mt-4 inline-flex items-center gap-1.5 rounded-md bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
           >
             <Plus className="h-4 w-4" />
-            Crear primer objetivo
+            {t('objectives.createFirst', 'Crear primer objetivo')}
           </button>
         </div>
       )}

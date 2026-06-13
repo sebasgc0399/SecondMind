@@ -1,11 +1,13 @@
 import { useState, type KeyboardEvent } from 'react';
 import { Plus } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
 interface TaskInlineCreateProps {
   onCreate: (name: string) => void | Promise<unknown>;
 }
 
 export default function TaskInlineCreate({ onCreate }: TaskInlineCreateProps) {
+  const { t } = useTranslation();
   const [value, setValue] = useState('');
 
   const handleKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
@@ -28,7 +30,7 @@ export default function TaskInlineCreate({ onCreate }: TaskInlineCreateProps) {
         value={value}
         onChange={(e) => setValue(e.target.value)}
         onKeyDown={handleKeyDown}
-        placeholder="Nueva tarea... (Enter para crear)"
+        placeholder={t('tasks.newPlaceholder', 'Nueva tarea... (Enter para crear)')}
         className="flex-1 bg-transparent text-sm text-foreground placeholder:text-muted-foreground focus:outline-none"
       />
     </div>
