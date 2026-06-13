@@ -145,11 +145,11 @@
         "hooks": [
           {
             "type": "command",
-            "command": "npx prettier --write \"$CLAUDE_TOOL_INPUT_FILE_PATH\""
+            "command": "fp=$(jq -r '.tool_input.file_path // empty'); case \"$fp\" in *\"Proyectos VS CODE\"*\"SecondMind\"*) npx prettier --write --ignore-unknown \"$fp\" 2>/dev/null || true ;; esac"
           },
           {
             "type": "command",
-            "command": "npx eslint --fix \"$CLAUDE_TOOL_INPUT_FILE_PATH\" 2>/dev/null || true"
+            "command": "fp=$(jq -r '.tool_input.file_path // empty'); case \"$fp\" in *\"Proyectos VS CODE\"*\"SecondMind\"*.ts|*\"Proyectos VS CODE\"*\"SecondMind\"*.tsx|*\"Proyectos VS CODE\"*\"SecondMind\"*.js|*\"Proyectos VS CODE\"*\"SecondMind\"*.jsx) npx eslint --fix \"$fp\" 2>/dev/null || true ;; esac"
           }
         ]
       },
