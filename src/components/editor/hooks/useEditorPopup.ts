@@ -191,7 +191,14 @@ export function useEditorPopup<TItem>(
 
   useEffect(() => {
     if (!state.isOpen) return;
-    const handleScroll = () => {
+    const handleScroll = (event: Event) => {
+      // Ignore scrolls originating inside the popup's own scrollable list
+      // (max-h-* overflow-y-auto). Closing on those breaks both wheel/touch
+      // scrolling of the options AND the programmatic scrollIntoView used for
+      // keyboard navigation below. Only document/editor scrolls (where the
+      // anchored reference moves out of view) should dismiss the popup.
+      const target = event.target as Node | null;
+      if (menuRef.current && target && menuRef.current.contains(target)) return;
       setState(makeInitialState<TItem>());
       setPosition(null);
     };
@@ -209,6 +216,18 @@ export function useEditorPopup<TItem>(
       document.removeEventListener('scroll', handleScroll, { capture: true });
     };
   }, [state.isOpen]);
+
+  // Keep the active option in view when navigating with the arrow keys. The
+  // popup renders inside its own max-h-* overflow-y-auto list, so moving the
+  // selection past the visible window otherwise leaves the viewport stuck on
+  // the first options. block: 'nearest' scrolls only the inner container (the
+  // fixed-positioned popup is already within the viewport), and that inner
+  // scroll is ignored by handleScroll above so it never self-dismisses.
+  useLayoutEffect(() => {
+    if (!state.isOpen) return;
+    const selected = menuRef.current?.querySelector<HTMLElement>('[aria-selected="true"]');
+    selected?.scrollIntoView({ block: 'nearest' });
+  }, [state.selectedIndex, state.isOpen, state.items]);
 
   const selectItem = useCallback((item: TItem) => {
     const props = propsRef.current;
