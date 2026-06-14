@@ -1,4 +1,5 @@
-import { HttpsError, type CallableRequest } from 'firebase-functions/v2/https';
+import { type CallableRequest } from 'firebase-functions/v2/https';
+import { appError } from './appError';
 
 // A-1 (SPEC-50 F1): exige autenticación Y email verificado al inicio de los
 // callables. Criterio idéntico a C1 en firestore.rules:10-14 — email/password
@@ -8,13 +9,13 @@ import { HttpsError, type CallableRequest } from 'firebase-functions/v2/https';
 // directo. Helper sync: lee del token (request.auth.token), sin lectura Firestore.
 export function requireVerified(request: CallableRequest): string {
   if (!request.auth) {
-    throw new HttpsError('unauthenticated', 'Login required');
+    throw appError('verified-unauthenticated', 'unauthenticated', 'Login required');
   }
   const token = request.auth.token;
   const verified =
     token.email_verified === true || token.firebase?.sign_in_provider === 'google.com';
   if (!verified) {
-    throw new HttpsError('permission-denied', 'Email no verificado');
+    throw appError('email-unverified', 'permission-denied', 'Email no verificado');
   }
   return request.auth.uid;
 }

@@ -1,5 +1,5 @@
-import { HttpsError } from 'firebase-functions/v2/https';
 import { getFirestore, FieldValue, Timestamp } from 'firebase-admin/firestore';
+import { appError } from './appError';
 
 const MINUTE_MS = 60_000;
 const DAY_MS = 86_400_000;
@@ -74,7 +74,8 @@ export async function enforceRateLimit(
     const snap = await ref.get();
     const count = (snap.data()?.count as number | undefined) ?? 0;
     if (exceedsLimit(count, window.limit)) {
-      throw new HttpsError(
+      throw appError(
+        'rate-limited',
         'resource-exhausted',
         'Demasiadas solicitudes. Probá de nuevo más tarde.',
       );
