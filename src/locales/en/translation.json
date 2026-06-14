@@ -527,6 +527,38 @@
       }
     }
   },
+  "errors": {
+    "accessCheckUnavailable": "",
+    "accountDisabled": "",
+    "accountExists": "",
+    "actionExpired": "",
+    "actionInvalid": "",
+    "actionNetworkError": "",
+    "adminUnauthorized": "",
+    "betaFull": "",
+    "betaFullNoMax": "",
+    "betaUnauthorized": "",
+    "default": "",
+    "emailUnverified": "",
+    "invalidCredentials": "",
+    "invalidEmail": "",
+    "invalidInput": "",
+    "invalidProvider": "",
+    "networkError": "",
+    "operationFailed": "",
+    "rateLimited": "",
+    "requestNotFound": "",
+    "resetGeneric": "",
+    "saveKeyInvalid": "",
+    "saveKeyRequired": "",
+    "saveKeyUnavailable": "",
+    "submitInvalidEmail": "",
+    "submitInvalidMotivo": "",
+    "tooManyRequests": "",
+    "unauthenticated": "",
+    "weakPassword": "",
+    "weakPasswordShort": ""
+  },
   "graph": {
     "createNotes": "",
     "empty": {

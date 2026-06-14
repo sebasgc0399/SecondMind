@@ -534,6 +534,38 @@ export default interface Resources {
         };
       };
     };
+    errors: {
+      accessCheckUnavailable: 'No pudimos verificar tu acceso. Reintentá en un momento.';
+      accountDisabled: 'Esta cuenta está deshabilitada.';
+      accountExists: 'Ya existe una cuenta con este email. Probá iniciar sesión o usar Google.';
+      actionExpired: 'El enlace expiró. Pedí uno nuevo.';
+      actionInvalid: 'El enlace no es válido. Pedí uno nuevo.';
+      actionNetworkError: 'Hubo un problema de conexión. Reintentá.';
+      adminUnauthorized: 'No autorizado.';
+      betaFull: 'Beta llena ({{max}}). Subí el límite o revocá un miembro antes de aprobar.';
+      betaFullNoMax: 'Beta llena. Subí el límite o revocá un miembro antes de aprobar.';
+      betaUnauthorized: 'Tu cuenta todavía no tiene acceso a la beta. Podés solicitarlo más abajo.';
+      default: 'Algo salió mal. Intentá de nuevo.';
+      emailUnverified: 'Verificá tu email para continuar.';
+      invalidCredentials: 'Email o contraseña incorrectos.';
+      invalidEmail: 'Email inválido.';
+      invalidInput: 'Datos inválidos. Probá de nuevo.';
+      invalidProvider: 'Proveedor no soportado.';
+      networkError: 'Sin conexión. Verificá tu internet.';
+      operationFailed: 'No se pudo completar la operación. Probá de nuevo.';
+      rateLimited: 'Demasiados intentos. Probá de nuevo más tarde.';
+      requestNotFound: 'Solicitud no encontrada.';
+      resetGeneric: 'Si la cuenta existe, recibirás un enlace en tu email.';
+      saveKeyInvalid: 'La API key es inválida.';
+      saveKeyRequired: 'La API key es requerida.';
+      saveKeyUnavailable: 'No pudimos validar la key ahora. Probá de nuevo en un momento.';
+      submitInvalidEmail: 'Revisá el email ingresado.';
+      submitInvalidMotivo: 'El motivo no es válido.';
+      tooManyRequests: 'Demasiados intentos. Probá de nuevo en unos minutos.';
+      unauthenticated: 'Tenés que iniciar sesión.';
+      weakPassword: 'Mínimo 8 caracteres con al menos un número.';
+      weakPasswordShort: 'Mínimo 8 caracteres.';
+    };
     graph: {
       createNotes: 'Crear notas →';
       empty: {
