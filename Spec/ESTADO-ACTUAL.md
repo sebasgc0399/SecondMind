@@ -15,6 +15,7 @@ Fuente de verdad única del versionado (los demás docs referencian acá, no dup
 - **0.4.9** — release de SPEC-57 (D13, durabilidad de writes offline subsiguientes). **Próximo release** (3 frentes: hosting + Tauri + Android).
 - **0.5.0 – 0.5.x** — feature work + pendientes acumulados. **v0.5.0 ya NO está reservado para la beta.**
 - **0.6.0** — **apertura de beta** (~100 users, gateada por allowlist). Pre-requisitos de la fase: `allowBackup=false` en Android (pendiente) + allowlist enforced (ya LIVE). **Objetivo: finales junio / inicios julio 2026.**
+- **Arco i18n (SPEC-58), serie 0.5.x:** F1 (infra) + F2 (extracción UI) + F3 (AI bilingüe + códigos de error CF) **cerradas y live en prod**. Resta **F4** (traducción `en` completa + QA cross-platform 3 frentes × 2 idiomas) — única fase pendiente del arco; la beta (0.6.0) abre después. F4.3 ejecutará la actualización formal de esta sección (beta desplazada · i18n en 0.5.x).
 
 > Plan vigente desde junio 2026. Los SPECs archivados anteriores citan el plan previo, donde la beta salía en v0.5.0 — son snapshots históricos, no el estado actual.
 
@@ -259,6 +260,7 @@ Cada feature comprimida a 1 línea con pointer al SPEC archivado. Para detalles 
 - [Una key no puede ser string Y objeto a la vez — colisión al anidar bajo una key plana existente](gotchas/i18n.md#una-key-no-puede-ser-string-y-objeto-a-la-vez--colisión-al-anidar-bajo-una-key-plana-existente)
 - [`<Trans>` solo para elementos DENTRO de la frase — iconos/elementos hermanos usan `t()` plano](gotchas/i18n.md#trans-solo-para-elementos-dentro-de-la-frase--iconoselementos-hermanos-usan-t-plano)
 - [Const i18n consumida por React Y por módulo no-React: `buildX(t)` con doble wrapper](gotchas/i18n.md#const-i18n-consumida-por-react-y-por-módulo-no-react-buildxt-con-doble-wrapper)
+- [El check tsc de keys solo aplica al form sin defaultValue (t(key,default) afloja la key a string; protección = extractor + verificación de catálogo)](gotchas/i18n.md#el-check-tsc-de-keys-solo-aplica-al-form-sin-defaultvalue)
 
 ### Responsive & Mobile UX — [`gotchas/responsive-mobile-ux.md`](gotchas/responsive-mobile-ux.md)
 
