@@ -40,10 +40,10 @@ export default function ResetPasswordAction({ oobCode }: ResetPasswordActionProp
         setState('form');
       })
       .catch((err: unknown) => {
-        setErrorMsg(mapActionError((err as { code?: string } | null)?.code));
+        setErrorMsg(mapActionError((err as { code?: string } | null)?.code, t));
         setState('error');
       });
-  }, [oobCode]);
+  }, [oobCode, t]);
 
   // Validación IDÉNTICA a SignUpForm (≥8 + match). NO se agrega la regla "un número" que
   // el copy de signup menciona pero el cliente no enforce.
@@ -73,7 +73,7 @@ export default function ResetPasswordAction({ oobCode }: ResetPasswordActionProp
       setState('success');
     } catch (err) {
       // El oobCode pudo expirar entre el verify (mount) y este confirm; mapeamos también acá.
-      setErrorMsg(mapActionError((err as { code?: string } | null)?.code));
+      setErrorMsg(mapActionError((err as { code?: string } | null)?.code, t));
       setState('error');
     }
   }

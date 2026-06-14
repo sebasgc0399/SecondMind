@@ -31,10 +31,10 @@ export default function VerifyEmailAction({ oobCode }: VerifyEmailActionProps) {
     applyVerifyEmailCode(oobCode)
       .then(() => setState('success'))
       .catch((err: unknown) => {
-        setErrorMsg(mapActionError((err as { code?: string } | null)?.code));
+        setErrorMsg(mapActionError((err as { code?: string } | null)?.code, t));
         setState('error');
       });
-  }, [oobCode]);
+  }, [oobCode, t]);
 
   const goToLogin = (
     <Button

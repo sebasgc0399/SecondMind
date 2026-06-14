@@ -20,7 +20,7 @@ export default function GoogleSignInButton({ onError }: GoogleSignInButtonProps)
       await signIn();
     } catch (err) {
       const code = (err as { code?: string } | null)?.code;
-      const message = mapAuthError(code, 'signin');
+      const message = mapAuthError(code, 'signin', t);
       if (message) onError(message);
     } finally {
       setLoading(false);

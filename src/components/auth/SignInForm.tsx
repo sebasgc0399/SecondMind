@@ -28,7 +28,7 @@ export default function SignInForm({ onError, onForgotPassword }: SignInFormProp
       navigate('/', { replace: true });
     } catch (err) {
       const code = (err as { code?: string } | null)?.code;
-      onError(mapAuthError(code, 'signin'));
+      onError(mapAuthError(code, 'signin', t));
       setLoading(false);
     }
   }
