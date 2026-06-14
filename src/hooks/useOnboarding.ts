@@ -1,5 +1,6 @@
 import { useCallback, useMemo } from 'react';
 import { useTable } from 'tinybase/ui-react';
+import { useTranslation } from 'react-i18next';
 import useAuth from '@/hooks/useAuth';
 import useApiKeys from '@/hooks/useApiKeys';
 import usePreferences from '@/hooks/usePreferences';
@@ -43,6 +44,7 @@ export interface UseOnboardingReturn {
  * usuario existente vería el welcome por un instante.
  */
 export default function useOnboarding(): UseOnboardingReturn {
+  const { t } = useTranslation();
   const { user } = useAuth();
   const { preferences, isLoaded: prefsLoaded } = usePreferences();
   const { apiKeys, isLoaded: keysLoaded } = useApiKeys();
@@ -89,38 +91,50 @@ export default function useOnboarding(): UseOnboardingReturn {
     () => [
       {
         id: 'apiKey',
-        label: 'Conectá tu IA',
-        description: 'Configurá tu API key de Anthropic para activar la clasificación con IA.',
+        label: t('onboarding.steps.apiKey.label', 'Conectá tu IA'),
+        description: t(
+          'onboarding.steps.apiKey.description',
+          'Configurá tu API key de Anthropic para activar la clasificación con IA.',
+        ),
         done: apiKeyDone,
-        ctaLabel: 'Configurar',
+        ctaLabel: t('onboarding.steps.apiKey.ctaLabel', 'Configurar'),
         ctaTo: '/settings#api-keys',
       },
       {
         id: 'firstNote',
-        label: 'Creá tu primera nota',
-        description: 'Empezá a construir tu segundo cerebro con una nota.',
+        label: t('onboarding.steps.firstNote.label', 'Creá tu primera nota'),
+        description: t(
+          'onboarding.steps.firstNote.description',
+          'Empezá a construir tu segundo cerebro con una nota.',
+        ),
         done: firstNoteDone,
-        ctaLabel: 'Crear nota',
+        ctaLabel: t('onboarding.steps.firstNote.ctaLabel', 'Crear nota'),
         ctaTo: '/notes',
       },
       {
         id: 'inboxAi',
-        label: 'Probá la magia de la IA',
-        description: 'Capturá una idea y mirá cómo la IA la organiza por vos.',
+        label: t('onboarding.steps.inboxAi.label', 'Probá la magia de la IA'),
+        description: t(
+          'onboarding.steps.inboxAi.description',
+          'Capturá una idea y mirá cómo la IA la organiza por vos.',
+        ),
         done: inboxAiDone,
-        ctaLabel: 'Capturar',
+        ctaLabel: t('onboarding.steps.inboxAi.ctaLabel', 'Capturar'),
         ctaAction: openCapture,
       },
       {
         id: 'firstTask',
-        label: 'Creá tu primera tarea',
-        description: 'Llevá tus ideas a la acción con una tarea.',
+        label: t('onboarding.steps.firstTask.label', 'Creá tu primera tarea'),
+        description: t(
+          'onboarding.steps.firstTask.description',
+          'Llevá tus ideas a la acción con una tarea.',
+        ),
         done: firstTaskDone,
-        ctaLabel: 'Crear tarea',
+        ctaLabel: t('onboarding.steps.firstTask.ctaLabel', 'Crear tarea'),
         ctaTo: '/tasks',
       },
     ],
-    [apiKeyDone, firstNoteDone, inboxAiDone, firstTaskDone, openCapture],
+    [apiKeyDone, firstNoteDone, inboxAiDone, firstTaskDone, openCapture, t],
   );
 
   const completedCount = steps.filter((step) => step.done).length;

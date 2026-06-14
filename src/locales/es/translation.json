@@ -821,6 +821,28 @@
       "progress": "{{completed}} de {{total}} completados",
       "title": "Primeros pasos"
     },
+    "steps": {
+      "apiKey": {
+        "ctaLabel": "Configurar",
+        "description": "Configurá tu API key de Anthropic para activar la clasificación con IA.",
+        "label": "Conectá tu IA"
+      },
+      "firstNote": {
+        "ctaLabel": "Crear nota",
+        "description": "Empezá a construir tu segundo cerebro con una nota.",
+        "label": "Creá tu primera nota"
+      },
+      "firstTask": {
+        "ctaLabel": "Crear tarea",
+        "description": "Llevá tus ideas a la acción con una tarea.",
+        "label": "Creá tu primera tarea"
+      },
+      "inboxAi": {
+        "ctaLabel": "Capturar",
+        "description": "Capturá una idea y mirá cómo la IA la organiza por vos.",
+        "label": "Probá la magia de la IA"
+      }
+    },
     "welcome": {
       "description": "Tu segundo cerebro para capturar ideas, conectar tu conocimiento y dejar que la IA te ayude a organizarlo.",
       "pillars": {

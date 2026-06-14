@@ -799,6 +799,28 @@
       "progress": "",
       "title": ""
     },
+    "steps": {
+      "apiKey": {
+        "ctaLabel": "",
+        "description": "",
+        "label": ""
+      },
+      "firstNote": {
+        "ctaLabel": "",
+        "description": "",
+        "label": ""
+      },
+      "firstTask": {
+        "ctaLabel": "",
+        "description": "",
+        "label": ""
+      },
+      "inboxAi": {
+        "ctaLabel": "",
+        "description": "",
+        "label": ""
+      }
+    },
     "welcome": {
       "description": "",
       "pillars": {
