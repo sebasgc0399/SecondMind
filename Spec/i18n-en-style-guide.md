@@ -49,6 +49,17 @@ Bloqueada en el dominio `entities` (batch 1 de F4.1). Todo el resto del catálog
 | Repaso/Revisión (spaced repetition) · Pendiente/s                  | Review · Pending                                               |                                       |
 | Pareja (área/hábito de vida)                                       | Relationship                                                   |                                       |
 
+**Labels default del dominio `entities` (fijados en batch 1 — confirmados por Sebastián):**
+
+- **Hábitos default:** Code · Eat well · Exercise · Stretch · Gratitude · English · Read · Wake up early · Meditate · **No sweets** · Relationship · Plan the day · Make the bed · Drink water.
+- **Áreas default:** Knowledge · Finance · Habits · Relationship · Projects · Health & Exercise.
+- **Inbox result type** "Descartar" → **Discard** (acción); "Item sin contenido" → **Empty item**.
+- **projectStatus:** el grupo "Sin clasificar" → **Unclassified**; la opción literal "Inbox" → **Inbox** (no confundir).
+
+## Gobernanza del canon
+
+Los batches 2–5 **consultan** esta tabla, no la re-deciden. Si un batch posterior toca un término ya fijado acá, lo usa **tal cual**. Si aparece un **término nuevo no cubierto**, se **marca para review de Sebastián** — no se inventa.
+
 ## Emojis
 
 Conservar donde están en el source (🎉 en empty states celebratorios: "Nothing for today 🎉"). **No agregar** emojis ausentes; **no quitar** los del source.
