@@ -3,7 +3,7 @@ import * as admin from 'firebase-admin';
 import { onDocumentCreated } from 'firebase-functions/v2/firestore';
 import { defineSecret } from 'firebase-functions/params';
 import { logger } from 'firebase-functions';
-import { buildInboxSchema, InboxClassification } from '../lib/schemas';
+import { buildInboxSchema, checkInboxEnums, InboxClassification } from '../lib/schemas';
 import { sanitizeError } from '../lib/sanitizeError';
 import { getUserAnthropicKey, invalidateUserAnthropicKey } from '../lib/getUserAnthropicKey';
 import { getUserLocale } from '../lib/getUserLocale';
@@ -93,13 +93,29 @@ export const processInboxItem = onDocumentCreated(
 
       const result = toolBlock.input as InboxClassification;
 
+      // Guard post-LLM (F3.1): si el modelo devolvió un enum de identidad fuera del
+      // set canónico (p.ej. traducido por el prompt en), descartamos toda la
+      // sugerencia — no persistimos un valor roto que rompería el matching D5 del
+      // cliente. Mismo efecto que el path "no tool_use" (onDocumentCreated dispara
+      // una vez → no hace falta marcar aiProcessed).
+      const enums = checkInboxEnums(result);
+      if (enums.discard) {
+        logger.warn('processInboxItem: enum de identidad invalido, descarta sugerencia', {
+          userId,
+          itemId,
+          suggestedType: result.suggestedType,
+          suggestedArea: result.suggestedArea,
+        });
+        return;
+      }
+
       await docRef.update({
         aiSuggestedTitle: result.suggestedTitle,
         aiSuggestedType: result.suggestedType,
         aiSuggestedTags: JSON.stringify(result.suggestedTags),
         aiSuggestedArea: result.suggestedArea,
         aiSummary: result.summary,
-        aiPriority: result.priority,
+        aiPriority: enums.priority,
         aiConfidence: typeof result.confidence === 'number' ? result.confidence : 0,
         aiProcessed: true,
       });

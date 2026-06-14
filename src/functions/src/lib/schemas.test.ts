@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { buildInboxSchema, buildNoteSchema } from './schemas';
+import { buildInboxSchema, buildNoteSchema, checkInboxEnums, isValidNoteType } from './schemas';
 
 // F3.1 (SPEC-58) — assert de PARIDAD es. Garantiza que el refactor de schemas
 // const→builder NO cambió el prompt-surface es (cero-regresión sin depender del
@@ -117,5 +117,48 @@ describe('schema builders (F3.1) — en cambia solo descriptions, nunca enums/sh
     expect(en.properties.summary.description).not.toBe(
       GOLDEN_NOTE_ES.properties.summary.description,
     );
+  });
+});
+
+describe('checkInboxEnums (F3.1) — guard post-LLM por campo', () => {
+  const valid = { suggestedType: 'task', suggestedArea: 'proyectos', priority: 'high' };
+
+  it('todo canónico → no descarta, priority preservada', () => {
+    expect(checkInboxEnums(valid)).toEqual({ discard: false, priority: 'high' });
+  });
+
+  it('suggestedType inválido (traducido) → descarta toda la sugerencia', () => {
+    expect(checkInboxEnums({ ...valid, suggestedType: 'project-translated' }).discard).toBe(true);
+  });
+
+  it('suggestedArea inválido (traducido "knowledge") → descarta toda la sugerencia', () => {
+    expect(checkInboxEnums({ ...valid, suggestedArea: 'knowledge' }).discard).toBe(true);
+  });
+
+  it('priority inválido pero identidad OK → NO descarta, priority → "" (cliente default medium)', () => {
+    expect(checkInboxEnums({ ...valid, priority: 'alta' })).toEqual({
+      discard: false,
+      priority: '',
+    });
+  });
+
+  it('los 6 IDs de área canónicos pasan', () => {
+    for (const area of ['proyectos', 'conocimiento', 'finanzas', 'salud', 'pareja', 'habitos']) {
+      expect(checkInboxEnums({ ...valid, suggestedArea: area }).discard).toBe(false);
+    }
+  });
+});
+
+describe('isValidNoteType (F3.1) — guard post-LLM de autoTagNote', () => {
+  it('los 3 IDs canónicos → true', () => {
+    expect(isValidNoteType('fleeting')).toBe(true);
+    expect(isValidNoteType('literature')).toBe(true);
+    expect(isValidNoteType('permanent')).toBe(true);
+  });
+
+  it('valor traducido / inválido / vacío → false', () => {
+    expect(isValidNoteType('permanente')).toBe(false);
+    expect(isValidNoteType('Permanent')).toBe(false);
+    expect(isValidNoteType('')).toBe(false);
   });
 });

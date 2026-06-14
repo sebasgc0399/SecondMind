@@ -162,3 +162,37 @@ export interface NoteTagging {
   suggestedNoteType: SuggestedNoteType;
   noteTypeConfidence: number;
 }
+
+// --- Validación post-LLM (F3.1) — el output se castea `as Interface` SIN validar;
+// con el prompt en, un enum traducido ('projects' en vez de 'proyectos') rompería
+// el matching D5 del cliente (entityLabels). Validamos contra los sets canónicos
+// antes de persistir. Identidad/ruteo inválido → descartar toda la sugerencia;
+// atributo opcional inválido → omitir el campo. Puro → unit-testable.
+
+const INBOX_TYPE_SET: ReadonlySet<string> = new Set(INBOX_TYPES);
+const INBOX_AREA_SET: ReadonlySet<string> = new Set(INBOX_AREAS);
+const INBOX_PRIORITY_SET: ReadonlySet<string> = new Set(INBOX_PRIORITIES);
+const NOTE_TYPE_SET: ReadonlySet<string> = new Set(NOTE_TYPES);
+
+export interface InboxEnumCheck {
+  /** true si suggestedType o suggestedArea (identidad/ruteo) no son IDs canónicos. */
+  discard: boolean;
+  /** priority canónica, o '' si el modelo devolvió un valor inválido (cliente → 'medium'). */
+  priority: string;
+}
+
+// El param se tipa con strings crudos (no los unions): el cast upstream miente,
+// el valor real del modelo puede ser cualquier string.
+export function checkInboxEnums(r: {
+  suggestedType: string;
+  suggestedArea: string;
+  priority: string;
+}): InboxEnumCheck {
+  const discard = !INBOX_TYPE_SET.has(r.suggestedType) || !INBOX_AREA_SET.has(r.suggestedArea);
+  const priority = INBOX_PRIORITY_SET.has(r.priority) ? r.priority : '';
+  return { discard, priority };
+}
+
+export function isValidNoteType(suggestedNoteType: string): boolean {
+  return NOTE_TYPE_SET.has(suggestedNoteType);
+}

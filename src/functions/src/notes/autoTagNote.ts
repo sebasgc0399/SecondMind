@@ -3,7 +3,7 @@ import * as admin from 'firebase-admin';
 import { onDocumentWritten } from 'firebase-functions/v2/firestore';
 import { defineSecret } from 'firebase-functions/params';
 import { logger } from 'firebase-functions';
-import { buildNoteSchema, NoteTagging } from '../lib/schemas';
+import { buildNoteSchema, isValidNoteType, NoteTagging } from '../lib/schemas';
 import { sanitizeError } from '../lib/sanitizeError';
 import { getUserAnthropicKey, invalidateUserAnthropicKey } from '../lib/getUserAnthropicKey';
 import { getUserLocale } from '../lib/getUserLocale';
@@ -90,6 +90,21 @@ export const autoTagNote = onDocumentWritten(
       }
 
       const result = toolBlock.input as NoteTagging;
+
+      // Guard post-LLM (F3.1): suggestedNoteType es un ID de identidad; si el modelo
+      // lo devolvió traducido/inválido (riesgo del prompt en), descartamos la
+      // sugerencia y dejamos el estado manejado (aiProcessed:true vacío) — idéntico
+      // al path "no tool_use"; onDocumentWritten re-dispara, necesita el flag.
+      if (!isValidNoteType(result.suggestedNoteType)) {
+        logger.warn('autoTagNote: suggestedNoteType invalido, descarta sugerencia', {
+          userId,
+          noteId,
+          suggestedNoteType: result.suggestedNoteType,
+        });
+        await docRef.update({ aiProcessed: true, aiTags: '[]', aiSummary: '' });
+        return;
+      }
+
       const confidence = Math.min(1, Math.max(0, result.noteTypeConfidence ?? 0));
 
       await docRef.update({
