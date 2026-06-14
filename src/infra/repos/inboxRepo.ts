@@ -1,3 +1,4 @@
+import i18n from '@/lib/i18n';
 import { createFirestoreRepo } from '@/infra/repos/baseRepo';
 import { saveInboxQueue } from '@/lib/saveQueue';
 import { inboxStore } from '@/stores/inboxStore';
@@ -91,7 +92,7 @@ async function convertToNote(
 
   const rawContent = (row.rawContent as string) || '';
   const firstLine = rawContent.split('\n', 1)[0]?.trim() ?? '';
-  const defaultTitle = firstLine.slice(0, 200) || 'Sin título';
+  const defaultTitle = firstLine.slice(0, 200) || i18n.t('common.untitled', 'Sin título');
   // Fallback: aiSuggestedTitle si no hay override del caller — alinea con
   // convertToTask y convertToProject. Sin esto, accept batch (que no pasa
   // overrides) terminaba con el firstLine como título en lugar del título
@@ -114,7 +115,7 @@ async function convertToTask(
   if (!row || Object.keys(row).length === 0) return null;
 
   const rawContent = (row.rawContent as string) || '';
-  const defaultTitle = rawContent.slice(0, 200) || 'Sin título';
+  const defaultTitle = rawContent.slice(0, 200) || i18n.t('common.untitled', 'Sin título');
   const finalTitle = (overrides?.title ?? (row.aiSuggestedTitle as string)) || defaultTitle;
   const finalPriority = (overrides?.priority ??
     ((row.aiPriority as string) || 'medium')) as Priority;
@@ -138,7 +139,7 @@ async function convertToProject(
   if (!row || Object.keys(row).length === 0) return null;
 
   const rawContent = (row.rawContent as string) || '';
-  const defaultTitle = rawContent.slice(0, 200) || 'Sin título';
+  const defaultTitle = rawContent.slice(0, 200) || i18n.t('common.untitled', 'Sin título');
   const finalTitle = (overrides?.title ?? (row.aiSuggestedTitle as string)) || defaultTitle;
   const finalPriority = (overrides?.priority ??
     ((row.aiPriority as string) || 'medium')) as Priority;

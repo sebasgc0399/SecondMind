@@ -364,6 +364,23 @@
       "placeholder": "¿Qué le explicarías a tu yo del futuro sobre esto? 1-2 frases.",
       "title": "Resumen ejecutivo (L3)"
     },
+    "templates": {
+      "literature": {
+        "inMyWordsHeading": "En mis palabras",
+        "interpretationPlaceholder": "[Tu interpretación y conexiones]",
+        "keyIdeasHeading": "Ideas clave",
+        "sourceHeading": "Fuente",
+        "sourcePlaceholder": "[Autor, título, año, URL]"
+      },
+      "permanent": {
+        "connectionsHeading": "Conexiones",
+        "connectionsPlaceholder": "[Notas relacionadas — usa @ para mencionar]",
+        "developmentHeading": "Desarrollo",
+        "developmentPlaceholder": "[Argumentación, evidencia, ejemplos]",
+        "thesisHeading": "Tesis",
+        "thesisPlaceholder": "[La idea central en una oración]"
+      }
+    },
     "toolbar": {
       "bold": "Negrita",
       "code": "Código inline",

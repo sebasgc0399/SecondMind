@@ -359,6 +359,23 @@
       "placeholder": "",
       "title": ""
     },
+    "templates": {
+      "literature": {
+        "inMyWordsHeading": "",
+        "interpretationPlaceholder": "",
+        "keyIdeasHeading": "",
+        "sourceHeading": "",
+        "sourcePlaceholder": ""
+      },
+      "permanent": {
+        "connectionsHeading": "",
+        "connectionsPlaceholder": "",
+        "developmentHeading": "",
+        "developmentPlaceholder": "",
+        "thesisHeading": "",
+        "thesisPlaceholder": ""
+      }
+    },
     "toolbar": {
       "bold": "",
       "code": "",
