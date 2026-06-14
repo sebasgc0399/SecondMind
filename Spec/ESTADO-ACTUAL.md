@@ -256,6 +256,9 @@ Cada feature comprimida a 1 línea con pointer al SPEC archivado. Para detalles 
 ### i18n — [`gotchas/i18n.md`](gotchas/i18n.md)
 
 - [`count` como variable de interpolación activa pluralización — clasificar el sitio ANTES de elegir el nombre](gotchas/i18n.md#count-como-variable-de-interpolación-activa-pluralización--clasificar-el-sitio-antes-de-elegir-el-nombre)
+- [Una key no puede ser string Y objeto a la vez — colisión al anidar bajo una key plana existente](gotchas/i18n.md#una-key-no-puede-ser-string-y-objeto-a-la-vez--colisión-al-anidar-bajo-una-key-plana-existente)
+- [`<Trans>` solo para elementos DENTRO de la frase — iconos/elementos hermanos usan `t()` plano](gotchas/i18n.md#trans-solo-para-elementos-dentro-de-la-frase--iconoselementos-hermanos-usan-t-plano)
+- [Const i18n consumida por React Y por módulo no-React: `buildX(t)` con doble wrapper](gotchas/i18n.md#const-i18n-consumida-por-react-y-por-módulo-no-react-buildxt-con-doble-wrapper)
 
 ### Responsive & Mobile UX — [`gotchas/responsive-mobile-ux.md`](gotchas/responsive-mobile-ux.md)
 

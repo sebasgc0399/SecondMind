@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router';
 import { Mail, CheckCircle2, AlertTriangle } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 import ActionStatus from '@/components/auth/ActionStatus';
 import { applyVerifyEmailCode } from '@/lib/authActions';
@@ -16,6 +17,7 @@ type State = 'verifying' | 'success' | 'error';
 // resuelve a success/error. NO intenta auto-login (D3): el click llega casi siempre
 // cross-device sin sesión en este browser; el CTA → /login rebota a / si igual hay sesión.
 export default function VerifyEmailAction({ oobCode }: VerifyEmailActionProps) {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const [state, setState] = useState<State>('verifying');
   const [errorMsg, setErrorMsg] = useState('');
@@ -42,7 +44,7 @@ export default function VerifyEmailAction({ oobCode }: VerifyEmailActionProps) {
       onClick={() => navigate('/login')}
       className="mt-2 w-full"
     >
-      Iniciar sesión
+      {t('auth.signIn', 'Iniciar sesión')}
     </Button>
   );
 
@@ -51,8 +53,11 @@ export default function VerifyEmailAction({ oobCode }: VerifyEmailActionProps) {
       <ActionStatus
         variant="loading"
         icon={Mail}
-        title="Verificando tu email…"
-        description="Un segundo, estamos activando tu cuenta."
+        title={t('auth.action.verify.loadingTitle', 'Verificando tu email…')}
+        description={t(
+          'auth.action.verify.loadingBody',
+          'Un segundo, estamos activando tu cuenta.',
+        )}
       />
     );
   }
@@ -62,8 +67,11 @@ export default function VerifyEmailAction({ oobCode }: VerifyEmailActionProps) {
       <ActionStatus
         variant="success"
         icon={CheckCircle2}
-        title="Email verificado"
-        description="Tu cuenta está activa. Ya podés iniciar sesión."
+        title={t('auth.action.verify.successTitle', 'Email verificado')}
+        description={t(
+          'auth.action.verify.successBody',
+          'Tu cuenta está activa. Ya podés iniciar sesión.',
+        )}
       >
         {goToLogin}
       </ActionStatus>
@@ -74,7 +82,7 @@ export default function VerifyEmailAction({ oobCode }: VerifyEmailActionProps) {
     <ActionStatus
       variant="error"
       icon={AlertTriangle}
-      title="No pudimos verificar tu email"
+      title={t('auth.action.verify.errorTitle', 'No pudimos verificar tu email')}
       description={errorMsg}
     >
       {goToLogin}

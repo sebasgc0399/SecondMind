@@ -1,4 +1,117 @@
 {
+  "admin": {
+    "members": {
+      "added": "",
+      "empty": "",
+      "noMatch": "",
+      "revoke": "",
+      "revokeDialog": {
+        "description": "",
+        "title": ""
+      },
+      "revokeError": "",
+      "searchAria": ""
+    },
+    "requests": {
+      "approve": "",
+      "empty": "",
+      "errorFull": "",
+      "errorFullNoMax": "",
+      "errorGeneric": "",
+      "noMatch": "",
+      "reject": "",
+      "searchAria": ""
+    },
+    "searchByEmail": "",
+    "subtitle": "",
+    "tabs": {
+      "members": "",
+      "requests": ""
+    },
+    "title": ""
+  },
+  "auth": {
+    "accessRequest": {
+      "betaTagline": "",
+      "errorEmail": "",
+      "errorGeneric": "",
+      "errorRateLimit": "",
+      "invalidEmail": "",
+      "motivo": "",
+      "optional": "",
+      "pageSubtitle": "",
+      "pageTitle": "",
+      "placeholder": "",
+      "submit": "",
+      "success": ""
+    },
+    "action": {
+      "invalidBody": "",
+      "invalidTitle": "",
+      "reset": {
+        "errorTitle": "",
+        "forAccount": "",
+        "formTitle": "",
+        "loadingBody": "",
+        "loadingTitle": "",
+        "newPassword": "",
+        "submit": "",
+        "successBody": "",
+        "successTitle": ""
+      },
+      "unsupportedBody": "",
+      "unsupportedTitle": "",
+      "verify": {
+        "errorTitle": "",
+        "loadingBody": "",
+        "loadingTitle": "",
+        "successBody": "",
+        "successTitle": ""
+      }
+    },
+    "backToLogin": "",
+    "backToSignIn": "",
+    "confirmPassword": "",
+    "continueWithGoogle": "",
+    "creatingAccount": "",
+    "email": "",
+    "forgotPassword": "",
+    "noAccess": "",
+    "orContinueWith": "",
+    "password": "",
+    "passwordHint": "",
+    "requestInvite": "",
+    "reset": {
+      "send": "",
+      "sentBody": "",
+      "sentTitle": "",
+      "subtitle": "",
+      "title": ""
+    },
+    "signIn": "",
+    "signingIn": "",
+    "signUp": "",
+    "signupGate": {
+      "checking": "",
+      "disabled": "",
+      "disabledBody": "",
+      "error": ""
+    },
+    "tagline": "",
+    "validation": {
+      "emailInvalid": "",
+      "minChars": "",
+      "passwordMismatch": ""
+    },
+    "verify": {
+      "autoRefresh": "",
+      "bannerMessage": "",
+      "body": "",
+      "pageTitle": "",
+      "resend": "",
+      "sent": ""
+    }
+  },
   "capture": {
     "fabLabel": "",
     "hint": {
@@ -41,6 +154,8 @@
     "creating": "",
     "retry": "",
     "save": "",
+    "saving": "",
+    "sending": "",
     "unlink": "",
     "untitled": ""
   },
@@ -514,6 +629,33 @@
     "new": "",
     "noArea": "",
     "title": ""
+  },
+  "onboarding": {
+    "checklist": {
+      "allComplete": "",
+      "dismissAria": "",
+      "progress": "",
+      "title": ""
+    },
+    "welcome": {
+      "description": "",
+      "pillars": {
+        "ai": {
+          "description": "",
+          "title": ""
+        },
+        "capture": {
+          "description": "",
+          "title": ""
+        },
+        "connect": {
+          "description": "",
+          "title": ""
+        }
+      },
+      "start": "",
+      "title": ""
+    }
   },
   "projects": {
     "area": "",

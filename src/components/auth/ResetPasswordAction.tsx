@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import type { FormEvent } from 'react';
 import { useNavigate } from 'react-router';
 import { KeyRound, CheckCircle2, AlertTriangle } from 'lucide-react';
+import { Trans, useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 import ActionStatus from '@/components/auth/ActionStatus';
 import { verifyResetCode, confirmReset } from '@/lib/authActions';
@@ -17,6 +18,7 @@ type State = 'verifying-code' | 'form' | 'submitting' | 'success' | 'error';
 // → form (nueva contraseña + confirmación) → confirmPasswordReset. Error en cualquier paso
 // (verify o confirm) cae a la pantalla de error con CTA → /login.
 export default function ResetPasswordAction({ oobCode }: ResetPasswordActionProps) {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const [state, setState] = useState<State>('verifying-code');
   const [email, setEmail] = useState('');
@@ -48,13 +50,13 @@ export default function ResetPasswordAction({ oobCode }: ResetPasswordActionProp
   function validate(): boolean {
     let ok = true;
     if (password.length < 8) {
-      setPasswordErr('Mínimo 8 caracteres.');
+      setPasswordErr(t('auth.validation.minChars', 'Mínimo 8 caracteres.'));
       ok = false;
     } else {
       setPasswordErr('');
     }
     if (password !== confirmPassword) {
-      setConfirmErr('Las contraseñas no coinciden.');
+      setConfirmErr(t('auth.validation.passwordMismatch', 'Las contraseñas no coinciden.'));
       ok = false;
     } else {
       setConfirmErr('');
@@ -84,7 +86,7 @@ export default function ResetPasswordAction({ oobCode }: ResetPasswordActionProp
       onClick={() => navigate('/login')}
       className="mt-2 w-full"
     >
-      Iniciar sesión
+      {t('auth.signIn', 'Iniciar sesión')}
     </Button>
   );
 
@@ -93,8 +95,11 @@ export default function ResetPasswordAction({ oobCode }: ResetPasswordActionProp
       <ActionStatus
         variant="loading"
         icon={KeyRound}
-        title="Validando el enlace…"
-        description="Un segundo, estamos verificando tu enlace de recuperación."
+        title={t('auth.action.reset.loadingTitle', 'Validando el enlace…')}
+        description={t(
+          'auth.action.reset.loadingBody',
+          'Un segundo, estamos verificando tu enlace de recuperación.',
+        )}
       />
     );
   }
@@ -104,8 +109,11 @@ export default function ResetPasswordAction({ oobCode }: ResetPasswordActionProp
       <ActionStatus
         variant="success"
         icon={CheckCircle2}
-        title="Contraseña actualizada"
-        description="Ya podés iniciar sesión con tu nueva contraseña."
+        title={t('auth.action.reset.successTitle', 'Contraseña actualizada')}
+        description={t(
+          'auth.action.reset.successBody',
+          'Ya podés iniciar sesión con tu nueva contraseña.',
+        )}
       >
         {goToLogin}
       </ActionStatus>
@@ -117,7 +125,7 @@ export default function ResetPasswordAction({ oobCode }: ResetPasswordActionProp
       <ActionStatus
         variant="error"
         icon={AlertTriangle}
-        title="No pudimos restablecer tu contraseña"
+        title={t('auth.action.reset.errorTitle', 'No pudimos restablecer tu contraseña')}
         description={errorMsg}
       >
         {goToLogin}
@@ -133,15 +141,25 @@ export default function ResetPasswordAction({ oobCode }: ResetPasswordActionProp
         <div className="rounded-full bg-amber-500/15 p-3">
           <KeyRound className="size-6 text-amber-600 dark:text-amber-400" aria-hidden />
         </div>
-        <h2 className="text-xl font-semibold">Elegí una nueva contraseña</h2>
+        <h2 className="text-xl font-semibold">
+          {t('auth.action.reset.formTitle', 'Elegí una nueva contraseña')}
+        </h2>
         <p className="text-sm text-muted-foreground">
-          Para la cuenta <span className="font-medium text-foreground">{email}</span>.
+          <Trans
+            i18nKey="auth.action.reset.forAccount"
+            defaults="Para la cuenta <1>{{email}}</1>."
+            values={{ email }}
+            components={[
+              <span key="0" />,
+              <span key="1" className="font-medium text-foreground" />,
+            ]}
+          />
         </p>
       </div>
       <form onSubmit={handleSubmit} className="flex flex-col gap-4" noValidate>
         <div className="flex flex-col gap-1.5">
           <label htmlFor="reset-password" className="text-sm font-medium">
-            Nueva contraseña
+            {t('auth.action.reset.newPassword', 'Nueva contraseña')}
           </label>
           <input
             id="reset-password"
@@ -160,12 +178,14 @@ export default function ResetPasswordAction({ oobCode }: ResetPasswordActionProp
               {passwordErr}
             </p>
           ) : (
-            <p className="text-xs text-muted-foreground">Mínimo 8 caracteres.</p>
+            <p className="text-xs text-muted-foreground">
+              {t('auth.validation.minChars', 'Mínimo 8 caracteres.')}
+            </p>
           )}
         </div>
         <div className="flex flex-col gap-1.5">
           <label htmlFor="reset-confirm" className="text-sm font-medium">
-            Confirmar contraseña
+            {t('auth.confirmPassword', 'Confirmar contraseña')}
           </label>
           <input
             id="reset-confirm"
@@ -185,7 +205,9 @@ export default function ResetPasswordAction({ oobCode }: ResetPasswordActionProp
           )}
         </div>
         <Button type="submit" variant="default" size="lg" disabled={submitting} className="w-full">
-          {submitting ? 'Guardando…' : 'Cambiar contraseña'}
+          {submitting
+            ? t('common.saving', 'Guardando…')
+            : t('auth.action.reset.submit', 'Cambiar contraseña')}
         </Button>
       </form>
     </div>

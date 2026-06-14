@@ -1,25 +1,8 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Dialog } from '@base-ui/react/dialog';
 import { Brain, Inbox, Sparkles, Workflow } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import useOnboarding from '@/hooks/useOnboarding';
-
-const PILLARS = [
-  {
-    icon: Inbox,
-    title: 'Capturá sin fricción',
-    description: 'Tirá ideas al inbox y procesalas después, sin perder el hilo.',
-  },
-  {
-    icon: Workflow,
-    title: 'Conectá tu conocimiento',
-    description: 'Notas atómicas enlazadas que forman tu segundo cerebro.',
-  },
-  {
-    icon: Sparkles,
-    title: 'La IA organiza por vos',
-    description: 'Clasifica, etiqueta y resume tus capturas automáticamente.',
-  },
-] as const;
 
 /**
  * Modal de bienvenida de 1 paso (F49). Se auto-abre una sola vez a cuentas
@@ -32,9 +15,40 @@ const PILLARS = [
  * la elegibilidad y la acción de persistencia.
  */
 export default function WelcomeModal() {
+  const { t } = useTranslation();
   const { shouldShowWelcome, markWelcomeSeen } = useOnboarding();
   const [open, setOpen] = useState(false);
   const autoOpenedRef = useRef(false);
+
+  const pillars = useMemo(
+    () => [
+      {
+        icon: Inbox,
+        title: t('onboarding.welcome.pillars.capture.title', 'Capturá sin fricción'),
+        description: t(
+          'onboarding.welcome.pillars.capture.description',
+          'Tirá ideas al inbox y procesalas después, sin perder el hilo.',
+        ),
+      },
+      {
+        icon: Workflow,
+        title: t('onboarding.welcome.pillars.connect.title', 'Conectá tu conocimiento'),
+        description: t(
+          'onboarding.welcome.pillars.connect.description',
+          'Notas atómicas enlazadas que forman tu segundo cerebro.',
+        ),
+      },
+      {
+        icon: Sparkles,
+        title: t('onboarding.welcome.pillars.ai.title', 'La IA organiza por vos'),
+        description: t(
+          'onboarding.welcome.pillars.ai.description',
+          'Clasifica, etiqueta y resume tus capturas automáticamente.',
+        ),
+      },
+    ],
+    [t],
+  );
 
   useEffect(() => {
     if (autoOpenedRef.current) return;
@@ -64,16 +78,18 @@ export default function WelcomeModal() {
               <Brain className="h-6 w-6" aria-hidden />
             </span>
             <Dialog.Title className="text-xl font-semibold text-foreground">
-              Te damos la bienvenida a SecondMind
+              {t('onboarding.welcome.title', 'Te damos la bienvenida a SecondMind')}
             </Dialog.Title>
             <Dialog.Description className="mt-2 text-sm leading-relaxed text-muted-foreground">
-              Tu segundo cerebro para capturar ideas, conectar tu conocimiento y dejar que la IA te
-              ayude a organizarlo.
+              {t(
+                'onboarding.welcome.description',
+                'Tu segundo cerebro para capturar ideas, conectar tu conocimiento y dejar que la IA te ayude a organizarlo.',
+              )}
             </Dialog.Description>
           </div>
 
           <ul className="mt-6 flex flex-col gap-4">
-            {PILLARS.map((pillar) => (
+            {pillars.map((pillar) => (
               <li key={pillar.title} className="flex items-start gap-3">
                 <span className="mt-0.5 inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-muted text-muted-foreground">
                   <pillar.icon className="h-4 w-4" aria-hidden />
@@ -94,7 +110,7 @@ export default function WelcomeModal() {
             onClick={() => handleOpenChange(false)}
             className="mt-6 inline-flex min-h-11 w-full items-center justify-center rounded-lg bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90"
           >
-            Empezar
+            {t('onboarding.welcome.start', 'Empezar')}
           </button>
         </Dialog.Popup>
       </Dialog.Portal>

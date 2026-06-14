@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Link } from 'react-router';
 import { Tabs } from '@base-ui/react/tabs';
+import { useTranslation } from 'react-i18next';
 import { cn } from '@/lib/utils';
 import useLoginError from '@/hooks/useLoginError';
 import useMountedTransition from '@/hooks/useMountedTransition';
@@ -14,6 +15,7 @@ type TabValue = 'signin' | 'signup';
 type Mode = 'tabs' | 'reset';
 
 export default function LoginCard() {
+  const { t } = useTranslation();
   const [tab, setTab] = useState<TabValue>('signin');
   const [mode, setMode] = useState<Mode>('tabs');
   // SPEC-51 F3: error en store persistente (no useState local) para que SOBREVIVA
@@ -58,13 +60,13 @@ export default function LoginCard() {
                     value="signin"
                     className="relative flex h-10 flex-1 items-center justify-center px-4 text-sm font-medium text-muted-foreground transition-colors outline-none hover:text-foreground data-selected:text-foreground"
                   >
-                    Iniciar sesión
+                    {t('auth.signIn', 'Iniciar sesión')}
                   </Tabs.Tab>
                   <Tabs.Tab
                     value="signup"
                     className="relative flex h-10 flex-1 items-center justify-center px-4 text-sm font-medium text-muted-foreground transition-colors outline-none hover:text-foreground data-selected:text-foreground"
                   >
-                    Crear cuenta
+                    {t('auth.signUp', 'Crear cuenta')}
                   </Tabs.Tab>
                   <Tabs.Indicator className="absolute bottom-[-1px] left-0 h-[2px] w-(--active-tab-width) translate-x-(--active-tab-left) bg-primary transition-[translate,width] duration-200 ease-out" />
                 </Tabs.List>
@@ -108,7 +110,7 @@ export default function LoginCard() {
           <>
             <div className="mt-6 mb-4 flex items-center gap-3 text-xs tracking-wider text-muted-foreground uppercase">
               <div className="h-px flex-1 bg-border" />
-              o continuá con
+              {t('auth.orContinueWith', 'o continuá con')}
               <div className="h-px flex-1 bg-border" />
             </div>
 
@@ -117,9 +119,9 @@ export default function LoginCard() {
         )}
 
         <p className="mt-6 text-center text-sm text-muted-foreground">
-          ¿No tenés acceso?{' '}
+          {t('auth.noAccess', '¿No tenés acceso?')}{' '}
           <Link to="/solicitar-acceso" className="font-medium text-primary hover:underline">
-            Solicitá una invitación
+            {t('auth.requestInvite', 'Solicitá una invitación')}
           </Link>
         </p>
       </div>

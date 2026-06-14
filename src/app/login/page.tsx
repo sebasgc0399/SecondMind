@@ -1,9 +1,11 @@
 import { useEffect } from 'react';
 import { useNavigate } from 'react-router';
+import { useTranslation } from 'react-i18next';
 import useAuth from '@/hooks/useAuth';
 import LoginCard from '@/components/auth/LoginCard';
 
 export default function LoginPage() {
+  const { t } = useTranslation();
   const { user, isLoading } = useAuth();
   const navigate = useNavigate();
 
@@ -39,7 +41,7 @@ export default function LoginPage() {
       <div className="mb-10 flex flex-col items-center gap-3 text-center">
         <img src="/favicon.svg" alt="" aria-hidden className="h-20 w-20 md:h-24 md:w-24" />
         <h1 className="text-3xl font-extrabold tracking-tight md:text-4xl">SecondMind</h1>
-        <p className="text-muted-foreground">Tu segundo cerebro digital</p>
+        <p className="text-muted-foreground">{t('auth.tagline', 'Tu segundo cerebro digital')}</p>
       </div>
 
       <LoginCard />

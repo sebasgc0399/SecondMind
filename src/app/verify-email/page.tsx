@@ -1,11 +1,13 @@
 import { useEffect } from 'react';
 import { Navigate, useNavigate } from 'react-router';
 import { Mail } from 'lucide-react';
+import { Trans, useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 import useAuth from '@/hooks/useAuth';
 import useEmailVerificationResend from '@/hooks/useEmailVerificationResend';
 
 export default function VerifyEmailPage() {
+  const { t } = useTranslation();
   const { user, isLoading, refreshUser } = useAuth();
   const navigate = useNavigate();
   const { remainingSeconds, sending, handleResend } = useEmailVerificationResend();
@@ -73,10 +75,10 @@ export default function VerifyEmailPage() {
   }
 
   const resendLabel = sending
-    ? 'Enviando…'
+    ? t('common.sending', 'Enviando…')
     : remainingSeconds > 0
-    ? `Enviado · ${remainingSeconds}s`
-    : 'Reenviar enlace';
+    ? t('auth.verify.sent', 'Enviado · {{seconds}}s', { seconds: remainingSeconds })
+    : t('auth.verify.resend', 'Reenviar enlace');
 
   return (
     <div className="relative flex min-h-screen flex-col items-center justify-center overflow-hidden bg-background px-6 py-12">
@@ -99,12 +101,19 @@ export default function VerifyEmailPage() {
           <div className="rounded-full bg-amber-500/15 p-3">
             <Mail className="size-6 text-amber-600 dark:text-amber-400" aria-hidden />
           </div>
-          <h2 className="text-xl font-semibold">Verificá tu email para continuar</h2>
+          <h2 className="text-xl font-semibold">
+            {t('auth.verify.pageTitle', 'Verificá tu email para continuar')}
+          </h2>
           <p className="text-sm text-muted-foreground">
-            Para activar tu cuenta verificá{' '}
-            <span className="font-medium text-foreground">{user.email}</span>. Revisá tu bandeja de
-            entrada y la carpeta de spam, y hacé click en el enlace — sin verificación no podés
-            guardar notas ni tareas. ¿No te llegó? Reenvialo abajo.
+            <Trans
+              i18nKey="auth.verify.body"
+              defaults="Para activar tu cuenta verificá <1>{{email}}</1>. Revisá tu bandeja de entrada y la carpeta de spam, y hacé click en el enlace — sin verificación no podés guardar notas ni tareas. ¿No te llegó? Reenvialo abajo."
+              values={{ email: user.email ?? '' }}
+              components={[
+                <span key="0" />,
+                <span key="1" className="font-medium text-foreground" />,
+              ]}
+            />
           </p>
           <Button
             type="button"
@@ -117,7 +126,10 @@ export default function VerifyEmailPage() {
             {resendLabel}
           </Button>
           <p className="text-xs text-muted-foreground">
-            ¿Ya verificaste? Esta página se actualiza sola cuando volvés desde tu correo.
+            {t(
+              'auth.verify.autoRefresh',
+              '¿Ya verificaste? Esta página se actualiza sola cuando volvés desde tu correo.',
+            )}
           </p>
         </div>
       </div>

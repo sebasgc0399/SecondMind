@@ -1,5 +1,6 @@
 import { useSearchParams, useNavigate } from 'react-router';
 import { AlertTriangle } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 import ActionStatus from '@/components/auth/ActionStatus';
 import VerifyEmailAction from '@/components/auth/VerifyEmailAction';
@@ -11,6 +12,7 @@ import ResetPasswordAction from '@/components/auth/ResetPasswordAction';
 // reset/verify (cross-device o de otra cuenta). El SDK usa su propia apiKey; ignoramos
 // apiKey/continueUrl/lang del query — solo leemos mode + oobCode.
 export default function AuthActionPage() {
+  const { t } = useTranslation();
   const [params] = useSearchParams();
   const navigate = useNavigate();
   const mode = params.get('mode');
@@ -25,7 +27,7 @@ export default function AuthActionPage() {
         onClick={() => navigate('/login')}
         className="mt-2 w-full"
       >
-        Iniciar sesión
+        {t('auth.signIn', 'Iniciar sesión')}
       </Button>
     );
 
@@ -35,8 +37,11 @@ export default function AuthActionPage() {
         <ActionStatus
           variant="error"
           icon={AlertTriangle}
-          title="Enlace inválido"
-          description="Este enlace no es válido o está incompleto. Pedí uno nuevo desde la app."
+          title={t('auth.action.invalidTitle', 'Enlace inválido')}
+          description={t(
+            'auth.action.invalidBody',
+            'Este enlace no es válido o está incompleto. Pedí uno nuevo desde la app.',
+          )}
         >
           {goToLogin}
         </ActionStatus>
@@ -52,8 +57,11 @@ export default function AuthActionPage() {
       <ActionStatus
         variant="error"
         icon={AlertTriangle}
-        title="Enlace no soportado"
-        description="Este tipo de enlace no está disponible. Pedí uno nuevo desde la app."
+        title={t('auth.action.unsupportedTitle', 'Enlace no soportado')}
+        description={t(
+          'auth.action.unsupportedBody',
+          'Este tipo de enlace no está disponible. Pedí uno nuevo desde la app.',
+        )}
       >
         {goToLogin}
       </ActionStatus>
