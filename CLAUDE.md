@@ -151,6 +151,15 @@ Docs teóricos en `Docs/00-04-*.md` — leer **solo el que aplique** a la tarea,
 
 Cuando la conversación se alarga y conviene abrir una sesión limpia, usar `/context-handoff` (skill user-level global). Genera un snapshot del delta — estado del repo, qué se acaba de hacer, qué sigue, pointers a docs no auto-cargados — listo para pegar como primer mensaje de la nueva ventana.
 
+### Engram (memoria de sesión) vs canon del repo — precedencia
+
+Engram (memoria persistente MCP, protocolo en el CLAUDE.md global) y el canon documental (`Spec/`, memoria nativa de `~/.claude`) cumplen roles distintos y **no compiten**:
+
+- **Canon técnico durable** → `Spec/` (`gotchas/<dominio>.md`, SPEC, ESTADO-ACTUAL) + memoria nativa. Es la fuente verificada y mantenida.
+- **Engram** → estado de sesión, handoff, decisiones en vuelo, captura efímera del momento del descubrimiento. Es el front-end que **alimenta** el canon vía SDD step 8, no una fuente paralela de verdad técnica.
+
+**Regla de precedencia:** ante conflicto entre un kernel técnico guardado en engram y el canon del repo, **gana el canon**. Una observation de engram refleja lo que era cierto cuando se escribió; si nombra un archivo/función/flag, verificarlo contra el repo antes de actuar (las notas de sesión envejecen; el canon se mantiene). No podar de engram los kernels ya escalados a canon: son el hilo narrativo de "cuándo/por qué se descubrió", lectura distinta a "cuál es la regla". Auditoría de respaldo: 2026-06-14 (24 observations) — 50% estado de sesión con valor único, 46% kernels técnicos que escalaron correctamente a canon, 1 fuga detectada por engram (gotcha close-on-scroll de `useEditorPopup`, escalado a `gotchas/editor-tiptap.md`).
+
 ## Estructura del proyecto
 
 ```
