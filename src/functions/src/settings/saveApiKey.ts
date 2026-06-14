@@ -7,6 +7,7 @@ import { requireVerified } from '../lib/requireVerified';
 import { assertAllowlisted } from '../lib/assertAllowlisted';
 import { validateProviderKey } from '../lib/validateProviderKey';
 import { sanitizeError } from '../lib/sanitizeError';
+import { appError } from '../lib/appError';
 
 const byokMasterKey = defineSecret('BYOK_MASTER_KEY');
 
@@ -39,20 +40,21 @@ export const saveApiKey = onCall<SaveApiKeyRequest, Promise<SaveApiKeyResponse>>
     const rawKey = request.data?.key;
 
     if (provider !== 'anthropic') {
-      throw new HttpsError('invalid-argument', 'Provider no soportado');
+      throw appError('save-key-invalid-provider', 'invalid-argument', 'Provider no soportado');
     }
     if (typeof rawKey !== 'string' || !rawKey.trim()) {
-      throw new HttpsError('invalid-argument', 'La API key es requerida');
+      throw appError('save-key-required', 'invalid-argument', 'La API key es requerida');
     }
     const key = rawKey.trim();
 
     try {
       const validation = await validateProviderKey(provider, key);
       if (validation === 'invalid') {
-        throw new HttpsError('invalid-argument', 'La API key es inválida');
+        throw appError('save-key-invalid', 'invalid-argument', 'La API key es inválida');
       }
       if (validation === 'unknown') {
-        throw new HttpsError(
+        throw appError(
+          'save-key-validation-unavailable',
           'unavailable',
           'No pudimos validar la key ahora. Probá de nuevo en un momento.',
         );
@@ -84,7 +86,7 @@ export const saveApiKey = onCall<SaveApiKeyRequest, Promise<SaveApiKeyResponse>>
       if (error instanceof HttpsError) throw error;
       const { code, message } = sanitizeError(error);
       logger.error('saveApiKey: failed', { userId, provider, code, message });
-      throw new HttpsError('internal', 'No se pudo guardar la API key');
+      throw appError('save-key-failed', 'internal', 'No se pudo guardar la API key');
     }
   },
 );

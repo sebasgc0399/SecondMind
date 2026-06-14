@@ -1,4 +1,4 @@
-import { onCall, HttpsError } from 'firebase-functions/v2/https';
+import { onCall } from 'firebase-functions/v2/https';
 import { defineSecret } from 'firebase-functions/params';
 import { logger } from 'firebase-functions';
 import OpenAI from 'openai';
@@ -6,6 +6,7 @@ import { requireVerified } from '../lib/requireVerified';
 import { assertAllowlisted } from '../lib/assertAllowlisted';
 import { enforceRateLimit } from '../lib/rateLimit';
 import { sanitizeError } from '../lib/sanitizeError';
+import { appError } from '../lib/appError';
 
 const openaiApiKey = defineSecret('OPENAI_API_KEY');
 
@@ -45,17 +46,25 @@ export const embedQuery = onCall<EmbedQueryRequest, Promise<EmbedQueryResponse>>
     const rawText = request.data?.text;
 
     if (rawText === null || rawText === undefined || typeof rawText !== 'string') {
-      throw new HttpsError('invalid-argument', 'text is required and must be a string');
+      throw appError(
+        'embed-query-invalid-text',
+        'invalid-argument',
+        'text is required and must be a string',
+      );
     }
 
     const text = rawText.trim();
 
     if (!text) {
-      throw new HttpsError('invalid-argument', 'text cannot be empty');
+      throw appError('embed-query-empty-text', 'invalid-argument', 'text cannot be empty');
     }
 
     if (text.length > MAX_TEXT_LENGTH) {
-      throw new HttpsError('invalid-argument', `text exceeds ${MAX_TEXT_LENGTH} characters`);
+      throw appError(
+        'embed-query-text-too-long',
+        'invalid-argument',
+        `text exceeds ${MAX_TEXT_LENGTH} characters`,
+      );
     }
 
     // SPEC-51 F8 (A-3): rate-limit por-uid tras validar el input (los malformados no
@@ -83,7 +92,7 @@ export const embedQuery = onCall<EmbedQueryRequest, Promise<EmbedQueryResponse>>
     } catch (error) {
       const { code, message } = sanitizeError(error);
       logger.error('embedQuery: failed', { userId, code, message });
-      throw new HttpsError('internal', 'Failed to generate embedding');
+      throw appError('embed-query-failed', 'internal', 'Failed to generate embedding');
     }
   },
 );

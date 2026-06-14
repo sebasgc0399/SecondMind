@@ -1,9 +1,10 @@
-import { onCall, HttpsError } from 'firebase-functions/v2/https';
+import { onCall } from 'firebase-functions/v2/https';
 import { logger } from 'firebase-functions';
 import * as admin from 'firebase-admin';
 import { requireVerified } from '../lib/requireVerified';
 import { assertAllowlisted } from '../lib/assertAllowlisted';
 import { sanitizeError } from '../lib/sanitizeError';
+import { appError } from '../lib/appError';
 
 interface DeleteApiKeyRequest {
   provider: string;
@@ -26,7 +27,7 @@ export const deleteApiKey = onCall<DeleteApiKeyRequest, Promise<DeleteApiKeyResp
     const provider = request.data?.provider;
 
     if (provider !== 'anthropic') {
-      throw new HttpsError('invalid-argument', 'Provider no soportado');
+      throw appError('delete-key-invalid-provider', 'invalid-argument', 'Provider no soportado');
     }
 
     try {
@@ -46,7 +47,7 @@ export const deleteApiKey = onCall<DeleteApiKeyRequest, Promise<DeleteApiKeyResp
     } catch (error) {
       const { code, message } = sanitizeError(error);
       logger.error('deleteApiKey: failed', { userId, provider, code, message });
-      throw new HttpsError('internal', 'No se pudo borrar la API key');
+      throw appError('delete-key-failed', 'internal', 'No se pudo borrar la API key');
     }
   },
 );
