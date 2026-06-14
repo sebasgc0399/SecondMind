@@ -383,140 +383,140 @@
   },
   "entities": {
     "area": {
-      "conocimiento": "",
-      "finanzas": "",
-      "habitos": "",
-      "pareja": "",
-      "proyectos": "",
-      "salud": ""
+      "conocimiento": "Knowledge",
+      "finanzas": "Finance",
+      "habitos": "Habits",
+      "pareja": "Relationship",
+      "proyectos": "Projects",
+      "salud": "Health & Exercise"
     },
     "discardable": {
       "group": {
-        "habit": "",
-        "inboxItem": "",
-        "note": "",
-        "objective": "",
-        "project": "",
-        "task": ""
+        "habit": "Habits",
+        "inboxItem": "Inbox",
+        "note": "Notes",
+        "objective": "Objectives",
+        "project": "Projects",
+        "task": "Tasks"
       },
-      "habitFallback": "",
-      "habitOfDate": "",
-      "inboxEmpty": "",
-      "noteUntitled": "",
-      "objectiveUntitled": "",
-      "projectUntitled": "",
-      "taskUntitled": ""
+      "habitFallback": "Habits ({{id}})",
+      "habitOfDate": "Habits for {{date}}",
+      "inboxEmpty": "Empty item",
+      "noteUntitled": "Untitled note",
+      "objectiveUntitled": "Untitled objective",
+      "projectUntitled": "Untitled project",
+      "taskUntitled": "Untitled task"
     },
     "habit": {
-      "codear": "",
-      "comerBien": "",
-      "ejercicio": "",
-      "estirar": "",
-      "gratitud": "",
-      "ingles": "",
-      "leer": "",
-      "madrugar": "",
-      "meditar": "",
-      "noComerDulce": "",
-      "pareja": "",
-      "planificarDia": "",
-      "tenderCama": "",
-      "tomarAgua": ""
+      "codear": "Code",
+      "comerBien": "Eat well",
+      "ejercicio": "Exercise",
+      "estirar": "Stretch",
+      "gratitud": "Gratitude",
+      "ingles": "English",
+      "leer": "Read",
+      "madrugar": "Wake up early",
+      "meditar": "Meditate",
+      "noComerDulce": "No sweets",
+      "pareja": "Relationship",
+      "planificarDia": "Plan the day",
+      "tenderCama": "Make the bed",
+      "tomarAgua": "Drink water"
     },
     "inboxResultType": {
-      "note": "",
-      "project": "",
-      "task": "",
-      "trash": ""
+      "note": "Note",
+      "project": "Project",
+      "task": "Task",
+      "trash": "Discard"
     },
     "noteType": {
-      "fleeting": "",
-      "literature": "",
-      "permanent": ""
+      "fleeting": "Fleeting",
+      "literature": "Literature",
+      "permanent": "Permanent"
     },
     "objectiveStatus": {
-      "completed": "",
-      "inProgress": "",
-      "notStarted": ""
+      "completed": "Completed",
+      "inProgress": "In progress",
+      "notStarted": "Not started"
     },
     "paraType": {
-      "archive": "",
-      "area": "",
-      "project": "",
-      "resource": ""
+      "archive": "Archive",
+      "area": "Area",
+      "project": "Project",
+      "resource": "Resource"
     },
     "pendingSync": {
       "habit": {
-        "plur": "",
-        "sing": ""
+        "plur": "habits",
+        "sing": "habit"
       },
       "inboxItem": {
-        "plur": "",
-        "sing": ""
+        "plur": "inbox items",
+        "sing": "inbox item"
       },
       "note": {
-        "plur": "",
-        "sing": ""
+        "plur": "notes",
+        "sing": "note"
       },
       "noteEdit": {
-        "plur": "",
-        "sing": ""
+        "plur": "note edits",
+        "sing": "note edit"
       },
       "noteNew": {
-        "plur": "",
-        "sing": ""
+        "plur": "new notes",
+        "sing": "new note"
       },
       "objective": {
-        "plur": "",
-        "sing": ""
+        "plur": "objectives",
+        "sing": "objective"
       },
       "objectiveNew": {
-        "plur": "",
-        "sing": ""
+        "plur": "new objectives",
+        "sing": "new objective"
       },
       "project": {
-        "plur": "",
-        "sing": ""
+        "plur": "projects",
+        "sing": "project"
       },
       "projectNew": {
-        "plur": "",
-        "sing": ""
+        "plur": "new projects",
+        "sing": "new project"
       },
       "task": {
-        "plur": "",
-        "sing": ""
+        "plur": "tasks",
+        "sing": "task"
       },
       "taskNew": {
-        "plur": "",
-        "sing": ""
+        "plur": "new tasks",
+        "sing": "new task"
       }
     },
     "priority": {
-      "high": "",
-      "low": "",
-      "medium": "",
-      "urgent": ""
+      "high": "High",
+      "low": "Low",
+      "medium": "Medium",
+      "urgent": "Urgent"
     },
     "priorityLong": {
-      "high": "",
-      "low": "",
-      "medium": "",
-      "urgent": ""
+      "high": "High priority",
+      "low": "Low priority",
+      "medium": "Medium priority",
+      "urgent": "Urgent priority"
     },
     "projectStatus": {
       "group": {
-        "completed": "",
-        "inbox": "",
-        "inProgress": "",
-        "notStarted": "",
-        "onHold": ""
+        "completed": "Completed",
+        "inbox": "Unclassified",
+        "inProgress": "In progress",
+        "notStarted": "Not started",
+        "onHold": "On hold"
       },
       "option": {
-        "completed": "",
-        "inbox": "",
-        "inProgress": "",
-        "notStarted": "",
-        "onHold": ""
+        "completed": "Completed",
+        "inbox": "Inbox",
+        "inProgress": "In progress",
+        "notStarted": "Not started",
+        "onHold": "On hold"
       }
     }
   },
