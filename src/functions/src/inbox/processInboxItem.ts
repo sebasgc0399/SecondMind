@@ -3,19 +3,17 @@ import * as admin from 'firebase-admin';
 import { onDocumentCreated } from 'firebase-functions/v2/firestore';
 import { defineSecret } from 'firebase-functions/params';
 import { logger } from 'firebase-functions';
-import { INBOX_CLASSIFICATION_SCHEMA, InboxClassification } from '../lib/schemas';
+import { buildInboxSchema, checkInboxEnums, InboxClassification } from '../lib/schemas';
 import { sanitizeError } from '../lib/sanitizeError';
 import { getUserAnthropicKey, invalidateUserAnthropicKey } from '../lib/getUserAnthropicKey';
+import { getUserLocale } from '../lib/getUserLocale';
+import { buildInboxSystemPrompt, buildInboxToolDescription, buildInboxUserPrompt } from './prompts';
 
 const byokMasterKey = defineSecret('BYOK_MASTER_KEY');
 
 const MODEL = 'claude-haiku-4-5-20251001';
 const MAX_TOKENS = 512;
 const MAX_CONTENT_CHARS = 10_000;
-
-const SYSTEM_PROMPT = `Eres un asistente de productividad personal. Analizas capturas rapidas del usuario y sugieres como clasificarlas. El usuario tiene estas areas: Proyectos, Conocimiento, Finanzas, Salud y Ejercicio, Pareja, Habitos.
-
-Devuelve confidence entre 0 y 1: que tan seguro estas de la clasificacion completa (tipo + area + titulo). Usa >0.9 para casos obvios, 0.7-0.9 para casos claros, <0.7 para ambiguedades.`;
 
 export const processInboxItem = onDocumentCreated(
   {
@@ -61,24 +59,25 @@ export const processInboxItem = onDocumentCreated(
         logger.info('processInboxItem: skip, sin BYOK key', { userId, itemId });
         return;
       }
+      const locale = await getUserLocale(userId);
       const client = new Anthropic({ apiKey: key });
 
       const response = await client.messages.create({
         model: MODEL,
         max_tokens: MAX_TOKENS,
-        system: SYSTEM_PROMPT,
+        system: buildInboxSystemPrompt(locale),
         tools: [
           {
             name: 'classify_inbox',
-            description: 'Clasifica una captura de inbox del usuario',
-            input_schema: INBOX_CLASSIFICATION_SCHEMA,
+            description: buildInboxToolDescription(locale),
+            input_schema: buildInboxSchema(locale),
           },
         ],
         tool_choice: { type: 'tool', name: 'classify_inbox' },
         messages: [
           {
             role: 'user',
-            content: `Clasifica esta captura:\n"${rawContent}"`,
+            content: buildInboxUserPrompt(locale, rawContent),
           },
         ],
       });
@@ -94,13 +93,29 @@ export const processInboxItem = onDocumentCreated(
 
       const result = toolBlock.input as InboxClassification;
 
+      // Guard post-LLM (F3.1): si el modelo devolvió un enum de identidad fuera del
+      // set canónico (p.ej. traducido por el prompt en), descartamos toda la
+      // sugerencia — no persistimos un valor roto que rompería el matching D5 del
+      // cliente. Mismo efecto que el path "no tool_use" (onDocumentCreated dispara
+      // una vez → no hace falta marcar aiProcessed).
+      const enums = checkInboxEnums(result);
+      if (enums.discard) {
+        logger.warn('processInboxItem: enum de identidad invalido, descarta sugerencia', {
+          userId,
+          itemId,
+          suggestedType: result.suggestedType,
+          suggestedArea: result.suggestedArea,
+        });
+        return;
+      }
+
       await docRef.update({
         aiSuggestedTitle: result.suggestedTitle,
         aiSuggestedType: result.suggestedType,
         aiSuggestedTags: JSON.stringify(result.suggestedTags),
         aiSuggestedArea: result.suggestedArea,
         aiSummary: result.summary,
-        aiPriority: result.priority,
+        aiPriority: enums.priority,
         aiConfidence: typeof result.confidence === 'number' ? result.confidence : 0,
         aiProcessed: true,
       });
