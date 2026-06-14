@@ -9,15 +9,11 @@
         "description": "",
         "title": ""
       },
-      "revokeError": "",
       "searchAria": ""
     },
     "requests": {
       "approve": "",
       "empty": "",
-      "errorFull": "",
-      "errorFullNoMax": "",
-      "errorGeneric": "",
       "noMatch": "",
       "reject": "",
       "searchAria": ""
@@ -33,9 +29,6 @@
   "auth": {
     "accessRequest": {
       "betaTagline": "",
-      "errorEmail": "",
-      "errorGeneric": "",
-      "errorRateLimit": "",
       "invalidEmail": "",
       "motivo": "",
       "optional": "",

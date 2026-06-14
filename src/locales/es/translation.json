@@ -9,15 +9,11 @@
         "description": "{{email}} dejará de tener acceso a la beta en su próximo gate (no borra su cuenta ni sus datos). Podés volver a invitarlo aprobando una nueva solicitud.",
         "title": "¿Revocar el acceso?"
       },
-      "revokeError": "No se pudo revocar el acceso. Probá de nuevo.",
       "searchAria": "Buscar miembros por email"
     },
     "requests": {
       "approve": "Aprobar",
       "empty": "No hay solicitudes pendientes.",
-      "errorFull": "Beta llena ({{max}}). Subí el límite o revocá un miembro antes de aprobar.",
-      "errorFullNoMax": "Beta llena. Subí el límite o revocá un miembro antes de aprobar.",
-      "errorGeneric": "No se pudo procesar la solicitud. Probá de nuevo.",
       "noMatch": "Ninguna solicitud coincide con la búsqueda.",
       "reject": "Rechazar",
       "searchAria": "Buscar solicitudes por email"
@@ -33,9 +29,6 @@
   "auth": {
     "accessRequest": {
       "betaTagline": "Beta cerrada por invitación",
-      "errorEmail": "Revisá el email ingresado.",
-      "errorGeneric": "No se pudo enviar la solicitud. Probá de nuevo.",
-      "errorRateLimit": "Demasiados intentos. Probá de nuevo más tarde.",
       "invalidEmail": "Ingresá un email válido.",
       "motivo": "Motivo",
       "optional": "(opcional)",
