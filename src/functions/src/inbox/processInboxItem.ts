@@ -3,7 +3,7 @@ import * as admin from 'firebase-admin';
 import { onDocumentCreated } from 'firebase-functions/v2/firestore';
 import { defineSecret } from 'firebase-functions/params';
 import { logger } from 'firebase-functions';
-import { INBOX_CLASSIFICATION_SCHEMA, InboxClassification } from '../lib/schemas';
+import { buildInboxSchema, InboxClassification } from '../lib/schemas';
 import { sanitizeError } from '../lib/sanitizeError';
 import { getUserAnthropicKey, invalidateUserAnthropicKey } from '../lib/getUserAnthropicKey';
 
@@ -71,7 +71,7 @@ export const processInboxItem = onDocumentCreated(
           {
             name: 'classify_inbox',
             description: 'Clasifica una captura de inbox del usuario',
-            input_schema: INBOX_CLASSIFICATION_SCHEMA,
+            input_schema: buildInboxSchema('es'),
           },
         ],
         tool_choice: { type: 'tool', name: 'classify_inbox' },

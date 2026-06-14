@@ -3,7 +3,7 @@ import * as admin from 'firebase-admin';
 import { onDocumentWritten } from 'firebase-functions/v2/firestore';
 import { defineSecret } from 'firebase-functions/params';
 import { logger } from 'firebase-functions';
-import { NOTE_TAGGING_SCHEMA, NoteTagging } from '../lib/schemas';
+import { buildNoteSchema, NoteTagging } from '../lib/schemas';
 import { sanitizeError } from '../lib/sanitizeError';
 import { getUserAnthropicKey, invalidateUserAnthropicKey } from '../lib/getUserAnthropicKey';
 
@@ -79,7 +79,7 @@ export const autoTagNote = onDocumentWritten(
           {
             name: 'tag_note',
             description: 'Sugiere tags, resumen y tipo Zettelkasten para una nota personal',
-            input_schema: NOTE_TAGGING_SCHEMA,
+            input_schema: buildNoteSchema('es'),
           },
         ],
         tool_choice: { type: 'tool', name: 'tag_note' },
