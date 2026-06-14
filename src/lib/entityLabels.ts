@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import type { Priority, ObjectiveStatus, ProjectStatus } from '@/types/common';
+import type { Priority, ObjectiveStatus, ProjectStatus, NoteType, ParaType } from '@/types/common';
 import type { InboxResultType } from '@/types/inbox';
 import type { TFunction } from 'i18next';
 
@@ -106,4 +106,33 @@ export function buildInboxResultTypeLabels(t: TFunction): Record<InboxResultType
 export function useInboxResultTypeLabels(): Record<InboxResultType, string> {
   const { t } = useTranslation();
   return useMemo(() => buildInboxResultTypeLabels(t), [t]);
+}
+
+// --- NoteType (Fugaz/Literatura/Permanente). Antes en EN en grafo (bug) ---
+export function buildNoteTypeLabels(t: TFunction): Record<NoteType, string> {
+  return {
+    fleeting: t('entities.noteType.fleeting', 'Fugaz'),
+    literature: t('entities.noteType.literature', 'Literatura'),
+    permanent: t('entities.noteType.permanent', 'Permanente'),
+  };
+}
+
+export function useNoteTypeLabels(): Record<NoteType, string> {
+  const { t } = useTranslation();
+  return useMemo(() => buildNoteTypeLabels(t), [t]);
+}
+
+// --- ParaType (Proyecto/Área/Recurso/Archivo). 'Área' con tilde unificado ---
+export function buildParaTypeLabels(t: TFunction): Record<ParaType, string> {
+  return {
+    project: t('entities.paraType.project', 'Proyecto'),
+    area: t('entities.paraType.area', 'Área'),
+    resource: t('entities.paraType.resource', 'Recurso'),
+    archive: t('entities.paraType.archive', 'Archivo'),
+  };
+}
+
+export function useParaTypeLabels(): Record<ParaType, string> {
+  const { t } = useTranslation();
+  return useMemo(() => buildParaTypeLabels(t), [t]);
 }

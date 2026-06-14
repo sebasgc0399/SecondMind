@@ -2,6 +2,8 @@ import { Link } from 'react-router';
 import { X } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { formatRelative } from '@/lib/formatDate';
+import { useNoteTypeLabels, useParaTypeLabels } from '@/lib/entityLabels';
+import type { NoteType, ParaType } from '@/types/common';
 
 export interface LinkedNote {
   id: string;
@@ -16,21 +18,10 @@ interface ProjectNoteListProps {
   onUnlink: (noteId: string) => void;
 }
 
-const NOTE_TYPE_LABELS: Record<string, string> = {
-  fleeting: 'Fugaz',
-  literature: 'Literatura',
-  permanent: 'Permanente',
-};
-
-const PARA_TYPE_LABELS: Record<string, string> = {
-  project: 'Proyecto',
-  area: 'Área',
-  resource: 'Recurso',
-  archive: 'Archivo',
-};
-
 export default function ProjectNoteList({ notes, onUnlink }: ProjectNoteListProps) {
   const { t } = useTranslation();
+  const noteTypeLabels = useNoteTypeLabels();
+  const paraTypeLabels = useParaTypeLabels();
   if (notes.length === 0) {
     return (
       <div className="rounded-lg border border-dashed border-border p-6 text-center">
@@ -55,10 +46,10 @@ export default function ProjectNoteList({ notes, onUnlink }: ProjectNoteListProp
               </h4>
               <div className="mt-1 flex flex-wrap items-center gap-2 text-[11px] text-muted-foreground">
                 <span className="rounded-full border border-border bg-muted/40 px-2 py-0.5 font-medium uppercase tracking-wide">
-                  {NOTE_TYPE_LABELS[note.noteType] ?? note.noteType}
+                  {noteTypeLabels[note.noteType as NoteType] ?? note.noteType}
                 </span>
                 <span className="rounded-full border border-border bg-muted/40 px-2 py-0.5 font-medium uppercase tracking-wide">
-                  {PARA_TYPE_LABELS[note.paraType] ?? note.paraType}
+                  {paraTypeLabels[note.paraType as ParaType] ?? note.paraType}
                 </span>
                 <span>{formatRelative(note.updatedAt)}</span>
               </div>

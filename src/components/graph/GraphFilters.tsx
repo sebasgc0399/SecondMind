@@ -4,29 +4,12 @@ import { useTranslation } from 'react-i18next';
 import type { GraphFilters as GraphFiltersType } from '@/hooks/useGraph';
 import { DEFAULT_FILTERS } from '@/hooks/useGraph';
 import type { ParaType, NoteType } from '@/types/common';
+import { useNoteTypeLabels, useParaTypeLabels } from '@/lib/entityLabels';
 
 interface GraphFiltersProps {
   filters: GraphFiltersType;
   onChange: (filters: GraphFiltersType) => void;
 }
-
-// PARA_OPTIONS / NOTE_TYPE_OPTIONS: labels de enum (Proyecto/Recurso…,
-// Fleeting/Literature…) + "Todas" → diferidos a F2.7 (entityLabels central,
-// mismo enum que NoteCard/GraphNodePanel). Quedan en es = idéntico al baseline.
-const PARA_OPTIONS: { value: ParaType | 'all'; label: string }[] = [
-  { value: 'all', label: 'Todas' },
-  { value: 'project', label: 'Proyecto' },
-  { value: 'area', label: 'Area' },
-  { value: 'resource', label: 'Recurso' },
-  { value: 'archive', label: 'Archivo' },
-];
-
-const NOTE_TYPE_OPTIONS: { value: NoteType | 'all'; label: string }[] = [
-  { value: 'all', label: 'Todas' },
-  { value: 'fleeting', label: 'Fleeting' },
-  { value: 'literature', label: 'Literature' },
-  { value: 'permanent', label: 'Permanent' },
-];
 
 function isFiltered(filters: GraphFiltersType): boolean {
   return (
@@ -38,6 +21,8 @@ function isFiltered(filters: GraphFiltersType): boolean {
 
 export default function GraphFilters({ filters, onChange }: GraphFiltersProps) {
   const { t } = useTranslation();
+  const paraTypeLabels = useParaTypeLabels();
+  const noteTypeLabels = useNoteTypeLabels();
   const [isOpen, setIsOpen] = useState(false);
   const hasFilters = isFiltered(filters);
 
@@ -60,7 +45,7 @@ export default function GraphFilters({ filters, onChange }: GraphFiltersProps) {
       {isOpen && (
         <div className="flex flex-wrap items-end gap-3 px-4 pb-3 md:gap-4 md:px-6">
           <label className="flex flex-col gap-1">
-            <span className="text-xs text-muted-foreground">{t('graph.filters.area', 'Area')}</span>
+            <span className="text-xs text-muted-foreground">{t('graph.filters.area', 'Área')}</span>
             <select
               value={filters.paraType}
               onChange={(e) =>
@@ -68,9 +53,10 @@ export default function GraphFilters({ filters, onChange }: GraphFiltersProps) {
               }
               className="rounded-md border border-border bg-card px-2 py-1.5 text-sm text-foreground"
             >
-              {PARA_OPTIONS.map((opt) => (
-                <option key={opt.value} value={opt.value}>
-                  {opt.label}
+              <option value="all">{t('graph.filters.allOption', 'Todas')}</option>
+              {Object.entries(paraTypeLabels).map(([value, label]) => (
+                <option key={value} value={value}>
+                  {label}
                 </option>
               ))}
             </select>
@@ -85,9 +71,10 @@ export default function GraphFilters({ filters, onChange }: GraphFiltersProps) {
               }
               className="rounded-md border border-border bg-card px-2 py-1.5 text-sm text-foreground"
             >
-              {NOTE_TYPE_OPTIONS.map((opt) => (
-                <option key={opt.value} value={opt.value}>
-                  {opt.label}
+              <option value="all">{t('graph.filters.allOption', 'Todas')}</option>
+              {Object.entries(noteTypeLabels).map(([value, label]) => (
+                <option key={value} value={value}>
+                  {label}
                 </option>
               ))}
             </select>

@@ -385,10 +385,21 @@ export default interface Resources {
         task: 'Tarea';
         trash: 'Descartar';
       };
+      noteType: {
+        fleeting: 'Fugaz';
+        literature: 'Literatura';
+        permanent: 'Permanente';
+      };
       objectiveStatus: {
         completed: 'Completado';
         inProgress: 'En progreso';
         notStarted: 'No empezado';
+      };
+      paraType: {
+        archive: 'Archivo';
+        area: 'Área';
+        project: 'Proyecto';
+        resource: 'Recurso';
       };
       priority: {
         high: 'Alta';
@@ -428,7 +439,8 @@ export default interface Resources {
       exitFullscreen: 'Salir de pantalla completa';
       filters: {
         active: 'activos';
-        area: 'Area';
+        allOption: 'Todas';
+        area: 'Área';
         minLinks: 'Links min';
         reset: 'Resetear';
         title: 'Filtros';
@@ -643,6 +655,11 @@ export default interface Resources {
         noOtherNotes: 'Sin otras notas disponibles';
         openTitle: 'Abrir nota lado a lado (⌘\\)';
         searchPlaceholder: 'Buscar nota para abrir lado a lado...';
+      };
+      suggestions: {
+        maturity: 'Esta nota tiene varias conexiones y un resumen ejecutivo — parece una idea madura.';
+        promote: 'Promover a {{type}}';
+        promoteDescription: 'La AI detectó que esta nota encaja mejor como {{type}}.';
       };
       tabs: {
         all: 'Todas';

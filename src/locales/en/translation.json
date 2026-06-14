@@ -378,10 +378,21 @@
       "task": "",
       "trash": ""
     },
+    "noteType": {
+      "fleeting": "",
+      "literature": "",
+      "permanent": ""
+    },
     "objectiveStatus": {
       "completed": "",
       "inProgress": "",
       "notStarted": ""
+    },
+    "paraType": {
+      "archive": "",
+      "area": "",
+      "project": "",
+      "resource": ""
     },
     "priority": {
       "high": "",
@@ -421,6 +432,7 @@
     "exitFullscreen": "",
     "filters": {
       "active": "",
+      "allOption": "",
       "area": "",
       "minLinks": "",
       "reset": "",
@@ -623,6 +635,11 @@
       "noOtherNotes": "",
       "openTitle": "",
       "searchPlaceholder": ""
+    },
+    "suggestions": {
+      "maturity": "",
+      "promote": "",
+      "promoteDescription": ""
     },
     "tabs": {
       "all": "",

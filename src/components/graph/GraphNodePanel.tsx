@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react';
 import { Link } from 'react-router';
 import { useTranslation } from 'react-i18next';
 import type { ParaType, NoteType } from '@/types/common';
+import { useNoteTypeLabels, useParaTypeLabels } from '@/lib/entityLabels';
 
 interface GraphNodePanelProps {
   nodeId: string;
@@ -12,26 +13,11 @@ interface GraphNodePanelProps {
   onClose: () => void;
 }
 
-// PARA_LABELS / NOTE_TYPE_LABELS: enums diferidos a F2.7 (entityLabels central,
-// mismos que NoteCard/GraphFilters). Quedan en es = idéntico al baseline.
-const PARA_LABELS: Record<ParaType, string> = {
-  project: 'Proyecto',
-  area: 'Area',
-  resource: 'Recurso',
-  archive: 'Archivo',
-};
-
 const PARA_BADGE_COLORS: Record<ParaType, string> = {
   project: 'bg-blue-500/15 text-blue-700 dark:text-blue-400',
   area: 'bg-green-500/15 text-green-700 dark:text-green-400',
   resource: 'bg-amber-500/15 text-amber-700 dark:text-amber-400',
   archive: 'bg-gray-500/15 text-gray-700 dark:text-gray-400',
-};
-
-const NOTE_TYPE_LABELS: Record<NoteType, string> = {
-  fleeting: 'Fleeting',
-  literature: 'Literature',
-  permanent: 'Permanent',
 };
 
 export default function GraphNodePanel({
@@ -43,6 +29,8 @@ export default function GraphNodePanel({
   onClose,
 }: GraphNodePanelProps) {
   const { t } = useTranslation();
+  const noteTypeLabels = useNoteTypeLabels();
+  const paraTypeLabels = useParaTypeLabels();
   const panelRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -74,10 +62,10 @@ export default function GraphNodePanel({
         <span
           className={`rounded-md px-2 py-0.5 text-xs font-medium ${PARA_BADGE_COLORS[paraType]}`}
         >
-          {PARA_LABELS[paraType]}
+          {paraTypeLabels[paraType]}
         </span>
         <span className="rounded-md bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground">
-          {NOTE_TYPE_LABELS[noteType]}
+          {noteTypeLabels[noteType]}
         </span>
       </div>
 

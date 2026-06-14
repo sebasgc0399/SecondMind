@@ -1,7 +1,9 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useCell } from 'tinybase/ui-react';
+import { useTranslation } from 'react-i18next';
 import { parseIds } from '@/lib/tinybase';
 import { notesRepo } from '@/infra/repos/notesRepo';
+import { useNoteTypeLabels } from '@/lib/entityLabels';
 import type { NoteType } from '@/types/common';
 import type { Suggestion } from '@/types/suggestion';
 import { SUGGESTION_IDS } from '@/types/suggestion';
@@ -12,12 +14,6 @@ const NOTE_TYPE_CONFIDENCE_THRESHOLD = 0.7;
 
 // Heurística B: estricto > 3 (4+ wikilinks salientes).
 const HEURISTIC_LINK_THRESHOLD = 3;
-
-const NOTE_TYPE_LABEL: Record<NoteType, string> = {
-  fleeting: 'Fleeting',
-  literature: 'Literature',
-  permanent: 'Permanent',
-};
 
 interface RemoteFields {
   suggestedNoteType?: NoteType;
@@ -45,6 +41,8 @@ export interface UseNoteSuggestionsResult {
  * entonces la suscripción ya propagó el dismiss confirmado).
  */
 export function useNoteSuggestions(noteId: string): UseNoteSuggestionsResult {
+  const { t } = useTranslation();
+  const noteTypeLabels = useNoteTypeLabels();
   const noteType = useCell('notes', noteId, 'noteType') as NoteType | undefined;
   const summaryL3 = (useCell('notes', noteId, 'summaryL3') as string | undefined) ?? '';
   const outgoingLinkIdsRaw =
@@ -76,12 +74,15 @@ export function useNoteSuggestions(noteId: string): UseNoteSuggestionsResult {
     ) {
       const id = `promote-to-${remote.suggestedNoteType}`;
       if (!allDismissed.has(id)) {
+        const typeLabel = noteTypeLabels[remote.suggestedNoteType] ?? remote.suggestedNoteType;
         result.push({
           id,
-          label: `Promover a ${NOTE_TYPE_LABEL[remote.suggestedNoteType]}`,
-          description: `La AI detectó que esta nota encaja mejor como ${NOTE_TYPE_LABEL[
-            remote.suggestedNoteType
-          ].toLowerCase()}.`,
+          label: t('notes.suggestions.promote', 'Promover a {{type}}', { type: typeLabel }),
+          description: t(
+            'notes.suggestions.promoteDescription',
+            'La AI detectó que esta nota encaja mejor como {{type}}.',
+            { type: typeLabel.toLowerCase() },
+          ),
           action: 'promote-to',
           payload: { noteType: remote.suggestedNoteType },
         });
@@ -101,9 +102,13 @@ export function useNoteSuggestions(noteId: string): UseNoteSuggestionsResult {
     ) {
       result.push({
         id: heuristicId,
-        label: `Promover a ${NOTE_TYPE_LABEL.permanent}`,
-        description:
+        label: t('notes.suggestions.promote', 'Promover a {{type}}', {
+          type: noteTypeLabels.permanent,
+        }),
+        description: t(
+          'notes.suggestions.maturity',
           'Esta nota tiene varias conexiones y un resumen ejecutivo — parece una idea madura.',
+        ),
         action: 'promote-to',
         payload: { noteType: 'permanent' },
       });
@@ -117,6 +122,8 @@ export function useNoteSuggestions(noteId: string): UseNoteSuggestionsResult {
     allDismissed,
     outgoingLinkIds,
     summaryL3,
+    t,
+    noteTypeLabels,
   ]);
 
   const dismiss = useCallback(

@@ -3,6 +3,8 @@ import { Dialog } from '@base-ui/react/dialog';
 import { Search } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import useNoteSearch from '@/hooks/useNoteSearch';
+import { useNoteTypeLabels, useParaTypeLabels } from '@/lib/entityLabels';
+import type { NoteType, ParaType } from '@/types/common';
 
 interface NoteLinkModalProps {
   open: boolean;
@@ -11,19 +13,6 @@ interface NoteLinkModalProps {
   excludeNoteIds: string[];
 }
 
-const NOTE_TYPE_LABELS: Record<string, string> = {
-  fleeting: 'Fugaz',
-  literature: 'Literatura',
-  permanent: 'Permanente',
-};
-
-const PARA_TYPE_LABELS: Record<string, string> = {
-  project: 'Proyecto',
-  area: 'Área',
-  resource: 'Recurso',
-  archive: 'Archivo',
-};
-
 export default function NoteLinkModal({
   open,
   onOpenChange,
@@ -31,6 +20,8 @@ export default function NoteLinkModal({
   excludeNoteIds,
 }: NoteLinkModalProps) {
   const { t } = useTranslation();
+  const noteTypeLabels = useNoteTypeLabels();
+  const paraTypeLabels = useParaTypeLabels();
   const { query, setQuery, results } = useNoteSearch();
 
   const excludeSet = useMemo(() => new Set(excludeNoteIds), [excludeNoteIds]);
@@ -98,10 +89,10 @@ export default function NoteLinkModal({
                         )}
                         <div className="mt-2 flex flex-wrap items-center gap-2 text-[10px] text-muted-foreground">
                           <span className="rounded-full border border-border bg-muted/40 px-2 py-0.5 font-medium uppercase tracking-wide">
-                            {NOTE_TYPE_LABELS[note.noteType] ?? note.noteType}
+                            {noteTypeLabels[note.noteType as NoteType] ?? note.noteType}
                           </span>
                           <span className="rounded-full border border-border bg-muted/40 px-2 py-0.5 font-medium uppercase tracking-wide">
-                            {PARA_TYPE_LABELS[note.paraType] ?? note.paraType}
+                            {paraTypeLabels[note.paraType as ParaType] ?? note.paraType}
                           </span>
                         </div>
                       </button>

@@ -3,7 +3,9 @@ import { Link } from 'react-router';
 import { Link2, Sparkles, Star, Trash2, Undo2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import type { NoteOramaDoc } from '@/lib/orama';
+import type { NoteType, ParaType } from '@/types/common';
 import { formatRelative } from '@/lib/formatDate';
+import { useNoteTypeLabels, useParaTypeLabels } from '@/lib/entityLabels';
 import { notesRepo } from '@/infra/repos/notesRepo';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import PendingSyncDot from '@/components/layout/PendingSyncDot';
@@ -18,22 +20,6 @@ interface NoteCardProps {
   // ya se cumplió).
   daysUntilPurge?: number | null;
 }
-
-// NOTE_TYPE_LABELS / PARA_TYPE_LABELS: enums de entidad compartidos
-// cross-dominio → diferidos a F2.7 (entityLabels central, junto con los de
-// AiSuggestionCard/GraphFilters). Quedan en es = idéntico al baseline.
-const NOTE_TYPE_LABELS: Record<string, string> = {
-  fleeting: 'Fugaz',
-  literature: 'Literatura',
-  permanent: 'Permanente',
-};
-
-const PARA_TYPE_LABELS: Record<string, string> = {
-  project: 'Proyecto',
-  area: 'Área',
-  resource: 'Recurso',
-  archive: 'Archivo',
-};
 
 const DISTILL_BADGE_STYLES: Record<1 | 2 | 3, string> = {
   1: 'bg-blue-500/15 text-blue-700 dark:text-blue-400',
@@ -62,6 +48,8 @@ export default function NoteCard({
   daysUntilPurge,
 }: NoteCardProps) {
   const { t } = useTranslation();
+  const noteTypeLabels = useNoteTypeLabels();
+  const paraTypeLabels = useParaTypeLabels();
   const snippet = note.contentPlain.trim().slice(0, 200);
   const showSnippet = snippet.length > 0;
   const [isSoftDeleteOpen, setIsSoftDeleteOpen] = useState(false);
@@ -192,8 +180,8 @@ export default function NoteCard({
               L{note.distillLevel}
             </Badge>
           )}
-          <Badge>{NOTE_TYPE_LABELS[note.noteType] ?? note.noteType}</Badge>
-          <Badge>{PARA_TYPE_LABELS[note.paraType] ?? note.paraType}</Badge>
+          <Badge>{noteTypeLabels[note.noteType as NoteType] ?? note.noteType}</Badge>
+          <Badge>{paraTypeLabels[note.paraType as ParaType] ?? note.paraType}</Badge>
           {purgeBadge && <Badge className="bg-destructive/10 text-destructive">{purgeBadge}</Badge>}
           {note.linkCount > 0 && (
             <span className="inline-flex items-center gap-1">
