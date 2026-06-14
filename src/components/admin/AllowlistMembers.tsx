@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 import type { UseAllowlistMembersReturn } from '@/hooks/useAllowlistMembers';
 import { revokeAccess } from '@/lib/allowlistMembers';
+import { mapCfError } from '@/lib/cfError';
 import AllowlistMemberRow from './AllowlistMemberRow';
 
 interface AllowlistMembersProps {
@@ -22,10 +23,8 @@ export default function AllowlistMembers({ data }: AllowlistMembersProps) {
     try {
       await revokeAccess(email);
       await refetch();
-    } catch {
-      setActionError(
-        t('admin.members.revokeError', 'No se pudo revocar el acceso. Probá de nuevo.'),
-      );
+    } catch (err) {
+      setActionError(mapCfError(err, t));
     } finally {
       setBusyEmail(null);
     }

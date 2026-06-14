@@ -9,15 +9,11 @@
         "description": "{{email}} dejará de tener acceso a la beta en su próximo gate (no borra su cuenta ni sus datos). Podés volver a invitarlo aprobando una nueva solicitud.",
         "title": "¿Revocar el acceso?"
       },
-      "revokeError": "No se pudo revocar el acceso. Probá de nuevo.",
       "searchAria": "Buscar miembros por email"
     },
     "requests": {
       "approve": "Aprobar",
       "empty": "No hay solicitudes pendientes.",
-      "errorFull": "Beta llena ({{max}}). Subí el límite o revocá un miembro antes de aprobar.",
-      "errorFullNoMax": "Beta llena. Subí el límite o revocá un miembro antes de aprobar.",
-      "errorGeneric": "No se pudo procesar la solicitud. Probá de nuevo.",
       "noMatch": "Ninguna solicitud coincide con la búsqueda.",
       "reject": "Rechazar",
       "searchAria": "Buscar solicitudes por email"
@@ -33,9 +29,6 @@
   "auth": {
     "accessRequest": {
       "betaTagline": "Beta cerrada por invitación",
-      "errorEmail": "Revisá el email ingresado.",
-      "errorGeneric": "No se pudo enviar la solicitud. Probá de nuevo.",
-      "errorRateLimit": "Demasiados intentos. Probá de nuevo más tarde.",
       "invalidEmail": "Ingresá un email válido.",
       "motivo": "Motivo",
       "optional": "(opcional)",
@@ -531,6 +524,38 @@
         "onHold": "En pausa"
       }
     }
+  },
+  "errors": {
+    "accessCheckUnavailable": "No pudimos verificar tu acceso. Reintentá en un momento.",
+    "accountDisabled": "Esta cuenta está deshabilitada.",
+    "accountExists": "Ya existe una cuenta con este email. Probá iniciar sesión o usar Google.",
+    "actionExpired": "El enlace expiró. Pedí uno nuevo.",
+    "actionInvalid": "El enlace no es válido. Pedí uno nuevo.",
+    "actionNetworkError": "Hubo un problema de conexión. Reintentá.",
+    "adminUnauthorized": "No autorizado.",
+    "betaFull": "Beta llena ({{max}}). Subí el límite o revocá un miembro antes de aprobar.",
+    "betaFullNoMax": "Beta llena. Subí el límite o revocá un miembro antes de aprobar.",
+    "betaUnauthorized": "Tu cuenta todavía no tiene acceso a la beta. Podés solicitarlo más abajo.",
+    "default": "Algo salió mal. Intentá de nuevo.",
+    "emailUnverified": "Verificá tu email para continuar.",
+    "invalidCredentials": "Email o contraseña incorrectos.",
+    "invalidEmail": "Email inválido.",
+    "invalidInput": "Datos inválidos. Probá de nuevo.",
+    "invalidProvider": "Proveedor no soportado.",
+    "networkError": "Sin conexión. Verificá tu internet.",
+    "operationFailed": "No se pudo completar la operación. Probá de nuevo.",
+    "rateLimited": "Demasiados intentos. Probá de nuevo más tarde.",
+    "requestNotFound": "Solicitud no encontrada.",
+    "resetGeneric": "Si la cuenta existe, recibirás un enlace en tu email.",
+    "saveKeyInvalid": "La API key es inválida.",
+    "saveKeyRequired": "La API key es requerida.",
+    "saveKeyUnavailable": "No pudimos validar la key ahora. Probá de nuevo en un momento.",
+    "submitInvalidEmail": "Revisá el email ingresado.",
+    "submitInvalidMotivo": "El motivo no es válido.",
+    "tooManyRequests": "Demasiados intentos. Probá de nuevo en unos minutos.",
+    "unauthenticated": "Tenés que iniciar sesión.",
+    "weakPassword": "Mínimo 8 caracteres con al menos un número.",
+    "weakPasswordShort": "Mínimo 8 caracteres."
   },
   "graph": {
     "createNotes": "Crear notas →",

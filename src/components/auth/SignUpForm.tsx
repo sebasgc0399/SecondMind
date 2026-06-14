@@ -63,7 +63,7 @@ export default function SignUpForm({ onError }: SignUpFormProps) {
       navigate('/', { replace: true });
     } catch (err) {
       const code = (err as { code?: string } | null)?.code;
-      onError(mapAuthError(code, 'signup'));
+      onError(mapAuthError(code, 'signup', t));
       setLoading(false);
     }
   }

@@ -1,5 +1,5 @@
-import { HttpsError } from 'firebase-functions/v2/https';
 import * as admin from 'firebase-admin';
+import { appError } from './appError';
 
 // SPEC-50 F5 (A-2): membresía en la allowlist de la beta cerrada. Lee
 // allowlist/{email} con Admin SDK (bypassa el deny-all de F4). Normaliza igual
@@ -20,6 +20,6 @@ export async function isAllowlisted(email: unknown): Promise<boolean> {
 // con requireVerified (F1). Lanza si el email no está en la allowlist.
 export async function assertAllowlisted(email: unknown): Promise<void> {
   if (!(await isAllowlisted(email))) {
-    throw new HttpsError('permission-denied', 'Email no autorizado para la beta');
+    throw appError('beta-unauthorized', 'permission-denied', 'Email no autorizado para la beta');
   }
 }

@@ -1,14 +1,13 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import useAuth from '@/hooks/useAuth';
 import { subscribeAiKeys, saveApiKey, deleteApiKey } from '@/lib/apiKeys';
-import { mapApiKeyError } from '@/lib/apiKeyErrors';
 import { DEFAULT_AI_KEYS, type AiKeysState, type ApiKeyProvider } from '@/types/apiKey';
 
 interface UseApiKeysReturn {
   apiKeys: AiKeysState;
   isLoaded: boolean;
   saving: boolean;
-  error: string | null;
+  error: unknown;
   saveKey: (provider: ApiKeyProvider, key: string) => Promise<boolean>;
   removeKey: (provider: ApiKeyProvider) => Promise<boolean>;
 }
@@ -23,7 +22,7 @@ export default function useApiKeys(): UseApiKeysReturn {
   const [apiKeys, setApiKeys] = useState<AiKeysState>(DEFAULT_AI_KEYS);
   const [isLoaded, setIsLoaded] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<unknown>(null);
   const userIdRef = useRef<string | null>(null);
 
   useEffect(() => {
@@ -50,7 +49,7 @@ export default function useApiKeys(): UseApiKeysReturn {
       await saveApiKey(provider, key);
       return true;
     } catch (err) {
-      setError(mapApiKeyError(err));
+      setError(err);
       return false;
     } finally {
       setSaving(false);
@@ -64,7 +63,7 @@ export default function useApiKeys(): UseApiKeysReturn {
       await deleteApiKey(provider);
       return true;
     } catch (err) {
-      setError(mapApiKeyError(err));
+      setError(err);
       return false;
     } finally {
       setSaving(false);

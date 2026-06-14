@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { CheckCircle2, ExternalLink, Key } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import useApiKeys from '@/hooks/useApiKeys';
+import { mapCfError } from '@/lib/cfError';
 
 export default function ApiKeysSection() {
   const { t } = useTranslation();
@@ -84,7 +85,7 @@ export default function ApiKeysSection() {
         </div>
       )}
 
-      {error && <p className="mt-2 text-xs text-destructive">{error}</p>}
+      {error != null && <p className="mt-2 text-xs text-destructive">{mapCfError(error, t)}</p>}
 
       <a
         href="https://console.anthropic.com/settings/keys"

@@ -1,5 +1,6 @@
-import { HttpsError, type CallableRequest } from 'firebase-functions/v2/https';
+import { type CallableRequest } from 'firebase-functions/v2/https';
 import { defineSecret } from 'firebase-functions/params';
+import { appError } from './appError';
 
 // SPEC-52 — identidad del admin vía SECRET (no hardcodeada: el repo es público, no
 // señalamos el target admin en el código). Mismo patrón que BYOK_MASTER_KEY/OPENAI_API_KEY.
@@ -14,7 +15,7 @@ export const adminEmail = defineSecret('ADMIN_EMAIL');
 // cosmético. Fail-closed: si el secret viene vacío o el token no trae email → permission-denied.
 export function requireAdmin(request: CallableRequest, expectedEmail: string): void {
   if (!request.auth) {
-    throw new HttpsError('unauthenticated', 'Login required');
+    throw appError('admin-unauthenticated', 'unauthenticated', 'Login required');
   }
   const email = request.auth.token.email;
   if (
@@ -22,6 +23,6 @@ export function requireAdmin(request: CallableRequest, expectedEmail: string): v
     !expectedEmail ||
     email.trim().toLowerCase() !== expectedEmail.trim().toLowerCase()
   ) {
-    throw new HttpsError('permission-denied', 'No autorizado');
+    throw appError('admin-unauthorized', 'permission-denied', 'No autorizado');
   }
 }

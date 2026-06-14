@@ -3,32 +3,11 @@ import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 import type { UseAccessRequestsQueueReturn } from '@/hooks/useAccessRequestsQueue';
 import { processAccessRequest } from '@/lib/accessRequests';
+import { mapCfError } from '@/lib/cfError';
 import AccessRequestRow from './AccessRequestRow';
-import type { TFunction } from 'i18next';
 
 interface AccessRequestQueueProps {
   data: UseAccessRequestsQueueReturn;
-}
-
-// SPEC-53 F8 — el approve ahora enforce capacity sobre la allowlist: si está llena, la CF
-// lanza resource-exhausted con { maxUsers, current } en details. Mapeamos ese caso a un
-// mensaje accionable; el resto sigue genérico. Hardcodeado acá (NO authErrors) → F2.6.
-function mapProcessError(err: unknown, t: TFunction): string {
-  const e = err as { code?: string; details?: { maxUsers?: number } } | null;
-  if (e?.code === 'functions/resource-exhausted') {
-    const max = e.details?.maxUsers;
-    return max != null
-      ? t(
-          'admin.requests.errorFull',
-          'Beta llena ({{max}}). Subí el límite o revocá un miembro antes de aprobar.',
-          { max },
-        )
-      : t(
-          'admin.requests.errorFullNoMax',
-          'Beta llena. Subí el límite o revocá un miembro antes de aprobar.',
-        );
-  }
-  return t('admin.requests.errorGeneric', 'No se pudo procesar la solicitud. Probá de nuevo.');
 }
 
 export default function AccessRequestQueue({ data }: AccessRequestQueueProps) {
@@ -45,7 +24,7 @@ export default function AccessRequestQueue({ data }: AccessRequestQueueProps) {
       await processAccessRequest(id, action);
       await refetch();
     } catch (err) {
-      setActionError(mapProcessError(err, t));
+      setActionError(mapCfError(err, t));
     } finally {
       setBusyId(null);
     }

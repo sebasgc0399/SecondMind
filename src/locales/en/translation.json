@@ -9,15 +9,11 @@
         "description": "",
         "title": ""
       },
-      "revokeError": "",
       "searchAria": ""
     },
     "requests": {
       "approve": "",
       "empty": "",
-      "errorFull": "",
-      "errorFullNoMax": "",
-      "errorGeneric": "",
       "noMatch": "",
       "reject": "",
       "searchAria": ""
@@ -33,9 +29,6 @@
   "auth": {
     "accessRequest": {
       "betaTagline": "",
-      "errorEmail": "",
-      "errorGeneric": "",
-      "errorRateLimit": "",
       "invalidEmail": "",
       "motivo": "",
       "optional": "",
@@ -526,6 +519,38 @@
         "onHold": ""
       }
     }
+  },
+  "errors": {
+    "accessCheckUnavailable": "",
+    "accountDisabled": "",
+    "accountExists": "",
+    "actionExpired": "",
+    "actionInvalid": "",
+    "actionNetworkError": "",
+    "adminUnauthorized": "",
+    "betaFull": "",
+    "betaFullNoMax": "",
+    "betaUnauthorized": "",
+    "default": "",
+    "emailUnverified": "",
+    "invalidCredentials": "",
+    "invalidEmail": "",
+    "invalidInput": "",
+    "invalidProvider": "",
+    "networkError": "",
+    "operationFailed": "",
+    "rateLimited": "",
+    "requestNotFound": "",
+    "resetGeneric": "",
+    "saveKeyInvalid": "",
+    "saveKeyRequired": "",
+    "saveKeyUnavailable": "",
+    "submitInvalidEmail": "",
+    "submitInvalidMotivo": "",
+    "tooManyRequests": "",
+    "unauthenticated": "",
+    "weakPassword": "",
+    "weakPasswordShort": ""
   },
   "graph": {
     "createNotes": "",

@@ -5,32 +5,12 @@ import { Check } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 import { submitAccessRequest } from '@/lib/accessRequests';
-import type { TFunction } from 'i18next';
+import { mapCfError } from '@/lib/cfError';
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const MAX_MOTIVO = 280;
 
 type Status = 'idle' | 'submitting' | 'success';
-
-// Mapea el code del FunctionsError (functions/<code>) a copy. Hardcodeado acá (NO
-// authErrors.ts) → F2.6. resource-exhausted = rate-limit por IP; invalid-argument
-// = validación server-side. Ningún mensaje confirma membresía (no-oráculo).
-function mapSubmitError(code: string | undefined, t: TFunction): string {
-  switch (code) {
-    case 'functions/resource-exhausted':
-      return t(
-        'auth.accessRequest.errorRateLimit',
-        'Demasiados intentos. Probá de nuevo más tarde.',
-      );
-    case 'functions/invalid-argument':
-      return t('auth.accessRequest.errorEmail', 'Revisá el email ingresado.');
-    default:
-      return t(
-        'auth.accessRequest.errorGeneric',
-        'No se pudo enviar la solicitud. Probá de nuevo.',
-      );
-  }
-}
 
 export default function AccessRequestForm() {
   const { t } = useTranslation();
@@ -53,8 +33,7 @@ export default function AccessRequestForm() {
       await submitAccessRequest(trimmed, motivo.trim() || undefined);
       setStatus('success');
     } catch (err) {
-      const code = (err as { code?: string } | null)?.code;
-      setError(mapSubmitError(code, t));
+      setError(mapCfError(err, t));
       setStatus('idle');
     }
   }

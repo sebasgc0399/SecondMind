@@ -29,7 +29,7 @@ export default function ResetPasswordForm({ onBack }: ResetPasswordFormProps) {
       setSent(true);
     } catch (err) {
       const code = (err as { code?: string } | null)?.code;
-      setError(mapAuthError(code, 'reset'));
+      setError(mapAuthError(code, 'reset', t));
     } finally {
       setLoading(false);
     }
