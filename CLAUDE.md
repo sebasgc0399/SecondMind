@@ -55,6 +55,7 @@ npm run cap:build    # Build web + sync + gradlew assembleDebug → APK en andro
 - `ui-ux-pro-max` — bases de datos buscables de 50+ estilos, 161 paletas, 57 combinaciones tipográficas, 161 tipos de producto, 99 guidelines UX, 25 tipos de gráfico. Se activa automáticamente en tareas UI/UX. Requiere Python 3 para los scripts internos (search.py usa BM25 + regex)
 - `subagent-orchestration` (user-level, global) — guía la decisión de cuándo delegar a subagentes y cómo. Ver "Delegación a subagentes" abajo para criterios de activación.
 - `gotchas-search` (user-level, CLI on-demand) — búsqueda BM25 sobre el corpus de gotchas técnicos en `Spec/gotchas/<dominio>.md`. Invocación: `python ~/.claude/skills/gotchas-search/search.py <query>`. Auto-reindex al editar gotchas vía PostToolUse hook (matcher separado en `.claude/settings.json`).
+- `git-worktrees` (user-level, on-demand) — procedimiento seguro para crear/usar/destruir git worktrees aislados en Windows (Node/Vite/Firebase): copiar `.env*` gitignored, compartir `node_modules` vía junction SÓLO si el lockfile coincide, correr/buildear/deployar desde el worktree, y limpieza segura (borrar el junction ANTES de `git worktree remove` o se borra el `node_modules` real). Invocar **bajo demanda** cuando haga falta trabajo paralelo aislado sobre el repo: un fix/experimento que no debe pisar cambios sin commitear de la rama actual y que además corre su propio dev server.
 
 ### Delegación a subagentes
 
