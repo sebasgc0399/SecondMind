@@ -4,6 +4,7 @@ import { getFirestore, FieldValue } from 'firebase-admin/firestore';
 import { requireAdmin, adminEmail } from '../lib/requireAdmin';
 import { sanitizeError } from '../lib/sanitizeError';
 import { decideApproval } from './capacity';
+import { appError } from '../lib/appError';
 
 interface ProcessAccessRequestData {
   id?: unknown;
@@ -31,10 +32,10 @@ export const processAccessRequest = onCall<ProcessAccessRequestData, Promise<{ o
     const id = request.data?.id;
     const action = request.data?.action;
     if (typeof id !== 'string' || !id.trim()) {
-      throw new HttpsError('invalid-argument', 'id requerido');
+      throw appError('access-request-invalid-id', 'invalid-argument', 'id requerido');
     }
     if (action !== 'approve' && action !== 'reject') {
-      throw new HttpsError('invalid-argument', 'action inválida');
+      throw appError('access-request-invalid-action', 'invalid-argument', 'action inválida');
     }
 
     try {
@@ -45,7 +46,7 @@ export const processAccessRequest = onCall<ProcessAccessRequestData, Promise<{ o
         // reject no toca capacity ni la allowlist → set simple (sin tx, sin count).
         const snap = await reqRef.get();
         if (!snap.exists) {
-          throw new HttpsError('not-found', 'Solicitud no encontrada');
+          throw appError('access-request-not-found', 'not-found', 'Solicitud no encontrada');
         }
         await reqRef.set(
           { status: 'rejected', processedAt: FieldValue.serverTimestamp() },
@@ -64,7 +65,11 @@ export const processAccessRequest = onCall<ProcessAccessRequestData, Promise<{ o
       await db.runTransaction(async (tx) => {
         const snap = await tx.get(reqRef);
         if (!snap.exists) {
-          throw new HttpsError('not-found', 'Solicitud no encontrada');
+          throw appError(
+            'access-request-not-found-approve',
+            'not-found',
+            'Solicitud no encontrada',
+          );
         }
         // El doc id YA es el email normalizado; re-normalizamos por robustez — la key de
         // allowlist/ debe matchear token.email lowercase char-por-char (gotcha rules).
@@ -73,7 +78,7 @@ export const processAccessRequest = onCall<ProcessAccessRequestData, Promise<{ o
         const alreadyMember = (await tx.get(allowRef)).exists;
 
         if (!decideApproval({ alreadyMember, current, maxUsers })) {
-          throw new HttpsError('resource-exhausted', 'Beta llena', { maxUsers, current });
+          throw appError('beta-full', 'resource-exhausted', 'Beta llena', { maxUsers, current });
         }
 
         const now = FieldValue.serverTimestamp();
@@ -89,7 +94,11 @@ export const processAccessRequest = onCall<ProcessAccessRequestData, Promise<{ o
       if (error instanceof HttpsError) throw error;
       const { code, message } = sanitizeError(error);
       logger.error('processAccessRequest: failed', { action, code, message });
-      throw new HttpsError('internal', 'No se pudo procesar la solicitud');
+      throw appError(
+        'process-access-request-failed',
+        'internal',
+        'No se pudo procesar la solicitud',
+      );
     }
   },
 );

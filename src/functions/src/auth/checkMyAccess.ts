@@ -1,5 +1,6 @@
-import { onCall, HttpsError } from 'firebase-functions/v2/https';
+import { onCall } from 'firebase-functions/v2/https';
 import { isAllowlisted } from '../lib/assertAllowlisted';
+import { appError } from '../lib/appError';
 
 interface CheckMyAccessResponse {
   authorized: boolean;
@@ -21,7 +22,7 @@ export const checkMyAccess = onCall<unknown, Promise<CheckMyAccessResponse>>(
   },
   async (request) => {
     if (!request.auth) {
-      throw new HttpsError('unauthenticated', 'Login required');
+      throw appError('check-access-unauthenticated', 'unauthenticated', 'Login required');
     }
     return { authorized: await isAllowlisted(request.auth.token.email) };
   },

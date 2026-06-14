@@ -1,9 +1,10 @@
-import { onCall, HttpsError, type CallableRequest } from 'firebase-functions/v2/https';
+import { onCall, type CallableRequest } from 'firebase-functions/v2/https';
 import { logger } from 'firebase-functions';
 import { getFirestore, FieldValue } from 'firebase-admin/firestore';
 import { createHash } from 'node:crypto';
 import { enforceRateLimit } from '../lib/rateLimit';
 import { sanitizeError } from '../lib/sanitizeError';
+import { appError } from '../lib/appError';
 
 // SPEC-52 F2 — formulario PÚBLICO de solicitud de acceso. Tres invariantes de seguridad:
 //  (1) NO-ORÁCULO: respuesta uniforme { ok: true } SIEMPRE (email nuevo / duplicado /
@@ -43,19 +44,35 @@ export function isValidEmail(email: string): boolean {
 export function validateInput(data: SubmitAccessRequestData): { email: string; motivo?: string } {
   const rawEmail = data?.email;
   if (typeof rawEmail !== 'string' || !rawEmail.trim()) {
-    throw new HttpsError('invalid-argument', 'El email es requerido');
+    throw appError(
+      'submit-access-request-invalid-email',
+      'invalid-argument',
+      'El email es requerido',
+    );
   }
   const email = normalizeEmail(rawEmail);
   if (!isValidEmail(email)) {
-    throw new HttpsError('invalid-argument', 'El email no es válido');
+    throw appError(
+      'submit-access-request-invalid-email-format',
+      'invalid-argument',
+      'El email no es válido',
+    );
   }
   const rawMotivo = data?.motivo;
   if (rawMotivo !== undefined && rawMotivo !== null) {
     if (typeof rawMotivo !== 'string') {
-      throw new HttpsError('invalid-argument', 'El motivo debe ser texto');
+      throw appError(
+        'submit-access-request-invalid-motivo-type',
+        'invalid-argument',
+        'El motivo debe ser texto',
+      );
     }
     if (rawMotivo.length > MAX_MOTIVO_LENGTH) {
-      throw new HttpsError('invalid-argument', `El motivo excede ${MAX_MOTIVO_LENGTH} caracteres`);
+      throw appError(
+        'submit-access-request-motivo-too-long',
+        'invalid-argument',
+        `El motivo excede ${MAX_MOTIVO_LENGTH} caracteres`,
+      );
     }
   }
   const motivo = typeof rawMotivo === 'string' ? rawMotivo.trim() : '';
@@ -111,7 +128,11 @@ export const submitAccessRequest = onCall<
       // Sin el email crudo en el log (PII). sanitizeError trunca + extrae code.
       const { code, message } = sanitizeError(error);
       logger.error('submitAccessRequest: failed', { code, message });
-      throw new HttpsError('internal', 'No se pudo registrar la solicitud');
+      throw appError(
+        'submit-access-request-failed',
+        'internal',
+        'No se pudo registrar la solicitud',
+      );
     }
 
     // 4) Respuesta UNIFORME — idéntica para nuevo / duplicado / ya-allowlisted.

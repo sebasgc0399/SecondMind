@@ -3,6 +3,7 @@ import { logger } from 'firebase-functions';
 import { getFirestore } from 'firebase-admin/firestore';
 import { requireAdmin, adminEmail } from '../lib/requireAdmin';
 import { sanitizeError } from '../lib/sanitizeError';
+import { appError } from '../lib/appError';
 
 interface RevokeAccessData {
   email?: unknown;
@@ -26,7 +27,7 @@ export const revokeAccess = onCall<RevokeAccessData, Promise<{ ok: true }>>(
 
     const email = request.data?.email;
     if (typeof email !== 'string' || !email.trim()) {
-      throw new HttpsError('invalid-argument', 'email requerido');
+      throw appError('revoke-access-invalid-email', 'invalid-argument', 'email requerido');
     }
     const normalized = email.trim().toLowerCase();
 
@@ -38,7 +39,7 @@ export const revokeAccess = onCall<RevokeAccessData, Promise<{ ok: true }>>(
       if (error instanceof HttpsError) throw error;
       const { code, message } = sanitizeError(error);
       logger.error('revokeAccess: failed', { code, message });
-      throw new HttpsError('internal', 'No se pudo revocar el acceso');
+      throw appError('revoke-access-failed', 'internal', 'No se pudo revocar el acceso');
     }
   },
 );
