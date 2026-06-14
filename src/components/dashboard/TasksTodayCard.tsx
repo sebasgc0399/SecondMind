@@ -4,6 +4,7 @@ import { CheckSquare } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import useTasks from '@/hooks/useTasks';
 import { isSameDay } from '@/lib/formatDate';
+import { usePriorityLongLabels } from '@/lib/entityLabels';
 import type { Priority } from '@/types/common';
 import type { Task } from '@/types/task';
 
@@ -16,15 +17,9 @@ const PRIORITY_DOT: Record<Priority, string> = {
   urgent: 'bg-red-500',
 };
 
-const PRIORITY_LABEL: Record<Priority, string> = {
-  low: 'Prioridad baja',
-  medium: 'Prioridad media',
-  high: 'Prioridad alta',
-  urgent: 'Prioridad urgente',
-};
-
 export default function TasksTodayCard() {
   const { t } = useTranslation();
+  const priorityLongLabels = usePriorityLongLabels();
   const { tasks, isInitializing, completeTask } = useTasks();
 
   const todayTasks = useMemo<Task[]>(() => {
@@ -83,8 +78,8 @@ export default function TasksTodayCard() {
               </Link>
               <span
                 className={`shrink-0 h-2 w-2 rounded-full ${PRIORITY_DOT[task.priority]}`}
-                aria-label={PRIORITY_LABEL[task.priority]}
-                title={PRIORITY_LABEL[task.priority]}
+                aria-label={priorityLongLabels[task.priority]}
+                title={priorityLongLabels[task.priority]}
               />
             </li>
           ))}

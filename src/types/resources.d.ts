@@ -378,6 +378,41 @@ export default interface Resources {
         untitled: 'Nota sin título';
       };
     };
+    entities: {
+      objectiveStatus: {
+        completed: 'Completado';
+        inProgress: 'En progreso';
+        notStarted: 'No empezado';
+      };
+      priority: {
+        high: 'Alta';
+        low: 'Baja';
+        medium: 'Media';
+        urgent: 'Urgente';
+      };
+      priorityLong: {
+        high: 'Prioridad alta';
+        low: 'Prioridad baja';
+        medium: 'Prioridad media';
+        urgent: 'Prioridad urgente';
+      };
+      projectStatus: {
+        group: {
+          completed: 'Completados';
+          inProgress: 'En progreso';
+          inbox: 'Sin clasificar';
+          notStarted: 'No empezados';
+          onHold: 'En pausa';
+        };
+        option: {
+          completed: 'Completado';
+          inProgress: 'En progreso';
+          inbox: 'Inbox';
+          notStarted: 'No empezado';
+          onHold: 'En pausa';
+        };
+      };
+    };
     graph: {
       createNotes: 'Crear notas →';
       empty: {

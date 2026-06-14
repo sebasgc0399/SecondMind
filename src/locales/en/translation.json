@@ -371,6 +371,41 @@
       "untitled": ""
     }
   },
+  "entities": {
+    "objectiveStatus": {
+      "completed": "",
+      "inProgress": "",
+      "notStarted": ""
+    },
+    "priority": {
+      "high": "",
+      "low": "",
+      "medium": "",
+      "urgent": ""
+    },
+    "priorityLong": {
+      "high": "",
+      "low": "",
+      "medium": "",
+      "urgent": ""
+    },
+    "projectStatus": {
+      "group": {
+        "completed": "",
+        "inbox": "",
+        "inProgress": "",
+        "notStarted": "",
+        "onHold": ""
+      },
+      "option": {
+        "completed": "",
+        "inbox": "",
+        "inProgress": "",
+        "notStarted": "",
+        "onHold": ""
+      }
+    }
+  },
   "graph": {
     "createNotes": "",
     "empty": {
