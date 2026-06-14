@@ -2,7 +2,9 @@ import { useSyncExternalStore } from 'react';
 import { allQueues } from '@/lib/saveQueue';
 
 export interface PendingSyncEntity {
-  entity: string;
+  // Index alineado con `allQueues`. El label (sing/plur) lo resuelve el
+  // consumidor con usePendingSyncLabels()[entityIndex] según el count.
+  entityIndex: number;
   count: number;
   hasError: boolean;
 }
@@ -14,29 +16,18 @@ export interface PendingSyncSummary {
   hasAny: boolean;
 }
 
-// Labels singular/plural en español. Index alineado con `allQueues`:
+// `byEntity[].entityIndex` está alineado con el orden de `allQueues`:
 // [saveContentQueue, saveNotesMetaQueue, saveTasksQueue, saveProjectsQueue,
 //  saveObjectivesQueue, saveHabitsQueue, saveInboxQueue,
 //  saveNotesCreatesQueue, saveTasksCreatesQueue, saveProjectsCreatesQueue,
-//  saveObjectivesCreatesQueue].
+//  saveObjectivesCreatesQueue]. Los labels sing/plur viven en
+// buildPendingSyncLabels (src/lib/entityLabels.ts) y se resuelven en render
+// (F2.7: desacopla el label del idioma del boot — i18n.t a module-scope acá
+// lo congelaría).
 //
-// F30 D8: distinción semántica entre "edición/nota" (meta updates pendientes)
-// y "nota nueva" (creates pendientes). El popover muestra ambos por separado
-// para que el usuario distinga "una nota recién creada sin sincronizar" de
-// "edición pendiente sobre una nota existente".
-const ENTITY_LABELS: ReadonlyArray<{ sing: string; plur: string }> = [
-  { sing: 'edición de nota', plur: 'ediciones de nota' },
-  { sing: 'nota', plur: 'notas' },
-  { sing: 'tarea', plur: 'tareas' },
-  { sing: 'proyecto', plur: 'proyectos' },
-  { sing: 'objetivo', plur: 'objetivos' },
-  { sing: 'hábito', plur: 'hábitos' },
-  { sing: 'item de inbox', plur: 'items de inbox' },
-  { sing: 'nota nueva', plur: 'notas nuevas' },
-  { sing: 'tarea nueva', plur: 'tareas nuevas' },
-  { sing: 'proyecto nuevo', plur: 'proyectos nuevos' },
-  { sing: 'objetivo nuevo', plur: 'objetivos nuevos' },
-];
+// F30 D8: distinción semántica entre "edición/nota" (meta updates pendientes,
+// índice 1) y "nota nueva" (creates pendientes, índice 7). El popover muestra
+// ambos por separado.
 
 // Module-level version primitive: cualquier notify de cualquier queue lo
 // bumpea. Se cachea el agg derivado por version, asi getSnapshot devuelve
@@ -88,9 +79,8 @@ function computeSummary(): PendingSyncSummary {
     if (count === 0) return;
     total += count;
     errorCount += errorIds.size;
-    const labels = ENTITY_LABELS[idx]!;
     byEntity.push({
-      entity: count === 1 ? labels.sing : labels.plur,
+      entityIndex: idx,
       count,
       hasError: errorIds.size > 0,
     });

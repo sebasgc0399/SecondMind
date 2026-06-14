@@ -380,6 +380,23 @@
       "proyectos": "",
       "salud": ""
     },
+    "discardable": {
+      "group": {
+        "habit": "",
+        "inboxItem": "",
+        "note": "",
+        "objective": "",
+        "project": "",
+        "task": ""
+      },
+      "habitFallback": "",
+      "habitOfDate": "",
+      "inboxEmpty": "",
+      "noteUntitled": "",
+      "objectiveUntitled": "",
+      "projectUntitled": "",
+      "taskUntitled": ""
+    },
     "habit": {
       "codear": "",
       "comerBien": "",
@@ -417,6 +434,52 @@
       "area": "",
       "project": "",
       "resource": ""
+    },
+    "pendingSync": {
+      "habit": {
+        "plur": "",
+        "sing": ""
+      },
+      "inboxItem": {
+        "plur": "",
+        "sing": ""
+      },
+      "note": {
+        "plur": "",
+        "sing": ""
+      },
+      "noteEdit": {
+        "plur": "",
+        "sing": ""
+      },
+      "noteNew": {
+        "plur": "",
+        "sing": ""
+      },
+      "objective": {
+        "plur": "",
+        "sing": ""
+      },
+      "objectiveNew": {
+        "plur": "",
+        "sing": ""
+      },
+      "project": {
+        "plur": "",
+        "sing": ""
+      },
+      "projectNew": {
+        "plur": "",
+        "sing": ""
+      },
+      "task": {
+        "plur": "",
+        "sing": ""
+      },
+      "taskNew": {
+        "plur": "",
+        "sing": ""
+      }
     },
     "priority": {
       "high": "",

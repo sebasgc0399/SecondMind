@@ -385,6 +385,23 @@
       "proyectos": "Proyectos",
       "salud": "Salud y Ejercicio"
     },
+    "discardable": {
+      "group": {
+        "habit": "Hábitos",
+        "inboxItem": "Inbox",
+        "note": "Notas",
+        "objective": "Objetivos",
+        "project": "Proyectos",
+        "task": "Tareas"
+      },
+      "habitFallback": "Hábitos ({{id}})",
+      "habitOfDate": "Hábitos del {{date}}",
+      "inboxEmpty": "Item sin contenido",
+      "noteUntitled": "Nota sin nombre",
+      "objectiveUntitled": "Objetivo sin nombre",
+      "projectUntitled": "Proyecto sin nombre",
+      "taskUntitled": "Tarea sin nombre"
+    },
     "habit": {
       "codear": "Codear",
       "comerBien": "Comer bien",
@@ -422,6 +439,52 @@
       "area": "Área",
       "project": "Proyecto",
       "resource": "Recurso"
+    },
+    "pendingSync": {
+      "habit": {
+        "plur": "hábitos",
+        "sing": "hábito"
+      },
+      "inboxItem": {
+        "plur": "items de inbox",
+        "sing": "item de inbox"
+      },
+      "note": {
+        "plur": "notas",
+        "sing": "nota"
+      },
+      "noteEdit": {
+        "plur": "ediciones de nota",
+        "sing": "edición de nota"
+      },
+      "noteNew": {
+        "plur": "notas nuevas",
+        "sing": "nota nueva"
+      },
+      "objective": {
+        "plur": "objetivos",
+        "sing": "objetivo"
+      },
+      "objectiveNew": {
+        "plur": "objetivos nuevos",
+        "sing": "objetivo nuevo"
+      },
+      "project": {
+        "plur": "proyectos",
+        "sing": "proyecto"
+      },
+      "projectNew": {
+        "plur": "proyectos nuevos",
+        "sing": "proyecto nuevo"
+      },
+      "task": {
+        "plur": "tareas",
+        "sing": "tarea"
+      },
+      "taskNew": {
+        "plur": "tareas nuevas",
+        "sing": "tarea nueva"
+      }
     },
     "priority": {
       "high": "Alta",

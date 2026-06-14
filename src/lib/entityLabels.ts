@@ -180,3 +180,65 @@ export function useHabitLabels(): Record<HabitKey, string> {
   const { t } = useTranslation();
   return useMemo(() => buildHabitLabels(t), [t]);
 }
+
+// --- Pending sync (sing/plur por índice, alineado a allQueues) ---
+// NO son pluralización gramatical i18next (edición vs creación): keys planas
+// *.sing/*.plur, nunca variable `count` ni sufijos _one/_other.
+export interface PendingSyncLabel {
+  sing: string;
+  plur: string;
+}
+
+export function buildPendingSyncLabels(t: TFunction): ReadonlyArray<PendingSyncLabel> {
+  return [
+    {
+      sing: t('entities.pendingSync.noteEdit.sing', 'edición de nota'),
+      plur: t('entities.pendingSync.noteEdit.plur', 'ediciones de nota'),
+    },
+    {
+      sing: t('entities.pendingSync.note.sing', 'nota'),
+      plur: t('entities.pendingSync.note.plur', 'notas'),
+    },
+    {
+      sing: t('entities.pendingSync.task.sing', 'tarea'),
+      plur: t('entities.pendingSync.task.plur', 'tareas'),
+    },
+    {
+      sing: t('entities.pendingSync.project.sing', 'proyecto'),
+      plur: t('entities.pendingSync.project.plur', 'proyectos'),
+    },
+    {
+      sing: t('entities.pendingSync.objective.sing', 'objetivo'),
+      plur: t('entities.pendingSync.objective.plur', 'objetivos'),
+    },
+    {
+      sing: t('entities.pendingSync.habit.sing', 'hábito'),
+      plur: t('entities.pendingSync.habit.plur', 'hábitos'),
+    },
+    {
+      sing: t('entities.pendingSync.inboxItem.sing', 'item de inbox'),
+      plur: t('entities.pendingSync.inboxItem.plur', 'items de inbox'),
+    },
+    {
+      sing: t('entities.pendingSync.noteNew.sing', 'nota nueva'),
+      plur: t('entities.pendingSync.noteNew.plur', 'notas nuevas'),
+    },
+    {
+      sing: t('entities.pendingSync.taskNew.sing', 'tarea nueva'),
+      plur: t('entities.pendingSync.taskNew.plur', 'tareas nuevas'),
+    },
+    {
+      sing: t('entities.pendingSync.projectNew.sing', 'proyecto nuevo'),
+      plur: t('entities.pendingSync.projectNew.plur', 'proyectos nuevos'),
+    },
+    {
+      sing: t('entities.pendingSync.objectiveNew.sing', 'objetivo nuevo'),
+      plur: t('entities.pendingSync.objectiveNew.plur', 'objetivos nuevos'),
+    },
+  ];
+}
+
+export function usePendingSyncLabels(): ReadonlyArray<PendingSyncLabel> {
+  const { t } = useTranslation();
+  return useMemo(() => buildPendingSyncLabels(t), [t]);
+}
