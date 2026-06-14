@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { Priority, ObjectiveStatus, ProjectStatus } from '@/types/common';
+import type { InboxResultType } from '@/types/inbox';
 import type { TFunction } from 'i18next';
 
 // F58 F2.7: punto único de verdad para los labels de enum de entidad, antes
@@ -90,4 +91,19 @@ export function buildProjectStatusLabels(t: TFunction): Record<ProjectStatus, st
 export function useProjectStatusLabels(): Record<ProjectStatus, string> {
   const { t } = useTranslation();
   return useMemo(() => buildProjectStatusLabels(t), [t]);
+}
+
+// --- InboxResultType (sugerencia AI: nota/tarea/proyecto/descartar) ---
+export function buildInboxResultTypeLabels(t: TFunction): Record<InboxResultType, string> {
+  return {
+    note: t('entities.inboxResultType.note', 'Nota'),
+    task: t('entities.inboxResultType.task', 'Tarea'),
+    project: t('entities.inboxResultType.project', 'Proyecto'),
+    trash: t('entities.inboxResultType.trash', 'Descartar'),
+  };
+}
+
+export function useInboxResultTypeLabels(): Record<InboxResultType, string> {
+  const { t } = useTranslation();
+  return useMemo(() => buildInboxResultTypeLabels(t), [t]);
 }

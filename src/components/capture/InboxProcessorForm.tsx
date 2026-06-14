@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Check, Trash2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { AREAS, type AreaKey } from '@/types/area';
+import { usePriorityLabels, useInboxResultTypeLabels } from '@/lib/entityLabels';
 import type { Priority } from '@/types/common';
 import type { InboxAiResult, InboxItem, InboxResultType } from '@/types/inbox';
 
@@ -15,16 +16,6 @@ interface InboxProcessorFormProps {
   onCreate: (edited: InboxAiResult) => void | Promise<void>;
   onDismiss: () => void;
 }
-
-// PRIORITY_LABELS (valores del select de prioridad) queda en es: enum de
-// entidad compartido cross-dominio → diferido a F2.7 (entityLabels central),
-// igual que en TaskCard/AiSuggestionCard. Idem las <option> de tipo.
-const PRIORITY_LABELS: Record<Priority, string> = {
-  low: 'Baja',
-  medium: 'Media',
-  high: 'Alta',
-  urgent: 'Urgente',
-};
 
 function buildInitialDraft(item: InboxItem): InboxAiResult {
   if (item.aiResult) return { ...item.aiResult };
@@ -48,6 +39,8 @@ export default function InboxProcessorForm({
   onDismiss,
 }: InboxProcessorFormProps) {
   const { t } = useTranslation();
+  const typeLabels = useInboxResultTypeLabels();
+  const priorityLabels = usePriorityLabels();
   const [draft, setDraft] = useState<InboxAiResult>(() => buildInitialDraft(item));
   const [tagsRaw, setTagsRaw] = useState(() => buildInitialDraft(item).suggestedTags.join(', '));
 
@@ -121,10 +114,11 @@ export default function InboxProcessorForm({
               }
               className="mt-1 w-full rounded-md border border-border bg-background px-3 py-1.5 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40"
             >
-              <option value="note">Nota</option>
-              <option value="task">Tarea</option>
-              <option value="project">Proyecto</option>
-              <option value="trash">Descartar</option>
+              {Object.entries(typeLabels).map(([value, label]) => (
+                <option key={value} value={value}>
+                  {label}
+                </option>
+              ))}
             </select>
           </label>
 
@@ -156,9 +150,9 @@ export default function InboxProcessorForm({
               onChange={(e) => setDraft({ ...draft, priority: e.target.value as Priority })}
               className="mt-1 w-full rounded-md border border-border bg-background px-3 py-1.5 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40"
             >
-              {(Object.keys(PRIORITY_LABELS) as Priority[]).map((p) => (
-                <option key={p} value={p}>
-                  {PRIORITY_LABELS[p]}
+              {Object.entries(priorityLabels).map(([value, label]) => (
+                <option key={value} value={value}>
+                  {label}
                 </option>
               ))}
             </select>

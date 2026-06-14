@@ -379,6 +379,12 @@ export default interface Resources {
       };
     };
     entities: {
+      inboxResultType: {
+        note: 'Nota';
+        project: 'Proyecto';
+        task: 'Tarea';
+        trash: 'Descartar';
+      };
       objectiveStatus: {
         completed: 'Completado';
         inProgress: 'En progreso';
