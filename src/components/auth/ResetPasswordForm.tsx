@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import type { FormEvent } from 'react';
 import { ArrowLeft } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 import useAuth from '@/hooks/useAuth';
 import { mapAuthError } from '@/lib/authErrors';
@@ -10,6 +11,7 @@ interface ResetPasswordFormProps {
 }
 
 export default function ResetPasswordForm({ onBack }: ResetPasswordFormProps) {
+  const { t } = useTranslation();
   const { resetPassword } = useAuth();
   const [email, setEmail] = useState('');
   const [error, setError] = useState('');
@@ -37,9 +39,12 @@ export default function ResetPasswordForm({ onBack }: ResetPasswordFormProps) {
     return (
       <div className="flex flex-col gap-4">
         <div className="flex flex-col gap-1.5">
-          <h3 className="text-base font-medium">Revisá tu correo</h3>
+          <h3 className="text-base font-medium">{t('auth.reset.sentTitle', 'Revisá tu correo')}</h3>
           <p className="text-sm text-muted-foreground">
-            Si la cuenta existe, recibirás un enlace en tu email para restablecer tu contraseña.
+            {t(
+              'auth.reset.sentBody',
+              'Si la cuenta existe, recibirás un enlace en tu email para restablecer tu contraseña.',
+            )}
           </p>
         </div>
         <button
@@ -48,7 +53,7 @@ export default function ResetPasswordForm({ onBack }: ResetPasswordFormProps) {
           className="inline-flex items-center gap-1.5 self-start text-sm text-primary hover:underline"
         >
           <ArrowLeft className="size-4" />
-          Volver al login
+          {t('auth.backToLogin', 'Volver al login')}
         </button>
       </div>
     );
@@ -57,14 +62,14 @@ export default function ResetPasswordForm({ onBack }: ResetPasswordFormProps) {
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-4" noValidate>
       <div className="flex flex-col gap-1.5">
-        <h3 className="text-base font-medium">Recuperar contraseña</h3>
+        <h3 className="text-base font-medium">{t('auth.reset.title', 'Recuperar contraseña')}</h3>
         <p className="text-sm text-muted-foreground">
-          Te enviaremos un enlace para restablecer tu contraseña.
+          {t('auth.reset.subtitle', 'Te enviaremos un enlace para restablecer tu contraseña.')}
         </p>
       </div>
       <div className="flex flex-col gap-1.5">
         <label htmlFor="reset-email" className="text-sm font-medium">
-          Email
+          {t('auth.email', 'Email')}
         </label>
         <input
           id="reset-email"
@@ -82,7 +87,7 @@ export default function ResetPasswordForm({ onBack }: ResetPasswordFormProps) {
         </p>
       )}
       <Button type="submit" variant="default" size="lg" disabled={loading} className="w-full">
-        {loading ? 'Enviando…' : 'Enviar enlace'}
+        {loading ? t('common.sending', 'Enviando…') : t('auth.reset.send', 'Enviar enlace')}
       </Button>
       <button
         type="button"
@@ -90,7 +95,7 @@ export default function ResetPasswordForm({ onBack }: ResetPasswordFormProps) {
         className="inline-flex items-center gap-1.5 self-start text-sm text-primary hover:underline"
       >
         <ArrowLeft className="size-4" />
-        Volver al login
+        {t('auth.backToLogin', 'Volver al login')}
       </button>
     </form>
   );

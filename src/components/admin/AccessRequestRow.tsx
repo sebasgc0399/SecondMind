@@ -1,3 +1,5 @@
+import { useTranslation } from 'react-i18next';
+import i18n from '@/lib/i18n';
 import { Button } from '@/components/ui/button';
 import type { AccessRequest } from '@/types/accessRequest';
 
@@ -14,8 +16,9 @@ export default function AccessRequestRow({
   onApprove,
   onReject,
 }: AccessRequestRowProps) {
+  const { t } = useTranslation();
   const date = request.createdAt
-    ? new Date(request.createdAt).toLocaleString('es-AR', {
+    ? new Date(request.createdAt).toLocaleString(i18n.language || 'es', {
         dateStyle: 'medium',
         timeStyle: 'short',
       })
@@ -32,10 +35,10 @@ export default function AccessRequestRow({
       </div>
       <div className="flex shrink-0 gap-2">
         <Button size="sm" disabled={busy} onClick={() => onApprove(request.id)}>
-          Aprobar
+          {t('admin.requests.approve', 'Aprobar')}
         </Button>
         <Button size="sm" variant="outline" disabled={busy} onClick={() => onReject(request.id)}>
-          Rechazar
+          {t('admin.requests.reject', 'Rechazar')}
         </Button>
       </div>
     </li>

@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 import type { UseAllowlistMembersReturn } from '@/hooks/useAllowlistMembers';
 import { revokeAccess } from '@/lib/allowlistMembers';
@@ -9,6 +10,7 @@ interface AllowlistMembersProps {
 }
 
 export default function AllowlistMembers({ data }: AllowlistMembersProps) {
+  const { t } = useTranslation();
   const { members, isLoading, error, refetch } = data;
   const [busyEmail, setBusyEmail] = useState<string | null>(null);
   const [actionError, setActionError] = useState('');
@@ -21,7 +23,9 @@ export default function AllowlistMembers({ data }: AllowlistMembersProps) {
       await revokeAccess(email);
       await refetch();
     } catch {
-      setActionError('No se pudo revocar el acceso. Probá de nuevo.');
+      setActionError(
+        t('admin.members.revokeError', 'No se pudo revocar el acceso. Probá de nuevo.'),
+      );
     } finally {
       setBusyEmail(null);
     }
@@ -43,7 +47,7 @@ export default function AllowlistMembers({ data }: AllowlistMembersProps) {
       <div className="flex flex-col items-center gap-4 rounded-xl border border-border bg-card p-8 text-center">
         <p className="text-sm text-muted-foreground">{error}</p>
         <Button size="sm" variant="outline" onClick={() => void refetch()}>
-          Reintentar
+          {t('common.retry', 'Reintentar')}
         </Button>
       </div>
     );
@@ -53,7 +57,9 @@ export default function AllowlistMembers({ data }: AllowlistMembersProps) {
   if (members.length === 0) {
     return (
       <div className="rounded-xl border border-dashed border-border p-8 text-center">
-        <p className="text-sm text-muted-foreground">Todavía no hay miembros en la beta.</p>
+        <p className="text-sm text-muted-foreground">
+          {t('admin.members.empty', 'Todavía no hay miembros en la beta.')}
+        </p>
       </div>
     );
   }
@@ -73,14 +79,16 @@ export default function AllowlistMembers({ data }: AllowlistMembersProps) {
         type="search"
         value={query}
         onChange={(e) => setQuery(e.target.value)}
-        placeholder="Buscar por email…"
-        aria-label="Buscar miembros por email"
+        placeholder={t('admin.searchByEmail', 'Buscar por email…')}
+        aria-label={t('admin.members.searchAria', 'Buscar miembros por email')}
         className="rounded-lg border border-border bg-card px-3 py-2 text-sm outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-ring/40"
       />
       {/* Empty con filtro activo: mantener el buscador + mensaje diferenciado (no el empty real). */}
       {filtered.length === 0 ? (
         <div className="rounded-xl border border-dashed border-border p-8 text-center">
-          <p className="text-sm text-muted-foreground">Ningún miembro coincide con la búsqueda.</p>
+          <p className="text-sm text-muted-foreground">
+            {t('admin.members.noMatch', 'Ningún miembro coincide con la búsqueda.')}
+          </p>
         </div>
       ) : (
         <ul className="flex flex-col gap-3">

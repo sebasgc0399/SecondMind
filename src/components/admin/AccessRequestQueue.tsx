@@ -1,8 +1,10 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 import type { UseAccessRequestsQueueReturn } from '@/hooks/useAccessRequestsQueue';
 import { processAccessRequest } from '@/lib/accessRequests';
 import AccessRequestRow from './AccessRequestRow';
+import type { TFunction } from 'i18next';
 
 interface AccessRequestQueueProps {
   data: UseAccessRequestsQueueReturn;
@@ -10,19 +12,27 @@ interface AccessRequestQueueProps {
 
 // SPEC-53 F8 — el approve ahora enforce capacity sobre la allowlist: si está llena, la CF
 // lanza resource-exhausted con { maxUsers, current } en details. Mapeamos ese caso a un
-// mensaje accionable; el resto sigue genérico.
-function mapProcessError(err: unknown): string {
+// mensaje accionable; el resto sigue genérico. Hardcodeado acá (NO authErrors) → F2.6.
+function mapProcessError(err: unknown, t: TFunction): string {
   const e = err as { code?: string; details?: { maxUsers?: number } } | null;
   if (e?.code === 'functions/resource-exhausted') {
     const max = e.details?.maxUsers;
     return max != null
-      ? `Beta llena (${max}). Subí el límite o revocá un miembro antes de aprobar.`
-      : 'Beta llena. Subí el límite o revocá un miembro antes de aprobar.';
+      ? t(
+          'admin.requests.errorFull',
+          'Beta llena ({{max}}). Subí el límite o revocá un miembro antes de aprobar.',
+          { max },
+        )
+      : t(
+          'admin.requests.errorFullNoMax',
+          'Beta llena. Subí el límite o revocá un miembro antes de aprobar.',
+        );
   }
-  return 'No se pudo procesar la solicitud. Probá de nuevo.';
+  return t('admin.requests.errorGeneric', 'No se pudo procesar la solicitud. Probá de nuevo.');
 }
 
 export default function AccessRequestQueue({ data }: AccessRequestQueueProps) {
+  const { t } = useTranslation();
   const { requests, isLoading, error, refetch } = data;
   const [busyId, setBusyId] = useState<string | null>(null);
   const [actionError, setActionError] = useState('');
@@ -35,7 +45,7 @@ export default function AccessRequestQueue({ data }: AccessRequestQueueProps) {
       await processAccessRequest(id, action);
       await refetch();
     } catch (err) {
-      setActionError(mapProcessError(err));
+      setActionError(mapProcessError(err, t));
     } finally {
       setBusyId(null);
     }
@@ -57,7 +67,7 @@ export default function AccessRequestQueue({ data }: AccessRequestQueueProps) {
       <div className="flex flex-col items-center gap-4 rounded-xl border border-border bg-card p-8 text-center">
         <p className="text-sm text-muted-foreground">{error}</p>
         <Button size="sm" variant="outline" onClick={() => void refetch()}>
-          Reintentar
+          {t('common.retry', 'Reintentar')}
         </Button>
       </div>
     );
@@ -67,7 +77,9 @@ export default function AccessRequestQueue({ data }: AccessRequestQueueProps) {
   if (requests.length === 0) {
     return (
       <div className="rounded-xl border border-dashed border-border p-8 text-center">
-        <p className="text-sm text-muted-foreground">No hay solicitudes pendientes.</p>
+        <p className="text-sm text-muted-foreground">
+          {t('admin.requests.empty', 'No hay solicitudes pendientes.')}
+        </p>
       </div>
     );
   }
@@ -87,15 +99,15 @@ export default function AccessRequestQueue({ data }: AccessRequestQueueProps) {
         type="search"
         value={query}
         onChange={(e) => setQuery(e.target.value)}
-        placeholder="Buscar por email…"
-        aria-label="Buscar solicitudes por email"
+        placeholder={t('admin.searchByEmail', 'Buscar por email…')}
+        aria-label={t('admin.requests.searchAria', 'Buscar solicitudes por email')}
         className="rounded-lg border border-border bg-card px-3 py-2 text-sm outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-ring/40"
       />
       {/* Empty con filtro activo: mantener el buscador + mensaje diferenciado (no el empty real). */}
       {filtered.length === 0 ? (
         <div className="rounded-xl border border-dashed border-border p-8 text-center">
           <p className="text-sm text-muted-foreground">
-            Ninguna solicitud coincide con la búsqueda.
+            {t('admin.requests.noMatch', 'Ninguna solicitud coincide con la búsqueda.')}
           </p>
         </div>
       ) : (

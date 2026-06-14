@@ -1,11 +1,13 @@
 import { useEffect, useState } from 'react';
 import { Mail, X } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import useAuth from '@/hooks/useAuth';
 import useEmailVerificationResend from '@/hooks/useEmailVerificationResend';
 
 const DISMISS_KEY = 'secondmind:em-banner-dismissed';
 
 export default function EmailVerificationBanner() {
+  const { t } = useTranslation();
   const { refreshUser } = useAuth();
   const { remainingSeconds, sending, handleResend } = useEmailVerificationResend();
 
@@ -49,10 +51,10 @@ export default function EmailVerificationBanner() {
   if (dismissed) return null;
 
   const resendLabel = sending
-    ? 'Enviando…'
+    ? t('common.sending', 'Enviando…')
     : remainingSeconds > 0
-    ? `Enviado · ${remainingSeconds}s`
-    : 'Reenviar enlace';
+    ? t('auth.verify.sent', 'Enviado · {{seconds}}s', { seconds: remainingSeconds })
+    : t('auth.verify.resend', 'Reenviar enlace');
 
   return (
     <div
@@ -60,7 +62,9 @@ export default function EmailVerificationBanner() {
       className="flex items-center gap-3 border-b border-amber-500/30 bg-amber-500/10 px-4 py-2 text-sm text-amber-700 dark:text-amber-300"
     >
       <Mail className="size-4 shrink-0" aria-hidden />
-      <p className="flex-1">Verificá tu email para asegurar tu cuenta.</p>
+      <p className="flex-1">
+        {t('auth.verify.bannerMessage', 'Verificá tu email para asegurar tu cuenta.')}
+      </p>
       <button
         type="button"
         onClick={handleResend}
@@ -72,7 +76,7 @@ export default function EmailVerificationBanner() {
       <button
         type="button"
         onClick={handleDismiss}
-        aria-label="Cerrar"
+        aria-label={t('common.close', 'Cerrar')}
         className="rounded-md p-1 transition-colors hover:bg-amber-500/15"
       >
         <X className="size-4" aria-hidden />

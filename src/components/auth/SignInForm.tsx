@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import type { FormEvent } from 'react';
 import { useNavigate } from 'react-router';
+import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 import useAuth from '@/hooks/useAuth';
 import { mapAuthError } from '@/lib/authErrors';
@@ -11,6 +12,7 @@ interface SignInFormProps {
 }
 
 export default function SignInForm({ onError, onForgotPassword }: SignInFormProps) {
+  const { t } = useTranslation();
   const { signInWithEmail } = useAuth();
   const navigate = useNavigate();
   const [email, setEmail] = useState('');
@@ -35,7 +37,7 @@ export default function SignInForm({ onError, onForgotPassword }: SignInFormProp
     <form onSubmit={handleSubmit} className="flex flex-col gap-4" noValidate>
       <div className="flex flex-col gap-1.5">
         <label htmlFor="signin-email" className="text-sm font-medium">
-          Email
+          {t('auth.email', 'Email')}
         </label>
         <input
           id="signin-email"
@@ -50,14 +52,14 @@ export default function SignInForm({ onError, onForgotPassword }: SignInFormProp
       <div className="flex flex-col gap-1.5">
         <div className="flex items-center justify-between">
           <label htmlFor="signin-password" className="text-sm font-medium">
-            Contraseña
+            {t('auth.password', 'Contraseña')}
           </label>
           <button
             type="button"
             onClick={onForgotPassword}
             className="text-xs text-primary hover:underline"
           >
-            ¿Olvidaste tu contraseña?
+            {t('auth.forgotPassword', '¿Olvidaste tu contraseña?')}
           </button>
         </div>
         <input
@@ -71,7 +73,7 @@ export default function SignInForm({ onError, onForgotPassword }: SignInFormProp
         />
       </div>
       <Button type="submit" variant="default" size="lg" disabled={loading} className="w-full">
-        {loading ? 'Iniciando sesión…' : 'Iniciar sesión'}
+        {loading ? t('auth.signingIn', 'Iniciando sesión…') : t('auth.signIn', 'Iniciar sesión')}
       </Button>
     </form>
   );

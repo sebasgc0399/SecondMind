@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 import useAuth from '@/hooks/useAuth';
 import { mapAuthError } from '@/lib/authErrors';
@@ -8,6 +9,7 @@ interface GoogleSignInButtonProps {
 }
 
 export default function GoogleSignInButton({ onError }: GoogleSignInButtonProps) {
+  const { t } = useTranslation();
   const { signIn } = useAuth();
   const [loading, setLoading] = useState(false);
 
@@ -33,7 +35,7 @@ export default function GoogleSignInButton({ onError }: GoogleSignInButtonProps)
       onClick={handleClick}
       disabled={loading}
       className="w-full gap-2"
-      aria-label="Continuar con Google"
+      aria-label={t('auth.continueWithGoogle', 'Continuar con Google')}
     >
       <svg viewBox="0 0 18 18" aria-hidden="true" className="size-4">
         <path
@@ -53,7 +55,9 @@ export default function GoogleSignInButton({ onError }: GoogleSignInButtonProps)
           d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 0 0 .957 4.958L3.964 7.29C4.672 5.163 6.656 3.58 9 3.58z"
         />
       </svg>
-      {loading ? 'Iniciando sesión…' : 'Continuar con Google'}
+      {loading
+        ? t('auth.signingIn', 'Iniciando sesión…')
+        : t('auth.continueWithGoogle', 'Continuar con Google')}
     </Button>
   );
 }

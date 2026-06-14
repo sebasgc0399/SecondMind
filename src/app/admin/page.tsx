@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Navigate } from 'react-router';
 import { Tabs } from '@base-ui/react/tabs';
+import { useTranslation } from 'react-i18next';
 import useAuth from '@/hooks/useAuth';
 import useAccessRequestsQueue from '@/hooks/useAccessRequestsQueue';
 import useAllowlistMembers from '@/hooks/useAllowlistMembers';
@@ -19,6 +20,7 @@ type AdminTab = 'requests' | 'members';
 // porque las listas sean largas). Los datos se fetchean acá y se pasan a cada panel → el
 // contador de cada tab queda at-a-glance sin tener que entrar.
 export default function AdminPage() {
+  const { t } = useTranslation();
   const { user, isLoading } = useAuth();
   const adminUid = import.meta.env.VITE_ADMIN_UID as string | undefined;
   const requests = useAccessRequestsQueue();
@@ -34,9 +36,9 @@ export default function AdminPage() {
 
   return (
     <div className="mx-auto max-w-2xl">
-      <h1 className="text-2xl font-bold tracking-tight">Administración</h1>
+      <h1 className="text-2xl font-bold tracking-tight">{t('admin.title', 'Administración')}</h1>
       <p className="mt-1 mb-6 text-sm text-muted-foreground">
-        Procesá solicitudes de acceso y gestioná los miembros de la beta.
+        {t('admin.subtitle', 'Procesá solicitudes de acceso y gestioná los miembros de la beta.')}
       </p>
 
       <Tabs.Root value={tab} onValueChange={(value) => setTab(value as AdminTab)}>
@@ -45,13 +47,15 @@ export default function AdminPage() {
             value="requests"
             className="relative flex h-10 flex-1 items-center justify-center px-4 text-sm font-medium text-muted-foreground transition-colors outline-none hover:text-foreground data-selected:text-foreground"
           >
-            Solicitudes{!requests.isLoading && ` (${requests.requests.length})`}
+            {t('admin.tabs.requests', 'Solicitudes')}
+            {!requests.isLoading && ` (${requests.requests.length})`}
           </Tabs.Tab>
           <Tabs.Tab
             value="members"
             className="relative flex h-10 flex-1 items-center justify-center px-4 text-sm font-medium text-muted-foreground transition-colors outline-none hover:text-foreground data-selected:text-foreground"
           >
-            Miembros{!members.isLoading && ` (${members.members.length})`}
+            {t('admin.tabs.members', 'Miembros')}
+            {!members.isLoading && ` (${members.members.length})`}
           </Tabs.Tab>
           <Tabs.Indicator className="absolute bottom-[-1px] left-0 h-[2px] w-(--active-tab-width) translate-x-(--active-tab-left) bg-primary transition-[translate,width] duration-200 ease-out" />
         </Tabs.List>

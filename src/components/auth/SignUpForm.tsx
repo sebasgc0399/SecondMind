@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import type { FormEvent } from 'react';
 import { useNavigate } from 'react-router';
+import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 import useAuth from '@/hooks/useAuth';
 import { mapAuthError } from '@/lib/authErrors';
@@ -13,6 +14,7 @@ interface SignUpFormProps {
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export default function SignUpForm({ onError }: SignUpFormProps) {
+  const { t } = useTranslation();
   const { signUpWithEmail } = useAuth();
   const navigate = useNavigate();
   const [email, setEmail] = useState('');
@@ -26,19 +28,19 @@ export default function SignUpForm({ onError }: SignUpFormProps) {
   function validate(): boolean {
     let ok = true;
     if (!EMAIL_PATTERN.test(email)) {
-      setEmailErr('Email inválido.');
+      setEmailErr(t('auth.validation.emailInvalid', 'Email inválido.'));
       ok = false;
     } else {
       setEmailErr('');
     }
     if (password.length < 8) {
-      setPasswordErr('Mínimo 8 caracteres.');
+      setPasswordErr(t('auth.validation.minChars', 'Mínimo 8 caracteres.'));
       ok = false;
     } else {
       setPasswordErr('');
     }
     if (password !== confirmPassword) {
-      setConfirmErr('Las contraseñas no coinciden.');
+      setConfirmErr(t('auth.validation.passwordMismatch', 'Las contraseñas no coinciden.'));
       ok = false;
     } else {
       setConfirmErr('');
@@ -70,7 +72,7 @@ export default function SignUpForm({ onError }: SignUpFormProps) {
     <form onSubmit={handleSubmit} className="flex flex-col gap-4" noValidate>
       <div className="flex flex-col gap-1.5">
         <label htmlFor="signup-email" className="text-sm font-medium">
-          Email
+          {t('auth.email', 'Email')}
         </label>
         <input
           id="signup-email"
@@ -91,7 +93,7 @@ export default function SignUpForm({ onError }: SignUpFormProps) {
       </div>
       <div className="flex flex-col gap-1.5">
         <label htmlFor="signup-password" className="text-sm font-medium">
-          Contraseña
+          {t('auth.password', 'Contraseña')}
         </label>
         <input
           id="signup-password"
@@ -111,13 +113,13 @@ export default function SignUpForm({ onError }: SignUpFormProps) {
           </p>
         ) : (
           <p className="text-xs text-muted-foreground">
-            Mínimo 8 caracteres con al menos un número.
+            {t('auth.passwordHint', 'Mínimo 8 caracteres con al menos un número.')}
           </p>
         )}
       </div>
       <div className="flex flex-col gap-1.5">
         <label htmlFor="signup-confirm" className="text-sm font-medium">
-          Confirmar contraseña
+          {t('auth.confirmPassword', 'Confirmar contraseña')}
         </label>
         <input
           id="signup-confirm"
@@ -137,7 +139,7 @@ export default function SignUpForm({ onError }: SignUpFormProps) {
         )}
       </div>
       <Button type="submit" variant="default" size="lg" disabled={loading} className="w-full">
-        {loading ? 'Creando cuenta…' : 'Crear cuenta'}
+        {loading ? t('auth.creatingAccount', 'Creando cuenta…') : t('auth.signUp', 'Crear cuenta')}
       </Button>
     </form>
   );

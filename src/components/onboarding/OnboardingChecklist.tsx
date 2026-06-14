@@ -1,5 +1,6 @@
 import { Link } from 'react-router';
 import { CheckCircle2, Circle, PartyPopper, X } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import useOnboarding, { type OnboardingStep } from '@/hooks/useOnboarding';
 
 /**
@@ -10,6 +11,7 @@ import useOnboarding, { type OnboardingStep } from '@/hooks/useOnboarding';
  * única ruta de desaparición es que el usuario descarte la guía (Opción A).
  */
 export default function OnboardingChecklist() {
+  const { t } = useTranslation();
   const { steps, completedCount, allComplete, shouldShowChecklist, dismissChecklist } =
     useOnboarding();
 
@@ -23,15 +25,20 @@ export default function OnboardingChecklist() {
     <section className="mb-4 rounded-lg border border-border bg-card p-5">
       <header className="flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <h2 className="text-base font-semibold text-foreground">Primeros pasos</h2>
+          <h2 className="text-base font-semibold text-foreground">
+            {t('onboarding.checklist.title', 'Primeros pasos')}
+          </h2>
           <p className="mt-0.5 text-xs text-muted-foreground">
-            {completedCount} de {total} completados
+            {t('onboarding.checklist.progress', '{{completed}} de {{total}} completados', {
+              completed: completedCount,
+              total,
+            })}
           </p>
         </div>
         <button
           type="button"
           onClick={() => void dismissChecklist()}
-          aria-label="Descartar guía de primeros pasos"
+          aria-label={t('onboarding.checklist.dismissAria', 'Descartar guía de primeros pasos')}
           className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent/40 hover:text-foreground"
         >
           <X className="h-4 w-4" aria-hidden />
@@ -55,14 +62,14 @@ export default function OnboardingChecklist() {
         <div className="mt-4 flex flex-col items-center gap-3 rounded-lg bg-primary/5 p-4 text-center">
           <PartyPopper className="h-6 w-6 text-primary" aria-hidden />
           <p className="text-sm font-medium text-foreground">
-            ¡Listo! Ya conocés lo esencial de SecondMind.
+            {t('onboarding.checklist.allComplete', '¡Listo! Ya conocés lo esencial de SecondMind.')}
           </p>
           <button
             type="button"
             onClick={() => void dismissChecklist()}
             className="inline-flex min-h-9 items-center justify-center rounded-md bg-primary px-4 py-1.5 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
           >
-            Cerrar
+            {t('common.close', 'Cerrar')}
           </button>
         </div>
       )}
