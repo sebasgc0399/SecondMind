@@ -2,6 +2,8 @@ import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { Priority, ObjectiveStatus, ProjectStatus, NoteType, ParaType } from '@/types/common';
 import type { InboxResultType } from '@/types/inbox';
+import type { AreaKey } from '@/types/area';
+import type { HabitKey } from '@/types/habit';
 import type { TFunction } from 'i18next';
 
 // F58 F2.7: punto único de verdad para los labels de enum de entidad, antes
@@ -135,4 +137,46 @@ export function buildParaTypeLabels(t: TFunction): Record<ParaType, string> {
 export function useParaTypeLabels(): Record<ParaType, string> {
   const { t } = useTranslation();
   return useMemo(() => buildParaTypeLabels(t), [t]);
+}
+
+// --- AREAS (D5: keys = IDs opacos persistidos; solo el label se localiza) ---
+export function buildAreaLabels(t: TFunction): Record<AreaKey, string> {
+  return {
+    proyectos: t('entities.area.proyectos', 'Proyectos'),
+    conocimiento: t('entities.area.conocimiento', 'Conocimiento'),
+    finanzas: t('entities.area.finanzas', 'Finanzas'),
+    salud: t('entities.area.salud', 'Salud y Ejercicio'),
+    pareja: t('entities.area.pareja', 'Pareja'),
+    habitos: t('entities.area.habitos', 'Hábitos'),
+  };
+}
+
+export function useAreaLabels(): Record<AreaKey, string> {
+  const { t } = useTranslation();
+  return useMemo(() => buildAreaLabels(t), [t]);
+}
+
+// --- HABITS (D5: keys = IDs opacos persistidos; solo el label se localiza) ---
+export function buildHabitLabels(t: TFunction): Record<HabitKey, string> {
+  return {
+    ejercicio: t('entities.habit.ejercicio', 'Ejercicio'),
+    codear: t('entities.habit.codear', 'Codear'),
+    leer: t('entities.habit.leer', 'Leer'),
+    meditar: t('entities.habit.meditar', 'Meditar'),
+    comerBien: t('entities.habit.comerBien', 'Comer bien'),
+    tomarAgua: t('entities.habit.tomarAgua', 'Tomar agua'),
+    planificarDia: t('entities.habit.planificarDia', 'Planificar día'),
+    madrugar: t('entities.habit.madrugar', 'Madrugar'),
+    gratitud: t('entities.habit.gratitud', 'Gratitud'),
+    ingles: t('entities.habit.ingles', 'Inglés'),
+    pareja: t('entities.habit.pareja', 'Pareja'),
+    estirar: t('entities.habit.estirar', 'Estirar'),
+    tenderCama: t('entities.habit.tenderCama', 'Tender cama'),
+    noComerDulce: t('entities.habit.noComerDulce', 'No comer dulce'),
+  };
+}
+
+export function useHabitLabels(): Record<HabitKey, string> {
+  const { t } = useTranslation();
+  return useMemo(() => buildHabitLabels(t), [t]);
 }

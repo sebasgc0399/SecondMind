@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Check, Edit2, Sparkles, Trash2, X } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { AREAS, type AreaKey } from '@/types/area';
-import { usePriorityLabels, useInboxResultTypeLabels } from '@/lib/entityLabels';
+import { usePriorityLabels, useInboxResultTypeLabels, useAreaLabels } from '@/lib/entityLabels';
 import type { Priority } from '@/types/common';
 import type { InboxAiResult, InboxResultType } from '@/types/inbox';
 
@@ -20,6 +20,7 @@ export default function AiSuggestionCard({
   const { t } = useTranslation();
   const typeLabels = useInboxResultTypeLabels();
   const priorityLabels = usePriorityLabels();
+  const areaLabels = useAreaLabels();
   const [draft, setDraft] = useState<InboxAiResult | null>(null);
   const [tagsRaw, setTagsRaw] = useState('');
 
@@ -111,7 +112,7 @@ export default function AiSuggestionCard({
               >
                 {(Object.keys(AREAS) as AreaKey[]).map((key) => (
                   <option key={key} value={key}>
-                    {AREAS[key].emoji} {AREAS[key].label}
+                    {AREAS[key].emoji} {areaLabels[key]}
                   </option>
                 ))}
               </select>
@@ -195,7 +196,7 @@ export default function AiSuggestionCard({
       <div className="mt-2 flex flex-wrap items-center gap-1.5 text-[10px]">
         {area && (
           <span className="rounded-full border border-border bg-muted/40 px-2 py-0.5 font-medium">
-            {area.emoji} {area.label}
+            {area.emoji} {areaLabels[suggestion.suggestedArea]}
           </span>
         )}
         {suggestion.suggestedType === 'task' && (

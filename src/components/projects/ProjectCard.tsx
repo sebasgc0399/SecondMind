@@ -1,7 +1,7 @@
 import { Link } from 'react-router';
 import { useTranslation } from 'react-i18next';
 import { AREAS, type AreaKey } from '@/types/area';
-import { usePriorityLabels } from '@/lib/entityLabels';
+import { usePriorityLabels, useAreaLabels } from '@/lib/entityLabels';
 import PendingSyncDot from '@/components/layout/PendingSyncDot';
 import type { Project } from '@/types/project';
 import type { Priority } from '@/types/common';
@@ -21,6 +21,7 @@ const PRIORITY_STYLES: Record<Priority, string> = {
 export default function ProjectCard({ project, pendingTaskCount }: ProjectCardProps) {
   const { t } = useTranslation();
   const priorityLabels = usePriorityLabels();
+  const areaLabels = useAreaLabels();
   const area = AREAS[project.areaId as AreaKey];
 
   return (
@@ -42,7 +43,7 @@ export default function ProjectCard({ project, pendingTaskCount }: ProjectCardPr
       <div className="mt-3 flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
         {area && (
           <span>
-            {area.emoji} {area.label}
+            {area.emoji} {areaLabels[project.areaId as AreaKey]}
           </span>
         )}
         <span>

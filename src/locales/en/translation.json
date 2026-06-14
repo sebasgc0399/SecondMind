@@ -372,6 +372,30 @@
     }
   },
   "entities": {
+    "area": {
+      "conocimiento": "",
+      "finanzas": "",
+      "habitos": "",
+      "pareja": "",
+      "proyectos": "",
+      "salud": ""
+    },
+    "habit": {
+      "codear": "",
+      "comerBien": "",
+      "ejercicio": "",
+      "estirar": "",
+      "gratitud": "",
+      "ingles": "",
+      "leer": "",
+      "madrugar": "",
+      "meditar": "",
+      "noComerDulce": "",
+      "pareja": "",
+      "planificarDia": "",
+      "tenderCama": "",
+      "tomarAgua": ""
+    },
     "inboxResultType": {
       "note": "",
       "project": "",

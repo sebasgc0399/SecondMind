@@ -7,6 +7,7 @@ import useProjects from '@/hooks/useProjects';
 import ObjectiveCard, { type ProjectMini } from '@/components/objectives/ObjectiveCard';
 import ObjectiveCreateModal from '@/components/objectives/ObjectiveCreateModal';
 import { AREAS, type AreaKey } from '@/types/area';
+import { useAreaLabels } from '@/lib/entityLabels';
 import type { Objective } from '@/types/objective';
 
 const AREA_ORDER: AreaKey[] = [
@@ -27,6 +28,7 @@ interface ObjectiveGroup {
 
 export default function ObjectivesPage() {
   const { t } = useTranslation();
+  const areaLabels = useAreaLabels();
   const { objectives, isInitializing, createObjective, updateObjective } = useObjectives();
   const { projects, updateProject } = useProjects();
   const tasksTable = useTable('tasks', 'tasks');
@@ -66,7 +68,7 @@ export default function ObjectivesPage() {
       if (groupObjectives.length > 0) {
         out.push({
           key: areaId,
-          label: area.label,
+          label: areaLabels[areaId],
           emoji: area.emoji,
           objectives: groupObjectives,
         });
@@ -83,7 +85,7 @@ export default function ObjectivesPage() {
       });
     }
     return out;
-  }, [visible, t]);
+  }, [visible, t, areaLabels]);
 
   async function handleLinkProject(objectiveId: string, projectId: string) {
     const objective = objectives.find((o) => o.id === objectiveId);

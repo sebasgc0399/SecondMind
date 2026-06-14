@@ -379,6 +379,30 @@ export default interface Resources {
       };
     };
     entities: {
+      area: {
+        conocimiento: 'Conocimiento';
+        finanzas: 'Finanzas';
+        habitos: 'Hábitos';
+        pareja: 'Pareja';
+        proyectos: 'Proyectos';
+        salud: 'Salud y Ejercicio';
+      };
+      habit: {
+        codear: 'Codear';
+        comerBien: 'Comer bien';
+        ejercicio: 'Ejercicio';
+        estirar: 'Estirar';
+        gratitud: 'Gratitud';
+        ingles: 'Inglés';
+        leer: 'Leer';
+        madrugar: 'Madrugar';
+        meditar: 'Meditar';
+        noComerDulce: 'No comer dulce';
+        pareja: 'Pareja';
+        planificarDia: 'Planificar día';
+        tenderCama: 'Tender cama';
+        tomarAgua: 'Tomar agua';
+      };
       inboxResultType: {
         note: 'Nota';
         project: 'Proyecto';
