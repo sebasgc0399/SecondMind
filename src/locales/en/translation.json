@@ -359,6 +359,23 @@
       "placeholder": "",
       "title": ""
     },
+    "templates": {
+      "literature": {
+        "inMyWordsHeading": "",
+        "interpretationPlaceholder": "",
+        "keyIdeasHeading": "",
+        "sourceHeading": "",
+        "sourcePlaceholder": ""
+      },
+      "permanent": {
+        "connectionsHeading": "",
+        "connectionsPlaceholder": "",
+        "developmentHeading": "",
+        "developmentPlaceholder": "",
+        "thesisHeading": "",
+        "thesisPlaceholder": ""
+      }
+    },
     "toolbar": {
       "bold": "",
       "code": "",
@@ -371,6 +388,145 @@
       "untitled": ""
     }
   },
+  "entities": {
+    "area": {
+      "conocimiento": "",
+      "finanzas": "",
+      "habitos": "",
+      "pareja": "",
+      "proyectos": "",
+      "salud": ""
+    },
+    "discardable": {
+      "group": {
+        "habit": "",
+        "inboxItem": "",
+        "note": "",
+        "objective": "",
+        "project": "",
+        "task": ""
+      },
+      "habitFallback": "",
+      "habitOfDate": "",
+      "inboxEmpty": "",
+      "noteUntitled": "",
+      "objectiveUntitled": "",
+      "projectUntitled": "",
+      "taskUntitled": ""
+    },
+    "habit": {
+      "codear": "",
+      "comerBien": "",
+      "ejercicio": "",
+      "estirar": "",
+      "gratitud": "",
+      "ingles": "",
+      "leer": "",
+      "madrugar": "",
+      "meditar": "",
+      "noComerDulce": "",
+      "pareja": "",
+      "planificarDia": "",
+      "tenderCama": "",
+      "tomarAgua": ""
+    },
+    "inboxResultType": {
+      "note": "",
+      "project": "",
+      "task": "",
+      "trash": ""
+    },
+    "noteType": {
+      "fleeting": "",
+      "literature": "",
+      "permanent": ""
+    },
+    "objectiveStatus": {
+      "completed": "",
+      "inProgress": "",
+      "notStarted": ""
+    },
+    "paraType": {
+      "archive": "",
+      "area": "",
+      "project": "",
+      "resource": ""
+    },
+    "pendingSync": {
+      "habit": {
+        "plur": "",
+        "sing": ""
+      },
+      "inboxItem": {
+        "plur": "",
+        "sing": ""
+      },
+      "note": {
+        "plur": "",
+        "sing": ""
+      },
+      "noteEdit": {
+        "plur": "",
+        "sing": ""
+      },
+      "noteNew": {
+        "plur": "",
+        "sing": ""
+      },
+      "objective": {
+        "plur": "",
+        "sing": ""
+      },
+      "objectiveNew": {
+        "plur": "",
+        "sing": ""
+      },
+      "project": {
+        "plur": "",
+        "sing": ""
+      },
+      "projectNew": {
+        "plur": "",
+        "sing": ""
+      },
+      "task": {
+        "plur": "",
+        "sing": ""
+      },
+      "taskNew": {
+        "plur": "",
+        "sing": ""
+      }
+    },
+    "priority": {
+      "high": "",
+      "low": "",
+      "medium": "",
+      "urgent": ""
+    },
+    "priorityLong": {
+      "high": "",
+      "low": "",
+      "medium": "",
+      "urgent": ""
+    },
+    "projectStatus": {
+      "group": {
+        "completed": "",
+        "inbox": "",
+        "inProgress": "",
+        "notStarted": "",
+        "onHold": ""
+      },
+      "option": {
+        "completed": "",
+        "inbox": "",
+        "inProgress": "",
+        "notStarted": "",
+        "onHold": ""
+      }
+    }
+  },
   "graph": {
     "createNotes": "",
     "empty": {
@@ -380,6 +536,7 @@
     "exitFullscreen": "",
     "filters": {
       "active": "",
+      "allOption": "",
       "area": "",
       "minLinks": "",
       "reset": "",
@@ -583,6 +740,11 @@
       "openTitle": "",
       "searchPlaceholder": ""
     },
+    "suggestions": {
+      "maturity": "",
+      "promote": "",
+      "promoteDescription": ""
+    },
     "tabs": {
       "all": "",
       "favorites": "",
@@ -636,6 +798,28 @@
       "dismissAria": "",
       "progress": "",
       "title": ""
+    },
+    "steps": {
+      "apiKey": {
+        "ctaLabel": "",
+        "description": "",
+        "label": ""
+      },
+      "firstNote": {
+        "ctaLabel": "",
+        "description": "",
+        "label": ""
+      },
+      "firstTask": {
+        "ctaLabel": "",
+        "description": "",
+        "label": ""
+      },
+      "inboxAi": {
+        "ctaLabel": "",
+        "description": "",
+        "label": ""
+      }
     },
     "welcome": {
       "description": "",

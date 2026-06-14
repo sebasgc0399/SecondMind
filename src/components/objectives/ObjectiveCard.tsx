@@ -3,6 +3,7 @@ import { Link } from 'react-router';
 import { MoreHorizontal, ChevronUp, X } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import i18n from '@/lib/i18n';
+import { useObjectiveStatusLabels } from '@/lib/entityLabels';
 import PendingSyncDot from '@/components/layout/PendingSyncDot';
 import type { Objective } from '@/types/objective';
 import type { ObjectiveStatus } from '@/types/common';
@@ -27,12 +28,6 @@ const STATUS_STYLES: Record<ObjectiveStatus, string> = {
   'not-started': 'bg-muted/60 text-muted-foreground',
   'in-progress': 'bg-blue-500/15 text-blue-700 dark:text-blue-400',
   completed: 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-400',
-};
-
-const STATUS_LABELS: Record<ObjectiveStatus, string> = {
-  'not-started': 'No empezado',
-  'in-progress': 'En progreso',
-  completed: 'Completado',
 };
 
 // F58: localizado in-place, NO unificado en formatRelative — la unificación
@@ -62,6 +57,7 @@ export default function ObjectiveCard({
   onUnlinkProject,
 }: ObjectiveCardProps) {
   const { t } = useTranslation();
+  const statusLabels = useObjectiveStatusLabels();
   const [isExpanded, setIsExpanded] = useState(false);
 
   const handleLinkChange = (e: ChangeEvent<HTMLSelectElement>) => {
@@ -84,7 +80,7 @@ export default function ObjectiveCard({
                 STATUS_STYLES[objective.status]
               }`}
             >
-              {STATUS_LABELS[objective.status]}
+              {statusLabels[objective.status]}
             </span>
           </div>
           <p className="mt-1 text-xs text-muted-foreground">

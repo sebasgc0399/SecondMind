@@ -44,7 +44,7 @@ describe('usePendingSyncCount — de-dupe per entityId intra-queue', () => {
     expect(result.current.total).toBe(1);
     expect(result.current.byEntity).toHaveLength(1);
     expect(result.current.byEntity[0]).toMatchObject({
-      entity: 'nota',
+      entityIndex: 1,
       count: 1,
       hasError: false,
     });
@@ -59,7 +59,7 @@ describe('usePendingSyncCount — de-dupe per entityId intra-queue', () => {
     expect(result.current.total).toBe(2);
     expect(result.current.byEntity).toHaveLength(1);
     expect(result.current.byEntity[0]).toMatchObject({
-      entity: 'notas',
+      entityIndex: 1,
       count: 2,
     });
   });
@@ -72,8 +72,8 @@ describe('usePendingSyncCount — de-dupe per entityId intra-queue', () => {
     });
     expect(result.current.total).toBe(2);
     expect(result.current.byEntity).toHaveLength(2);
-    const labels = result.current.byEntity.map((e) => e.entity);
-    expect(labels).toEqual(expect.arrayContaining(['nota', 'nota nueva']));
+    const indices = result.current.byEntity.map((e) => e.entityIndex);
+    expect(indices).toEqual(expect.arrayContaining([1, 7]));
   });
 
   it('mixed: 1 task pending + 1 nota con 2 writes en metaQueue → byEntity 2 filas, total=2', () => {
@@ -85,8 +85,8 @@ describe('usePendingSyncCount — de-dupe per entityId intra-queue', () => {
     });
     expect(result.current.total).toBe(2);
     expect(result.current.byEntity).toHaveLength(2);
-    const tasks = result.current.byEntity.find((e) => e.entity === 'tarea');
-    const notes = result.current.byEntity.find((e) => e.entity === 'nota');
+    const tasks = result.current.byEntity.find((e) => e.entityIndex === 2);
+    const notes = result.current.byEntity.find((e) => e.entityIndex === 1);
     expect(tasks?.count).toBe(1);
     expect(notes?.count).toBe(1);
   });
@@ -102,7 +102,7 @@ describe('usePendingSyncCount — de-dupe per entityId intra-queue', () => {
     expect(result.current.errorCount).toBe(1);
     expect(result.current.byEntity).toHaveLength(1);
     expect(result.current.byEntity[0]).toMatchObject({
-      entity: 'nota',
+      entityIndex: 1,
       count: 1,
       hasError: true,
     });
@@ -125,16 +125,16 @@ describe('usePendingSyncCount — de-dupe per entityId intra-queue', () => {
       saveContentQueue.enqueue('note-A', {} as never, PENDING_FOREVER);
     });
     expect(result.current.total).toBe(1);
-    expect(result.current.byEntity[0]?.entity).toBe('edición de nota');
+    expect(result.current.byEntity[0]?.entityIndex).toBe(0);
   });
 
-  it('singular vs plural según count dedupeado, no entries.size (3 entries → "nota" no "notas")', () => {
+  it('count dedupeado, no entries.size (3 entries en la misma nota → count 1, no 3)', () => {
     const { result } = renderHook(() => usePendingSyncCount());
     act(() => {
       saveNotesMetaQueue.enqueue('note-A', { title: 'x' }, PENDING_FOREVER);
       saveNotesMetaQueue.enqueue('note-A:accept-1', {} as never, PENDING_FOREVER);
       saveNotesMetaQueue.enqueue('note-A:dismiss-2', {} as never, PENDING_FOREVER);
     });
-    expect(result.current.byEntity[0]?.entity).toBe('nota');
+    expect(result.current.byEntity[0]?.count).toBe(1);
   });
 });

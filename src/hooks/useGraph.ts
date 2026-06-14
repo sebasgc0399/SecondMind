@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import { useTable } from 'tinybase/ui-react';
 import useTheme from '@/hooks/useTheme';
+import i18n from '@/lib/i18n';
 import { getGraphColors } from '@/lib/theme-colors';
 import type { ParaType, NoteType } from '@/types/common';
 import type { GraphNode, GraphEdge } from 'reagraph';
@@ -42,7 +43,10 @@ export default function useGraph(filters: GraphFilters = DEFAULT_FILTERS): Graph
       if (row.isArchived === true || row.isArchived === 1) continue;
       if (typeof row.deletedAt === 'number' && row.deletedAt > 0) continue;
 
-      const title = typeof row.title === 'string' && row.title ? row.title : 'Sin titulo';
+      const title =
+        typeof row.title === 'string' && row.title
+          ? row.title
+          : i18n.t('common.untitled', 'Sin título');
       const paraType = (row.paraType as ParaType) || 'resource';
       const noteType = (row.noteType as NoteType) || 'fleeting';
       const linkCount = typeof row.linkCount === 'number' ? row.linkCount : 0;

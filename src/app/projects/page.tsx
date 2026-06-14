@@ -5,18 +5,11 @@ import { Plus } from 'lucide-react';
 import useProjects from '@/hooks/useProjects';
 import ProjectCard from '@/components/projects/ProjectCard';
 import ProjectCreateModal from '@/components/projects/ProjectCreateModal';
+import { useProjectStatusGroupLabels } from '@/lib/entityLabels';
 import type { Project } from '@/types/project';
 import type { ProjectStatus } from '@/types/common';
 
 const STATUS_ORDER: ProjectStatus[] = ['in-progress', 'not-started', 'on-hold'];
-
-const STATUS_LABELS: Record<ProjectStatus, string> = {
-  'in-progress': 'En progreso',
-  'not-started': 'No empezados',
-  'on-hold': 'En pausa',
-  inbox: 'Sin clasificar',
-  completed: 'Completados',
-};
 
 interface ProjectGroup {
   status: ProjectStatus;
@@ -26,6 +19,7 @@ interface ProjectGroup {
 
 export default function ProjectsPage() {
   const { t } = useTranslation();
+  const statusLabels = useProjectStatusGroupLabels();
   const { projects, isInitializing, createProject } = useProjects();
   const [modalOpen, setModalOpen] = useState(false);
 
@@ -51,10 +45,10 @@ export default function ProjectsPage() {
   const groups = useMemo<ProjectGroup[]>(() => {
     return STATUS_ORDER.map((status) => ({
       status,
-      label: STATUS_LABELS[status],
+      label: statusLabels[status],
       projects: visible.filter((p) => p.status === status),
     })).filter((g) => g.projects.length > 0);
-  }, [visible]);
+  }, [visible, statusLabels]);
 
   const totalVisible = visible.length;
   const showSkeleton = isInitializing && totalVisible === 0;

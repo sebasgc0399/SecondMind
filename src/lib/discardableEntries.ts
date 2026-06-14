@@ -1,3 +1,4 @@
+import i18n from '@/lib/i18n';
 import { notesStore } from '@/stores/notesStore';
 import { tasksStore } from '@/stores/tasksStore';
 import { projectsStore } from '@/stores/projectsStore';
@@ -42,24 +43,52 @@ function extractEntityId(queueKey: string): string {
   return colonIdx === -1 ? queueKey : queueKey.slice(0, colonIdx);
 }
 
+// F2.7: labels localizados con i18n.t DIRECTO (module-scope no-React, no puede
+// usar hooks). Se resuelven al llamar getDiscardableEntries() / getLabel() —
+// es decir, al abrir el dialog, NO a module-eval — así toman el idioma vigente.
+function discardableGroupLabel(entityType: DiscardableEntityType): string {
+  switch (entityType) {
+    case 'note':
+      return i18n.t('entities.discardable.group.note', 'Notas');
+    case 'task':
+      return i18n.t('entities.discardable.group.task', 'Tareas');
+    case 'project':
+      return i18n.t('entities.discardable.group.project', 'Proyectos');
+    case 'objective':
+      return i18n.t('entities.discardable.group.objective', 'Objetivos');
+    case 'habit':
+      return i18n.t('entities.discardable.group.habit', 'Hábitos');
+    case 'inboxItem':
+      return i18n.t('entities.discardable.group.inboxItem', 'Inbox');
+  }
+}
+
 function noteLabel(id: string): string {
   const title = notesStore.getCell('notes', id, 'title');
-  return typeof title === 'string' && title.trim().length > 0 ? title : 'Nota sin nombre';
+  return typeof title === 'string' && title.trim().length > 0
+    ? title
+    : i18n.t('entities.discardable.noteUntitled', 'Nota sin nombre');
 }
 
 function taskLabel(id: string): string {
   const name = tasksStore.getCell('tasks', id, 'name');
-  return typeof name === 'string' && name.trim().length > 0 ? name : 'Tarea sin nombre';
+  return typeof name === 'string' && name.trim().length > 0
+    ? name
+    : i18n.t('entities.discardable.taskUntitled', 'Tarea sin nombre');
 }
 
 function projectLabel(id: string): string {
   const name = projectsStore.getCell('projects', id, 'name');
-  return typeof name === 'string' && name.trim().length > 0 ? name : 'Proyecto sin nombre';
+  return typeof name === 'string' && name.trim().length > 0
+    ? name
+    : i18n.t('entities.discardable.projectUntitled', 'Proyecto sin nombre');
 }
 
 function objectiveLabel(id: string): string {
   const name = objectivesStore.getCell('objectives', id, 'name');
-  return typeof name === 'string' && name.trim().length > 0 ? name : 'Objetivo sin nombre';
+  return typeof name === 'string' && name.trim().length > 0
+    ? name
+    : i18n.t('entities.discardable.objectiveUntitled', 'Objetivo sin nombre');
 }
 
 function habitLabel(id: string): string {
@@ -68,20 +97,26 @@ function habitLabel(id: string): string {
   const parts = id.split('-');
   if (parts.length === 3) {
     const [y, m, d] = parts;
-    if (y && m && d) return `Hábitos del ${d}/${m}/${y}`;
+    if (y && m && d)
+      return i18n.t('entities.discardable.habitOfDate', 'Hábitos del {{date}}', {
+        date: `${d}/${m}/${y}`,
+      });
   }
   // Fallback: leer la row si existe.
   const dateMs = habitsStore.getCell('habits', id, 'date');
   if (typeof dateMs === 'number' && dateMs > 0) {
-    return `Hábitos del ${new Date(dateMs).toLocaleDateString('es')}`;
+    return i18n.t('entities.discardable.habitOfDate', 'Hábitos del {{date}}', {
+      date: new Date(dateMs).toLocaleDateString(i18n.language || 'es'),
+    });
   }
-  return `Hábitos (${id})`;
+  return i18n.t('entities.discardable.habitFallback', 'Hábitos ({{id}})', { id });
 }
 
 const INBOX_TRUNCATE = 80;
 function inboxLabel(id: string): string {
   const raw = inboxStore.getCell('inbox', id, 'rawContent');
-  if (typeof raw !== 'string' || raw.trim().length === 0) return 'Item sin contenido';
+  if (typeof raw !== 'string' || raw.trim().length === 0)
+    return i18n.t('entities.discardable.inboxEmpty', 'Item sin contenido');
   const trimmed = raw.trim();
   return trimmed.length > INBOX_TRUNCATE ? `${trimmed.slice(0, INBOX_TRUNCATE)}…` : trimmed;
 }
@@ -89,7 +124,6 @@ function inboxLabel(id: string): string {
 interface QueueBinding {
   queue: SaveQueue<unknown>;
   entityType: DiscardableEntityType;
-  entityLabel: string;
   getLabel: (id: string) => string;
 }
 
@@ -97,67 +131,56 @@ const BINDINGS: ReadonlyArray<QueueBinding> = [
   {
     queue: saveContentQueue as unknown as SaveQueue<unknown>,
     entityType: 'note',
-    entityLabel: 'Notas',
     getLabel: noteLabel,
   },
   {
     queue: saveNotesMetaQueue as unknown as SaveQueue<unknown>,
     entityType: 'note',
-    entityLabel: 'Notas',
     getLabel: noteLabel,
   },
   {
     queue: saveNotesCreatesQueue as unknown as SaveQueue<unknown>,
     entityType: 'note',
-    entityLabel: 'Notas',
     getLabel: noteLabel,
   },
   {
     queue: saveTasksQueue as unknown as SaveQueue<unknown>,
     entityType: 'task',
-    entityLabel: 'Tareas',
     getLabel: taskLabel,
   },
   {
     queue: saveTasksCreatesQueue as unknown as SaveQueue<unknown>,
     entityType: 'task',
-    entityLabel: 'Tareas',
     getLabel: taskLabel,
   },
   {
     queue: saveProjectsQueue as unknown as SaveQueue<unknown>,
     entityType: 'project',
-    entityLabel: 'Proyectos',
     getLabel: projectLabel,
   },
   {
     queue: saveProjectsCreatesQueue as unknown as SaveQueue<unknown>,
     entityType: 'project',
-    entityLabel: 'Proyectos',
     getLabel: projectLabel,
   },
   {
     queue: saveObjectivesQueue as unknown as SaveQueue<unknown>,
     entityType: 'objective',
-    entityLabel: 'Objetivos',
     getLabel: objectiveLabel,
   },
   {
     queue: saveObjectivesCreatesQueue as unknown as SaveQueue<unknown>,
     entityType: 'objective',
-    entityLabel: 'Objetivos',
     getLabel: objectiveLabel,
   },
   {
     queue: saveHabitsQueue as unknown as SaveQueue<unknown>,
     entityType: 'habit',
-    entityLabel: 'Hábitos',
     getLabel: habitLabel,
   },
   {
     queue: saveInboxQueue as unknown as SaveQueue<unknown>,
     entityType: 'inboxItem',
-    entityLabel: 'Inbox',
     getLabel: inboxLabel,
   },
 ];
@@ -175,7 +198,7 @@ export function getDiscardableEntries(): DiscardableEntry[] {
       if (seen.has(dedupKey)) continue;
       seen.set(dedupKey, {
         entityType: binding.entityType,
-        entityLabel: binding.entityLabel,
+        entityLabel: discardableGroupLabel(binding.entityType),
         id,
         label: binding.getLabel(id),
       });

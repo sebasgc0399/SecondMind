@@ -14,25 +14,13 @@ import TaskCard from '@/components/tasks/TaskCard';
 import TaskInlineCreate from '@/components/tasks/TaskInlineCreate';
 import ProjectNoteList, { type LinkedNote } from '@/components/projects/ProjectNoteList';
 import NoteLinkModal from '@/components/projects/NoteLinkModal';
+import { usePriorityLabels, useProjectStatusLabels } from '@/lib/entityLabels';
 import type { Priority, ProjectStatus } from '@/types/common';
-
-const STATUS_OPTIONS: { value: ProjectStatus; label: string }[] = [
-  { value: 'inbox', label: 'Inbox' },
-  { value: 'not-started', label: 'No empezado' },
-  { value: 'in-progress', label: 'En progreso' },
-  { value: 'on-hold', label: 'En pausa' },
-  { value: 'completed', label: 'Completado' },
-];
-
-const PRIORITY_OPTIONS: { value: Priority; label: string }[] = [
-  { value: 'low', label: 'Baja' },
-  { value: 'medium', label: 'Media' },
-  { value: 'high', label: 'Alta' },
-  { value: 'urgent', label: 'Urgente' },
-];
 
 export default function ProjectDetailPage() {
   const { t, i18n } = useTranslation();
+  const statusLabels = useProjectStatusLabels();
+  const priorityLabels = usePriorityLabels();
   const { projectId } = useParams<{ projectId: string }>();
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -190,9 +178,9 @@ export default function ProjectDetailPage() {
               onChange={(e) => void handleStatusChange(e.target.value as ProjectStatus)}
               className="rounded-md border border-border bg-background px-2 py-1.5 text-sm text-foreground focus:border-primary/50 focus:outline-none focus:ring-2 focus:ring-primary/40"
             >
-              {STATUS_OPTIONS.map((opt) => (
-                <option key={opt.value} value={opt.value}>
-                  {opt.label}
+              {Object.entries(statusLabels).map(([value, label]) => (
+                <option key={value} value={value}>
+                  {label}
                 </option>
               ))}
             </select>
@@ -206,9 +194,9 @@ export default function ProjectDetailPage() {
               onChange={(e) => void handlePriorityChange(e.target.value as Priority)}
               className="rounded-md border border-border bg-background px-2 py-1.5 text-sm text-foreground focus:border-primary/50 focus:outline-none focus:ring-2 focus:ring-primary/40"
             >
-              {PRIORITY_OPTIONS.map((opt) => (
-                <option key={opt.value} value={opt.value}>
-                  {opt.label}
+              {Object.entries(priorityLabels).map(([value, label]) => (
+                <option key={value} value={value}>
+                  {label}
                 </option>
               ))}
             </select>

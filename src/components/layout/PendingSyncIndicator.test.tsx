@@ -49,7 +49,7 @@ describe('PendingSyncIndicator', () => {
     setSummary({
       total: 3,
       errorCount: 0,
-      byEntity: [{ entity: 'notas', count: 3, hasError: false }],
+      byEntity: [{ entityIndex: 1, count: 3, hasError: false }],
       hasAny: true,
     });
     const { container } = render(<PendingSyncIndicator />);
@@ -70,7 +70,7 @@ describe('PendingSyncIndicator', () => {
     setSummary({
       total: 1,
       errorCount: 0,
-      byEntity: [{ entity: 'tarea', count: 1, hasError: false }],
+      byEntity: [{ entityIndex: 2, count: 1, hasError: false }],
       hasAny: true,
     });
     const { container } = render(<PendingSyncIndicator />);
@@ -93,7 +93,7 @@ describe('PendingSyncIndicator', () => {
     setSummary({
       total: 1,
       errorCount: 1,
-      byEntity: [{ entity: 'nota', count: 1, hasError: true }],
+      byEntity: [{ entityIndex: 1, count: 1, hasError: true }],
       hasAny: true,
     });
     const { container } = render(<PendingSyncIndicator />);
@@ -114,7 +114,7 @@ describe('PendingSyncIndicator', () => {
     setSummary({
       total: 5,
       errorCount: 2,
-      byEntity: [{ entity: 'notas', count: 5, hasError: true }],
+      byEntity: [{ entityIndex: 1, count: 5, hasError: true }],
       hasAny: true,
     });
     const { container } = render(<PendingSyncIndicator />);

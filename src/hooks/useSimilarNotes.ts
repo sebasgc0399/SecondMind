@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import i18n from '@/lib/i18n';
 import { notesStore } from '@/stores/notesStore';
 import useAuth from '@/hooks/useAuth';
 import {
@@ -59,7 +60,9 @@ export default function useSimilarNotes(noteId: string): UseSimilarNotesReturn {
         if (otherId === noteId) continue;
         const score = cosineSimilarity(currentVector, otherVector);
         if (score >= SIMILARITY_THRESHOLD) {
-          const title = (notesStore.getCell('notes', otherId, 'title') as string) || 'Sin titulo';
+          const title =
+            (notesStore.getCell('notes', otherId, 'title') as string) ||
+            i18n.t('common.untitled', 'Sin título');
           scored.push({ noteId: otherId, title, score });
         }
       }

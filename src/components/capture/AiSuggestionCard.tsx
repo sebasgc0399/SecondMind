@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Check, Edit2, Sparkles, Trash2, X } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { AREAS, type AreaKey } from '@/types/area';
+import { usePriorityLabels, useInboxResultTypeLabels, useAreaLabels } from '@/lib/entityLabels';
 import type { Priority } from '@/types/common';
 import type { InboxAiResult, InboxResultType } from '@/types/inbox';
 
@@ -11,30 +12,15 @@ interface AiSuggestionCardProps {
   onDismiss: () => void;
 }
 
-// TYPE_LABELS y PRIORITY_LABELS (badges + <option> del tipo/prioridad
-// sugeridos) quedan en es: enums de entidad compartidos cross-dominio →
-// diferidos a F2.7 (entityLabels central). El contenido sugerido por la AI
-// (suggestedTitle/summary/suggestedTags) es DATO, lo parametriza F3, no F2.
-const TYPE_LABELS: Record<InboxResultType, string> = {
-  note: 'Nota',
-  task: 'Tarea',
-  project: 'Proyecto',
-  trash: 'Descartar',
-};
-
-const PRIORITY_LABELS: Record<Priority, string> = {
-  low: 'Baja',
-  medium: 'Media',
-  high: 'Alta',
-  urgent: 'Urgente',
-};
-
 export default function AiSuggestionCard({
   suggestion,
   onAccept,
   onDismiss,
 }: AiSuggestionCardProps) {
   const { t } = useTranslation();
+  const typeLabels = useInboxResultTypeLabels();
+  const priorityLabels = usePriorityLabels();
+  const areaLabels = useAreaLabels();
   const [draft, setDraft] = useState<InboxAiResult | null>(null);
   const [tagsRaw, setTagsRaw] = useState('');
 
@@ -107,10 +93,11 @@ export default function AiSuggestionCard({
                 }
                 className="mt-0.5 w-full rounded-md border border-border bg-background px-2 py-1 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
               >
-                <option value="note">Nota</option>
-                <option value="task">Tarea</option>
-                <option value="project">Proyecto</option>
-                <option value="trash">Descartar</option>
+                {Object.entries(typeLabels).map(([value, label]) => (
+                  <option key={value} value={value}>
+                    {label}
+                  </option>
+                ))}
               </select>
             </label>
 
@@ -125,7 +112,7 @@ export default function AiSuggestionCard({
               >
                 {(Object.keys(AREAS) as AreaKey[]).map((key) => (
                   <option key={key} value={key}>
-                    {AREAS[key].emoji} {AREAS[key].label}
+                    {AREAS[key].emoji} {areaLabels[key]}
                   </option>
                 ))}
               </select>
@@ -142,9 +129,9 @@ export default function AiSuggestionCard({
                 onChange={(e) => setDraft({ ...draft, priority: e.target.value as Priority })}
                 className="mt-0.5 w-full rounded-md border border-border bg-background px-2 py-1 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
               >
-                {(Object.keys(PRIORITY_LABELS) as Priority[]).map((p) => (
-                  <option key={p} value={p}>
-                    {PRIORITY_LABELS[p]}
+                {Object.entries(priorityLabels).map(([value, label]) => (
+                  <option key={value} value={value}>
+                    {label}
                   </option>
                 ))}
               </select>
@@ -196,7 +183,7 @@ export default function AiSuggestionCard({
         <Sparkles className="h-3 w-3" />
         {t('inbox.suggestion.title', 'Sugerencia AI')}
         <span className="ml-1 rounded-full bg-primary/10 px-1.5 py-0.5 text-[10px]">
-          {TYPE_LABELS[suggestion.suggestedType]}
+          {typeLabels[suggestion.suggestedType]}
         </span>
       </div>
 
@@ -209,12 +196,12 @@ export default function AiSuggestionCard({
       <div className="mt-2 flex flex-wrap items-center gap-1.5 text-[10px]">
         {area && (
           <span className="rounded-full border border-border bg-muted/40 px-2 py-0.5 font-medium">
-            {area.emoji} {area.label}
+            {area.emoji} {areaLabels[suggestion.suggestedArea]}
           </span>
         )}
         {suggestion.suggestedType === 'task' && (
           <span className="rounded-full border border-border bg-muted/40 px-2 py-0.5 font-medium uppercase tracking-wide">
-            {PRIORITY_LABELS[suggestion.priority]}
+            {priorityLabels[suggestion.priority]}
           </span>
         )}
         {suggestion.suggestedTags.map((tag) => (

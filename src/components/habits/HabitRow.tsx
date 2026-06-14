@@ -1,3 +1,4 @@
+import { useHabitLabels } from '@/lib/entityLabels';
 import type { HabitEntry, HabitKey, HABITS } from '@/types/habit';
 
 interface HabitRowProps {
@@ -15,12 +16,14 @@ export default function HabitRow({
   todayMs,
   onToggle,
 }: HabitRowProps) {
+  const habitLabels = useHabitLabels();
+  const label = habitLabels[habit.key];
   return (
     <tr className="border-b border-border last:border-b-0">
       <td className="sticky left-0 z-10 bg-background py-2 pr-3 pl-2 text-sm text-foreground">
         <span className="inline-flex items-center gap-1.5 whitespace-nowrap">
           <span aria-hidden="true">{habit.emoji}</span>
-          <span>{habit.label}</span>
+          <span>{label}</span>
         </span>
       </td>
       {weekEntries.map((entry) => {
@@ -48,9 +51,9 @@ export default function HabitRow({
               className={`flex h-11 w-11 min-w-11 items-center justify-center ${
                 isEditable ? 'cursor-pointer hover:bg-accent/40' : 'cursor-not-allowed'
               }`}
-              aria-label={`${habit.label} — ${entry.id}`}
+              aria-label={`${label} — ${entry.id}`}
               aria-pressed={isDone}
-              title={`${habit.label} · ${entry.id}`}
+              title={`${label} · ${entry.id}`}
             >
               <span className={visualClass} />
             </button>

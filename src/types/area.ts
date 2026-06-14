@@ -1,10 +1,13 @@
+// Las KEYS (proyectos/conocimiento/…) son IDs opacos persistidos en Firestore
+// (D5): NO se migran. El label se resuelve en render vía buildAreaLabels(t)
+// (src/lib/entityLabels.ts); acá solo vive el emoji.
 export const AREAS = {
-  proyectos: { label: 'Proyectos', emoji: '🚀' },
-  conocimiento: { label: 'Conocimiento', emoji: '🧠' },
-  finanzas: { label: 'Finanzas', emoji: '💵' },
-  salud: { label: 'Salud y Ejercicio', emoji: '💪' },
-  pareja: { label: 'Pareja', emoji: '❤️' },
-  habitos: { label: 'Hábitos', emoji: '✅' },
+  proyectos: { emoji: '🚀' },
+  conocimiento: { emoji: '🧠' },
+  finanzas: { emoji: '💵' },
+  salud: { emoji: '💪' },
+  pareja: { emoji: '❤️' },
+  habitos: { emoji: '✅' },
 } as const;
 
 export type AreaKey = keyof typeof AREAS;

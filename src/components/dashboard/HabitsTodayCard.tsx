@@ -4,9 +4,11 @@ import { Repeat } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import useHabits, { formatDateKey, getWeekStart } from '@/hooks/useHabits';
 import { HABITS } from '@/types/habit';
+import { useHabitLabels } from '@/lib/entityLabels';
 
 export default function HabitsTodayCard() {
   const { t } = useTranslation();
+  const habitLabels = useHabitLabels();
   const weekStart = useMemo(() => getWeekStart(new Date()), []);
   const todayKey = useMemo(() => formatDateKey(new Date()), []);
   const { weekEntries, isInitializing, toggleHabit } = useHabits(weekStart);
@@ -71,9 +73,9 @@ export default function HabitsTodayCard() {
                     ? 'border-primary bg-primary text-primary-foreground'
                     : 'border-border bg-muted text-muted-foreground hover:bg-accent/60'
                 }`}
-                title={h.label}
+                title={habitLabels[h.key]}
               >
-                {h.emoji} {h.label}
+                {h.emoji} {habitLabels[h.key]}
               </button>
             );
           })}

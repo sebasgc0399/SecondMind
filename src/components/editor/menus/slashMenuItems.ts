@@ -18,8 +18,8 @@ import { useTranslation } from 'react-i18next';
 import i18n from '@/lib/i18n';
 import { notesRepo } from '@/infra/repos/notesRepo';
 import type { NoteType } from '@/types/common';
-import { literatureTemplate } from '@/components/editor/templates/literatureTemplate';
-import { permanentTemplate } from '@/components/editor/templates/permanentTemplate';
+import { buildLiteratureTemplate } from '@/components/editor/templates/literatureTemplate';
+import { buildPermanentTemplate } from '@/components/editor/templates/permanentTemplate';
 import type { TFunction } from 'i18next';
 import type { Editor } from '@tiptap/core';
 
@@ -161,7 +161,7 @@ function buildSlashMenuItems(t: TFunction): SlashMenuItem[] {
       icon: BookOpen,
       category: 'templates',
       action: (editor, ctx) => {
-        editor.chain().focus().insertContent(literatureTemplate).run();
+        editor.chain().focus().insertContent(buildLiteratureTemplate(t)).run();
         void updateNoteType(ctx.noteId, 'literature');
       },
     },
@@ -175,7 +175,7 @@ function buildSlashMenuItems(t: TFunction): SlashMenuItem[] {
       icon: FileCheck,
       category: 'templates',
       action: (editor, ctx) => {
-        editor.chain().focus().insertContent(permanentTemplate).run();
+        editor.chain().focus().insertContent(buildPermanentTemplate(t)).run();
         void updateNoteType(ctx.noteId, 'permanent');
       },
     },

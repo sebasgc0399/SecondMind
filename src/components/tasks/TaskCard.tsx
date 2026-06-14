@@ -3,6 +3,7 @@ import { Link } from 'react-router';
 import { MoreHorizontal, ChevronUp } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { formatRelative } from '@/lib/formatDate';
+import { usePriorityLabels } from '@/lib/entityLabels';
 import PendingSyncDot from '@/components/layout/PendingSyncDot';
 import type { Task } from '@/types/task';
 import type { Priority } from '@/types/common';
@@ -25,13 +26,6 @@ const PRIORITY_STYLES: Record<Priority, string> = {
   medium: 'bg-yellow-500/15 text-yellow-700 dark:text-yellow-400',
   high: 'bg-orange-500/15 text-orange-700 dark:text-orange-400',
   urgent: 'bg-red-500/15 text-red-700 dark:text-red-400',
-};
-
-const PRIORITY_LABELS: Record<Priority, string> = {
-  low: 'Baja',
-  medium: 'Media',
-  high: 'Alta',
-  urgent: 'Urgente',
 };
 
 function toDateInputValue(ms: number): string {
@@ -61,6 +55,7 @@ export default function TaskCard({
   onUpdate,
 }: TaskCardProps) {
   const { t } = useTranslation();
+  const priorityLabels = usePriorityLabels();
   const [isExpanded, setIsExpanded] = useState(false);
   const [descDraft, setDescDraft] = useState(task.description);
 
@@ -117,7 +112,7 @@ export default function TaskCard({
                 PRIORITY_STYLES[task.priority]
               }`}
             >
-              {PRIORITY_LABELS[task.priority]}
+              {priorityLabels[task.priority]}
             </span>
             {task.projectId && projectName && (
               <Link
@@ -171,10 +166,11 @@ export default function TaskCard({
                 onChange={handlePriorityChange}
                 className="rounded-md border border-border bg-background px-2 py-1.5 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary/50"
               >
-                <option value="low">Baja</option>
-                <option value="medium">Media</option>
-                <option value="high">Alta</option>
-                <option value="urgent">Urgente</option>
+                {Object.entries(priorityLabels).map(([value, label]) => (
+                  <option key={value} value={value}>
+                    {label}
+                  </option>
+                ))}
               </select>
             </label>
 

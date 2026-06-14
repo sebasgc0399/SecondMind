@@ -4,6 +4,7 @@ import { CloudUpload, RefreshCw, Trash2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { allQueues, createsQueueBindings, retryAllErrors } from '@/lib/saveQueue';
 import usePendingSyncCount from '@/hooks/usePendingSyncCount';
+import { usePendingSyncLabels } from '@/lib/entityLabels';
 import useExpandThenCollapse from '@/hooks/useExpandThenCollapse';
 import { cn } from '@/lib/utils';
 import DiscardPendingDialog from './DiscardPendingDialog';
@@ -52,6 +53,7 @@ export default function PendingSyncIndicator({
 function IndicatorBody({ compact, side }: { compact: boolean; side: PopoverSide }) {
   const { t } = useTranslation();
   const { total, errorCount, byEntity } = usePendingSyncCount();
+  const pendingLabels = usePendingSyncLabels();
   const isError = errorCount > 0;
   const [discardOpen, setDiscardOpen] = useState(false);
 
@@ -157,18 +159,22 @@ function IndicatorBody({ compact, side }: { compact: boolean; side: PopoverSide 
               </Popover.Title>
               {byEntity.length > 0 ? (
                 <ul className="mt-2 space-y-1 text-xs text-muted-foreground">
-                  {byEntity.map((e) => (
-                    <li key={e.entity} className="flex items-center justify-between">
-                      <span>
-                        {e.count} {e.entity}
-                      </span>
-                      {e.hasError && (
-                        <span className="text-[10px] font-semibold uppercase text-destructive">
-                          {t('sync.errorBadge', 'error')}
+                  {byEntity.map((e) => {
+                    const pair = pendingLabels[e.entityIndex];
+                    const name = e.count === 1 ? pair?.sing : pair?.plur;
+                    return (
+                      <li key={e.entityIndex} className="flex items-center justify-between">
+                        <span>
+                          {e.count} {name}
                         </span>
-                      )}
-                    </li>
-                  ))}
+                        {e.hasError && (
+                          <span className="text-[10px] font-semibold uppercase text-destructive">
+                            {t('sync.errorBadge', 'error')}
+                          </span>
+                        )}
+                      </li>
+                    );
+                  })}
                 </ul>
               ) : (
                 <p className="mt-2 text-xs text-muted-foreground">

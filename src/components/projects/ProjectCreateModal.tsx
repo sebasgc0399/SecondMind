@@ -3,6 +3,7 @@ import { Dialog } from '@base-ui/react/dialog';
 import { useNavigate } from 'react-router';
 import { useTranslation } from 'react-i18next';
 import { AREAS, type AreaKey } from '@/types/area';
+import { useAreaLabels, usePriorityLabels } from '@/lib/entityLabels';
 import type { Priority } from '@/types/common';
 
 interface CreateProjectInput {
@@ -26,6 +27,8 @@ export default function ProjectCreateModal({
   onCreate,
 }: ProjectCreateModalProps) {
   const { t } = useTranslation();
+  const areaLabels = useAreaLabels();
+  const priorityLabels = usePriorityLabels();
   const navigate = useNavigate();
   const [name, setName] = useState('');
   const [areaId, setAreaId] = useState<AreaKey>(DEFAULT_AREA);
@@ -97,7 +100,7 @@ export default function ProjectCreateModal({
                 >
                   {AREA_ENTRIES.map(([key, area]) => (
                     <option key={key} value={key}>
-                      {area.emoji} {area.label}
+                      {area.emoji} {areaLabels[key]}
                     </option>
                   ))}
                 </select>
@@ -112,10 +115,11 @@ export default function ProjectCreateModal({
                   onChange={(e) => setPriority(e.target.value as Priority)}
                   className="rounded-md border border-border bg-background px-2 py-1.5 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary/50"
                 >
-                  <option value="low">Baja</option>
-                  <option value="medium">Media</option>
-                  <option value="high">Alta</option>
-                  <option value="urgent">Urgente</option>
+                  {Object.entries(priorityLabels).map(([value, label]) => (
+                    <option key={value} value={value}>
+                      {label}
+                    </option>
+                  ))}
                 </select>
               </label>
             </div>

@@ -366,6 +366,23 @@ export default interface Resources {
         placeholder: '¿Qué le explicarías a tu yo del futuro sobre esto? 1-2 frases.';
         title: 'Resumen ejecutivo (L3)';
       };
+      templates: {
+        literature: {
+          inMyWordsHeading: 'En mis palabras';
+          interpretationPlaceholder: '[Tu interpretación y conexiones]';
+          keyIdeasHeading: 'Ideas clave';
+          sourceHeading: 'Fuente';
+          sourcePlaceholder: '[Autor, título, año, URL]';
+        };
+        permanent: {
+          connectionsHeading: 'Conexiones';
+          connectionsPlaceholder: '[Notas relacionadas — usa @ para mencionar]';
+          developmentHeading: 'Desarrollo';
+          developmentPlaceholder: '[Argumentación, evidencia, ejemplos]';
+          thesisHeading: 'Tesis';
+          thesisPlaceholder: '[La idea central en una oración]';
+        };
+      };
       toolbar: {
         bold: 'Negrita';
         code: 'Código inline';
@@ -378,6 +395,145 @@ export default interface Resources {
         untitled: 'Nota sin título';
       };
     };
+    entities: {
+      area: {
+        conocimiento: 'Conocimiento';
+        finanzas: 'Finanzas';
+        habitos: 'Hábitos';
+        pareja: 'Pareja';
+        proyectos: 'Proyectos';
+        salud: 'Salud y Ejercicio';
+      };
+      discardable: {
+        group: {
+          habit: 'Hábitos';
+          inboxItem: 'Inbox';
+          note: 'Notas';
+          objective: 'Objetivos';
+          project: 'Proyectos';
+          task: 'Tareas';
+        };
+        habitFallback: 'Hábitos ({{id}})';
+        habitOfDate: 'Hábitos del {{date}}';
+        inboxEmpty: 'Item sin contenido';
+        noteUntitled: 'Nota sin nombre';
+        objectiveUntitled: 'Objetivo sin nombre';
+        projectUntitled: 'Proyecto sin nombre';
+        taskUntitled: 'Tarea sin nombre';
+      };
+      habit: {
+        codear: 'Codear';
+        comerBien: 'Comer bien';
+        ejercicio: 'Ejercicio';
+        estirar: 'Estirar';
+        gratitud: 'Gratitud';
+        ingles: 'Inglés';
+        leer: 'Leer';
+        madrugar: 'Madrugar';
+        meditar: 'Meditar';
+        noComerDulce: 'No comer dulce';
+        pareja: 'Pareja';
+        planificarDia: 'Planificar día';
+        tenderCama: 'Tender cama';
+        tomarAgua: 'Tomar agua';
+      };
+      inboxResultType: {
+        note: 'Nota';
+        project: 'Proyecto';
+        task: 'Tarea';
+        trash: 'Descartar';
+      };
+      noteType: {
+        fleeting: 'Fugaz';
+        literature: 'Literatura';
+        permanent: 'Permanente';
+      };
+      objectiveStatus: {
+        completed: 'Completado';
+        inProgress: 'En progreso';
+        notStarted: 'No empezado';
+      };
+      paraType: {
+        archive: 'Archivo';
+        area: 'Área';
+        project: 'Proyecto';
+        resource: 'Recurso';
+      };
+      pendingSync: {
+        habit: {
+          plur: 'hábitos';
+          sing: 'hábito';
+        };
+        inboxItem: {
+          plur: 'items de inbox';
+          sing: 'item de inbox';
+        };
+        note: {
+          plur: 'notas';
+          sing: 'nota';
+        };
+        noteEdit: {
+          plur: 'ediciones de nota';
+          sing: 'edición de nota';
+        };
+        noteNew: {
+          plur: 'notas nuevas';
+          sing: 'nota nueva';
+        };
+        objective: {
+          plur: 'objetivos';
+          sing: 'objetivo';
+        };
+        objectiveNew: {
+          plur: 'objetivos nuevos';
+          sing: 'objetivo nuevo';
+        };
+        project: {
+          plur: 'proyectos';
+          sing: 'proyecto';
+        };
+        projectNew: {
+          plur: 'proyectos nuevos';
+          sing: 'proyecto nuevo';
+        };
+        task: {
+          plur: 'tareas';
+          sing: 'tarea';
+        };
+        taskNew: {
+          plur: 'tareas nuevas';
+          sing: 'tarea nueva';
+        };
+      };
+      priority: {
+        high: 'Alta';
+        low: 'Baja';
+        medium: 'Media';
+        urgent: 'Urgente';
+      };
+      priorityLong: {
+        high: 'Prioridad alta';
+        low: 'Prioridad baja';
+        medium: 'Prioridad media';
+        urgent: 'Prioridad urgente';
+      };
+      projectStatus: {
+        group: {
+          completed: 'Completados';
+          inProgress: 'En progreso';
+          inbox: 'Sin clasificar';
+          notStarted: 'No empezados';
+          onHold: 'En pausa';
+        };
+        option: {
+          completed: 'Completado';
+          inProgress: 'En progreso';
+          inbox: 'Inbox';
+          notStarted: 'No empezado';
+          onHold: 'En pausa';
+        };
+      };
+    };
     graph: {
       createNotes: 'Crear notas →';
       empty: {
@@ -387,7 +543,8 @@ export default interface Resources {
       exitFullscreen: 'Salir de pantalla completa';
       filters: {
         active: 'activos';
-        area: 'Area';
+        allOption: 'Todas';
+        area: 'Área';
         minLinks: 'Links min';
         reset: 'Resetear';
         title: 'Filtros';
@@ -603,6 +760,11 @@ export default interface Resources {
         openTitle: 'Abrir nota lado a lado (⌘\\)';
         searchPlaceholder: 'Buscar nota para abrir lado a lado...';
       };
+      suggestions: {
+        maturity: 'Esta nota tiene varias conexiones y un resumen ejecutivo — parece una idea madura.';
+        promote: 'Promover a {{type}}';
+        promoteDescription: 'La AI detectó que esta nota encaja mejor como {{type}}.';
+      };
       tabs: {
         all: 'Todas';
         favorites: 'Favoritas';
@@ -660,6 +822,28 @@ export default interface Resources {
         dismissAria: 'Descartar guía de primeros pasos';
         progress: '{{completed}} de {{total}} completados';
         title: 'Primeros pasos';
+      };
+      steps: {
+        apiKey: {
+          ctaLabel: 'Configurar';
+          description: 'Configurá tu API key de Anthropic para activar la clasificación con IA.';
+          label: 'Conectá tu IA';
+        };
+        firstNote: {
+          ctaLabel: 'Crear nota';
+          description: 'Empezá a construir tu segundo cerebro con una nota.';
+          label: 'Creá tu primera nota';
+        };
+        firstTask: {
+          ctaLabel: 'Crear tarea';
+          description: 'Llevá tus ideas a la acción con una tarea.';
+          label: 'Creá tu primera tarea';
+        };
+        inboxAi: {
+          ctaLabel: 'Capturar';
+          description: 'Capturá una idea y mirá cómo la IA la organiza por vos.';
+          label: 'Probá la magia de la IA';
+        };
       };
       welcome: {
         description: 'Tu segundo cerebro para capturar ideas, conectar tu conocimiento y dejar que la IA te ayude a organizarlo.';

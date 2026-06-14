@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Dialog } from '@base-ui/react/dialog';
 import { useTranslation } from 'react-i18next';
 import { AREAS, type AreaKey } from '@/types/area';
+import { useAreaLabels } from '@/lib/entityLabels';
 
 interface CreateObjectiveInput {
   name: string;
@@ -34,6 +35,7 @@ export default function ObjectiveCreateModal({
   onCreate,
 }: ObjectiveCreateModalProps) {
   const { t } = useTranslation();
+  const areaLabels = useAreaLabels();
   const [name, setName] = useState('');
   const [areaId, setAreaId] = useState<AreaKey>(DEFAULT_AREA);
   const [deadlineInput, setDeadlineInput] = useState('');
@@ -103,7 +105,7 @@ export default function ObjectiveCreateModal({
               >
                 {AREA_ENTRIES.map(([key, area]) => (
                   <option key={key} value={key}>
-                    {area.emoji} {area.label}
+                    {area.emoji} {areaLabels[key]}
                   </option>
                 ))}
               </select>
