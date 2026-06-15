@@ -48,6 +48,7 @@ Bloqueada en el dominio `entities` (batch 1 de F4.1). Todo el resto del catálog
 | Segundo cerebro                                                    | Second brain                                                   | término canónico (Tiago Forte)        |
 | Repaso/Revisión (spaced repetition) · Pendiente/s                  | Review · Pending                                               |                                       |
 | Pareja (área/hábito de vida)                                       | Relationship                                                   |                                       |
+| Sin sincronizar / pendiente de sincronizar (estado sync)           | Unsynced · Unsynced changes                                    | mismo estado en toda la UI (batch 2)  |
 
 **Labels default del dominio `entities` (fijados en batch 1 — confirmados por Sebastián):**
 
