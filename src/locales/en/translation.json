@@ -206,179 +206,179 @@
   },
   "editor": {
     "backlinks": {
-      "empty": "",
-      "hide": ""
+      "empty": "No backlinks yet. Notes that link here will appear here.",
+      "hide": "Hide backlinks"
     },
     "codeBlock": {
-      "copied": "",
-      "copy": ""
+      "copied": "Code copied",
+      "copy": "Copy code"
     },
     "distill": {
       "banner": {
-        "l1": "",
-        "l2": "",
-        "l3": ""
+        "l1": "You reached L1 · Key passages marked",
+        "l2": "You reached L2 · Essentials highlighted",
+        "l3": "You reached L3 · Note distilled"
       },
-      "indicatorLabel": "",
+      "indicatorLabel": "Distillation level: L{{level}} — {{label}}",
       "l0": {
-        "label": "",
-        "tip": ""
+        "label": "No distillation",
+        "tip": "Select the key passages and bold them (Ctrl+B) to mark them as L1."
       },
       "l1": {
-        "label": "",
-        "tip": ""
+        "label": "Key passages marked",
+        "tip": "From what you marked, highlight what's truly essential with Ctrl+Shift+H to reach L2."
       },
       "l2": {
-        "label": "",
-        "tip": ""
+        "label": "Essentials highlighted",
+        "tip": "Write an executive summary in your own words to reach L3 — the note is ready for your future self, without rereading everything."
       },
       "l3": {
-        "label": "",
-        "tip": ""
+        "label": "Summary written",
+        "tip": "Distillation complete. The note is ready for your future self."
       },
-      "writeL3": ""
+      "writeL3": "Write L3 summary"
     },
     "link": {
-      "confirm": "",
-      "edit": "",
-      "openNewTab": ""
+      "confirm": "Confirm link",
+      "edit": "Edit link",
+      "openNewTab": "Open link in new tab"
     },
     "menu": {
-      "noResults": "",
-      "noResultsQuery": ""
+      "noResults": "No results",
+      "noResultsQuery": "No results for \"{{query}}\""
     },
-    "placeholder": "",
+    "placeholder": "Type an idea...",
     "review": {
-      "activate": "",
-      "again": "",
-      "good": "",
-      "next": "",
-      "prompt": "",
+      "activate": "Activate periodic review",
+      "again": "I need to review it",
+      "good": "I remember it well",
+      "next": "Next review: {{when}}",
+      "prompt": "Do you remember it?",
       "relative": {
-        "days_one": "",
-        "days_other": "",
-        "months_one": "",
-        "months_other": "",
-        "today": "",
-        "tomorrow": "",
-        "weeks_one": "",
-        "weeks_other": ""
+        "days_one": "in {{count}} day",
+        "days_other": "in {{count}} days",
+        "months_one": "in {{count}} month",
+        "months_other": "in {{count}} months",
+        "today": "today",
+        "tomorrow": "tomorrow",
+        "weeks_one": "in {{count}} week",
+        "weeks_other": "in {{count}} weeks"
       },
-      "reviewed": "",
-      "soon": ""
+      "reviewed": "Reviewed. Next review: {{when}}",
+      "soon": "soon"
     },
     "save": {
-      "error": "",
-      "retrying": "",
-      "saved": "",
-      "saving": ""
+      "error": "Save failed",
+      "retrying": "Retrying...",
+      "saved": "Saved",
+      "saving": "Saving..."
     },
     "saveError": {
-      "copied": "",
-      "copy": "",
-      "detail": "",
-      "discard": "",
-      "title": ""
+      "copied": "Copied",
+      "copy": "Copy content",
+      "detail": "We retried 3 times without success. Retry saves the full content. Discard reverts the visible title.",
+      "discard": "Discard changes",
+      "title": "We couldn't save your last edit"
     },
     "similar": {
-      "empty": "",
-      "noEmbedding": "",
-      "offline": "",
-      "title": ""
+      "empty": "No similar notes yet.",
+      "noEmbedding": "Save the note to see suggestions.",
+      "offline": "Available when you're back online.",
+      "title": "Similar notes"
     },
     "slash": {
       "category": {
-        "blocks": "",
-        "lists": "",
-        "mentions": "",
-        "templates": "",
-        "text": ""
+        "blocks": "Blocks",
+        "lists": "Lists",
+        "mentions": "Mentions",
+        "templates": "Templates",
+        "text": "Text"
       },
       "items": {
         "blockquote": {
-          "description": "",
-          "label": ""
+          "description": "Quote",
+          "label": "Blockquote"
         },
         "bulletList": {
-          "description": "",
-          "label": ""
+          "description": "Bulleted list",
+          "label": "Bullet List"
         },
         "codeBlock": {
-          "description": "",
-          "label": ""
+          "description": "Code block",
+          "label": "Code Block"
         },
         "divider": {
-          "description": "",
-          "label": ""
+          "description": "Horizontal line",
+          "label": "Divider"
         },
         "heading1": {
-          "description": "",
-          "label": ""
+          "description": "Main heading",
+          "label": "Heading 1"
         },
         "heading2": {
-          "description": "",
-          "label": ""
+          "description": "Subheading",
+          "label": "Heading 2"
         },
         "heading3": {
-          "description": "",
-          "label": ""
+          "description": "Smaller subheading",
+          "label": "Heading 3"
         },
         "mentionNote": {
-          "description": "",
-          "label": ""
+          "description": "Type @ to autocomplete",
+          "label": "Mention note"
         },
         "orderedList": {
-          "description": "",
-          "label": ""
+          "description": "Numbered list",
+          "label": "Numbered List"
         },
         "taskList": {
-          "description": "",
-          "label": ""
+          "description": "Checklist",
+          "label": "Task List"
         },
         "templateLiterature": {
-          "description": "",
-          "label": ""
+          "description": "Template for source notes",
+          "label": "Literature note"
         },
         "templatePermanent": {
-          "description": "",
-          "label": ""
+          "description": "Template for permanent ideas",
+          "label": "Permanent note"
         }
       }
     },
     "suggestion": {
-      "regionLabel": ""
+      "regionLabel": "AI suggestions"
     },
     "summaryL3": {
-      "placeholder": "",
-      "title": ""
+      "placeholder": "What would you explain to your future self about this? 1-2 sentences.",
+      "title": "Executive summary (L3)"
     },
     "templates": {
       "literature": {
-        "inMyWordsHeading": "",
-        "interpretationPlaceholder": "",
-        "keyIdeasHeading": "",
-        "sourceHeading": "",
-        "sourcePlaceholder": ""
+        "inMyWordsHeading": "In my own words",
+        "interpretationPlaceholder": "[Your interpretation and connections]",
+        "keyIdeasHeading": "Key ideas",
+        "sourceHeading": "Source",
+        "sourcePlaceholder": "[Author, title, year, URL]"
       },
       "permanent": {
-        "connectionsHeading": "",
-        "connectionsPlaceholder": "",
-        "developmentHeading": "",
-        "developmentPlaceholder": "",
-        "thesisHeading": "",
-        "thesisPlaceholder": ""
+        "connectionsHeading": "Connections",
+        "connectionsPlaceholder": "[Related notes — use @ to mention]",
+        "developmentHeading": "Development",
+        "developmentPlaceholder": "[Argument, evidence, examples]",
+        "thesisHeading": "Thesis",
+        "thesisPlaceholder": "[The core idea in one sentence]"
       }
     },
     "toolbar": {
-      "bold": "",
-      "code": "",
-      "highlight": "",
-      "italic": "",
-      "link": "",
-      "strike": ""
+      "bold": "Bold",
+      "code": "Inline code",
+      "highlight": "Highlight",
+      "italic": "Italic",
+      "link": "Link",
+      "strike": "Strikethrough"
     },
     "wikilink": {
-      "untitled": ""
+      "untitled": "Untitled note"
     }
   },
   "entities": {
@@ -704,86 +704,86 @@
   },
   "notes": {
     "card": {
-      "aiSummaryLabel": "",
-      "delete": "",
-      "deleteForever": "",
-      "favorite": "",
+      "aiSummaryLabel": "AI-generated summary",
+      "delete": "Delete note",
+      "deleteForever": "Delete forever",
+      "favorite": "Mark as favorite",
       "hardDelete": {
-        "description": "",
-        "title": ""
+        "description": "This action can't be undone. The note, its embeddings, and the links that mention it are deleted forever.",
+        "title": "Delete this note forever?"
       },
-      "purgeDays_one": "",
-      "purgeDays_other": "",
-      "purgePending": "",
-      "restore": "",
+      "purgeDays_one": "{{count}} day",
+      "purgeDays_other": "{{count}} days",
+      "purgePending": "Pending",
+      "restore": "Restore note",
       "softDelete": {
-        "confirm": "",
-        "description": "",
-        "title": ""
+        "confirm": "Move to Trash",
+        "description": "You can restore it from Notes → Trash or delete it permanently there.",
+        "title": "Move this note to Trash?"
       },
-      "unfavorite": ""
+      "unfavorite": "Remove from favorites"
     },
     "detail": {
-      "loadError": "",
-      "notFound": ""
+      "loadError": "Error loading the note: {{message}}",
+      "notFound": "This note no longer exists."
     },
     "empty": {
-      "all": "",
-      "backToAll": "",
-      "clearSearch": "",
-      "createFirst": "",
-      "favorites": "",
-      "review": "",
-      "reviewFilter": "",
-      "showAll": "",
-      "trash": "",
-      "trashFilter": ""
+      "all": "You don't have any notes yet.",
+      "backToAll": "Back to all notes",
+      "clearSearch": "Clear search",
+      "createFirst": "Create your first note",
+      "favorites": "You don't have any favorite notes yet.",
+      "review": "Nothing to review today.",
+      "reviewFilter": "No notes found in review.",
+      "showAll": "Show all notes",
+      "trash": "Your Trash is empty.",
+      "trashFilter": "No notes found in Trash."
     },
-    "newNote": "",
-    "newShort": "",
+    "newNote": "New note",
+    "newShort": "New",
     "purgeDialog": {
-      "description_one": "",
-      "description_other": "",
-      "title": ""
+      "description_one": "{{count}} note, its embeddings, and the links that mention it will be permanently deleted. This action can't be undone.",
+      "description_other": "{{count}} notes, their embeddings, and the links that mention them will be permanently deleted. This action can't be undone.",
+      "title": "Empty Trash?"
     },
     "search": {
-      "all": "",
-      "review": "",
-      "trash": ""
+      "all": "Search notes...",
+      "review": "Search notes to review...",
+      "trash": "Search Trash..."
     },
     "semantic": {
-      "noExactMatch": "",
-      "noResults": "",
-      "titleNoKeyword": "",
-      "titleWithKeyword": ""
+      "noExactMatch": "No exact matches, but these notes are thematically similar.",
+      "noResults": "No results.",
+      "titleNoKeyword": "Thematically similar notes",
+      "titleWithKeyword": "Semantically similar"
     },
     "split": {
-      "closePaneAria": "",
-      "closePaneTitle": "",
-      "closeTitle": "",
-      "noOtherNotes": "",
-      "openTitle": "",
-      "searchPlaceholder": ""
+      "closePaneAria": "Close this pane",
+      "closePaneTitle": "Close pane",
+      "closeTitle": "Close right pane (⌘\\)",
+      "noOtherNotes": "No other notes available",
+      "openTitle": "Open note side by side (⌘\\)",
+      "searchPlaceholder": "Search for a note to open side by side..."
     },
     "suggestions": {
-      "maturity": "",
-      "promote": "",
-      "promoteDescription": ""
+      "maturity": "This note has several connections and an executive summary — it looks like a mature idea.",
+      "promote": "Promote to {{type}} note",
+      "promoteDescription": "AI detected this note fits better as a {{type}} note."
     },
     "tabs": {
-      "all": "",
-      "favorites": "",
-      "review": "",
-      "trash": ""
+      "all": "All",
+      "favorites": "Favorites",
+      "review": "To review",
+      "trash": "Trash"
     },
     "trash": {
-      "captionDays_one": "",
-      "captionDays_other": "",
-      "captionNever": "",
-      "change": "",
-      "empty": ""
+      "captionDays_one": "Notes are permanently deleted after {{count}} day.",
+      "captionDays_other": "Notes are permanently deleted after {{count}} days.",
+      "captionNever": "Notes in Trash aren't deleted automatically.",
+      "change": "Change",
+      "empty": "Empty Trash"
     },
-    "viewAsGraph": ""
+    "viewAsGraph": "View as graph"
   },
   "objectives": {
     "area": "Area",
