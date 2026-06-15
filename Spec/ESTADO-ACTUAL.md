@@ -404,6 +404,7 @@ Cada feature comprimida a 1 línea con pointer al SPEC archivado. Para detalles 
 - [Firebase MCP `firestore_query_collection` no acepta paths de subcolección con "/" (post-SPEC-56)](gotchas/tooling-local.md#firebase-mcp-firestore_query_collection-no-acepta-paths-de-subcolección-con--post-spec-56)
 - [Context7 MCP expone `query-docs`, no `get-library-docs` (nombre viejo)](gotchas/tooling-local.md#context7-mcp-expone-query-docs-no-get-library-docs-nombre-viejo)
 - [Los subagentes leen archivos del cwd del proceso Claude Code, no del árbol del dev server](gotchas/tooling-local.md#los-subagentes-leen-archivos-del-cwd-del-proceso-claude-code-no-del-árbol-del-dev-server)
+- [Hooks de Windows que tocan `file_path`: el separador es BACKSLASH (normalizar con `tr`, no parameter expansion)](gotchas/tooling-local.md#hooks-de-windows-que-tocan-file_path-el-separador-es-backslash-normalizar-con-tr-no-parameter-expansion)
 
 ### Dependencias y build — [`gotchas/deps-build.md`](gotchas/deps-build.md)
 
