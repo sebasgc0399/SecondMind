@@ -119,6 +119,16 @@
       "open": "Open SecondMind"
     }
   },
+  "changelog": {
+    "dismiss": "Got it",
+    "v060": {
+      "items": [
+        "Unified version awareness across desktop, web, and Android.",
+        "A what's-new modal that appears once after each update."
+      ],
+      "title": "What's new in 0.6.0"
+    }
+  },
   "commandPalette": {
     "actions": "Actions",
     "closeSplit": "Close right pane",
@@ -922,6 +932,11 @@
     "appInfo": {
       "checkUpdates": "Check for updates",
       "description": "Current version and updates.",
+      "platform": {
+        "android": "Android",
+        "desktop": "Desktop",
+        "web": "Web"
+      },
       "productName": "SecondMind Desktop",
       "title": "App info",
       "version": "Version {{version}}"

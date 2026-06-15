@@ -13,6 +13,7 @@ import TopBar from '@/components/layout/TopBar';
 import UpdateBanner from '@/components/layout/UpdateBanner';
 import EmailVerificationBanner from '@/components/auth/EmailVerificationBanner';
 import WelcomeModal from '@/components/onboarding/WelcomeModal';
+import WhatsNewModal from '@/components/changelog/WhatsNewModal';
 import useAuth from '@/hooks/useAuth';
 import useHideSplashWhenReady from '@/hooks/useHideSplashWhenReady';
 import useLocaleSync from '@/hooks/useLocaleSync';
@@ -168,6 +169,7 @@ export default function Layout() {
             <CommandPalette />
             <InstallPrompt />
             <WelcomeModal />
+            <WhatsNewModal />
           </div>
         </QuickCaptureProvider>
       </CommandPaletteProvider>

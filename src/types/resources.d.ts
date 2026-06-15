@@ -121,6 +121,16 @@ export default interface Resources {
         open: 'Abrir SecondMind';
       };
     };
+    changelog: {
+      dismiss: 'Entendido';
+      v060: {
+        items: [
+          'Conciencia de versión unificada en escritorio, web y Android.',
+          'Modal de novedades que aparece una sola vez tras cada actualización.',
+        ];
+        title: 'Novedades de la 0.6.0';
+      };
+    };
     commandPalette: {
       actions: 'Acciones';
       closeSplit: 'Cerrar panel derecho';
@@ -943,6 +953,11 @@ export default interface Resources {
       appInfo: {
         checkUpdates: 'Buscar actualizaciones';
         description: 'Versión actual y actualizaciones.';
+        platform: {
+          android: 'Android';
+          desktop: 'Escritorio';
+          web: 'Web';
+        };
         productName: 'SecondMind Desktop';
         title: 'Información de la app';
         version: 'Versión {{version}}';

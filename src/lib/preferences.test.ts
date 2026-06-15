@@ -73,6 +73,7 @@ describe('parsePrefs', () => {
       onboardingWelcomeSeen: false,
       onboardingChecklistDismissed: false,
       locale: null,
+      lastSeenVersion: null,
     });
   });
 
@@ -195,6 +196,7 @@ describe('parsePrefs schema versioning (F36.F8)', () => {
       onboardingWelcomeSeen: false,
       onboardingChecklistDismissed: false,
       locale: null,
+      lastSeenVersion: null,
     });
   });
 
@@ -220,6 +222,7 @@ describe('parsePrefs schema versioning (F36.F8)', () => {
       onboardingWelcomeSeen: false,
       onboardingChecklistDismissed: false,
       locale: null,
+      lastSeenVersion: null,
     });
   });
 });
@@ -241,6 +244,24 @@ describe('parsePrefs locale (F58)', () => {
     expect(parsePrefs({ locale: 1 }).locale).toBeNull();
     expect(parsePrefs({ locale: true }).locale).toBeNull();
     expect(parsePrefs({ locale: { lang: 'es' } }).locale).toBeNull();
+  });
+});
+
+// F59: lastSeenVersion — campo aditivo (sin bump, mismo criterio que locale/F58).
+// null = "nunca visto" / instalación nueva. Igualdad de string, sin semver.
+describe('parsePrefs lastSeenVersion (F59)', () => {
+  it('no persistido → null (nunca visto)', () => {
+    expect(parsePrefs({}).lastSeenVersion).toBeNull();
+  });
+
+  it('string válido → se expone tal cual', () => {
+    expect(parsePrefs({ lastSeenVersion: '0.6.0' }).lastSeenVersion).toBe('0.6.0');
+  });
+
+  it('tipo inválido (número, boolean, objeto) → null defensivo', () => {
+    expect(parsePrefs({ lastSeenVersion: 60 }).lastSeenVersion).toBeNull();
+    expect(parsePrefs({ lastSeenVersion: true }).lastSeenVersion).toBeNull();
+    expect(parsePrefs({ lastSeenVersion: { v: '0.6.0' } }).lastSeenVersion).toBeNull();
   });
 });
 
