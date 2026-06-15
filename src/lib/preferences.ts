@@ -93,6 +93,8 @@ export function parsePrefs(data: Record<string, unknown> | undefined): UserPrefe
     // F58: campo aditivo, sin bump. Ausente/inválido → null = "nunca elegido"
     // (useLocaleSync detecta y persiste eager).
     locale: data?.locale === 'es' || data?.locale === 'en' ? data.locale : null,
+    // F59: campo aditivo, sin bump. Ausente/no-string → null ("nunca visto").
+    lastSeenVersion: typeof data?.lastSeenVersion === 'string' ? data.lastSeenVersion : null,
   };
 }
 

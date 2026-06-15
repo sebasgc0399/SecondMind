@@ -34,6 +34,10 @@ export interface UserPreferences {
   // PREFERENCES_SCHEMA_VERSION (desvío 1 del plan F1; gotcha precisado en
   // Spec/gotchas/tinybase-firestore.md § Schema versioning).
   locale: 'es' | 'en' | null;
+  // Última versión cuyo modal "Novedades" vio el usuario (F59). null = nunca
+  // visto / instalación nueva. Igualdad de string, sin semver. Campo aditivo —
+  // NO bumpear PREFERENCES_SCHEMA_VERSION (mismo criterio que locale/onboarding*).
+  lastSeenVersion: string | null;
 }
 
 export const DEFAULT_PREFERENCES: UserPreferences = {
@@ -45,4 +49,5 @@ export const DEFAULT_PREFERENCES: UserPreferences = {
   onboardingWelcomeSeen: false,
   onboardingChecklistDismissed: false,
   locale: null,
+  lastSeenVersion: null,
 };
