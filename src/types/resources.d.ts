@@ -64,7 +64,6 @@ export default interface Resources {
           successTitle: 'Email verificado';
         };
       };
-      backToLogin: 'Volver al login';
       backToSignIn: 'Volver al inicio de sesión';
       confirmPassword: 'Confirmar contraseña';
       continueWithGoogle: 'Continuar con Google';

@@ -53,7 +53,7 @@ export default function ResetPasswordForm({ onBack }: ResetPasswordFormProps) {
           className="inline-flex items-center gap-1.5 self-start text-sm text-primary hover:underline"
         >
           <ArrowLeft className="size-4" />
-          {t('auth.backToLogin', 'Volver al login')}
+          {t('auth.backToSignIn', 'Volver al inicio de sesión')}
         </button>
       </div>
     );
@@ -95,7 +95,7 @@ export default function ResetPasswordForm({ onBack }: ResetPasswordFormProps) {
         className="inline-flex items-center gap-1.5 self-start text-sm text-primary hover:underline"
       >
         <ArrowLeft className="size-4" />
-        {t('auth.backToLogin', 'Volver al login')}
+        {t('auth.backToSignIn', 'Volver al inicio de sesión')}
       </button>
     </form>
   );
