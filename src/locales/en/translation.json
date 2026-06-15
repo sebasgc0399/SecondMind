@@ -1,30 +1,30 @@
 {
   "admin": {
     "members": {
-      "added": "",
-      "empty": "",
-      "noMatch": "",
-      "revoke": "",
+      "added": "Added: {{date}}",
+      "empty": "No beta members yet.",
+      "noMatch": "No members match your search.",
+      "revoke": "Revoke",
       "revokeDialog": {
-        "description": "",
-        "title": ""
+        "description": "{{email}} will lose beta access at their next gate (this doesn't delete their account or data). You can invite them again by approving a new request.",
+        "title": "Revoke access?"
       },
-      "searchAria": ""
+      "searchAria": "Search members by email"
     },
     "requests": {
-      "approve": "",
-      "empty": "",
-      "noMatch": "",
-      "reject": "",
-      "searchAria": ""
+      "approve": "Approve",
+      "empty": "No pending requests.",
+      "noMatch": "No requests match your search.",
+      "reject": "Reject",
+      "searchAria": "Search requests by email"
     },
-    "searchByEmail": "",
-    "subtitle": "",
+    "searchByEmail": "Search by email…",
+    "subtitle": "Process access requests and manage beta members.",
     "tabs": {
-      "members": "",
-      "requests": ""
+      "members": "Members",
+      "requests": "Requests"
     },
-    "title": ""
+    "title": "Administration"
   },
   "auth": {
     "accessRequest": {
@@ -106,716 +106,716 @@
     }
   },
   "capture": {
-    "fabLabel": "",
+    "fabLabel": "Quick Capture",
     "hint": {
-      "cancel": "",
-      "close": "",
-      "newLine": "",
-      "save": ""
+      "cancel": "cancel",
+      "close": "close",
+      "newLine": "new line",
+      "save": "save"
     },
-    "placeholder": "",
-    "title": "",
+    "placeholder": "Type an idea...",
+    "title": "Quick Capture",
     "unauth": {
-      "message": "",
-      "open": ""
+      "message": "Open SecondMind to sign in.",
+      "open": "Open SecondMind"
     }
   },
   "commandPalette": {
-    "actions": "",
-    "closeSplit": "",
+    "actions": "Actions",
+    "closeSplit": "Close right pane",
     "groups": {
-      "notes": "",
-      "projects": "",
-      "tasks": ""
+      "notes": "Notes",
+      "projects": "Projects",
+      "tasks": "Tasks"
     },
-    "hideSidebar": "",
-    "noResults": "",
-    "open": "",
-    "openSplit": "",
-    "placeholder": "",
-    "recent": "",
-    "showSidebar": "",
-    "title": "",
-    "trigger": ""
+    "hideSidebar": "Hide sidebar",
+    "noResults": "No results for “{{query}}”",
+    "open": "Open search",
+    "openSplit": "Open note side by side",
+    "placeholder": "Search notes, tasks, projects...",
+    "recent": "Recent",
+    "showSidebar": "Show sidebar",
+    "title": "Search",
+    "trigger": "Search…"
   },
   "common": {
     "activeBadge": "active",
-    "avatar": "",
-    "cancel": "",
-    "close": "",
-    "create": "",
-    "creating": "",
-    "retry": "",
-    "save": "",
-    "saving": "",
-    "sending": "",
-    "unlink": "",
-    "untitled": ""
+    "avatar": "Avatar",
+    "cancel": "Cancel",
+    "close": "Close",
+    "create": "Create",
+    "creating": "Creating...",
+    "retry": "Retry",
+    "save": "Save",
+    "saving": "Saving…",
+    "sending": "Sending…",
+    "unlink": "Unlink",
+    "untitled": "Untitled"
   },
   "dashboard": {
     "greeting": {
-      "afternoon": "",
-      "fallbackName": "",
-      "morning": "",
-      "night": ""
+      "afternoon": "Good afternoon, {{name}}",
+      "fallbackName": "there",
+      "morning": "Good morning, {{name}}",
+      "night": "Good evening, {{name}}"
     },
     "habitsToday": {
-      "progress": "",
-      "seeWeek": "",
-      "title": ""
+      "progress": "Progress",
+      "seeWeek": "See week →",
+      "title": "Today's habits"
     },
     "hubs": {
-      "connections": "",
-      "empty": "",
-      "title": ""
+      "connections": "Hub: {{total}} connections",
+      "empty": "Link notes by typing @ — hubs will appear here.",
+      "title": "Active hubs"
     },
     "inbox": {
-      "empty": "",
-      "process": "",
-      "requiresConnection": "",
-      "title": ""
+      "empty": "Inbox zero 🎉",
+      "process": "Process →",
+      "requiresConnection": "Requires an internet connection",
+      "title": "Inbox"
     },
     "projects": {
-      "empty": "",
-      "noPendingTasks": "",
-      "pendingTasks_one": "",
-      "pendingTasks_other": "",
-      "seeAll": "",
-      "seeProjects": "",
-      "title": ""
+      "empty": "No active projects",
+      "noPendingTasks": "No pending tasks",
+      "pendingTasks_one": "{{count}} pending task",
+      "pendingTasks_other": "{{count}} pending tasks",
+      "seeAll": "See all →",
+      "seeProjects": "See projects →",
+      "title": "Active projects"
     },
     "recentNotes": {
-      "createFirst": "",
-      "empty": "",
-      "seeAll": "",
-      "title": ""
+      "createFirst": "Create your first note →",
+      "empty": "You don't have any notes yet.",
+      "seeAll": "See all →",
+      "title": "Recent notes"
     },
     "review": {
-      "empty": "",
-      "seeAll": "",
-      "title_one": "",
-      "title_other": "",
-      "titleEmpty": ""
+      "empty": "Nothing to review today. Come back tomorrow or create more notes to activate review.",
+      "seeAll": "See all {{total}}",
+      "title_one": "You have {{count}} note to review today.",
+      "title_other": "You have {{count}} notes to review today.",
+      "titleEmpty": "To review"
     },
     "tasks": {
-      "completeAria": "",
-      "empty": "",
-      "seeAll": "",
-      "title": ""
+      "completeAria": "Complete {{name}}",
+      "empty": "Nothing for today 🎉",
+      "seeAll": "See all →",
+      "title": "Today's tasks"
     }
   },
   "editor": {
     "backlinks": {
-      "empty": "",
-      "hide": ""
+      "empty": "No backlinks yet. Notes that link here will appear here.",
+      "hide": "Hide backlinks"
     },
     "codeBlock": {
-      "copied": "",
-      "copy": ""
+      "copied": "Code copied",
+      "copy": "Copy code"
     },
     "distill": {
       "banner": {
-        "l1": "",
-        "l2": "",
-        "l3": ""
+        "l1": "You reached L1 · Key passages marked",
+        "l2": "You reached L2 · Essentials highlighted",
+        "l3": "You reached L3 · Note distilled"
       },
-      "indicatorLabel": "",
+      "indicatorLabel": "Distillation level: L{{level}} — {{label}}",
       "l0": {
-        "label": "",
-        "tip": ""
+        "label": "No distillation",
+        "tip": "Select the key passages and bold them (Ctrl+B) to mark them as L1."
       },
       "l1": {
-        "label": "",
-        "tip": ""
+        "label": "Key passages marked",
+        "tip": "From what you marked, highlight what's truly essential with Ctrl+Shift+H to reach L2."
       },
       "l2": {
-        "label": "",
-        "tip": ""
+        "label": "Essentials highlighted",
+        "tip": "Write an executive summary in your own words to reach L3 — the note is ready for your future self, without rereading everything."
       },
       "l3": {
-        "label": "",
-        "tip": ""
+        "label": "Summary written",
+        "tip": "Distillation complete. The note is ready for your future self."
       },
-      "writeL3": ""
+      "writeL3": "Write L3 summary"
     },
     "link": {
-      "confirm": "",
-      "edit": "",
-      "openNewTab": ""
+      "confirm": "Confirm link",
+      "edit": "Edit link",
+      "openNewTab": "Open link in new tab"
     },
     "menu": {
-      "noResults": "",
-      "noResultsQuery": ""
+      "noResults": "No results",
+      "noResultsQuery": "No results for \"{{query}}\""
     },
-    "placeholder": "",
+    "placeholder": "Type an idea...",
     "review": {
-      "activate": "",
-      "again": "",
-      "good": "",
-      "next": "",
-      "prompt": "",
+      "activate": "Activate periodic review",
+      "again": "I need to review it",
+      "good": "I remember it well",
+      "next": "Next review: {{when}}",
+      "prompt": "Do you remember it?",
       "relative": {
-        "days_one": "",
-        "days_other": "",
-        "months_one": "",
-        "months_other": "",
-        "today": "",
-        "tomorrow": "",
-        "weeks_one": "",
-        "weeks_other": ""
+        "days_one": "in {{count}} day",
+        "days_other": "in {{count}} days",
+        "months_one": "in {{count}} month",
+        "months_other": "in {{count}} months",
+        "today": "today",
+        "tomorrow": "tomorrow",
+        "weeks_one": "in {{count}} week",
+        "weeks_other": "in {{count}} weeks"
       },
-      "reviewed": "",
-      "soon": ""
+      "reviewed": "Reviewed. Next review: {{when}}",
+      "soon": "soon"
     },
     "save": {
-      "error": "",
-      "retrying": "",
-      "saved": "",
-      "saving": ""
+      "error": "Save failed",
+      "retrying": "Retrying...",
+      "saved": "Saved",
+      "saving": "Saving..."
     },
     "saveError": {
-      "copied": "",
-      "copy": "",
-      "detail": "",
-      "discard": "",
-      "title": ""
+      "copied": "Copied",
+      "copy": "Copy content",
+      "detail": "We retried 3 times without success. Retry saves the full content. Discard reverts the visible title.",
+      "discard": "Discard changes",
+      "title": "We couldn't save your last edit"
     },
     "similar": {
-      "empty": "",
-      "noEmbedding": "",
-      "offline": "",
-      "title": ""
+      "empty": "No similar notes yet.",
+      "noEmbedding": "Save the note to see suggestions.",
+      "offline": "Available when you're back online.",
+      "title": "Similar notes"
     },
     "slash": {
       "category": {
-        "blocks": "",
-        "lists": "",
-        "mentions": "",
-        "templates": "",
-        "text": ""
+        "blocks": "Blocks",
+        "lists": "Lists",
+        "mentions": "Mentions",
+        "templates": "Templates",
+        "text": "Text"
       },
       "items": {
         "blockquote": {
-          "description": "",
-          "label": ""
+          "description": "Quote",
+          "label": "Blockquote"
         },
         "bulletList": {
-          "description": "",
-          "label": ""
+          "description": "Bulleted list",
+          "label": "Bullet List"
         },
         "codeBlock": {
-          "description": "",
-          "label": ""
+          "description": "Code block",
+          "label": "Code Block"
         },
         "divider": {
-          "description": "",
-          "label": ""
+          "description": "Horizontal line",
+          "label": "Divider"
         },
         "heading1": {
-          "description": "",
-          "label": ""
+          "description": "Main heading",
+          "label": "Heading 1"
         },
         "heading2": {
-          "description": "",
-          "label": ""
+          "description": "Subheading",
+          "label": "Heading 2"
         },
         "heading3": {
-          "description": "",
-          "label": ""
+          "description": "Smaller subheading",
+          "label": "Heading 3"
         },
         "mentionNote": {
-          "description": "",
-          "label": ""
+          "description": "Type @ to autocomplete",
+          "label": "Mention note"
         },
         "orderedList": {
-          "description": "",
-          "label": ""
+          "description": "Numbered list",
+          "label": "Numbered List"
         },
         "taskList": {
-          "description": "",
-          "label": ""
+          "description": "Checklist",
+          "label": "Task List"
         },
         "templateLiterature": {
-          "description": "",
-          "label": ""
+          "description": "Template for source notes",
+          "label": "Literature note"
         },
         "templatePermanent": {
-          "description": "",
-          "label": ""
+          "description": "Template for permanent ideas",
+          "label": "Permanent note"
         }
       }
     },
     "suggestion": {
-      "regionLabel": ""
+      "regionLabel": "AI suggestions"
     },
     "summaryL3": {
-      "placeholder": "",
-      "title": ""
+      "placeholder": "What would you explain to your future self about this? 1-2 sentences.",
+      "title": "Executive summary (L3)"
     },
     "templates": {
       "literature": {
-        "inMyWordsHeading": "",
-        "interpretationPlaceholder": "",
-        "keyIdeasHeading": "",
-        "sourceHeading": "",
-        "sourcePlaceholder": ""
+        "inMyWordsHeading": "In my own words",
+        "interpretationPlaceholder": "[Your interpretation and connections]",
+        "keyIdeasHeading": "Key ideas",
+        "sourceHeading": "Source",
+        "sourcePlaceholder": "[Author, title, year, URL]"
       },
       "permanent": {
-        "connectionsHeading": "",
-        "connectionsPlaceholder": "",
-        "developmentHeading": "",
-        "developmentPlaceholder": "",
-        "thesisHeading": "",
-        "thesisPlaceholder": ""
+        "connectionsHeading": "Connections",
+        "connectionsPlaceholder": "[Related notes — use @ to mention]",
+        "developmentHeading": "Development",
+        "developmentPlaceholder": "[Argument, evidence, examples]",
+        "thesisHeading": "Thesis",
+        "thesisPlaceholder": "[The core idea in one sentence]"
       }
     },
     "toolbar": {
-      "bold": "",
-      "code": "",
-      "highlight": "",
-      "italic": "",
-      "link": "",
-      "strike": ""
+      "bold": "Bold",
+      "code": "Inline code",
+      "highlight": "Highlight",
+      "italic": "Italic",
+      "link": "Link",
+      "strike": "Strikethrough"
     },
     "wikilink": {
-      "untitled": ""
+      "untitled": "Untitled note"
     }
   },
   "entities": {
     "area": {
-      "conocimiento": "",
-      "finanzas": "",
-      "habitos": "",
-      "pareja": "",
-      "proyectos": "",
-      "salud": ""
+      "conocimiento": "Knowledge",
+      "finanzas": "Finance",
+      "habitos": "Habits",
+      "pareja": "Relationship",
+      "proyectos": "Projects",
+      "salud": "Health & Exercise"
     },
     "discardable": {
       "group": {
-        "habit": "",
-        "inboxItem": "",
-        "note": "",
-        "objective": "",
-        "project": "",
-        "task": ""
+        "habit": "Habits",
+        "inboxItem": "Inbox",
+        "note": "Notes",
+        "objective": "Objectives",
+        "project": "Projects",
+        "task": "Tasks"
       },
-      "habitFallback": "",
-      "habitOfDate": "",
-      "inboxEmpty": "",
-      "noteUntitled": "",
-      "objectiveUntitled": "",
-      "projectUntitled": "",
-      "taskUntitled": ""
+      "habitFallback": "Habits ({{id}})",
+      "habitOfDate": "Habits for {{date}}",
+      "inboxEmpty": "Empty item",
+      "noteUntitled": "Untitled note",
+      "objectiveUntitled": "Untitled objective",
+      "projectUntitled": "Untitled project",
+      "taskUntitled": "Untitled task"
     },
     "habit": {
-      "codear": "",
-      "comerBien": "",
-      "ejercicio": "",
-      "estirar": "",
-      "gratitud": "",
-      "ingles": "",
-      "leer": "",
-      "madrugar": "",
-      "meditar": "",
-      "noComerDulce": "",
-      "pareja": "",
-      "planificarDia": "",
-      "tenderCama": "",
-      "tomarAgua": ""
+      "codear": "Code",
+      "comerBien": "Eat well",
+      "ejercicio": "Exercise",
+      "estirar": "Stretch",
+      "gratitud": "Gratitude",
+      "ingles": "English",
+      "leer": "Read",
+      "madrugar": "Wake up early",
+      "meditar": "Meditate",
+      "noComerDulce": "No sweets",
+      "pareja": "Relationship",
+      "planificarDia": "Plan the day",
+      "tenderCama": "Make the bed",
+      "tomarAgua": "Drink water"
     },
     "inboxResultType": {
-      "note": "",
-      "project": "",
-      "task": "",
-      "trash": ""
+      "note": "Note",
+      "project": "Project",
+      "task": "Task",
+      "trash": "Discard"
     },
     "noteType": {
-      "fleeting": "",
-      "literature": "",
-      "permanent": ""
+      "fleeting": "Fleeting",
+      "literature": "Literature",
+      "permanent": "Permanent"
     },
     "objectiveStatus": {
-      "completed": "",
-      "inProgress": "",
-      "notStarted": ""
+      "completed": "Completed",
+      "inProgress": "In progress",
+      "notStarted": "Not started"
     },
     "paraType": {
-      "archive": "",
-      "area": "",
-      "project": "",
-      "resource": ""
+      "archive": "Archive",
+      "area": "Area",
+      "project": "Project",
+      "resource": "Resource"
     },
     "pendingSync": {
       "habit": {
-        "plur": "",
-        "sing": ""
+        "plur": "habits",
+        "sing": "habit"
       },
       "inboxItem": {
-        "plur": "",
-        "sing": ""
+        "plur": "inbox items",
+        "sing": "inbox item"
       },
       "note": {
-        "plur": "",
-        "sing": ""
+        "plur": "notes",
+        "sing": "note"
       },
       "noteEdit": {
-        "plur": "",
-        "sing": ""
+        "plur": "note edits",
+        "sing": "note edit"
       },
       "noteNew": {
-        "plur": "",
-        "sing": ""
+        "plur": "new notes",
+        "sing": "new note"
       },
       "objective": {
-        "plur": "",
-        "sing": ""
+        "plur": "objectives",
+        "sing": "objective"
       },
       "objectiveNew": {
-        "plur": "",
-        "sing": ""
+        "plur": "new objectives",
+        "sing": "new objective"
       },
       "project": {
-        "plur": "",
-        "sing": ""
+        "plur": "projects",
+        "sing": "project"
       },
       "projectNew": {
-        "plur": "",
-        "sing": ""
+        "plur": "new projects",
+        "sing": "new project"
       },
       "task": {
-        "plur": "",
-        "sing": ""
+        "plur": "tasks",
+        "sing": "task"
       },
       "taskNew": {
-        "plur": "",
-        "sing": ""
+        "plur": "new tasks",
+        "sing": "new task"
       }
     },
     "priority": {
-      "high": "",
-      "low": "",
-      "medium": "",
-      "urgent": ""
+      "high": "High",
+      "low": "Low",
+      "medium": "Medium",
+      "urgent": "Urgent"
     },
     "priorityLong": {
-      "high": "",
-      "low": "",
-      "medium": "",
-      "urgent": ""
+      "high": "High priority",
+      "low": "Low priority",
+      "medium": "Medium priority",
+      "urgent": "Urgent priority"
     },
     "projectStatus": {
       "group": {
-        "completed": "",
-        "inbox": "",
-        "inProgress": "",
-        "notStarted": "",
-        "onHold": ""
+        "completed": "Completed",
+        "inbox": "Unclassified",
+        "inProgress": "In progress",
+        "notStarted": "Not started",
+        "onHold": "On hold"
       },
       "option": {
-        "completed": "",
-        "inbox": "",
-        "inProgress": "",
-        "notStarted": "",
-        "onHold": ""
+        "completed": "Completed",
+        "inbox": "Inbox",
+        "inProgress": "In progress",
+        "notStarted": "Not started",
+        "onHold": "On hold"
       }
     }
   },
   "errors": {
-    "accessCheckUnavailable": "",
-    "accountDisabled": "",
-    "accountExists": "",
-    "actionExpired": "",
-    "actionInvalid": "",
-    "actionNetworkError": "",
-    "adminUnauthorized": "",
-    "betaFull": "",
-    "betaFullNoMax": "",
-    "betaUnauthorized": "",
-    "default": "",
-    "emailUnverified": "",
-    "invalidCredentials": "",
-    "invalidEmail": "",
-    "invalidInput": "",
-    "invalidProvider": "",
-    "networkError": "",
-    "operationFailed": "",
-    "rateLimited": "",
-    "requestNotFound": "",
-    "resetGeneric": "",
-    "saveKeyInvalid": "",
-    "saveKeyRequired": "",
-    "saveKeyUnavailable": "",
-    "submitInvalidEmail": "",
-    "submitInvalidMotivo": "",
-    "tooManyRequests": "",
-    "unauthenticated": "",
-    "weakPassword": "",
-    "weakPasswordShort": ""
+    "accessCheckUnavailable": "We couldn't verify your access. Try again in a moment.",
+    "accountDisabled": "This account is disabled.",
+    "accountExists": "An account with this email already exists. Try signing in or using Google.",
+    "actionExpired": "This link has expired. Request a new one.",
+    "actionInvalid": "This link isn't valid. Request a new one.",
+    "actionNetworkError": "There was a connection problem. Try again.",
+    "adminUnauthorized": "Not authorized.",
+    "betaFull": "Beta is full ({{max}}). Raise the limit or revoke a member before approving.",
+    "betaFullNoMax": "Beta is full. Raise the limit or revoke a member before approving.",
+    "betaUnauthorized": "Your account doesn't have beta access yet. You can request it below.",
+    "default": "Something went wrong. Try again.",
+    "emailUnverified": "Verify your email to continue.",
+    "invalidCredentials": "Incorrect email or password.",
+    "invalidEmail": "Invalid email.",
+    "invalidInput": "Invalid input. Try again.",
+    "invalidProvider": "Unsupported provider.",
+    "networkError": "No connection. Check your internet.",
+    "operationFailed": "The operation couldn't be completed. Try again.",
+    "rateLimited": "Too many attempts. Try again later.",
+    "requestNotFound": "Request not found.",
+    "resetGeneric": "If the account exists, you'll get a link in your email.",
+    "saveKeyInvalid": "The API key is invalid.",
+    "saveKeyRequired": "The API key is required.",
+    "saveKeyUnavailable": "We couldn't validate the key right now. Try again in a moment.",
+    "submitInvalidEmail": "Check the email you entered.",
+    "submitInvalidMotivo": "The reason isn't valid.",
+    "tooManyRequests": "Too many attempts. Try again in a few minutes.",
+    "unauthenticated": "You need to sign in.",
+    "weakPassword": "At least 8 characters with at least one number.",
+    "weakPasswordShort": "At least 8 characters."
   },
   "graph": {
-    "createNotes": "",
+    "createNotes": "Create notes →",
     "empty": {
-      "filtered": "",
-      "noData": ""
+      "filtered": "No nodes match the filters.",
+      "noData": "The graph comes alive with more notes and connections."
     },
-    "exitFullscreen": "",
+    "exitFullscreen": "Exit fullscreen",
     "filters": {
-      "active": "",
-      "allOption": "",
-      "area": "",
-      "minLinks": "",
-      "reset": "",
-      "title": "",
-      "type": ""
+      "active": "active",
+      "allOption": "All",
+      "area": "Area",
+      "minLinks": "Min links",
+      "reset": "Reset",
+      "title": "Filters",
+      "type": "Type"
     },
-    "fullscreen": "",
+    "fullscreen": "Fullscreen",
     "node": {
-      "openNote": ""
+      "openNote": "Open note →"
     },
-    "resetFilters": "",
+    "resetFilters": "Reset filters",
     "stats": {
-      "connections_one": "",
-      "connections_other": "",
-      "notes_one": "",
-      "notes_other": ""
+      "connections_one": "{{count}} connection",
+      "connections_other": "{{count}} connections",
+      "notes_one": "{{count}} note",
+      "notes_other": "{{count}} notes"
     }
   },
   "habits": {
-    "gridHeader": "",
-    "nextWeek": "",
-    "prevWeek": "",
-    "title": "",
-    "today": ""
+    "gridHeader": "Habit",
+    "nextWeek": "Next week",
+    "prevWeek": "Previous week",
+    "title": "Habits",
+    "today": "Today"
   },
   "inbox": {
-    "aiDisabled": "",
+    "aiDisabled": "AI classification is off. Set up your Anthropic API key so the inbox can suggest title, type, and area automatically.",
     "batch": {
-      "acceptAll_one": "",
-      "acceptAll_other": "",
-      "accepted_one": "",
-      "accepted_other": "",
-      "failed_one": "",
-      "failed_other": "",
-      "processing": ""
+      "acceptAll_one": "Accept {{count}} item",
+      "acceptAll_other": "Accept {{count}} items",
+      "accepted_one": "{{count}} accepted",
+      "accepted_other": "{{count}} accepted",
+      "failed_one": "{{count}} failed",
+      "failed_other": "{{count}} failed",
+      "processing": "Processing..."
     },
-    "configure": "",
+    "configure": "Set up",
     "empty": {
-      "hint": "",
-      "title": ""
+      "hint": "Capture a new idea with <kbd>Alt+N</kbd> from any screen.",
+      "title": "Inbox zero 🎉"
     },
     "form": {
-      "area": "",
-      "createAndNext": "",
-      "priority": "",
-      "tags": "",
-      "tagsPlaceholder": "",
-      "title": "",
-      "type": ""
+      "area": "Area",
+      "createAndNext": "Create and next",
+      "priority": "Priority",
+      "tags": "Tags (comma-separated)",
+      "tagsPlaceholder": "tag1, tag2, tag3",
+      "title": "Title",
+      "type": "Type"
     },
-    "highConfidence": "",
+    "highConfidence": "High confidence",
     "item": {
-      "dismiss": "",
-      "processing": "",
-      "queued": "",
-      "toNote": ""
+      "dismiss": "Discard",
+      "processing": "Processing with AI...",
+      "queued": "Queued — will process when you reconnect",
+      "toNote": "Note"
     },
-    "pending_one": "",
-    "pending_other": "",
-    "process": "",
+    "pending_one": "{{count}} pending",
+    "pending_other": "{{count}} pending",
+    "process": "Process",
     "processed": {
-      "generic": "",
-      "hint": "",
-      "note": "",
-      "project": "",
-      "task": "",
-      "trash": ""
+      "generic": "Already processed",
+      "hint": "Use → Next to go back to a pending item.",
+      "note": "Already processed as a note",
+      "project": "Already processed as a project",
+      "task": "Already processed as a task",
+      "trash": "Discarded"
     },
     "processView": {
-      "back": "",
-      "counter": "",
+      "back": "Back",
+      "counter": "{{current}} of {{total}}",
       "done": {
-        "backToDashboard": "",
-        "captureHint": "",
-        "noItems": "",
-        "title": ""
+        "backToDashboard": "Back to Dashboard",
+        "captureHint": "Capture an idea with Alt+N from any screen.",
+        "noItems": "You have no pending items.",
+        "title": "Inbox zero! 🎉"
       },
-      "dotAria": "",
-      "exit": "",
-      "next": "",
-      "originalContent": "",
-      "title": ""
+      "dotAria": "Item {{current}} of {{total}}",
+      "exit": "Exit",
+      "next": "Next",
+      "originalContent": "Original content",
+      "title": "Processing Inbox"
     },
-    "requiresConnection": "",
-    "review": "",
+    "requiresConnection": "Requires an internet connection",
+    "review": "Review",
     "source": {
-      "email": "",
-      "quickCapture": "",
-      "shareIntent": "",
-      "voice": "",
-      "webClip": ""
+      "email": "Email",
+      "quickCapture": "Quick Capture",
+      "shareIntent": "Shared",
+      "voice": "Voice",
+      "webClip": "Web clip"
     },
     "suggestion": {
-      "accept": "",
-      "edit": "",
-      "editTitle": "",
-      "title": ""
+      "accept": "Accept",
+      "edit": "Edit",
+      "editTitle": "Edit suggestion",
+      "title": "AI suggestion"
     },
     "summary": {
-      "discarded_one": "",
-      "discarded_other": "",
-      "done": "",
-      "doneItems_one": "",
-      "doneItems_other": "",
-      "notes_one": "",
-      "notes_other": "",
-      "projects_one": "",
-      "projects_other": "",
-      "tasks_one": "",
-      "tasks_other": ""
+      "discarded_one": "{{count}} discarded",
+      "discarded_other": "{{count}} discarded",
+      "done": "You processed {{list}}.",
+      "doneItems_one": "You processed {{count}} item.",
+      "doneItems_other": "You processed {{count}} items.",
+      "notes_one": "{{count}} note",
+      "notes_other": "{{count}} notes",
+      "projects_one": "{{count}} project",
+      "projects_other": "{{count}} projects",
+      "tasks_one": "{{count}} task",
+      "tasks_other": "{{count}} tasks"
     },
-    "title": ""
+    "title": "Inbox"
   },
   "installPrompt": {
-    "install": "",
-    "message": ""
+    "install": "Install",
+    "message": "Install SecondMind for quick access from your device."
   },
   "nav": {
-    "ariaMain": "",
-    "closeMenu": "",
-    "expandMenu": "",
+    "ariaMain": "Main navigation",
+    "closeMenu": "Close menu",
+    "expandMenu": "Expand menu",
     "items": {
-      "dashboard": "",
-      "graph": "",
-      "habits": "",
-      "inbox": "",
-      "notes": "",
-      "objectives": "",
-      "projects": "",
-      "settings": "",
-      "tasks": ""
+      "dashboard": "Dashboard",
+      "graph": "Graph",
+      "habits": "Habits",
+      "inbox": "Inbox",
+      "notes": "Notes",
+      "objectives": "Objectives",
+      "projects": "Projects",
+      "settings": "Settings",
+      "tasks": "Tasks"
     },
-    "openMenu": "",
+    "openMenu": "Open menu",
     "sections": {
-      "execution": "",
-      "knowledge": ""
+      "execution": "Execution",
+      "knowledge": "Knowledge"
     },
-    "showMenu": "",
-    "signOut": ""
+    "showMenu": "Show menu",
+    "signOut": "Sign out"
   },
   "notes": {
     "card": {
-      "aiSummaryLabel": "",
-      "delete": "",
-      "deleteForever": "",
-      "favorite": "",
+      "aiSummaryLabel": "AI-generated summary",
+      "delete": "Delete note",
+      "deleteForever": "Delete forever",
+      "favorite": "Mark as favorite",
       "hardDelete": {
-        "description": "",
-        "title": ""
+        "description": "This action can't be undone. The note, its embeddings, and the links that mention it are deleted forever.",
+        "title": "Delete this note forever?"
       },
-      "purgeDays_one": "",
-      "purgeDays_other": "",
-      "purgePending": "",
-      "restore": "",
+      "purgeDays_one": "{{count}} day",
+      "purgeDays_other": "{{count}} days",
+      "purgePending": "Pending",
+      "restore": "Restore note",
       "softDelete": {
-        "confirm": "",
-        "description": "",
-        "title": ""
+        "confirm": "Move to Trash",
+        "description": "You can restore it from Notes → Trash or delete it permanently there.",
+        "title": "Move this note to Trash?"
       },
-      "unfavorite": ""
+      "unfavorite": "Remove from favorites"
     },
     "detail": {
-      "loadError": "",
-      "notFound": ""
+      "loadError": "Error loading the note: {{message}}",
+      "notFound": "This note no longer exists."
     },
     "empty": {
-      "all": "",
-      "backToAll": "",
-      "clearSearch": "",
-      "createFirst": "",
-      "favorites": "",
-      "review": "",
-      "reviewFilter": "",
-      "showAll": "",
-      "trash": "",
-      "trashFilter": ""
+      "all": "You don't have any notes yet.",
+      "backToAll": "Back to all notes",
+      "clearSearch": "Clear search",
+      "createFirst": "Create your first note",
+      "favorites": "You don't have any favorite notes yet.",
+      "review": "Nothing to review today.",
+      "reviewFilter": "No notes found in review.",
+      "showAll": "Show all notes",
+      "trash": "Your Trash is empty.",
+      "trashFilter": "No notes found in Trash."
     },
-    "newNote": "",
-    "newShort": "",
+    "newNote": "New note",
+    "newShort": "New",
     "purgeDialog": {
-      "description_one": "",
-      "description_other": "",
-      "title": ""
+      "description_one": "{{count}} note, its embeddings, and the links that mention it will be permanently deleted. This action can't be undone.",
+      "description_other": "{{count}} notes, their embeddings, and the links that mention them will be permanently deleted. This action can't be undone.",
+      "title": "Empty Trash?"
     },
     "search": {
-      "all": "",
-      "review": "",
-      "trash": ""
+      "all": "Search notes...",
+      "review": "Search notes to review...",
+      "trash": "Search Trash..."
     },
     "semantic": {
-      "noExactMatch": "",
-      "noResults": "",
-      "titleNoKeyword": "",
-      "titleWithKeyword": ""
+      "noExactMatch": "No exact matches, but these notes are thematically similar.",
+      "noResults": "No results.",
+      "titleNoKeyword": "Thematically similar notes",
+      "titleWithKeyword": "Semantically similar"
     },
     "split": {
-      "closePaneAria": "",
-      "closePaneTitle": "",
-      "closeTitle": "",
-      "noOtherNotes": "",
-      "openTitle": "",
-      "searchPlaceholder": ""
+      "closePaneAria": "Close this pane",
+      "closePaneTitle": "Close pane",
+      "closeTitle": "Close right pane (⌘\\)",
+      "noOtherNotes": "No other notes available",
+      "openTitle": "Open note side by side (⌘\\)",
+      "searchPlaceholder": "Search for a note to open side by side..."
     },
     "suggestions": {
-      "maturity": "",
-      "promote": "",
-      "promoteDescription": ""
+      "maturity": "This note has several connections and an executive summary — it looks like a mature idea.",
+      "promote": "Promote to {{type}} note",
+      "promoteDescription": "AI detected this note fits better as a {{type}} note."
     },
     "tabs": {
-      "all": "",
-      "favorites": "",
-      "review": "",
-      "trash": ""
+      "all": "All",
+      "favorites": "Favorites",
+      "review": "To review",
+      "trash": "Trash"
     },
     "trash": {
-      "captionDays_one": "",
-      "captionDays_other": "",
-      "captionNever": "",
-      "change": "",
-      "empty": ""
+      "captionDays_one": "Notes are permanently deleted after {{count}} day.",
+      "captionDays_other": "Notes are permanently deleted after {{count}} days.",
+      "captionNever": "Notes in Trash aren't deleted automatically.",
+      "change": "Change",
+      "empty": "Empty Trash"
     },
-    "viewAsGraph": ""
+    "viewAsGraph": "View as graph"
   },
   "objectives": {
-    "area": "",
+    "area": "Area",
     "card": {
-      "expandAria": "",
-      "hideDetailsAria": "",
-      "linkProject": "",
-      "linkProjectOption": "",
-      "noAvailableProjects": "",
-      "noLinkedProjects": "",
-      "progress_one": "",
-      "progress_other": "",
-      "unlinkAria": ""
+      "expandAria": "Expand objective",
+      "hideDetailsAria": "Hide details",
+      "linkProject": "Link project",
+      "linkProjectOption": "+ Link project...",
+      "noAvailableProjects": "(no projects available)",
+      "noLinkedProjects": "No linked projects yet.",
+      "progress_one": "{{percent}}% complete · {{count}} project",
+      "progress_other": "{{percent}}% complete · {{count}} projects",
+      "unlinkAria": "Unlink project"
     },
-    "createFirst": "",
+    "createFirst": "Create your first objective",
     "deadline": {
-      "none": "",
-      "overdue_one": "",
-      "overdue_other": "",
-      "today": "",
-      "tomorrow": "",
-      "upcoming_one": "",
-      "upcoming_other": ""
+      "none": "No deadline",
+      "overdue_one": "{{date}} · {{count}} day overdue",
+      "overdue_other": "{{date}} · {{count}} days overdue",
+      "today": "{{date}} · today",
+      "tomorrow": "{{date}} · tomorrow",
+      "upcoming_one": "{{date}} · in {{count}} day",
+      "upcoming_other": "{{date}} · in {{count}} days"
     },
-    "deadlineOptional": "",
-    "empty": "",
-    "emptyHint": "",
-    "name": "",
-    "namePlaceholder": "",
-    "new": "",
-    "noArea": "",
-    "title": ""
+    "deadlineOptional": "Deadline (optional)",
+    "empty": "No objectives yet",
+    "emptyHint": "Create your first objective to start tracking progress.",
+    "name": "Name",
+    "namePlaceholder": "Launch MVP...",
+    "new": "New objective",
+    "noArea": "No area",
+    "title": "Objectives"
   },
   "onboarding": {
     "checklist": {
@@ -867,41 +867,41 @@
     }
   },
   "projects": {
-    "area": "",
-    "createFirst": "",
+    "area": "Area",
+    "createFirst": "Create your first project",
     "detail": {
-      "linkedNotesHeader": "",
-      "linkNote": "",
-      "linkNoteDisabledTitle": "",
-      "linkNoteEnabledTitle": "",
-      "noTasks": "",
-      "noTasksHint": "",
-      "progress": "",
-      "progressDetail": "",
-      "tasksHeader": ""
+      "linkedNotesHeader": "Linked notes ({{total}})",
+      "linkNote": "Link note",
+      "linkNoteDisabledTitle": "Create a note first",
+      "linkNoteEnabledTitle": "Link an existing note",
+      "noTasks": "No tasks yet",
+      "noTasksHint": "Create a task above to get started.",
+      "progress": "Progress",
+      "progressDetail": "{{completed}} of {{total}} tasks completed ({{percent}}%)",
+      "tasksHeader": "Tasks ({{total}})"
     },
-    "empty": "",
-    "emptyHint": "",
+    "empty": "No projects yet",
+    "emptyHint": "Create your first project to start grouping tasks and notes.",
     "linkModal": {
-      "noNotes": "",
-      "noResults": "",
-      "searchPlaceholder": ""
+      "noNotes": "No notes available to link",
+      "noResults": "No results",
+      "searchPlaceholder": "Search notes..."
     },
-    "name": "",
-    "namePlaceholder": "",
-    "new": "",
-    "noName": "",
-    "noPendingTasks": "",
+    "name": "Name",
+    "namePlaceholder": "Personal website...",
+    "new": "New project",
+    "noName": "(untitled)",
+    "noPendingTasks": "No pending tasks",
     "noteList": {
-      "empty": "",
-      "emptyHint": "",
-      "unlinkAria": ""
+      "empty": "No linked notes yet",
+      "emptyHint": "Link existing notes from the button above.",
+      "unlinkAria": "Unlink note"
     },
-    "pendingTasks_one": "",
-    "pendingTasks_other": "",
-    "priority": "",
-    "status": "",
-    "title": ""
+    "pendingTasks_one": "{{count}} pending task",
+    "pendingTasks_other": "{{count}} pending tasks",
+    "priority": "Priority",
+    "status": "Status",
+    "title": "Projects"
   },
   "settings": {
     "apiKeys": {
@@ -984,69 +984,69 @@
     }
   },
   "sync": {
-    "changesPending": "",
-    "changesUnsaved": "",
-    "discard": "",
+    "changesPending": "Unsynced changes",
+    "changesUnsaved": "Unsaved changes",
+    "discard": "Discard",
     "discardDialog": {
-      "confirm": "",
-      "description": "",
-      "title": ""
+      "confirm": "Discard all",
+      "description": "These changes will be lost and can't be recovered.",
+      "title": "Discard pending changes?"
     },
-    "empty": "",
-    "errorBadge": "",
-    "openDetail": "",
-    "pending_one": "",
-    "pending_other": "",
-    "popoverTitle": "",
-    "unsaved": "",
-    "unsaved_one": "",
-    "unsaved_other": ""
+    "empty": "No pending changes.",
+    "errorBadge": "error",
+    "openDetail": "{{label}}: open details",
+    "pending_one": "{{count}} pending",
+    "pending_other": "{{count}} pending",
+    "popoverTitle": "Unsynced changes",
+    "unsaved": "{{count}} unsaved",
+    "unsaved_one": "{{count}} unsaved",
+    "unsaved_other": "{{count}} unsaved"
   },
   "tasks": {
     "card": {
-      "completeAria": "",
-      "date": "",
-      "description": "",
-      "descriptionPlaceholder": "",
-      "editAria": "",
-      "hideDetailsAria": "",
-      "markPendingAria": "",
-      "noProject": "",
-      "priority": "",
-      "project": ""
+      "completeAria": "Complete task",
+      "date": "Date",
+      "description": "Description",
+      "descriptionPlaceholder": "Add notes or details...",
+      "editAria": "Edit task",
+      "hideDetailsAria": "Hide details",
+      "markPendingAria": "Mark as pending",
+      "noProject": "(no project)",
+      "priority": "Priority",
+      "project": "Project"
     },
     "empty": {
-      "completedHint": "",
-      "completedTitle": "",
-      "soonHint": "",
-      "soonTitle": "",
-      "todayHint": "",
-      "todayTitle": ""
+      "completedHint": "Let's go! Your last 20 completed tasks will appear here.",
+      "completedTitle": "No completed tasks yet",
+      "soonHint": "Tasks due in the next 7 days will appear here.",
+      "soonTitle": "No upcoming tasks",
+      "todayHint": "Create a task above or check the “Soon” tab.",
+      "todayTitle": "Nothing for today 🎉"
     },
     "groups": {
-      "overdue": "",
-      "today": ""
+      "overdue": "Overdue",
+      "today": "Today"
     },
-    "newPlaceholder": "",
+    "newPlaceholder": "New task... (Enter to create)",
     "tabs": {
-      "completed": "",
-      "soon": "",
-      "today": ""
+      "completed": "Completed",
+      "soon": "Soon",
+      "today": "Today"
     },
-    "title": ""
+    "title": "Tasks"
   },
   "time": {
-    "justNow": ""
+    "justNow": "just now"
   },
   "updateBanner": {
-    "flushing": "",
-    "forceUpdate": "",
-    "newVersion": "",
-    "newVersionPending_one": "",
-    "newVersionPending_other": "",
-    "unsynced_one": "",
-    "unsynced_other": "",
-    "updateNow": "",
-    "updating": ""
+    "flushing": "Syncing before updating…",
+    "forceUpdate": "Update anyway",
+    "newVersion": "A new version is available.",
+    "newVersionPending_one": "A new version is available ({{count}} change pending).",
+    "newVersionPending_other": "A new version is available ({{count}} changes pending).",
+    "unsynced_one": "{{count}} unsynced change.",
+    "unsynced_other": "{{count}} unsynced changes.",
+    "updateNow": "Update now",
+    "updating": "Updating…"
   }
 }
