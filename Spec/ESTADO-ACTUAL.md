@@ -12,10 +12,11 @@
 
 Fuente de verdad única del versionado (los demás docs referencian acá, no duplican):
 
-- **0.4.9** — release de SPEC-57 (D13, durabilidad de writes offline subsiguientes). **Próximo release** (3 frentes: hosting + Tauri + Android).
-- **0.5.0 – 0.5.x** — feature work + pendientes acumulados. **v0.5.0 ya NO está reservado para la beta.**
-- **0.6.0** — **apertura de beta** (~100 users, gateada por allowlist). Pre-requisitos de la fase: `allowBackup=false` en Android (pendiente) + allowlist enforced (ya LIVE). **Objetivo: finales junio / inicios julio 2026.**
-- **Arco i18n (SPEC-58), serie 0.5.x:** F1 (infra) + F2 (extracción UI) + F3 (AI bilingüe + códigos de error CF) **cerradas y live en prod**. Resta **F4** (traducción `en` completa + QA cross-platform 3 frentes × 2 idiomas) — única fase pendiente del arco; la beta (0.6.0) abre después. F4.3 ejecutará la actualización formal de esta sección (beta desplazada · i18n en 0.5.x).
+- **0.4.9** ✅ (2026-06-09) — SPEC-57 (D13, durabilidad de writes offline subsiguientes).
+- **0.5.0** ✅ (2026-06-11) — sync-indicator, iconografía lucide, cleanup `__APP_VERSION__`.
+- **0.5.1** — **release del arco i18n (SPEC-58)**: app bilingüe es/en completa (UI + AI + errores CF + traducción `en` + QA web). _(este release — F4.3)_
+- **0.6.0** — **apertura de beta** (~100 users, gateada por allowlist). Pre-requisitos: `allowBackup=false` en Android (pendiente) + allowlist enforced (ya LIVE). **Desplazada:** i18n entró en la serie 0.5.x antes de la beta.
+- **Arco i18n (SPEC-58) — COMPLETO y live en 0.5.1:** F1 (infra) + F2 (UI es) + F3 (AI bilingüe + códigos de error CF) + F4 (traducción `en` completa + QA web es/en + offline-en). Arco cerrado 2026-06-15 · [registro](features/SPEC-feature-58-i18n.md).
 
 > Plan vigente desde junio 2026. Los SPECs archivados anteriores citan el plan previo, donde la beta salía en v0.5.0 — son snapshots históricos, no el estado actual.
 
@@ -261,6 +262,8 @@ Cada feature comprimida a 1 línea con pointer al SPEC archivado. Para detalles 
 - [`<Trans>` solo para elementos DENTRO de la frase — iconos/elementos hermanos usan `t()` plano](gotchas/i18n.md#trans-solo-para-elementos-dentro-de-la-frase--iconoselementos-hermanos-usan-t-plano)
 - [Const i18n consumida por React Y por módulo no-React: `buildX(t)` con doble wrapper](gotchas/i18n.md#const-i18n-consumida-por-react-y-por-módulo-no-react-buildxt-con-doble-wrapper)
 - [El check tsc de keys solo aplica al form sin defaultValue (t(key,default) afloja la key a string; protección = extractor + verificación de catálogo)](gotchas/i18n.md#el-check-tsc-de-keys-solo-aplica-al-form-sin-defaultvalue)
+- [Cleanup final con `removeUnusedKeys: true` — contar antes/después + vigilar 2 clases que el AST puede no ver (form defaultValue + instrumentScorer→null); hallazgo del huérfano sync.unsaved (F4)](gotchas/i18n.md#cleanup-final-con-removeunusedkeys-true--contar-antesdespués-y-vigilar-2-clases-que-el-ast-puede-no-ver)
+- [Traducir a en: `_many` jamás (CLDR en = one/other), enum interpolado puede necesitar el sustantivo ("{{type}} note"), tiempo relativo reordena es→en (F4)](gotchas/i18n.md#traducir-a-en-_many-jamás-enums-interpolados-pueden-necesitar-el-sustantivo-tiempo-relativo-reordena)
 
 ### Responsive & Mobile UX — [`gotchas/responsive-mobile-ux.md`](gotchas/responsive-mobile-ux.md)
 
