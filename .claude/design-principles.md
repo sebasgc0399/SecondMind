@@ -6,10 +6,8 @@
 ## Fuente de verdad
 
 - **Tokens vigentes = [`src/index.css`](../src/index.css)** (`@theme inline` + `:root`/`.dark`). Es lo que corre en producción y la **única fuente de verdad factual** de colores, radios, fuente y tipografía.
-- **Criterio de diseño = los bloques `TODO-Sebastián` de este archivo.** Las decisiones de jerarquía, densidad, motion y estética de referencia las define Sebastián; hasta entonces el agente **señala la pregunta abierta**, no inventa un estándar.
-- [`design-system/secondmind/MASTER.md`](../design-system/secondmind/MASTER.md) es **referencia histórica suelta, no canon** (fue una referencia rápida generada en 2026-04-10 y ya divergió del código). Se cita abajo solo como punto de partida de ideas; **no es vara de medición**. Si existe `design-system/secondmind/pages/[page].md`, esa regla sí manda sobre esa pantalla.
-
-> El código y MASTER divergen (fuente Geist vs Inter, hue 285 vs 270, base light vs dark, tokens `--space-*`/`--ease-*`/`--accent-success` que MASTER lista pero el CSS no implementa). **Por eso MASTER no se usa como criterio** — ante cualquier duda, gana `src/index.css`. El agente nunca debe reportar el código como "incorrecto" por no coincidir con MASTER.
+- **Criterio de diseño = las decisiones de las secciones 2–6 de este archivo** (definidas, no abiertas). El agente mide los hallazgos contra ellas. Lo que sigue siendo factual del código está marcado **Factual** en cada sección; lo demás es **Criterio**.
+- Si existe `design-system/secondmind/pages/[page].md`, esa regla **manda** sobre esa pantalla (precedencia: page > este doc).
 
 ---
 
@@ -75,10 +73,13 @@ Todos los colores son `oklch()`, hue **285** (violeta) salvo destructive (rojo) 
 
 - Ancho de lectura del editor: **`max-width: 720px`** centrado.
 
-> **TODO-Sebastián — criterio de tipografía y jerarquía global:**
->
-> - Confirmar la escala canónica **fuera** del editor (dashboard, headers de página, cards): tamaños/weights de H1/H2/H3 y body.
-> - ¿`letter-spacing` negativo en headings? ¿`tabular-nums` en stats/tablas? (Hoy no están en `index.css`.)
+**Criterio — jerarquía global (chrome, fuera del editor; el editor conserva su escala factual de arriba):**
+
+- **Títulos de página:** 1.25–1.5rem / weight 600. **Headers de sección:** ~1rem / 600.
+- **Body y texto de card:** 0.875rem (14px) / 400. **Meta y captions:** 0.75rem (12px) en `muted-foreground`.
+- **Line-height del chrome:** 1.4–1.5 (más denso que el 1.7 del editor).
+- `letter-spacing` leve negativo (**−0.01 a −0.02em**) en headings grandes.
+- `tabular-nums` **SÍ** en stats, counters y tablas (números de cards, `linkCount`, etc.).
 
 ---
 
@@ -86,57 +87,60 @@ Todos los colores son `oklch()`, hue **285** (violeta) salvo destructive (rojo) 
 
 **Factual:** el código **no** define tokens `--space-*`; usa la escala default de Tailwind v4 (múltiplos de `0.25rem` / 4px) vía utilities (`p-4`, `gap-2`…).
 
-> **TODO-Sebastián — criterio de spacing y densidad:**
->
-> - **Densidad objetivo:** ¿compacta (power-tool, alta densidad) o más aireada? El agente necesita un blanco para distinguir "spacing inconsistente" de "denso a propósito".
-> - Ritmo vertical canónico (gap entre cards, entre secciones, padding de página por breakpoint) y tap target mínimo en mobile.
+**Criterio — densidad y ritmo:**
+
+- **Densidad objetivo: POWER-TOOL DENSO con _restraint_.** Vara: **Linear** (primaria) + **Raycast** (secundaria). Densidad alta con ritmo **CONSISTENTE** — no apretado-de-Excel. Este es el blanco para que el agente distinga **"spacing inconsistente"** (hallazgo) de **"denso a propósito"** (correcto).
+- Base 4px (Tailwind default, ya vigente). **Ritmo canónico:** gap entre cards `gap-3`/`gap-4`; entre secciones `gap-6`/`gap-8`; padding de card `p-4` desktop / `p-3` mobile; padding de página `1.5rem` desktop / `1rem` mobile.
+- **Tap target mínimo en mobile: 44px.**
 
 ---
 
-## 4. Color y uso (parcial + TODO)
+## 4. Color y uso
 
 **Factual (reglas derivables del código):**
 
 - Acento **monocromático violeta** (hue 285): `--primary` para CTAs, links, wikilinks, estados activos, fills del graph.
 - Wikilinks: fondo `color-mix(in oklch, var(--primary) 12%, transparent)`, hover 22%, prefijo `@` a `opacity 0.6`.
 - Links del editor: subrayado `text-decoration-color` `--primary` 40% → 80% en hover.
-- Destructive (rojo) = errores/delete. **No** existen tokens semánticos success/warning.
+- Destructive (rojo) = errores/delete.
 
-> **TODO-Sebastián — criterio de color y uso:**
->
-> - ¿Se introducen tokens semánticos `success`/`warning` (hoy ausentes) o se derivan ad-hoc de chart colors?
-> - ¿"Un solo CTA primary por vista" es regla dura? Umbral de contraste a reportar como blocker (AA 4.5:1 vs AAA 7:1).
+**Criterio — uso:**
+
+- **`success`/`warning`: AUSENCIA INTENCIONAL (YAGNI).** El agente **NO** debe reportar su falta como gap. Si se necesita un "éxito" puntual, derivar ad-hoc del chart verde (hue 155).
+- **"Un CTA primary por vista": guía blanda** (ayuda a la jerarquía), **NO blocker**.
+- **Contraste:** AA **4.5:1 = [Blocker]**; AAA **7:1 = [Nit]**/aspiracional.
 
 ---
 
-## 5. Motion (TODO)
+## 5. Motion
 
 **Factual:** transiciones puntuales `0.15s ease` (wikilinks, links del editor). **No** existen tokens `--ease-*`/`--duration-*` ni un `@media (prefers-reduced-motion)` global en `index.css`.
 
-> **TODO-Sebastián — criterio de motion:**
->
-> - Definir easing/duración canónicos (entrada de modales, slides de sidebar/drawer). El repo ya tiene gotchas de animación de chrome (`useMountedTransition`, `useLayoutEffect` pre-paint) que el agente debe respetar.
-> - **`prefers-reduced-motion`:** confirmar dónde se respeta; si no hay reset global, es un gap de accesibilidad a marcar.
-> - _(Referencia suelta, no canon — de MASTER.md: easing `cubic-bezier(0.16,1,0.3,1)`, durations 150/250/400/600ms. Confirmar si se adopta.)_
+**Criterio — motion:**
+
+- **Easing canónico:** `cubic-bezier(0.16,1,0.3,1)`. **Durations:** 150ms (micro: hover/toggle), 250ms (modales/drawers), 400ms (layout). **NO usar 600ms.** Nada de bounce ni motion decorativo.
+- **`prefers-reduced-motion`:** regla declarada. **HOY no hay reset global → es un GAP REAL de accesibilidad; el agente DEBE marcarlo** hasta que se implemente. (Distinto de `success`/`warning`, que es "no marcar".)
+- Respetar los gotchas de animación de chrome existentes (`useMountedTransition`, `useLayoutEffect` pre-paint).
 
 ---
 
 ## 6. Estética de referencia y anti-patrones
 
-> **TODO-Sebastián — definir la vara de medición:**
->
-> - **Estética concreta:** elegir 1–2 pantallas "gold standard" del propio SecondMind (o screenshots de referencia) que el agente use como blanco, en vez de solo principios abstractos.
-> - Confirmar referencias vigentes y anti-patrones aplicables.
+**Criterio — vara de medición:**
 
-**Punto de partida sugerido (de MASTER.md — referencia suelta, confirmá; el agente lo usa como hipótesis, no como canon):**
+- **Vara externa: Linear (primaria) + Raycast (secundaria).** Power-tool para devs/creativos; **NO** consumer/gaming/corporate. Destilar, no copiar. _(Descartadas como vara de medición: Obsidian, Notion, Craft.)_
+- **Pantalla gold-standard interna:** _TODO menor — a definir tras el primer `/design-review`._
+- **Punto fino del purple `#878bf9`:** es acento de **MARCA**, usado con intención y parsimonia (CTAs, links, estados activos, fills del graph). **NO es gradiente decorativo.** El agente **NO** debe confundirlo con el anti-patrón "gradiente morado AI-default" ni marcarlo como _slop_ por ser violeta.
 
-- _Referencias:_ Linear · Obsidian · Raycast · Craft Docs · Notion dark. Power-tool para developers/creativos — no consumer/gaming/corporate. Destilar, no copiar.
-- _Anti-patrones candidatos:_ emojis como iconos funcionales (usar Lucide, stroke 1.5) · `transform: scale` en hover de cards · sombras fuertes en dark · gradientes decorativos brillantes · `#fff`/`#000` puros en dark · animaciones decorativas / bounce en productivity · **spinners** (usar skeletons — coincide con gotcha universal del repo) · tooltips inmediatos · FAB · bottom-tabs en desktop · modales para acciones rápidas (preferir inline editing) · scroll infinito sin señalizar fin · dropdowns con scrollbar (max ~8 items).
+**Anti-patrones (canon — el agente los reporta como hallazgos):**
+
+- Emojis como iconos funcionales (usar **Lucide**, stroke 1.5) · `transform: scale` en hover de cards · sombras fuertes en dark · gradientes decorativos brillantes · `#fff`/`#000` puros en dark · animaciones decorativas / bounce · **spinners** (usar skeletons — coincide con gotcha universal del repo) · tooltips inmediatos · FAB · bottom-tabs en desktop · modales para acciones rápidas (preferir inline editing) · scroll infinito sin señalizar fin · dropdowns con scrollbar (>~8 ítems).
 
 ---
 
 ## Cómo usa esto el agente `design-review`
 
 1. Compara hallazgos contra los **tokens factuales** (sección 1) — color/spacing/radius fuera del sistema = hallazgo.
-2. Para criterio abierto (bloques `TODO-Sebastián`), **señala la pregunta** en vez de inventar un estándar.
-3. Si existe regla por página en `design-system/secondmind/pages/`, esa manda. MASTER.md es solo referencia suelta.
+2. Mide contra el **criterio definido** (secciones 2–6): jerarquía del chrome, densidad power-tool densa-con-restraint, color/uso, motion, anti-patrones.
+3. Respeta las decisiones explícitas: **no** marcar la ausencia de `success`/`warning`; **sí** marcar el gap de `prefers-reduced-motion`; **no** confundir el violeta de marca con _slop_.
+4. Si existe regla por página en `design-system/secondmind/pages/`, esa manda.
