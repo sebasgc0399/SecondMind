@@ -109,6 +109,20 @@ Editar `package.json`, `package-lock.json`, `src-tauri/tauri.conf.json`, `src-ta
 
 Verificar con `git diff --stat` — deben aparecer exactamente 5 archivos, ~6 inserciones/6 deleciones.
 
+### Paso 2.5 — Entrada de changelog (condicional, user-facing)
+
+En el **mismo commit del bump** (no después), decidir según el contenido del release:
+
+- **¿Tiene cambios user-facing?** → **Sí:** agregar la entrada al catálogo de novedades (Feature 59):
+  1. Sumar `{ version: 'X.Y.Z', key: 'v0XY' }` a `CHANGELOG_ENTRIES` en `src/lib/changelog.ts`.
+  2. Agregar `changelog.v0XY.title` + `changelog.v0XY.items` (los highlights reales del release) en `src/locales/es/translation.json` **y** `src/locales/en/translation.json`.
+  3. Regenerar los tipos i18n.
+- **No** (patch interno, sin nada visible para el usuario) → **omitir**. Sin entrada para esa versión el modal queda **mudo by design**: `useWhatsNew` hace silent-advance (avanza `lastSeenVersion` sin mostrar nada).
+
+La mecánica exacta —normalización de la key, tipado del array i18n, el comando de regen de tipos, y el caveat crítico de **NUNCA** correr `i18next-cli extract` (purga keys)— vive en [Spec/gotchas/i18n.md](../../../Spec/gotchas/i18n.md) y en el registro [SPEC-feature-59](../../../Spec/features/SPEC-feature-59-conciencia-version-runtime.md). Seguir esas; no reinventarla acá.
+
+**Por qué acá y no después del tag (CRÍTICO):** la entrada se bundlea en **build-time** — el `define __APP_VERSION__` del bundle web y el binario/APK que CI arma desde el tag. Si se taggea primero y se agrega la entrada después, el build liberado NO la tiene → el modal queda mudo **en silencio** (no hay error; simplemente no aparece). Por eso va junto a los 5 archivos de versión, en el commit del bump, **antes** del hosting deploy (Paso 6) y del tag (Paso 7).
+
 ### Paso 3 — Commit atómico
 
 ```bash
@@ -119,6 +133,8 @@ git commit -m "chore(release): bump version X.Y.Z → A.B.C
 
 <trailer Co-Authored-By definido en CLAUDE.md § SDD step 4>"
 ```
+
+**Si agregaste entrada de changelog (Paso 2.5):** sumá también `src/lib/changelog.ts`, `src/locales/{es,en}/translation.json` y `src/types/resources.d.ts` al `git add` — todo en el **mismo** commit del bump, para que el build liberado la lleve. En ese caso el commit final ya no son 5 archivos sino **5 (bump) + los del changelog**: es esperado, no un error — el «exactamente 5» del Paso 2 verifica solo el bump aislado.
 
 ### Paso 4 — Merge --no-ff a main
 
