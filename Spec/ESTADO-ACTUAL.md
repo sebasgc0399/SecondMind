@@ -261,6 +261,8 @@ Cada feature comprimida a 1 línea con pointer al SPEC archivado. Para detalles 
 - [`<Trans>` solo para elementos DENTRO de la frase — iconos/elementos hermanos usan `t()` plano](gotchas/i18n.md#trans-solo-para-elementos-dentro-de-la-frase--iconoselementos-hermanos-usan-t-plano)
 - [Const i18n consumida por React Y por módulo no-React: `buildX(t)` con doble wrapper](gotchas/i18n.md#const-i18n-consumida-por-react-y-por-módulo-no-react-buildxt-con-doble-wrapper)
 - [El check tsc de keys solo aplica al form sin defaultValue (t(key,default) afloja la key a string; protección = extractor + verificación de catálogo)](gotchas/i18n.md#el-check-tsc-de-keys-solo-aplica-al-form-sin-defaultvalue)
+- [Cleanup final con `removeUnusedKeys: true` — contar antes/después + vigilar 2 clases que el AST puede no ver (form defaultValue + instrumentScorer→null); hallazgo del huérfano sync.unsaved (F4)](gotchas/i18n.md#cleanup-final-con-removeunusedkeys-true--contar-antesdespués-y-vigilar-2-clases-que-el-ast-puede-no-ver)
+- [Traducir a en: `_many` jamás (CLDR en = one/other), enum interpolado puede necesitar el sustantivo ("{{type}} note"), tiempo relativo reordena es→en (F4)](gotchas/i18n.md#traducir-a-en-_many-jamás-enums-interpolados-pueden-necesitar-el-sustantivo-tiempo-relativo-reordena)
 
 ### Responsive & Mobile UX — [`gotchas/responsive-mobile-ux.md`](gotchas/responsive-mobile-ux.md)
 
