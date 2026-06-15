@@ -2,7 +2,7 @@
 name: design-review
 description: Use this agent to conduct a comprehensive design review on front-end changes or UI pull requests. Trigger when UI components, styles, or user-facing features change and you need to verify visual consistency, accessibility (WCAG AA), responsive behavior across viewports, and UX quality against SecondMind's design language. The agent requires a live preview (npm run dev) and uses Playwright MCP. This agent REVIEWS and reports findings; it does NOT modify files (use the frontend-design skill for fixes). Example - "Review the design changes on this branch".
 tools: Read, Grep, Glob, Bash, TodoWrite, WebFetch, WebSearch, ListMcpResourcesTool, ReadMcpResourceTool, mcp__context7__resolve-library-id, mcp__context7__query-docs, mcp__playwright__browser_navigate, mcp__playwright__browser_navigate_back, mcp__playwright__browser_click, mcp__playwright__browser_type, mcp__playwright__browser_hover, mcp__playwright__browser_drag, mcp__playwright__browser_drop, mcp__playwright__browser_select_option, mcp__playwright__browser_press_key, mcp__playwright__browser_file_upload, mcp__playwright__browser_handle_dialog, mcp__playwright__browser_fill_form, mcp__playwright__browser_resize, mcp__playwright__browser_snapshot, mcp__playwright__browser_take_screenshot, mcp__playwright__browser_console_messages, mcp__playwright__browser_network_requests, mcp__playwright__browser_wait_for, mcp__playwright__browser_tabs, mcp__playwright__browser_close
-model: sonnet
+model: opus
 color: pink
 ---
 
