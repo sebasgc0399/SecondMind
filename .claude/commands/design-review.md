@@ -40,4 +40,4 @@ Review the complete diff above. This contains the code changes to assess.
 OBJECTIVE:
 Use the `design-review` subagent to comprehensively review the complete diff above against SecondMind's design language, and reply to the user with the design review report. Your final reply must contain the markdown report and nothing else.
 
-Follow the design criteria in `.claude/design-principles.md` (factual tokens from `src/index.css` + open `TODO-Sebastián` criteria). For criteria still open, raise the question rather than inventing a standard. `design-system/secondmind/MASTER.md` is a loose historical reference (not canon); `design-system/secondmind/pages/[page].md` overrides for that screen if it exists.
+Follow the design criteria in `.claude/design-principles.md` (factual tokens from `src/index.css` + the defined design criteria in sections 2–6). `design-system/secondmind/pages/[page].md` overrides for that screen if it exists.

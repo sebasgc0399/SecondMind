@@ -237,7 +237,7 @@ Documentación técnica y de diseño:
 - [`Docs/03-convenciones-y-patrones.md`](Docs/03-convenciones-y-patrones.md) — naming, componentes React, TinyBase, TypeScript, Tailwind, errores, Git
 - [`Docs/04-clean-architecture-frontend.md`](Docs/04-clean-architecture-frontend.md) — Clean Architecture en 4 capas, factory repos F10, excepciones documentadas
 - [`Docs/SETUP-WINDOWS.md`](Docs/SETUP-WINDOWS.md) — patches one-time de entorno Windows
-- [`design-system/secondmind/MASTER.md`](design-system/secondmind/MASTER.md) — tokens de diseño (paleta, tipografía, anti-patterns)
+- [`.claude/design-principles.md`](.claude/design-principles.md) — criterio de diseño (tokens factuales de `src/index.css` + jerarquía, densidad, color, motion, anti-patrones) que consume el agente `design-review`
 
 Las SPECs viven en [`Spec/`](Spec/):
 
