@@ -28,10 +28,11 @@ export default defineConfig({
     keySeparator: '.',
     primaryLanguage: 'es',
     sort: true,
-    // false durante F1–F2: protege contra un extract con scope acotado que
-    // purgaría keys ajenas al dominio en curso. Se flipea a true en F4 (cleanup
-    // final con `i18next-cli status`).
-    removeUnusedKeys: false,
+    // true desde F4 (cleanup final): la traducción en está completa y el extract
+    // se corre full-scope (sin I18N_INSTRUMENT_SCOPE), así que purgar keys no
+    // halladas en src/** es seguro. Durante F1–F3 estuvo en false para proteger
+    // contra un extract acotado por scope que habría purgado keys ajenas.
+    removeUnusedKeys: true,
     defaultValue: '',
     // D1/D5/D9: datos PERSISTIDOS jamás se instrumentan — sus strings se
     // localizan al momento de creación (manual), no por catálogo de render.

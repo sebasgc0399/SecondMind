@@ -1024,7 +1024,6 @@ export default interface Resources {
       pending_one: '{{count}} pendiente';
       pending_other: '{{count}} pendientes';
       popoverTitle: 'Cambios pendientes de sincronizar';
-      unsaved: '{{count}} sin guardar';
       unsaved_many: '{{count}} sin guardar';
       unsaved_one: '{{count}} sin guardar';
       unsaved_other: '{{count}} sin guardar';

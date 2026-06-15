@@ -998,7 +998,6 @@
     "pending_one": "{{count}} pending",
     "pending_other": "{{count}} pending",
     "popoverTitle": "Unsynced changes",
-    "unsaved": "{{count}} unsaved",
     "unsaved_one": "{{count}} unsaved",
     "unsaved_other": "{{count}} unsaved"
   },
