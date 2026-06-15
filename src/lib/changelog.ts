@@ -4,13 +4,14 @@
  * i18n init, independiente del locale activo). `version` = string crudo que
  * reporta `getRunningVersion()`; `key` = key i18n normalizada (D8: el
  * `keySeparator '.'` impide usar `'0.6.0'` como segmento de key → `'v060'`).
+ *
+ * `as const`: fija las keys como literales (p. ej. `'v060'`) para que el modal
+ * (F6) construya `t('changelog.${key}.title')` como key tipada, sin cast.
  */
-export interface ChangelogEntry {
-  version: string;
-  key: string;
-}
+export const CHANGELOG_ENTRIES = [{ version: '0.6.0', key: 'v060' }] as const;
 
-export const CHANGELOG_ENTRIES: ReadonlyArray<ChangelogEntry> = [{ version: '0.6.0', key: 'v060' }];
+export type ChangelogEntry = (typeof CHANGELOG_ENTRIES)[number];
+export type ChangelogKey = ChangelogEntry['key'];
 
 export function findChangelogEntry(version: string): ChangelogEntry | undefined {
   return CHANGELOG_ENTRIES.find((e) => e.version === version);
