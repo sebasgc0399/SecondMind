@@ -49,6 +49,7 @@ Bloqueada en el dominio `entities` (batch 1 de F4.1). Todo el resto del catálog
 | Repaso/Revisión (spaced repetition) · Pendiente/s                  | Review · Pending                                               |                                       |
 | Pareja (área/hábito de vida)                                       | Relationship                                                   |                                       |
 | Sin sincronizar / pendiente de sincronizar (estado sync)           | Unsynced · Unsynced changes                                    | mismo estado en toda la UI (batch 2)  |
+| Fuentes de inbox (`inbox.source.*`)                                | Shared · Web clip · Voice · Email · Quick Capture              | confirmado batch 3                    |
 
 **Labels default del dominio `entities` (fijados en batch 1 — confirmados por Sebastián):**
 
