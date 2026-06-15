@@ -121,4 +121,32 @@ describe('useWhatsNew', () => {
     expect(result.current.entryKey).toBeNull();
     expect(mockSetPreferences).not.toHaveBeenCalled();
   });
+
+  it('6. !isLoaded: preferences sin hidratar → no-op (evita flicker pre-snapshot, crítico SPEC)', async () => {
+    mockUsePreferences.mockReturnValue({
+      preferences: { ...DEFAULT_PREFERENCES, lastSeenVersion: null, onboardingWelcomeSeen: true },
+      isLoaded: false,
+    });
+    mockGetRunningVersion.mockResolvedValue('0.6.0');
+
+    const { result } = renderHook(() => useWhatsNew());
+    await flush();
+
+    expect(result.current.open).toBe(false);
+    expect(result.current.entryKey).toBeNull();
+    expect(mockSetPreferences).not.toHaveBeenCalled();
+  });
+
+  it('7. !user: sin sesión → no-op', async () => {
+    mockUseAuth.mockReturnValue({ user: null } as unknown as ReturnType<typeof useAuth>);
+    setPrefs({ lastSeenVersion: null, onboardingWelcomeSeen: true });
+    mockGetRunningVersion.mockResolvedValue('0.6.0');
+
+    const { result } = renderHook(() => useWhatsNew());
+    await flush();
+
+    expect(result.current.open).toBe(false);
+    expect(result.current.entryKey).toBeNull();
+    expect(mockSetPreferences).not.toHaveBeenCalled();
+  });
 });
