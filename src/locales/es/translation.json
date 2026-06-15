@@ -119,6 +119,16 @@
       "open": "Abrir SecondMind"
     }
   },
+  "changelog": {
+    "dismiss": "Entendido",
+    "v060": {
+      "items": [
+        "Conciencia de versión unificada en escritorio, web y Android.",
+        "Modal de novedades que aparece una sola vez tras cada actualización."
+      ],
+      "title": "Novedades de la 0.6.0"
+    }
+  },
   "commandPalette": {
     "actions": "Acciones",
     "closeSplit": "Cerrar panel derecho",
