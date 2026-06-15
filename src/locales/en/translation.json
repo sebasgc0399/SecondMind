@@ -106,18 +106,18 @@
     }
   },
   "capture": {
-    "fabLabel": "",
+    "fabLabel": "Quick Capture",
     "hint": {
-      "cancel": "",
-      "close": "",
-      "newLine": "",
-      "save": ""
+      "cancel": "cancel",
+      "close": "close",
+      "newLine": "new line",
+      "save": "save"
     },
-    "placeholder": "",
-    "title": "",
+    "placeholder": "Type an idea...",
+    "title": "Quick Capture",
     "unauth": {
-      "message": "",
-      "open": ""
+      "message": "Open SecondMind to sign in.",
+      "open": "Open SecondMind"
     }
   },
   "commandPalette": {
@@ -154,54 +154,54 @@
   },
   "dashboard": {
     "greeting": {
-      "afternoon": "",
-      "fallbackName": "",
-      "morning": "",
-      "night": ""
+      "afternoon": "Good afternoon, {{name}}",
+      "fallbackName": "there",
+      "morning": "Good morning, {{name}}",
+      "night": "Good evening, {{name}}"
     },
     "habitsToday": {
-      "progress": "",
-      "seeWeek": "",
-      "title": ""
+      "progress": "Progress",
+      "seeWeek": "See week →",
+      "title": "Today's habits"
     },
     "hubs": {
-      "connections": "",
-      "empty": "",
-      "title": ""
+      "connections": "Hub: {{total}} connections",
+      "empty": "Link notes by typing @ — hubs will appear here.",
+      "title": "Active hubs"
     },
     "inbox": {
-      "empty": "",
-      "process": "",
-      "requiresConnection": "",
-      "title": ""
+      "empty": "Inbox zero 🎉",
+      "process": "Process →",
+      "requiresConnection": "Requires an internet connection",
+      "title": "Inbox"
     },
     "projects": {
-      "empty": "",
-      "noPendingTasks": "",
-      "pendingTasks_one": "",
-      "pendingTasks_other": "",
-      "seeAll": "",
-      "seeProjects": "",
-      "title": ""
+      "empty": "No active projects",
+      "noPendingTasks": "No pending tasks",
+      "pendingTasks_one": "{{count}} pending task",
+      "pendingTasks_other": "{{count}} pending tasks",
+      "seeAll": "See all →",
+      "seeProjects": "See projects →",
+      "title": "Active projects"
     },
     "recentNotes": {
-      "createFirst": "",
-      "empty": "",
-      "seeAll": "",
-      "title": ""
+      "createFirst": "Create your first note →",
+      "empty": "You don't have any notes yet.",
+      "seeAll": "See all →",
+      "title": "Recent notes"
     },
     "review": {
-      "empty": "",
-      "seeAll": "",
-      "title_one": "",
-      "title_other": "",
-      "titleEmpty": ""
+      "empty": "Nothing to review today. Come back tomorrow or create more notes to activate review.",
+      "seeAll": "See all {{total}}",
+      "title_one": "You have {{count}} note to review today.",
+      "title_other": "You have {{count}} notes to review today.",
+      "titleEmpty": "To review"
     },
     "tasks": {
-      "completeAria": "",
-      "empty": "",
-      "seeAll": "",
-      "title": ""
+      "completeAria": "Complete {{name}}",
+      "empty": "Nothing for today 🎉",
+      "seeAll": "See all →",
+      "title": "Today's tasks"
     }
   },
   "editor": {
@@ -581,99 +581,99 @@
     }
   },
   "habits": {
-    "gridHeader": "",
-    "nextWeek": "",
-    "prevWeek": "",
-    "title": "",
-    "today": ""
+    "gridHeader": "Habit",
+    "nextWeek": "Next week",
+    "prevWeek": "Previous week",
+    "title": "Habits",
+    "today": "Today"
   },
   "inbox": {
-    "aiDisabled": "",
+    "aiDisabled": "AI classification is off. Set up your Anthropic API key so the inbox can suggest title, type, and area automatically.",
     "batch": {
-      "acceptAll_one": "",
-      "acceptAll_other": "",
-      "accepted_one": "",
-      "accepted_other": "",
-      "failed_one": "",
-      "failed_other": "",
-      "processing": ""
+      "acceptAll_one": "Accept {{count}} item",
+      "acceptAll_other": "Accept {{count}} items",
+      "accepted_one": "{{count}} accepted",
+      "accepted_other": "{{count}} accepted",
+      "failed_one": "{{count}} failed",
+      "failed_other": "{{count}} failed",
+      "processing": "Processing..."
     },
-    "configure": "",
+    "configure": "Set up",
     "empty": {
-      "hint": "",
-      "title": ""
+      "hint": "Capture a new idea with <kbd>Alt+N</kbd> from any screen.",
+      "title": "Inbox zero 🎉"
     },
     "form": {
-      "area": "",
-      "createAndNext": "",
-      "priority": "",
-      "tags": "",
-      "tagsPlaceholder": "",
-      "title": "",
-      "type": ""
+      "area": "Area",
+      "createAndNext": "Create and next",
+      "priority": "Priority",
+      "tags": "Tags (comma-separated)",
+      "tagsPlaceholder": "tag1, tag2, tag3",
+      "title": "Title",
+      "type": "Type"
     },
-    "highConfidence": "",
+    "highConfidence": "High confidence",
     "item": {
-      "dismiss": "",
-      "processing": "",
-      "queued": "",
-      "toNote": ""
+      "dismiss": "Discard",
+      "processing": "Processing with AI...",
+      "queued": "Queued — will process when you reconnect",
+      "toNote": "Note"
     },
-    "pending_one": "",
-    "pending_other": "",
-    "process": "",
+    "pending_one": "{{count}} pending",
+    "pending_other": "{{count}} pending",
+    "process": "Process",
     "processed": {
-      "generic": "",
-      "hint": "",
-      "note": "",
-      "project": "",
-      "task": "",
-      "trash": ""
+      "generic": "Already processed",
+      "hint": "Use → Next to go back to a pending item.",
+      "note": "Already processed as a note",
+      "project": "Already processed as a project",
+      "task": "Already processed as a task",
+      "trash": "Discarded"
     },
     "processView": {
-      "back": "",
-      "counter": "",
+      "back": "Back",
+      "counter": "{{current}} of {{total}}",
       "done": {
-        "backToDashboard": "",
-        "captureHint": "",
-        "noItems": "",
-        "title": ""
+        "backToDashboard": "Back to Dashboard",
+        "captureHint": "Capture an idea with Alt+N from any screen.",
+        "noItems": "You have no pending items.",
+        "title": "Inbox zero! 🎉"
       },
-      "dotAria": "",
-      "exit": "",
-      "next": "",
-      "originalContent": "",
-      "title": ""
+      "dotAria": "Item {{current}} of {{total}}",
+      "exit": "Exit",
+      "next": "Next",
+      "originalContent": "Original content",
+      "title": "Processing Inbox"
     },
-    "requiresConnection": "",
-    "review": "",
+    "requiresConnection": "Requires an internet connection",
+    "review": "Review",
     "source": {
-      "email": "",
-      "quickCapture": "",
-      "shareIntent": "",
-      "voice": "",
-      "webClip": ""
+      "email": "Email",
+      "quickCapture": "Quick Capture",
+      "shareIntent": "Shared",
+      "voice": "Voice",
+      "webClip": "Web clip"
     },
     "suggestion": {
-      "accept": "",
-      "edit": "",
-      "editTitle": "",
-      "title": ""
+      "accept": "Accept",
+      "edit": "Edit",
+      "editTitle": "Edit suggestion",
+      "title": "AI suggestion"
     },
     "summary": {
-      "discarded_one": "",
-      "discarded_other": "",
-      "done": "",
-      "doneItems_one": "",
-      "doneItems_other": "",
-      "notes_one": "",
-      "notes_other": "",
-      "projects_one": "",
-      "projects_other": "",
-      "tasks_one": "",
-      "tasks_other": ""
+      "discarded_one": "{{count}} discarded",
+      "discarded_other": "{{count}} discarded",
+      "done": "You processed {{list}}.",
+      "doneItems_one": "You processed {{count}} item.",
+      "doneItems_other": "You processed {{count}} items.",
+      "notes_one": "{{count}} note",
+      "notes_other": "{{count}} notes",
+      "projects_one": "{{count}} project",
+      "projects_other": "{{count}} projects",
+      "tasks_one": "{{count}} task",
+      "tasks_other": "{{count}} tasks"
     },
-    "title": ""
+    "title": "Inbox"
   },
   "installPrompt": {
     "install": "Install",
@@ -786,36 +786,36 @@
     "viewAsGraph": ""
   },
   "objectives": {
-    "area": "",
+    "area": "Area",
     "card": {
-      "expandAria": "",
-      "hideDetailsAria": "",
-      "linkProject": "",
-      "linkProjectOption": "",
-      "noAvailableProjects": "",
-      "noLinkedProjects": "",
-      "progress_one": "",
-      "progress_other": "",
-      "unlinkAria": ""
+      "expandAria": "Expand objective",
+      "hideDetailsAria": "Hide details",
+      "linkProject": "Link project",
+      "linkProjectOption": "+ Link project...",
+      "noAvailableProjects": "(no projects available)",
+      "noLinkedProjects": "No linked projects yet.",
+      "progress_one": "{{percent}}% complete · {{count}} project",
+      "progress_other": "{{percent}}% complete · {{count}} projects",
+      "unlinkAria": "Unlink project"
     },
-    "createFirst": "",
+    "createFirst": "Create your first objective",
     "deadline": {
-      "none": "",
-      "overdue_one": "",
-      "overdue_other": "",
-      "today": "",
-      "tomorrow": "",
-      "upcoming_one": "",
-      "upcoming_other": ""
+      "none": "No deadline",
+      "overdue_one": "{{date}} · {{count}} day overdue",
+      "overdue_other": "{{date}} · {{count}} days overdue",
+      "today": "{{date}} · today",
+      "tomorrow": "{{date}} · tomorrow",
+      "upcoming_one": "{{date}} · in {{count}} day",
+      "upcoming_other": "{{date}} · in {{count}} days"
     },
-    "deadlineOptional": "",
-    "empty": "",
-    "emptyHint": "",
-    "name": "",
-    "namePlaceholder": "",
-    "new": "",
-    "noArea": "",
-    "title": ""
+    "deadlineOptional": "Deadline (optional)",
+    "empty": "No objectives yet",
+    "emptyHint": "Create your first objective to start tracking progress.",
+    "name": "Name",
+    "namePlaceholder": "Launch MVP...",
+    "new": "New objective",
+    "noArea": "No area",
+    "title": "Objectives"
   },
   "onboarding": {
     "checklist": {
@@ -867,41 +867,41 @@
     }
   },
   "projects": {
-    "area": "",
-    "createFirst": "",
+    "area": "Area",
+    "createFirst": "Create your first project",
     "detail": {
-      "linkedNotesHeader": "",
-      "linkNote": "",
-      "linkNoteDisabledTitle": "",
-      "linkNoteEnabledTitle": "",
-      "noTasks": "",
-      "noTasksHint": "",
-      "progress": "",
-      "progressDetail": "",
-      "tasksHeader": ""
+      "linkedNotesHeader": "Linked notes ({{total}})",
+      "linkNote": "Link note",
+      "linkNoteDisabledTitle": "Create a note first",
+      "linkNoteEnabledTitle": "Link an existing note",
+      "noTasks": "No tasks yet",
+      "noTasksHint": "Create a task above to get started.",
+      "progress": "Progress",
+      "progressDetail": "{{completed}} of {{total}} tasks completed ({{percent}}%)",
+      "tasksHeader": "Tasks ({{total}})"
     },
-    "empty": "",
-    "emptyHint": "",
+    "empty": "No projects yet",
+    "emptyHint": "Create your first project to start grouping tasks and notes.",
     "linkModal": {
-      "noNotes": "",
-      "noResults": "",
-      "searchPlaceholder": ""
+      "noNotes": "No notes available to link",
+      "noResults": "No results",
+      "searchPlaceholder": "Search notes..."
     },
-    "name": "",
-    "namePlaceholder": "",
-    "new": "",
-    "noName": "",
-    "noPendingTasks": "",
+    "name": "Name",
+    "namePlaceholder": "Personal website...",
+    "new": "New project",
+    "noName": "(untitled)",
+    "noPendingTasks": "No pending tasks",
     "noteList": {
-      "empty": "",
-      "emptyHint": "",
-      "unlinkAria": ""
+      "empty": "No linked notes yet",
+      "emptyHint": "Link existing notes from the button above.",
+      "unlinkAria": "Unlink note"
     },
-    "pendingTasks_one": "",
-    "pendingTasks_other": "",
-    "priority": "",
-    "status": "",
-    "title": ""
+    "pendingTasks_one": "{{count}} pending task",
+    "pendingTasks_other": "{{count}} pending tasks",
+    "priority": "Priority",
+    "status": "Status",
+    "title": "Projects"
   },
   "settings": {
     "apiKeys": {
@@ -1004,36 +1004,36 @@
   },
   "tasks": {
     "card": {
-      "completeAria": "",
-      "date": "",
-      "description": "",
-      "descriptionPlaceholder": "",
-      "editAria": "",
-      "hideDetailsAria": "",
-      "markPendingAria": "",
-      "noProject": "",
-      "priority": "",
-      "project": ""
+      "completeAria": "Complete task",
+      "date": "Date",
+      "description": "Description",
+      "descriptionPlaceholder": "Add notes or details...",
+      "editAria": "Edit task",
+      "hideDetailsAria": "Hide details",
+      "markPendingAria": "Mark as pending",
+      "noProject": "(no project)",
+      "priority": "Priority",
+      "project": "Project"
     },
     "empty": {
-      "completedHint": "",
-      "completedTitle": "",
-      "soonHint": "",
-      "soonTitle": "",
-      "todayHint": "",
-      "todayTitle": ""
+      "completedHint": "Let's go! Your last 20 completed tasks will appear here.",
+      "completedTitle": "No completed tasks yet",
+      "soonHint": "Tasks due in the next 7 days will appear here.",
+      "soonTitle": "No upcoming tasks",
+      "todayHint": "Create a task above or check the “Soon” tab.",
+      "todayTitle": "Nothing for today 🎉"
     },
     "groups": {
-      "overdue": "",
-      "today": ""
+      "overdue": "Overdue",
+      "today": "Today"
     },
-    "newPlaceholder": "",
+    "newPlaceholder": "New task... (Enter to create)",
     "tabs": {
-      "completed": "",
-      "soon": "",
-      "today": ""
+      "completed": "Completed",
+      "soon": "Soon",
+      "today": "Today"
     },
-    "title": ""
+    "title": "Tasks"
   },
   "time": {
     "justNow": "just now"
