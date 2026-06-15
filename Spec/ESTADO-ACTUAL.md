@@ -12,10 +12,11 @@
 
 Fuente de verdad única del versionado (los demás docs referencian acá, no duplican):
 
-- **0.4.9** — release de SPEC-57 (D13, durabilidad de writes offline subsiguientes). **Próximo release** (3 frentes: hosting + Tauri + Android).
-- **0.5.0 – 0.5.x** — feature work + pendientes acumulados. **v0.5.0 ya NO está reservado para la beta.**
-- **0.6.0** — **apertura de beta** (~100 users, gateada por allowlist). Pre-requisitos de la fase: `allowBackup=false` en Android (pendiente) + allowlist enforced (ya LIVE). **Objetivo: finales junio / inicios julio 2026.**
-- **Arco i18n (SPEC-58), serie 0.5.x:** F1 (infra) + F2 (extracción UI) + F3 (AI bilingüe + códigos de error CF) **cerradas y live en prod**. Resta **F4** (traducción `en` completa + QA cross-platform 3 frentes × 2 idiomas) — única fase pendiente del arco; la beta (0.6.0) abre después. F4.3 ejecutará la actualización formal de esta sección (beta desplazada · i18n en 0.5.x).
+- **0.4.9** ✅ (2026-06-09) — SPEC-57 (D13, durabilidad de writes offline subsiguientes).
+- **0.5.0** ✅ (2026-06-11) — sync-indicator, iconografía lucide, cleanup `__APP_VERSION__`.
+- **0.5.1** — **release del arco i18n (SPEC-58)**: app bilingüe es/en completa (UI + AI + errores CF + traducción `en` + QA web). _(este release — F4.3)_
+- **0.6.0** — **apertura de beta** (~100 users, gateada por allowlist). Pre-requisitos: `allowBackup=false` en Android (pendiente) + allowlist enforced (ya LIVE). **Desplazada:** i18n entró en la serie 0.5.x antes de la beta.
+- **Arco i18n (SPEC-58) — COMPLETO y live en 0.5.1:** F1 (infra) + F2 (UI es) + F3 (AI bilingüe + códigos de error CF) + F4 (traducción `en` completa + QA web es/en + offline-en). Arco cerrado 2026-06-15 · [registro](features/SPEC-feature-58-i18n.md).
 
 > Plan vigente desde junio 2026. Los SPECs archivados anteriores citan el plan previo, donde la beta salía en v0.5.0 — son snapshots históricos, no el estado actual.
 
