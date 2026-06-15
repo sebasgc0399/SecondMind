@@ -1,6 +1,6 @@
 # SPEC — Feature 58: i18n (es + en)
 
-> **Estado:** F1 **COMPLETADA** y mergeada (2026-06-11, Done E2E 9/9). F2.1 (layout+nav, ~50 keys) · F2.2 (dashboard+habits, ~40 keys) · F2.3 (tasks+projects+objectives, ~100 keys) **COMPLETADAS y mergeadas** (2026-06-12/13, cada una con gate verde + smoke vs baseline GO). Protocolo instrument detector-only y jurisprudencia de unificación de tiempo relativo registrados en § F2. Pre-requisitos deps-1/deps-2 en el mismo arco. F2.4 (capture + inbox, ~70 keys) y F2.5 (notes + editor + grafo + split-pane, ~180 keys — 2× lo estimado, con refactor slashMenuItems dual-consumidor) **COMPLETADAS y mergeadas** (2026-06-13). F2.6 (auth + onboarding + admin) **COMPLETADA y mergeada** (2026-06-13). **F2.7 (constantes + persistidos D5 → `src/lib/entityLabels.ts`)** COMPLETADA (rama `feat/i18n-f2-constants`, 7 commits atómicos, gate verde + smoke E2E es/en GO con evidencia del grafo) — **cierra F2**. **F3 (AI + códigos de error CF) COMPLETADA y desplegada** (2026-06-14): F3.1 (AI bilingüe por locale, merge `e9c4a90`) + F3.2 (códigos de error CF, merge `2795ec4`), ambas live en prod (functions + hosting). **Siguiente: F4** (traducción `en` + QA cross-platform) — única fase pendiente del arco. GO original de Sebastián: 2026-06-10.
+> **Estado:** F1 **COMPLETADA** y mergeada (2026-06-11, Done E2E 9/9). F2.1 (layout+nav, ~50 keys) · F2.2 (dashboard+habits, ~40 keys) · F2.3 (tasks+projects+objectives, ~100 keys) **COMPLETADAS y mergeadas** (2026-06-12/13, cada una con gate verde + smoke vs baseline GO). Protocolo instrument detector-only y jurisprudencia de unificación de tiempo relativo registrados en § F2. Pre-requisitos deps-1/deps-2 en el mismo arco. F2.4 (capture + inbox, ~70 keys) y F2.5 (notes + editor + grafo + split-pane, ~180 keys — 2× lo estimado, con refactor slashMenuItems dual-consumidor) **COMPLETADAS y mergeadas** (2026-06-13). F2.6 (auth + onboarding + admin) **COMPLETADA y mergeada** (2026-06-13). **F2.7 (constantes + persistidos D5 → `src/lib/entityLabels.ts`)** COMPLETADA (rama `feat/i18n-f2-constants`, 7 commits atómicos, gate verde + smoke E2E es/en GO con evidencia del grafo) — **cierra F2**. **F3 (AI + códigos de error CF) COMPLETADA y desplegada** (2026-06-14): F3.1 (AI bilingüe por locale, merge `e9c4a90`) + F3.2 (códigos de error CF, merge `2795ec4`), ambas live en prod (functions + hosting). **F4 (traducción `en` completa + QA web es/en + offline-en + cierre) COMPLETADA** (2026-06-15): catálogo en 100%, QA GO, arco i18n cerrado. GO original de Sebastián: 2026-06-10.
 > **Alcance:** UI completa de `src/` + outputs de AI + errores de CF localizables es/en, con locale por usuario.
 > **Dependencias:** discovery i18n (informe de sesión 2026-06-10, verificado por re-conteo independiente). Ninguna feature bloqueante. Release 0.5.0 publicado antes de arrancar.
 > **Estimado:** 2–3 semanas solo dev — estimación de este SPEC, no compromiso; incluye migración de tests; F4.1 dimensionado por D11.
@@ -92,66 +92,25 @@ Transversales en el dominio que toque: 15 plurales → `count` + `_one`/`_other`
 
 **Done F3:** ✅ CUMPLIDO 2026-06-14. AI genera en el locale del usuario (4/4 QA: es/en/cruzado/null) · cero `HttpsError` suelto, todos con slug en `details.code` · catálogo `errors.*` completo, fallback en→es verificado end-to-end · cero strings de error user-visible hardcodeados (cliente + CFs) · F3.1 + F3.2 mergeadas y desplegadas (functions + hosting). Backlog del arco: hook PreToolUse de protección de main no es worktree-aware (anotado en memoria del proyecto).
 
-### F4 — Traducción en + QA cross-platform + cierre
+### F4 — Traducción en + QA cross-platform + cierre ✅ (2026-06-15)
 
-- **F4.1 Traducción en (D11):** (a) definir **guía de estilo del copy en** (registro, capitalización — equivalente del imperativo neutro es; se registra en este SPEC al producirse); (b) batch AI por dominio contra esa guía; (c) revisión de Sebastián por dominio (mismo corte que F2); (d) `i18next-cli status` limpio como gate; **(e) revisar al traducir: `useNoteSuggestions` interpola `{{type}}` con `.toLowerCase()` (F2.7) — "promover a permanente/literatura/fugaz" en minúscula funciona en es pero puede no dar frase natural en inglés; ajustar el copy o la key al producir el batch en.**
-- **F4.2 QA 3 frentes** (web Playwright 375/768/1280, Tauri, Android) × 2 idiomas: switch runtime, **offline con locale en** (valida D2), fechas/plurales/relativos. Escrituras bajo protocolo step 5; emulador preferido donde no haga falta la app completa.
-- **F4.3 Cierre:** archivar SPEC · escalar gotchas · **actualizar ESTADO-ACTUAL § Versionado y roadmap (beta v0.6.0 desplazada — decisión tomada; i18n entra en la serie 0.5.x)** · release coordinado según pendientes acumulados de la serie al cierre · **P9: decidir explícitamente si `Spec/qa/i18n-baseline/` se conserva o se borra** (artefacto temporal del arco) · **candidato housekeeping post-arco (junto a P9, fuera de este arco):** borrar `src/components/layout/AuthLoadingSkeleton.tsx` — huérfano, cero imports en src/ y e2e/ (detectado en F2.1, presumiblemente reemplazado por AppBootSplash).
+**F4.1 — Traducción en (D11)** — catálogo en de 657 strings vacías a **100%** (`i18next-cli status` limpio, 703/703) en **5 batches temáticos por tipo de voz**, cada uno: traducir contra guía → revisor adversarial de consistencia → apply (script con guard solo-vacías + verificación de set-de-keys vs HEAD) → commit → review de Sebastián → merge `--no-ff`. Batches: (1) **entities/terminología** (87) — bloquea la tabla canon; (2) **chrome/sistema/errores** (134) — `errors.*` mantiene el registro funcional de F3.2; (3) **captura/ejecución** (192) — plurales, `objectives.deadline.*` reordenado ("in X days"/"X days overdue"), greetings (Good morning/afternoon/evening), empty-states 🎉; (4) **notas/editor** (158) — `notes.suggestions.promote`→**"Promote to {{type}} note"** (resuelve el marcador F4.1-e con el label lowercase), slash-menu (labels convencionales en==es por excepción SPEC, categorías/descriptions traducidas); (5) **auth/onboarding** (86) — copy de PRODUCTO público, gate "no suena a traducción", brand copy reescrito con Sebastián (tagline "Your second brain", pillars imperativos paralelos, "Watch AI work its magic"). **Guía de estilo durable:** `Spec/i18n-en-style-guide.md` (tabla de terminología canon + gobernanza "consultar, no re-decidir"). **Cierre F4.1:** `removeUnusedKeys` flip `false→true` + `extract` full-scope → purgó **1 huérfano verificado** (`sync.unsaved` bare: el código usa `t('sync.unsaved', def, {count})` → i18next resuelve a `_one`/`_other`, la bare nunca se resuelve); las 2 clases de riesgo (`errors.*` form `t(key,defaultValue)` + `editor.templates.*` `instrumentScorer→null`) **intactas**. **Regla dura:** cero `_many` en el catálogo en (CLDR en = one/other; las 27 `_many` son es-only y correctas). Gates: status 100%, cero vacías, lint+build+318 tests verdes. Archivos: `src/locales/en/translation.json`, `Spec/i18n-en-style-guide.md` (nuevo), `i18next.config.ts`.
 
-**Done F4:** catálogo en 100% (`i18next-cli status` limpio) · QA GO 3 frentes × 2 idiomas incl. offline en · ESTADO-ACTUAL actualizado.
+**F4.2 — QA web es/en + offline-en** — matriz Playwright contra sesión prod real, locale en vía `LanguageSelector`: **1280** (10/10 pantallas baseline), **375** (5 + chrome mobile BottomNav/MobileHeader/FAB), **768** (spot). **docOverflow=0 en los 3 viewports** (el inglés es más corto que el es), cero keys crudas, plurales/relativos Intl/fechas/badges/emoji correctos, **switch runtime sin reload**. **Offline-en (D2) probado:** strings en-only inlineadas en `dist/assets/*.js` (sin chunk de locale lazy) + test en vivo `setOffline(true)`→SPA nav→UI en EN, `lang=en`, cero keys crudas. Pre-auth `/solicitar-acceso` EN verificado (incl. unificación "Back to sign in"). Limpieza step 5 verificada server-side (Firebase MCP: `preferences.locale="es"` restaurado, `_schemaVersion:1` sin bump). QA pura, sin commits de código. **Tauri/Android plegados al smoke del release 0.5.0** (F4.3) — cambio 100% client-side, un solo build.
+
+**F4.3 — Cierre del arco** — este registro (archivado del SPEC) + escalación de gotchas a `gotchas/i18n.md` (regla `_many` jamás en en · resolución `{{type}} note` · reorder de tiempo relativo es→en) + ESTADO-ACTUAL § Versionado y roadmap (arco i18n F1–F4 completo y live; beta 0.6.0 desplazada, i18n en serie 0.5.x) + **release coordinado 0.5.0** (5 archivos de versión alineados, hosting antes del tag, reconciliado con 0.4.9/SPEC-57) + **P9: baseline `Spec/qa/i18n-baseline/` conservado** + housekeeping (`AuthLoadingSkeleton.tsx` borrado — huérfano, 0 imports).
+
+**Checklist de smoke nativo del release 0.5.0** (los 3 `<Trans>` no alcanzables en QA web con cuenta verificada + inbox poblado — diferidos explícitamente, no evaporados):
+
+- [ ] `auth.action.reset.forAccount` — un reset de password a la propia cuenta renderiza el email real en `<1>{{email}}</1>`.
+- [ ] `inbox.empty.hint` — con el inbox vacío, el `<kbd>Alt+N</kbd>` queda inline en posición natural.
+- [ ] `auth.verify.body` — si no es alcanzable (cuenta verificada → `/verify-email` redirige), **cierre documentado** por garantía estructural: estructura `<1>{{email}}</1>` idéntica a es + F2.6 verificó este mismo `<Trans>` con email real en prod + 2 revisores sin reorder. NO pendiente abierto.
 
 ## Desvíos registrados (step 2 SDD — plan F1, aprobados por Sebastián 2026-06-11)
 
 1. **NO bumpear `PREFERENCES_SCHEMA_VERSION`** (el F1.3 original decía bump 1→2): `locale` es campo aditivo con default — el patrón del repo (precedente F46/F49, sentinel anti-bump en `preferences.test.ts`) es parse defensivo sin bump; bumpear purgaría las prefs reales (parsePrefs devuelve defaults ante mismatch). Gotcha precisado en su fuente: CLAUDE.md § Gotchas universales + `Spec/gotchas/tinybase-firestore.md` § "Schema versioning local de cache" — la regla ahora distingue aditivo (no bump) vs breaking (bump).
 2. **`locale` es `'es' | 'en' | null`** (no `'es' | 'en'`): `null` = "nunca elegido" — distingue elección de detección, y dispara el write eager de la detección al doc (F3.1 lee este campo server-side).
 3. **El slice settings son ~25-30 strings**, no ~10 (inventario exacto relevado en el plan F1).
-
-## Orden de implementación
-
-**F1 → F2 (F2.1 gateada por baseline F1.8) → F3 → F4**, estricto. F3 después de F2 (F3.2 toca el catálogo que F2 estabiliza). La decisión de traducción ya está tomada (D11 = Opción A), por lo que F2 no espera nada más que el baseline.
-
-## Estructura de archivos (nuevos)
-
-```
-i18next.config.ts
-scripts/check-hardcoded-es.mjs            (F2 — gate de done)
-src/lib/i18n.ts
-src/lib/entityLabels.ts                   (F2.7)
-src/locales/es/translation.json
-src/locales/en/translation.json
-src/types/i18next.d.ts                    (generado — archivo(s) exacto(s) se confirman en F1.5)
-src/components/settings/LanguageSelector.tsx
-Spec/qa/i18n-baseline/                    (F1.8 — capturas baseline)
-```
-
-## Riesgos
-
-1. **Regresión masiva de UI** (~167 archivos): dominios chicos + dry-run + smoke vs baseline + suite + script de done.
-2. **Main congelado para features durante F2** — explicitado. D10 (merges por dominio) acorta la ventana; aún así, ninguna feature paralela mientras dura.
-3. `instrument` recall ~80–90% + false positives → dry-run + revisión manual + scorer + script final.
-4. **El CLI escribe por fuera de los hooks del entorno** (sin Prettier/ESLint automático, sin bloqueo de main, HMR) → protocolo por corrida (F2).
-5. **Tests que assertean español literal** rompen al migrar sus módulos → F1.7 + regla "mismo commit".
-6. AI: prompts/descriptions en en pueden cambiar la calidad del output → QA con capturas reales en ambos locales antes del deploy.
-7. `PREFERENCES_SCHEMA_VERSION`: bumpearlo por error con el campo aditivo purgaría las prefs reales de todos los usuarios (parsePrefs purga ante mismatch) — NO bumpear, gotcha precisado en `Spec/gotchas/tinybase-firestore.md` § "Schema versioning local de cache".
-8. npm install nuevo → gotcha `resolve.dedupe` reincidente.
-9. Catálogo en incompleto en prod → `fallbackLng 'es'` (D8): nunca keys crudas.
-10. **Riesgo aceptado (GO):** los defaults en español dentro de `src/components/ui/` (ej. `confirm-dialog.tsx`) quedan como **residual consciente** — los call-sites pasan labels traducidos y el smoke por dominio caza cualquier default que se filtre.
-
-## Impacto en roadmap (decisión tomada — el cierre la ejecuta)
-
-La beta v0.6.0 (hoy "finales junio / inicios julio 2026") **se desplaza**: i18n entra en la serie 0.5.x antes de abrir la beta. F4.3 actualiza ESTADO-ACTUAL § Versionado y roadmap con la nueva secuencia y fecha.
-
-## Checklist global
-
-- [ ] App completa en es y en, switch runtime + persistencia del locale
-- [ ] es visualmente idéntico al pre-SPEC (capturas vs baseline F1.8)
-- [ ] AI genera en el locale del usuario (ambas CFs)
-- [ ] Todos los `HttpsError` → códigos estables con mensaje localizado
-- [ ] Plurales (15) e Intl (~10) locale-aware; tiempo relativo unificado
-- [ ] `tsc` falla ante key inexistente (verificado rompiéndolo)
-- [ ] `scripts/check-hardcoded-es.mjs` con salida vacía
-- [ ] QA GO 3 frentes × 2 idiomas, incl. offline en en
-- [ ] ESTADO-ACTUAL § Versionado y roadmap actualizado (beta desplazada)
 
 ## Siguiente fase
 
