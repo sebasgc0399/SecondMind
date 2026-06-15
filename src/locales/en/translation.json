@@ -28,81 +28,81 @@
   },
   "auth": {
     "accessRequest": {
-      "betaTagline": "",
-      "invalidEmail": "",
-      "motivo": "",
-      "optional": "",
-      "pageSubtitle": "",
-      "pageTitle": "",
-      "placeholder": "",
-      "submit": "",
-      "success": ""
+      "betaTagline": "Invite-only closed beta",
+      "invalidEmail": "Enter a valid email.",
+      "motivo": "Reason",
+      "optional": "(optional)",
+      "pageSubtitle": "Drop your email and, if there's room, we'll add you to the beta.",
+      "pageTitle": "Request access",
+      "placeholder": "Tell us what you'd use SecondMind for",
+      "submit": "Request access",
+      "success": "We got your request. Once your access is enabled, you'll be able to sign in as usual."
     },
     "action": {
-      "invalidBody": "",
-      "invalidTitle": "",
+      "invalidBody": "This link is invalid or incomplete. Request a new one from the app.",
+      "invalidTitle": "Invalid link",
       "reset": {
-        "errorTitle": "",
-        "forAccount": "",
-        "formTitle": "",
-        "loadingBody": "",
-        "loadingTitle": "",
-        "newPassword": "",
-        "submit": "",
-        "successBody": "",
-        "successTitle": ""
+        "errorTitle": "We couldn't reset your password",
+        "forAccount": "For the account <1>{{email}}</1>.",
+        "formTitle": "Choose a new password",
+        "loadingBody": "One moment — we're verifying your recovery link.",
+        "loadingTitle": "Validating the link…",
+        "newPassword": "New password",
+        "submit": "Change password",
+        "successBody": "You can now sign in with your new password.",
+        "successTitle": "Password updated"
       },
-      "unsupportedBody": "",
-      "unsupportedTitle": "",
+      "unsupportedBody": "This type of link isn't available. Request a new one from the app.",
+      "unsupportedTitle": "Unsupported link",
       "verify": {
-        "errorTitle": "",
-        "loadingBody": "",
-        "loadingTitle": "",
-        "successBody": "",
-        "successTitle": ""
+        "errorTitle": "We couldn't verify your email",
+        "loadingBody": "One moment — we're activating your account.",
+        "loadingTitle": "Verifying your email…",
+        "successBody": "Your account is active. You can now sign in.",
+        "successTitle": "Email verified"
       }
     },
-    "backToLogin": "",
-    "backToSignIn": "",
-    "confirmPassword": "",
-    "continueWithGoogle": "",
-    "creatingAccount": "",
-    "email": "",
-    "forgotPassword": "",
-    "noAccess": "",
-    "orContinueWith": "",
-    "password": "",
-    "passwordHint": "",
-    "requestInvite": "",
+    "backToLogin": "Back to sign in",
+    "backToSignIn": "Back to sign in",
+    "confirmPassword": "Confirm password",
+    "continueWithGoogle": "Continue with Google",
+    "creatingAccount": "Creating account…",
+    "email": "Email",
+    "forgotPassword": "Forgot your password?",
+    "noAccess": "Don't have access?",
+    "orContinueWith": "or continue with",
+    "password": "Password",
+    "passwordHint": "At least 8 characters with at least one number.",
+    "requestInvite": "Request an invite",
     "reset": {
-      "send": "",
-      "sentBody": "",
-      "sentTitle": "",
-      "subtitle": "",
-      "title": ""
+      "send": "Send link",
+      "sentBody": "If the account exists, you'll get a link in your email to reset your password.",
+      "sentTitle": "Check your email",
+      "subtitle": "We'll send you a link to reset your password.",
+      "title": "Reset password"
     },
-    "signIn": "",
-    "signingIn": "",
-    "signUp": "",
+    "signIn": "Sign in",
+    "signingIn": "Signing in…",
+    "signUp": "Create account",
     "signupGate": {
-      "checking": "",
-      "disabled": "",
-      "disabledBody": "",
-      "error": ""
+      "checking": "Checking availability…",
+      "disabled": "Sign-up temporarily disabled",
+      "disabledBody": "Come back later, or sign in with Google if you already have an account.",
+      "error": "Couldn't check availability. Try again."
     },
-    "tagline": "",
+    "tagline": "Your second brain",
     "validation": {
-      "emailInvalid": "",
-      "minChars": "",
-      "passwordMismatch": ""
+      "emailInvalid": "Invalid email.",
+      "minChars": "At least 8 characters.",
+      "passwordMismatch": "Passwords don't match."
     },
     "verify": {
-      "autoRefresh": "",
-      "bannerMessage": "",
-      "body": "",
-      "pageTitle": "",
-      "resend": "",
-      "sent": ""
+      "autoRefresh": "Already verified? This page updates automatically when you come back from your email.",
+      "bannerMessage": "Verify your email to secure your account.",
+      "body": "To activate your account, verify <1>{{email}}</1>. Check your inbox and spam folder, and click the link — without verification you can't save notes or tasks. Didn't get it? Resend it below.",
+      "pageTitle": "Verify your email to continue",
+      "resend": "Resend link",
+      "sent": "Sent · {{seconds}}s"
     }
   },
   "capture": {
@@ -819,51 +819,51 @@
   },
   "onboarding": {
     "checklist": {
-      "allComplete": "",
-      "dismissAria": "",
-      "progress": "",
-      "title": ""
+      "allComplete": "All set! You now know the essentials of SecondMind.",
+      "dismissAria": "Dismiss getting-started guide",
+      "progress": "{{completed}} of {{total}} done",
+      "title": "Getting started"
     },
     "steps": {
       "apiKey": {
-        "ctaLabel": "",
-        "description": "",
-        "label": ""
+        "ctaLabel": "Set up",
+        "description": "Set up your Anthropic API key to turn on AI classification.",
+        "label": "Connect your AI"
       },
       "firstNote": {
-        "ctaLabel": "",
-        "description": "",
-        "label": ""
+        "ctaLabel": "Create note",
+        "description": "Start building your second brain with a note.",
+        "label": "Create your first note"
       },
       "firstTask": {
-        "ctaLabel": "",
-        "description": "",
-        "label": ""
+        "ctaLabel": "Create task",
+        "description": "Turn your ideas into action with a task.",
+        "label": "Create your first task"
       },
       "inboxAi": {
-        "ctaLabel": "",
-        "description": "",
-        "label": ""
+        "ctaLabel": "Capture",
+        "description": "Capture an idea and watch AI organize it for you.",
+        "label": "Watch AI work its magic"
       }
     },
     "welcome": {
-      "description": "",
+      "description": "Your second brain for capturing ideas, connecting your knowledge, and letting AI organize it for you.",
       "pillars": {
         "ai": {
-          "description": "",
-          "title": ""
+          "description": "Automatically sorts, tags, and summarizes what you capture.",
+          "title": "Let AI organize"
         },
         "capture": {
-          "description": "",
-          "title": ""
+          "description": "Capture an idea, process it later — without losing your train of thought.",
+          "title": "Capture without friction"
         },
         "connect": {
-          "description": "",
-          "title": ""
+          "description": "Atomic notes linked together into your second brain.",
+          "title": "Connect your knowledge"
         }
       },
-      "start": "",
-      "title": ""
+      "start": "Get started",
+      "title": "Welcome to SecondMind"
     }
   },
   "projects": {
