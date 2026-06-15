@@ -155,7 +155,7 @@ function IndicatorBody({ compact, side }: { compact: boolean; side: PopoverSide 
           <Popover.Positioner side={side} sideOffset={8} align="end" className="z-50">
             <Popover.Popup className="w-64 rounded-lg border border-border bg-popover p-3 text-sm text-popover-foreground shadow-xl outline-none transition-[opacity,transform,scale] duration-200 data-ending-style:scale-95 data-ending-style:opacity-0 data-starting-style:scale-95 data-starting-style:opacity-0">
               <Popover.Title className="text-xs font-semibold text-foreground">
-                {t('sync.popoverTitle', 'Cambios pendientes de sincronizar')}
+                {t('sync.popoverTitle', 'Cambios sin sincronizar')}
               </Popover.Title>
               {byEntity.length > 0 ? (
                 <ul className="mt-2 space-y-1 text-xs text-muted-foreground">

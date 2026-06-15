@@ -1023,7 +1023,7 @@ export default interface Resources {
       pending_many: '{{count}} pendientes';
       pending_one: '{{count}} pendiente';
       pending_other: '{{count}} pendientes';
-      popoverTitle: 'Cambios pendientes de sincronizar';
+      popoverTitle: 'Cambios sin sincronizar';
       unsaved_many: '{{count}} sin guardar';
       unsaved_one: '{{count}} sin guardar';
       unsaved_other: '{{count}} sin guardar';

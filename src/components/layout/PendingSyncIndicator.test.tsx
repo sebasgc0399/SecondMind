@@ -125,4 +125,16 @@ describe('PendingSyncIndicator', () => {
     );
     expect(trigger?.getAttribute('aria-label')).toBe(expectedAria);
   });
+
+  // SPEC-58 F4 unificó el estado pending-de-sync a un único copy (EN: "Unsynced
+  // changes"). En es, popoverTitle (título del popover del chip, este componente)
+  // y changesPending (dot por-entidad, PendingSyncDot) deben resolver al MISMO
+  // string; divergerlos re-introduce la incoherencia que cerró fix/i18n-es-sync-
+  // unify ("Cambios pendientes de sincronizar" vs "Cambios sin sincronizar").
+  // Asserción contra catálogo (convención del archivo): el render real del
+  // popover (portal base-ui/floating-ui) requiere ResizeObserver, no polyfillado.
+  it('estado sync unificado: popoverTitle y changesPending comparten el copy "Cambios sin sincronizar"', () => {
+    expect(tEs('sync.popoverTitle')).toBe('Cambios sin sincronizar');
+    expect(tEs('sync.changesPending')).toBe('Cambios sin sincronizar');
+  });
 });
