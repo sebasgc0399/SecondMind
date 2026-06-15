@@ -399,6 +399,8 @@ Cada feature comprimida a 1 línea con pointer al SPEC archivado. Para detalles 
 - [`defineSecret().value()` en el emulador lee `.secret.local`, no `process.env` (post-SPEC-55)](gotchas/tooling-local.md#definesecretvalue-en-el-emulador-lee-secretlocal-no-processenv-post-spec-55)
 - [CI: deps de `src/functions` y type-check con references (post-SPEC-55)](gotchas/tooling-local.md#ci-deps-de-srcfunctions-y-type-check-con-references-post-spec-55)
 - [Firebase MCP `firestore_query_collection` no acepta paths de subcolección con "/" (post-SPEC-56)](gotchas/tooling-local.md#firebase-mcp-firestore_query_collection-no-acepta-paths-de-subcolección-con--post-spec-56)
+- [Context7 MCP expone `query-docs`, no `get-library-docs` (nombre viejo)](gotchas/tooling-local.md#context7-mcp-expone-query-docs-no-get-library-docs-nombre-viejo)
+- [Los subagentes leen archivos del cwd del proceso Claude Code, no del árbol del dev server](gotchas/tooling-local.md#los-subagentes-leen-archivos-del-cwd-del-proceso-claude-code-no-del-árbol-del-dev-server)
 
 ### Dependencias y build — [`gotchas/deps-build.md`](gotchas/deps-build.md)
 
