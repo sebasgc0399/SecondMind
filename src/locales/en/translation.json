@@ -1,30 +1,30 @@
 {
   "admin": {
     "members": {
-      "added": "",
-      "empty": "",
-      "noMatch": "",
-      "revoke": "",
+      "added": "Added: {{date}}",
+      "empty": "No beta members yet.",
+      "noMatch": "No members match your search.",
+      "revoke": "Revoke",
       "revokeDialog": {
-        "description": "",
-        "title": ""
+        "description": "{{email}} will lose beta access at their next gate (this doesn't delete their account or data). You can invite them again by approving a new request.",
+        "title": "Revoke access?"
       },
-      "searchAria": ""
+      "searchAria": "Search members by email"
     },
     "requests": {
-      "approve": "",
-      "empty": "",
-      "noMatch": "",
-      "reject": "",
-      "searchAria": ""
+      "approve": "Approve",
+      "empty": "No pending requests.",
+      "noMatch": "No requests match your search.",
+      "reject": "Reject",
+      "searchAria": "Search requests by email"
     },
-    "searchByEmail": "",
-    "subtitle": "",
+    "searchByEmail": "Search by email…",
+    "subtitle": "Process access requests and manage beta members.",
     "tabs": {
-      "members": "",
-      "requests": ""
+      "members": "Members",
+      "requests": "Requests"
     },
-    "title": ""
+    "title": "Administration"
   },
   "auth": {
     "accessRequest": {
@@ -121,36 +121,36 @@
     }
   },
   "commandPalette": {
-    "actions": "",
-    "closeSplit": "",
+    "actions": "Actions",
+    "closeSplit": "Close right pane",
     "groups": {
-      "notes": "",
-      "projects": "",
-      "tasks": ""
+      "notes": "Notes",
+      "projects": "Projects",
+      "tasks": "Tasks"
     },
-    "hideSidebar": "",
-    "noResults": "",
-    "open": "",
-    "openSplit": "",
-    "placeholder": "",
-    "recent": "",
-    "showSidebar": "",
-    "title": "",
-    "trigger": ""
+    "hideSidebar": "Hide sidebar",
+    "noResults": "No results for “{{query}}”",
+    "open": "Open search",
+    "openSplit": "Open note side by side",
+    "placeholder": "Search notes, tasks, projects...",
+    "recent": "Recent",
+    "showSidebar": "Show sidebar",
+    "title": "Search",
+    "trigger": "Search…"
   },
   "common": {
     "activeBadge": "active",
-    "avatar": "",
-    "cancel": "",
-    "close": "",
-    "create": "",
-    "creating": "",
-    "retry": "",
-    "save": "",
-    "saving": "",
-    "sending": "",
-    "unlink": "",
-    "untitled": ""
+    "avatar": "Avatar",
+    "cancel": "Cancel",
+    "close": "Close",
+    "create": "Create",
+    "creating": "Creating...",
+    "retry": "Retry",
+    "save": "Save",
+    "saving": "Saving…",
+    "sending": "Sending…",
+    "unlink": "Unlink",
+    "untitled": "Untitled"
   },
   "dashboard": {
     "greeting": {
@@ -521,63 +521,63 @@
     }
   },
   "errors": {
-    "accessCheckUnavailable": "",
-    "accountDisabled": "",
-    "accountExists": "",
-    "actionExpired": "",
-    "actionInvalid": "",
-    "actionNetworkError": "",
-    "adminUnauthorized": "",
-    "betaFull": "",
-    "betaFullNoMax": "",
-    "betaUnauthorized": "",
-    "default": "",
-    "emailUnverified": "",
-    "invalidCredentials": "",
-    "invalidEmail": "",
-    "invalidInput": "",
-    "invalidProvider": "",
-    "networkError": "",
-    "operationFailed": "",
-    "rateLimited": "",
-    "requestNotFound": "",
-    "resetGeneric": "",
-    "saveKeyInvalid": "",
-    "saveKeyRequired": "",
-    "saveKeyUnavailable": "",
-    "submitInvalidEmail": "",
-    "submitInvalidMotivo": "",
-    "tooManyRequests": "",
-    "unauthenticated": "",
-    "weakPassword": "",
-    "weakPasswordShort": ""
+    "accessCheckUnavailable": "We couldn't verify your access. Try again in a moment.",
+    "accountDisabled": "This account is disabled.",
+    "accountExists": "An account with this email already exists. Try signing in or using Google.",
+    "actionExpired": "This link has expired. Request a new one.",
+    "actionInvalid": "This link isn't valid. Request a new one.",
+    "actionNetworkError": "There was a connection problem. Try again.",
+    "adminUnauthorized": "Not authorized.",
+    "betaFull": "Beta is full ({{max}}). Raise the limit or revoke a member before approving.",
+    "betaFullNoMax": "Beta is full. Raise the limit or revoke a member before approving.",
+    "betaUnauthorized": "Your account doesn't have beta access yet. You can request it below.",
+    "default": "Something went wrong. Try again.",
+    "emailUnverified": "Verify your email to continue.",
+    "invalidCredentials": "Incorrect email or password.",
+    "invalidEmail": "Invalid email.",
+    "invalidInput": "Invalid input. Try again.",
+    "invalidProvider": "Unsupported provider.",
+    "networkError": "No connection. Check your internet.",
+    "operationFailed": "The operation couldn't be completed. Try again.",
+    "rateLimited": "Too many attempts. Try again later.",
+    "requestNotFound": "Request not found.",
+    "resetGeneric": "If the account exists, you'll get a link in your email.",
+    "saveKeyInvalid": "The API key is invalid.",
+    "saveKeyRequired": "The API key is required.",
+    "saveKeyUnavailable": "We couldn't validate the key right now. Try again in a moment.",
+    "submitInvalidEmail": "Check the email you entered.",
+    "submitInvalidMotivo": "The reason isn't valid.",
+    "tooManyRequests": "Too many attempts. Try again in a few minutes.",
+    "unauthenticated": "You need to sign in.",
+    "weakPassword": "At least 8 characters with at least one number.",
+    "weakPasswordShort": "At least 8 characters."
   },
   "graph": {
-    "createNotes": "",
+    "createNotes": "Create notes →",
     "empty": {
-      "filtered": "",
-      "noData": ""
+      "filtered": "No nodes match the filters.",
+      "noData": "The graph comes alive with more notes and connections."
     },
-    "exitFullscreen": "",
+    "exitFullscreen": "Exit fullscreen",
     "filters": {
-      "active": "",
-      "allOption": "",
-      "area": "",
-      "minLinks": "",
-      "reset": "",
-      "title": "",
-      "type": ""
+      "active": "active",
+      "allOption": "All",
+      "area": "Area",
+      "minLinks": "Min links",
+      "reset": "Reset",
+      "title": "Filters",
+      "type": "Type"
     },
-    "fullscreen": "",
+    "fullscreen": "Fullscreen",
     "node": {
-      "openNote": ""
+      "openNote": "Open note →"
     },
-    "resetFilters": "",
+    "resetFilters": "Reset filters",
     "stats": {
-      "connections_one": "",
-      "connections_other": "",
-      "notes_one": "",
-      "notes_other": ""
+      "connections_one": "{{count}} connection",
+      "connections_other": "{{count}} connections",
+      "notes_one": "{{count}} note",
+      "notes_other": "{{count}} notes"
     }
   },
   "habits": {
@@ -676,31 +676,31 @@
     "title": ""
   },
   "installPrompt": {
-    "install": "",
-    "message": ""
+    "install": "Install",
+    "message": "Install SecondMind for quick access from your device."
   },
   "nav": {
-    "ariaMain": "",
-    "closeMenu": "",
-    "expandMenu": "",
+    "ariaMain": "Main navigation",
+    "closeMenu": "Close menu",
+    "expandMenu": "Expand menu",
     "items": {
-      "dashboard": "",
-      "graph": "",
-      "habits": "",
-      "inbox": "",
-      "notes": "",
-      "objectives": "",
-      "projects": "",
-      "settings": "",
-      "tasks": ""
+      "dashboard": "Dashboard",
+      "graph": "Graph",
+      "habits": "Habits",
+      "inbox": "Inbox",
+      "notes": "Notes",
+      "objectives": "Objectives",
+      "projects": "Projects",
+      "settings": "Settings",
+      "tasks": "Tasks"
     },
-    "openMenu": "",
+    "openMenu": "Open menu",
     "sections": {
-      "execution": "",
-      "knowledge": ""
+      "execution": "Execution",
+      "knowledge": "Knowledge"
     },
-    "showMenu": "",
-    "signOut": ""
+    "showMenu": "Show menu",
+    "signOut": "Sign out"
   },
   "notes": {
     "card": {
@@ -984,23 +984,23 @@
     }
   },
   "sync": {
-    "changesPending": "",
-    "changesUnsaved": "",
-    "discard": "",
+    "changesPending": "Unsynced changes",
+    "changesUnsaved": "Unsaved changes",
+    "discard": "Discard",
     "discardDialog": {
-      "confirm": "",
-      "description": "",
-      "title": ""
+      "confirm": "Discard all",
+      "description": "These changes will be lost and can't be recovered.",
+      "title": "Discard pending changes?"
     },
-    "empty": "",
-    "errorBadge": "",
-    "openDetail": "",
-    "pending_one": "",
-    "pending_other": "",
-    "popoverTitle": "",
-    "unsaved": "",
-    "unsaved_one": "",
-    "unsaved_other": ""
+    "empty": "No pending changes.",
+    "errorBadge": "error",
+    "openDetail": "{{label}}: open details",
+    "pending_one": "{{count}} pending",
+    "pending_other": "{{count}} pending",
+    "popoverTitle": "Changes pending sync",
+    "unsaved": "{{count}} unsaved",
+    "unsaved_one": "{{count}} unsaved",
+    "unsaved_other": "{{count}} unsaved"
   },
   "tasks": {
     "card": {
@@ -1036,17 +1036,17 @@
     "title": ""
   },
   "time": {
-    "justNow": ""
+    "justNow": "just now"
   },
   "updateBanner": {
-    "flushing": "",
-    "forceUpdate": "",
-    "newVersion": "",
-    "newVersionPending_one": "",
-    "newVersionPending_other": "",
-    "unsynced_one": "",
-    "unsynced_other": "",
-    "updateNow": "",
-    "updating": ""
+    "flushing": "Syncing before updating…",
+    "forceUpdate": "Update anyway",
+    "newVersion": "A new version is available.",
+    "newVersionPending_one": "A new version is available ({{count}} change pending).",
+    "newVersionPending_other": "A new version is available ({{count}} changes pending).",
+    "unsynced_one": "{{count}} unsynced change.",
+    "unsynced_other": "{{count}} unsynced changes.",
+    "updateNow": "Update now",
+    "updating": "Updating…"
   }
 }
