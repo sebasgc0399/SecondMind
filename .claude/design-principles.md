@@ -149,7 +149,7 @@ Todos los colores son `oklch()`, hue **285** (violeta) salvo destructive (rojo) 
 | Clase         | px  | Usos  | Uso típico                                  |
 | ------------- | --- | ----- | ------------------------------------------- |
 | `w-3 h-3`     | 12  | 29    | micro: chips, badges, sugerencias densas    |
-| `w-3.5 h-3.5` | 14  | ~20   | **drift** (paso no-canónico)                |
+| `w-3.5 h-3.5` | 14  | ~30   | inline junto a label compacto (≈27 de 30)   |
 | `w-4 h-4`     | 16  | 76    | **default** (inline, botones, items)        |
 | `w-5 h-5`     | 20  | 7     | headers de sección, botones grandes         |
 | `w-6 h-6`     | 24  | 5     | FAB, empty-states grandes                   |
@@ -158,9 +158,9 @@ Todos los colores son `oklch()`, hue **285** (violeta) salvo destructive (rojo) 
 
 **Criterio:**
 
-- **Escala canónica:** **16px (`w-4`) default** (inline, botones, items de lista) · **20px (`w-5`)** headers de sección / botones grandes · **24px (`w-6`)** FAB y empty-states grandes · **12px (`w-3`)** micro-iconos en chips/badges densos (tier establecido, 29 usos). 32px reservado a iconos de empty-state.
+- **Escala canónica por rol:** **16px (`w-4`)** default standalone (icono suelto, botón icon-only, items de lista) · **14px (`w-3.5`)** icono **inline que acompaña un label de texto compacto** (botón con texto, chip, banner, fila de command palette/lista, con `gap-1.5`/`gap-2`) — patrón verificado y consistente (≈27 usos), el icono se empareja con label `text-xs`/`text-sm` (12–14px) · **12px (`w-3`)** micro en chips/badges muy densos (29 usos) · **20px (`w-5`)** headers de sección / botones grandes · **24px (`w-6`)** FAB y empty-states grandes · 32px solo iconos de empty-state.
 - **`strokeWidth`: decisión abierta.** Intent histórico = 1.5 ("más fino en dark"); realidad = default 2. Hasta resolverlo, el agente lo trata como **observación**, no blocker.
-- **Drift que el agente DEBE reportar:** **`w-3.5`/`h-3.5` (14px)** — paso no-canónico (~20 usos), debería migrar a `w-3` (12) o `w-4` (16); y cualquier tamaño suelto fuera de {12, 16, 20, 24} (ej. el 40px aislado).
+- **Drift que el agente DEBE reportar:** **14px (`w-3.5`) STANDALONE** — icono icon-only SIN label de texto que use 14px; debería ser 16px (o 12 micro). Hoy 3 casos (`SplitPaneHeader` X de cerrar, `CodeBlockNodeView` copy ×2). El 14px **inline-con-label es correcto y NO se reporta**. También cualquier tamaño suelto fuera de {12, 14, 16, 20, 24} (ej. el 40px aislado).
 - Color del icono: `currentColor` (hereda del contexto vía `text-*`).
 
 ---
