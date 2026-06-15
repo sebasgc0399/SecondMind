@@ -932,6 +932,11 @@
     "appInfo": {
       "checkUpdates": "Check for updates",
       "description": "Current version and updates.",
+      "platform": {
+        "android": "Android",
+        "desktop": "Desktop",
+        "web": "Web"
+      },
       "productName": "SecondMind Desktop",
       "title": "App info",
       "version": "Version {{version}}"

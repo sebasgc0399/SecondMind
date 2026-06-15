@@ -955,6 +955,11 @@
     "appInfo": {
       "checkUpdates": "Buscar actualizaciones",
       "description": "Versión actual y actualizaciones.",
+      "platform": {
+        "android": "Android",
+        "desktop": "Escritorio",
+        "web": "Web"
+      },
       "productName": "SecondMind Desktop",
       "title": "Información de la app",
       "version": "Versión {{version}}"
