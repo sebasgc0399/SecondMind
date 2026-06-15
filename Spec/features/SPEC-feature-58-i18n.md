@@ -100,11 +100,11 @@ Transversales en el dominio que toque: 15 plurales → `count` + `_one`/`_other`
 
 **F4.3 — Cierre del arco** — este registro (archivado del SPEC) + escalación de gotchas a `gotchas/i18n.md` (regla `_many` jamás en en · resolución `{{type}} note` · reorder de tiempo relativo es→en) + ESTADO-ACTUAL § Versionado y roadmap (arco i18n F1–F4 completo y live; beta 0.6.0 desplazada, i18n en serie 0.5.x) + **release coordinado 0.5.1** (publicado 2026-06-15; **reconciliación: 0.5.0 ya había shipeado el 06-11**, así que el arco i18n —102 commits unreleased— salió como 0.5.1, no 0.5.0; 5 archivos de versión bumpeados 0.5.0→0.5.1; hosting hash-verificado [`sha256` local==deployed], GitHub Release con MSI/NSIS firmados + `latest.json` del updater, APK a App Distribution; CI verde [`release-tauri`+`release-capacitor`]) + **P9: baseline `Spec/qa/i18n-baseline/` conservado** + housekeeping (`AuthLoadingSkeleton.tsx` borrado — huérfano, 0 imports).
 
-**Checklist de smoke nativo del release 0.5.1** (los 3 `<Trans>` no alcanzables en QA web con cuenta verificada + inbox poblado — diferidos explícitamente, no evaporados):
+**Checklist de smoke nativo del release 0.5.1** — los 3 `<Trans>` no alcanzables en QA web (cuenta verificada + inbox poblado). **✅ CONFIRMADOS por Sebastián en el smoke nativo (2026-06-15): es/en OK en desktop (updater) + APK; los 3 `<Trans>` verificados.**
 
-- [ ] `auth.action.reset.forAccount` — un reset de password a la propia cuenta renderiza el email real en `<1>{{email}}</1>`.
-- [ ] `inbox.empty.hint` — con el inbox vacío, el `<kbd>Alt+N</kbd>` queda inline en posición natural.
-- [ ] `auth.verify.body` — si no es alcanzable (cuenta verificada → `/verify-email` redirige), **cierre documentado** por garantía estructural: estructura `<1>{{email}}</1>` idéntica a es + F2.6 verificó este mismo `<Trans>` con email real en prod + 2 revisores sin reorder. NO pendiente abierto.
+- [x] `auth.action.reset.forAccount` — reset de password a la propia cuenta renderiza el email real en `<1>{{email}}</1>`.
+- [x] `inbox.empty.hint` — con el inbox vacío, el `<kbd>Alt+N</kbd>` queda inline en posición natural.
+- [x] `auth.verify.body` — cierre por garantía estructural (estructura `<1>{{email}}</1>` idéntica a es + F2.6 verificó este mismo `<Trans>` con email real en prod + 2 revisores sin reorder).
 
 ## Desvíos registrados (step 2 SDD — plan F1, aprobados por Sebastián 2026-06-11)
 
