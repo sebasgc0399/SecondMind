@@ -134,13 +134,40 @@ Todos los colores son `oklch()`, hue **285** (violeta) salvo destructive (rojo) 
 
 **Anti-patrones (canon — el agente los reporta como hallazgos):**
 
-- Emojis como iconos funcionales (usar **Lucide**, stroke 1.5) · `transform: scale` en hover de cards · sombras fuertes en dark · gradientes decorativos brillantes · `#fff`/`#000` puros en dark · animaciones decorativas / bounce · **spinners** (usar skeletons — coincide con gotcha universal del repo) · tooltips inmediatos · FAB · bottom-tabs en desktop · modales para acciones rápidas (preferir inline editing) · scroll infinito sin señalizar fin · dropdowns con scrollbar (>~8 ítems).
+- Emojis como iconos funcionales (usar **Lucide**; escala y stroke en §7) · `transform: scale` en hover de cards · sombras fuertes en dark · gradientes decorativos brillantes · `#fff`/`#000` puros en dark · animaciones decorativas / bounce · **spinners** (usar skeletons — coincide con gotcha universal del repo) · tooltips inmediatos · FAB · bottom-tabs en desktop · modales para acciones rápidas (preferir inline editing) · scroll infinito sin señalizar fin · dropdowns con scrollbar (>~8 ítems).
+
+---
+
+## 7. Iconografía
+
+**Factual (verificado en el código):**
+
+- Familia: **Lucide** (`lucide-react`) — 75 imports en 73 archivos, biblioteca única.
+- **`strokeWidth`: el código usa el _default_ de Lucide (2).** No hay override global a 1.5; única excepción `NoteCard` (estrella de favorito: `strokeWidth={isFavorite ? 1.5 : 2}`). El "stroke 1.5" del design system histórico **no está aplicado**.
+- Tamaño: vía clases Tailwind `w-N h-N` (el prop `size=` de Lucide **no se usa**). Distribución real:
+
+| Clase         | px  | Usos  | Uso típico                                  |
+| ------------- | --- | ----- | ------------------------------------------- |
+| `w-3 h-3`     | 12  | 29    | micro: chips, badges, sugerencias densas    |
+| `w-3.5 h-3.5` | 14  | ~20   | **drift** (paso no-canónico)                |
+| `w-4 h-4`     | 16  | 76    | **default** (inline, botones, items)        |
+| `w-5 h-5`     | 20  | 7     | headers de sección, botones grandes         |
+| `w-6 h-6`     | 24  | 5     | FAB, empty-states grandes                   |
+| `w-8 h-8`     | 32  | pocos | iconos de empty-state (Trash2/Search/Brain) |
+| `w-10 h-10`   | 40  | 1     | check de captura (celebración puntual)      |
+
+**Criterio:**
+
+- **Escala canónica:** **16px (`w-4`) default** (inline, botones, items de lista) · **20px (`w-5`)** headers de sección / botones grandes · **24px (`w-6`)** FAB y empty-states grandes · **12px (`w-3`)** micro-iconos en chips/badges densos (tier establecido, 29 usos). 32px reservado a iconos de empty-state.
+- **`strokeWidth`: decisión abierta.** Intent histórico = 1.5 ("más fino en dark"); realidad = default 2. Hasta resolverlo, el agente lo trata como **observación**, no blocker.
+- **Drift que el agente DEBE reportar:** **`w-3.5`/`h-3.5` (14px)** — paso no-canónico (~20 usos), debería migrar a `w-3` (12) o `w-4` (16); y cualquier tamaño suelto fuera de {12, 16, 20, 24} (ej. el 40px aislado).
+- Color del icono: `currentColor` (hereda del contexto vía `text-*`).
 
 ---
 
 ## Cómo usa esto el agente `design-review`
 
 1. Compara hallazgos contra los **tokens factuales** (sección 1) — color/spacing/radius fuera del sistema = hallazgo.
-2. Mide contra el **criterio definido** (secciones 2–6): jerarquía del chrome, densidad power-tool densa-con-restraint, color/uso, motion, anti-patrones.
+2. Mide contra el **criterio definido** (secciones 2–7): jerarquía del chrome, densidad power-tool densa-con-restraint, color/uso, motion, anti-patrones, iconografía.
 3. Respeta las decisiones explícitas: **no** marcar la ausencia de `success`/`warning`; **sí** marcar el gap de `prefers-reduced-motion`; **no** confundir el violeta de marca con _slop_.
 4. Si existe regla por página en `design-system/secondmind/pages/`, esa manda.
