@@ -65,7 +65,7 @@ export default function TableToolbar({ editor }: TableToolbarProps) {
       {/* z-50: el wrapper flotante del BubbleMenu es z-auto y ningún ancestro crea
           stacking context, así que sin esto el sidebar (z-30) tapa el menú e
           intercepta los clics cuando se solapan (tabla cerca del borde izquierdo). */}
-      <div className="relative z-50 flex items-center gap-0.5 rounded-lg border border-border bg-popover p-1 text-popover-foreground shadow-xl">
+      <div className="relative z-50 flex max-w-[calc(100vw-1rem)] flex-wrap items-center gap-0.5 rounded-lg border border-border bg-popover p-1 text-popover-foreground shadow-xl">
         <TableButton
           onClick={() => editor.chain().focus().addRowBefore().run()}
           label={t('editor.table.addRowBefore', 'Insertar fila arriba')}
@@ -162,7 +162,7 @@ export default function TableToolbar({ editor }: TableToolbarProps) {
 }
 
 function Divider() {
-  return <span aria-hidden className="mx-0.5 h-5 w-px bg-border" />;
+  return <span aria-hidden className="mx-0.5 h-5 w-px shrink-0 bg-border" />;
 }
 
 interface TableButtonProps {
@@ -190,7 +190,7 @@ function TableButton({
       aria-label={label}
       aria-pressed={active}
       title={label}
-      className={`inline-flex h-11 w-11 items-center justify-center rounded-md transition-colors disabled:pointer-events-none disabled:opacity-40 ${
+      className={`inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-md transition-colors disabled:pointer-events-none disabled:opacity-40 ${
         active
           ? 'bg-accent text-accent-foreground'
           : destructive
