@@ -23,7 +23,7 @@ describe('extractLinks', () => {
     expect(links[0]?.context).toContain('Nota uno');
   });
 
-  // D4 (F60): un wikilink dentro de una celda de tabla debe extraerse igual que
+  // D4 (F62): un wikilink dentro de una celda de tabla debe extraerse igual que
   // en cualquier otro bloque. El walker de extractLinks es recursivo genérico,
   // así recorre table > tableRow > tableCell > paragraph > wikilink sin código
   // específico de tablas. Este test es el guardrail de esa garantía.

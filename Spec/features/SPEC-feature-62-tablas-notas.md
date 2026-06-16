@@ -1,4 +1,4 @@
-# SPEC — Feature 60: Tablas en las notas (editor TipTap)
+# SPEC — Feature 62: Tablas en las notas (editor TipTap)
 
 > Estado: **Propuesto** (en revisión de Sebastián). Rama: `feat/tablas-notas` (worktree aislado `SecondMind-tablas`).
 > Alcance decidido: **Completo** (insertar + editar + resize + gestión filas/columnas + merge/split + header toggle + alineación) y **editable en todas las plataformas** (web/Tauri/Android, incluido touch).
@@ -53,7 +53,7 @@ Permitir insertar y editar **tablas** dentro de las notas del editor TipTap, con
 
 ### F6 — Cierre (SDD step 8)
 
-- **Qué:** escalar gotchas nuevos (CSS ProseMirror obligatorio, comportamiento de `getText` con celdas, lo que aparezca de merge/split o touch) a `Spec/gotchas/editor-tiptap.md`; actualizar `ESTADO-ACTUAL.md` (línea F60 + índices); convertir este SPEC a registro de implementación.
+- **Qué:** escalar gotchas nuevos (CSS ProseMirror obligatorio, comportamiento de `getText` con celdas, lo que aparezca de merge/split o touch) a `Spec/gotchas/editor-tiptap.md`; actualizar `ESTADO-ACTUAL.md` (línea F62 + índices); convertir este SPEC a registro de implementación.
 
 ## Decisiones clave
 

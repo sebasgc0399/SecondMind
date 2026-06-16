@@ -470,7 +470,7 @@
   text-decoration: line-through;
 }
 
-/* Tablas (F60) — TipTap TableKit. ProseMirror EXIGE estos estilos: sin ellos la
+/* Tablas (F62) — TipTap TableKit. ProseMirror EXIGE estos estilos: sin ellos la
    tabla no muestra bordes ni el handle de resize de columna. Las variables
    semánticas (--border/--muted/--primary) ya cambian en .dark, así que el modo
    oscuro se hereda solo (no hace falta un bloque .dark dedicado). */
