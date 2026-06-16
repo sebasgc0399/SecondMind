@@ -1,88 +1,39 @@
-# SPEC — Feature 62: Tablas en las notas (editor TipTap)
+# SPEC — Feature 62: Tablas en las notas (editor TipTap) (Registro de implementación)
 
-> Estado: **Propuesto** (en revisión de Sebastián). Rama: `feat/tablas-notas` (worktree aislado `SecondMind-tablas`).
-> Alcance decidido: **Completo** (insertar + editar + resize + gestión filas/columnas + merge/split + header toggle + alineación) y **editable en todas las plataformas** (web/Tauri/Android, incluido touch).
-> 100% cliente. Sin Cloud Functions / rules / indexes. Sin bump de `TINYBASE_SCHEMA_VERSION` (las tablas viven en el `content` JSON de Firestore, no en una Row de TinyBase).
+> Estado: Completada Junio 2026 (F1–F5 implementadas + verificadas E2E contra prod en `feat/tablas-notas`; **sin mergear** — coordinar con la rama paralela que avanzó `main` con F60/F61). Pendiente: smoke táctil en device real (Android/Tauri) — F5 cubrió solo la parte responsive web.
+> Commits: `8ce2a2c` F1 (insertar tablas), `b56d200` corrección numeración 60→62, `8240438` F2 (gestión filas/columnas), `ae5f4c0` F3 (header + alineación), `5da56aa` F4 (merge/split), `2c386a7` F5 (toolbar responsive mobile).
+> Alcance: Completo (insertar + editar + resize + gestión filas/columnas + merge/split + header + alineación) + responsive mobile. 100% cliente (sin functions/rules, sin bump de `TINYBASE_SCHEMA_VERSION` — las tablas viven en el `content` JSON de Firestore).
+> Gotchas operativos vigentes → `Spec/ESTADO-ACTUAL.md` (índice editor-tiptap).
 
 ## Objetivo
 
-Permitir insertar y editar **tablas** dentro de las notas del editor TipTap, con gestión completa de estructura (filas, columnas, merge/split, header, alineación) y soporte de edición en las tres plataformas del ecosistema. Single-concern: tablas como nuevo tipo de bloque del editor; reusa el patrón de inserción del slash menu existente y no toca la capa de persistencia/search/embeddings (que ya operan sobre `contentPlain`).
+Permitir insertar y editar **tablas** dentro de las notas del editor TipTap, con gestión completa de estructura (filas, columnas, merge/split, header, alineación) y soporte responsive en mobile. Single-concern: tablas como nuevo tipo de bloque del editor; reusa el patrón de inserción del slash menu existente y no toca la capa de persistencia/search/embeddings (que ya operan sobre `contentPlain`).
 
-## Contexto técnico (de la investigación pre-SPEC)
+## Qué se implementó
 
-- **TipTap v3.26.1.** El paquete de tablas en v3 es **`@tiptap/extension-table`** (uno solo), que exporta **`TableKit`** — un kit que agrupa `Table` + `TableRow` + `TableHeader` + `TableCell` (igual que `StarterKit`). `@tiptap/pm` ya está instalado. NO son paquetes separados como en v2.
-- **Editor:** instancia única en [src/components/editor/NoteEditor.tsx](src/components/editor/NoteEditor.tsx) (extensiones líneas 48-71). `StarterKit` v3 ya incluye `Gapcursor` y `Dropcursor` (necesarios para posicionar el cursor antes/después de una tabla) — **verificar, no re-agregar**.
-- **Inserción:** patrón data-driven en [src/components/editor/menus/slashMenuItems.ts](src/components/editor/menus/slashMenuItems.ts) — shape `SlashMenuItem` (`id`, `label`, `description`, `icon`, `category`, `keywords?`, `action: (editor, ctx) => void`). Categorías en `CATEGORY_ORDER`: `text | lists | blocks | mentions | templates`.
-- **Menú flotante sobre selección:** [src/components/editor/menus/BubbleToolbar.tsx](src/components/editor/menus/BubbleToolbar.tsx) usa `BubbleMenu` de `@tiptap/react/menus` con `shouldShow`. Es el patrón a reusar para el menú de gestión de tabla.
-- **Persistencia (sin cambios):** el doc TipTap JSON va directo a Firestore como `content` string vía `notesRepo.saveContent` ([src/hooks/useNoteSave.ts](src/hooks/useNoteSave.ts):118-148). Las tablas se serializan solas.
-- **Search/embeddings (sin cambios):** indexan `contentPlain` (`editor.getText()`), que ya incluye el texto de las celdas. Orama schema en [src/lib/orama.ts](src/lib/orama.ts) no se toca.
-- **Links:** [src/lib/editor/extractLinks.ts](src/lib/editor/extractLinks.ts) camina el JSON buscando nodos `wikilink` — **verificar** que el walker recorre nodos de tabla (celdas) si se permiten `@wikilinks` dentro de celdas.
-- **CSS obligatorio (gotcha clásico ProseMirror):** sin estilos para `table/td/th/.selectedCell/.column-resize-handle/.tableWrapper`, la tabla se ve rota y el resize es invisible. Va en [src/index.css](src/index.css), themed con las CSS variables de shadcn.
-
-## Sub-features (orden de implementación: núcleo → cortable)
-
-### F1 — Inserción + persistencia + estilos (núcleo usable)
-
-- **Qué:** instalar `@tiptap/extension-table`; registrar `TableKit.configure({ table: { resizable: true } })` en `NoteEditor.tsx`; agregar item "Insertar tabla" en `slashMenuItems.ts` (categoría `blocks`, icono `Table` de lucide-react, `action: (editor) => editor.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run()`); keys i18n `editor.slash.items.table.{label,description}` (es/en) + regen de tipos i18n; CSS themed completo de tablas en `src/index.css` (bordes `border-border`, header `bg-muted`, `.selectedCell` con `primary/accent`, `.column-resize-handle` con `primary`, `.tableWrapper` con `overflow-x-auto` para mobile), light + dark. Verificar `Gapcursor` y el walker de `extractLinks`.
-- **Criterio de done:** insertar tabla 3×3 con header desde `/`; editar celdas; resize de columnas (desktop, arrastrando el borde); persiste a Firestore y reabre intacta; `getText()` incluye el texto de las celdas (search lo encuentra); se ve coherente en light/dark; scroll horizontal en viewport angosto sin romper layout.
-- **Archivos:** `package.json` (+ lock), `src/components/editor/NoteEditor.tsx`, `src/components/editor/menus/slashMenuItems.ts`, `src/index.css`, `src/locales/{es,en}/translation.json`, `src/types/resources.d.ts`.
-
-### F2 — Menú de gestión de tabla (filas / columnas / borrar)
-
-- **Qué:** menú flotante contextual visible cuando el cursor está dentro de una tabla (`editor.isActive('table')`), con acciones: agregar fila arriba/abajo (`addRowBefore/After`), borrar fila (`deleteRow`), agregar columna izq/der (`addColumnBefore/After`), borrar columna (`deleteColumn`), borrar tabla (`deleteTable`). Patrón: `BubbleMenu` con `shouldShow` (calca `BubbleToolbar.tsx`), o un componente nuevo `TableToolbar.tsx`. Iconos lucide. i18n.
-- **Criterio de done:** todas las operaciones disponibles desde UI descubrible en desktop; el menú aparece/desaparece según contexto; no colisiona con el `BubbleToolbar` de formato de texto.
-- **Archivos:** `src/components/editor/menus/TableToolbar.tsx` (nuevo), `src/components/editor/NoteEditor.tsx` (montar), `src/locales/{es,en}/translation.json`, `src/types/resources.d.ts`.
-
-### F3 — Header toggle + alineación de celdas
-
-- **Qué:** en el menú de F2, toggle de header row/column (`toggleHeaderRow`, `toggleHeaderColumn`) y alineación de texto de celdas (left/center/right). **Decisión abierta D3** sobre el mecanismo de alineación (ver Decisiones). i18n.
-- **Criterio de done:** toggle header funciona en ambos sentidos; alineación aplica al contenido de la celda activa o la selección de celdas y persiste.
-- **Archivos:** `src/components/editor/menus/TableToolbar.tsx`, posiblemente `package.json` (`@tiptap/extension-text-align` si se elige esa vía), `src/components/editor/NoteEditor.tsx`, locales + tipos.
-
-### F4 — Merge / split de celdas (cortable)
-
-- **Qué:** en el menú de F2, merge (`mergeCells`), split (`splitCell`) y toggle (`mergeOrSplit`) sobre selección de celdas. Es la pieza más propensa a bugs (estados inválidos, undo/redo). i18n.
-- **Criterio de done:** merge de 2+ celdas seleccionadas; split de una celda merged; undo/redo coherente; persiste y reabre.
-- **Archivos:** `src/components/editor/menus/TableToolbar.tsx`, locales + tipos.
-
-### F5 — Touch / mobile (Android) (cortable)
-
-- **Qué:** edición y gestión por touch en Android: resize de columnas por touch, accesibilidad del menú de gestión por touch (el `BubbleMenu` puede requerir ajustes de posicionamiento/tap), y QA en device real (Android APK + Tauri desktop). Ajustar `overflow-x` y la ergonomía táctil del menú.
-- **Criterio de done:** insertar/editar/gestionar tablas funciona por touch en Android; resize táctil usable; smoke en device (Android + Tauri) verde.
-- **Archivos:** `src/index.css` (ajustes táctiles), `src/components/editor/menus/TableToolbar.tsx` (ergonomía touch), `NoteEditor.tsx` si hace falta.
-
-### F6 — Cierre (SDD step 8)
-
-- **Qué:** escalar gotchas nuevos (CSS ProseMirror obligatorio, comportamiento de `getText` con celdas, lo que aparezca de merge/split o touch) a `Spec/gotchas/editor-tiptap.md`; actualizar `ESTADO-ACTUAL.md` (línea F62 + índices); convertir este SPEC a registro de implementación.
+- **F1 — Inserción + persistencia + estilos:** instalado `@tiptap/extension-table`; `TableKit.configure({ table: { resizable: true } })` en NoteEditor; item slash "Table" (categoría `blocks`) que inserta tabla 3×3 con header; CSS ProseMirror themed (bordes/header/`.selectedCell`/`.column-resize-handle`/`.tableWrapper`) que hereda dark mode vía variables semánticas; i18n es/en + tipos; test de regresión de `extractLinks` (wikilink en celda, D4). Verificado E2E contra prod: insertar/editar/persistir a Firestore/reabrir; `contentPlain` incluye el texto de celdas. Archivos tocados: `package.json` (+lock), `components/editor/NoteEditor.tsx`, `components/editor/menus/slashMenuItems.ts`, `index.css`, `locales/{es,en}/translation.json`, `types/resources.d.ts`, `lib/editor/extractLinks.test.ts` (nuevo).
+- **F2 — Menú de gestión (`TableToolbar.tsx`, nuevo):** `BubbleMenu` contextual visible con el cursor en una celda sin selección de texto (`isActive('table') && selection.empty`, mutuamente exclusivo con el `BubbleToolbar` de formato). Acciones: insertar/eliminar fila y columna, eliminar tabla. Fix de z-index (`relative z-50`) para que el menú quede sobre el sidebar (z-30) cuando se solapan. Verificado E2E: las 7 operaciones + el fix. Archivos tocados: `components/editor/menus/TableToolbar.tsx` (nuevo), `NoteEditor.tsx`, locales + tipos.
+- **F3 — Header toggle + alineación:** `@tiptap/extension-text-align` (`types: ['heading','paragraph']`) + botones de toggle header row/column y alineación L/C/R en el TableToolbar (estado activo vía `aria-pressed`). Verificado E2E: `toggleHeaderColumn` (th 3→5) y `setTextAlign('center')` persisten como `tableHeader`/`textAlign` en el JSON. Archivos tocados: `package.json` (+lock), `NoteEditor.tsx`, `menus/TableToolbar.tsx`, locales + tipos.
+- **F4 — Merge/split de celdas:** botón `mergeOrSplit` contextual (deshabilitado vía `can().mergeOrSplit()` cuando no aplica); `shouldShow` del TableToolbar ampliado para mostrarse ante una `CellSelection`, y el `BubbleToolbar` de formato la excluye (cederle el paso, sin doble menú). Verificado E2E: drag entre celdas → CellSelection → merge (`colspan=2`, persiste en Firestore) → split (`colspan=1`). Archivos tocados: `menus/TableToolbar.tsx`, `menus/BubbleToolbar.tsx`, locales + tipos.
+- **F5 — Toolbar responsive mobile:** el TableToolbar (13 botones, ~640px) se salía del viewport en mobile dejando botones inaccesibles; fix con `flex-wrap` + `max-w-[calc(100vw-1rem)]` + `shrink-0` → envuelve a 2-3 filas dentro del viewport (375px → 359px / 2 filas). Verificado en viewport mobile vía Playwright. **Pendiente:** smoke táctil en device real (APK/Tauri) — la parte B de F5. Archivos tocados: `menus/TableToolbar.tsx`.
+- **F6 — Cierre (SDD step 8):** gotchas escalados a `Spec/gotchas/editor-tiptap.md` (TableKit setup, z-index del BubbleMenu + bug latente en BubbleToolbar, toolbar mobile wrap, walker de extractLinks recorre tablas, TextAlign global); `ESTADO-ACTUAL.md` actualizado (línea F62 + índice). Archivos tocados: `Spec/gotchas/editor-tiptap.md`, `Spec/ESTADO-ACTUAL.md`.
 
 ## Decisiones clave
 
-| #      | Decisión                                                                                                                                                                                                                                                                                                                             | Estado                |
-| ------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | --------------------- |
-| **D1** | **`TableKit` (no extensiones sueltas)** con `table.resizable: true`. Consistente con cómo el proyecto usa `StarterKit`.                                                                                                                                                                                                              | Propuesta             |
-| **D2** | **Menú de gestión = `BubbleMenu` contextual** (`shouldShow: isActive('table')`), reusando el patrón de `BubbleToolbar`, en vez de un toolbar fijo. Descubrible y no roba espacio.                                                                                                                                                    | Propuesta             |
-| **D3** | **Alineación de celdas (F3):** opción A = `@tiptap/extension-text-align` aplicado a `paragraph`/`heading` (simple, pero la alineación queda disponible **globalmente**, no solo en tablas); opción B = restringir a contenido de celda (más complejo). **Recomiendo A** salvo que se quiera evitar alinear párrafos fuera de tablas. | **Abierta — decidir** |
-| **D4** | **¿Wikilinks dentro de celdas?** Si sí, verificar/ajustar `extractLinks.ts` para recorrer nodos de tabla. **Recomiendo permitirlo** (consistencia) y cubrir el walker en F1.                                                                                                                                                         | **Abierta — decidir** |
-| **D5** | **F4 (merge/split) y F5 (touch) son cortables** sin dejar la feature a medias: F1-F3 ya entregan una tabla plenamente usable en desktop. Si el costo/riesgo de merge/split o touch escala, se difieren a una feature posterior.                                                                                                      | Propuesta             |
-| **D6** | **Sin bump de schema** TinyBase ni de preferences. Confirmado en la investigación.                                                                                                                                                                                                                                                   | Cerrada (técnica)     |
+| #      | Decisión                                                                                                                                                                                                                                                                                                                          | Estado              |
+| ------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------- |
+| **D1** | **`TableKit` (no extensiones sueltas)** con `table.resizable: true`. Consistente con cómo el proyecto usa `StarterKit`.                                                                                                                                                                                                           | Cerrada             |
+| **D2** | **Menú de gestión = `BubbleMenu` contextual** (`shouldShow: isActive('table')`), reusando el patrón de `BubbleToolbar` en vez de un toolbar fijo. Descubrible, no roba espacio.                                                                                                                                                   | Cerrada             |
+| **D3** | **Alineación vía `@tiptap/extension-text-align` (global)** sobre `paragraph`/`heading`. Confirmada **intencional**: la alineación queda disponible en todo el editor (botones solo en el TableToolbar, pero los atajos `Mod-Shift-l/e/r/j` funcionan en cualquier párrafo). Restringirla a celdas no es trivial con este enfoque. | Cerrada (Sebastián) |
+| **D4** | **Wikilinks dentro de celdas: permitidos.** El walker recursivo de `extractLinks` recorre las celdas sin código específico. **Verificado E2E** (no solo unit test): un wikilink en una celda crea el doc en `links/` (con context) y registra el backlink en `incomingLinkIds` de la target. NO se dropean.                       | Cerrada (Sebastián) |
+| **D5** | **F4 (merge/split) y F5 (touch) cortables** sin dejar la feature a medias: F1-F3 entregaban una tabla usable en desktop. Ambas hechas (F5 solo la parte responsive web; smoke device diferido).                                                                                                                                   | Cerrada             |
+| **D6** | **Sin bump de schema** TinyBase ni preferences. Confirmado en la investigación.                                                                                                                                                                                                                                                   | Cerrada (técnica)   |
 
-## Pre-requisitos / gotchas a vigilar
+## Lecciones
 
-- **`resolve.dedupe` tras `npm install`** (CLAUDE.md): instalar `@tiptap/extension-table` mueve el lockfile → al levantar el dev server del worktree, verificar que no reaparece `Firebase: Component auth has not been registered yet` / `Invalid hook call`. Si pasa, revisar `vite.config.ts` dedupe.
-- **Worktree aislado:** `node_modules` propio (no junction, lockfile diverge). Limpieza segura al cerrar (skill `git-worktrees`): `remove-worktree.ps1`.
-- **QA contra prod** bajo el protocolo del CLAUDE.md step 5 (anunciar, revertir + verificar server-side, hard-delete notas de prueba). Emulador preferido donde alcance.
-
-## Verificación (gate de cierre)
-
-- `npm run lint` (completo) + `npx tsc -b` + `npm test`.
-- Smoke web E2E (Playwright): insertar tabla, editar, resize, gestión (add/del row/col), merge/split, header, alineación; persistencia (reabrir nota); search encuentra texto de celda. Cleanup server-side verificado.
-- Smoke nativo: Tauri (desktop) + Android (APK) — edición y touch.
-
-## Checklist
-
-- [ ] F1 — inserción + persistencia + estilos
-- [ ] F2 — menú de gestión (filas/columnas/borrar)
-- [ ] F3 — header toggle + alineación
-- [ ] F4 — merge/split (cortable)
-- [ ] F5 — touch/mobile Android (cortable)
-- [ ] F6 — cierre SDD step 8
+- **TipTap v3 agrupa tablas en `TableKit`** (un solo paquete `@tiptap/extension-table`), no en paquetes separados como v2. El CSS de ProseMirror es obligatorio o la tabla se ve rota (sin bordes, resize invisible). Variables semánticas → dark mode gratis. (Gotcha en `editor-tiptap.md`.)
+- **El wrapper flotante de `BubbleMenu` es `z-index: auto`** y ningún ancestro del editor crea stacking context → el sidebar (z-30) lo tapa e intercepta clics cuando se solapan. Fix: `relative z-50` en el div del menú. **El `BubbleToolbar` de formato tiene el mismo bug latente.** (Gotcha en `editor-tiptap.md`.)
+- **Un toolbar flotante de muchos botones se sale del viewport en mobile** — `flex-wrap` + `max-w-[calc(100vw-1rem)]` + `shrink-0` lo resuelve sin tocar el resto. El usuario percibe "el menú no aparece" cuando en realidad está fuera de pantalla. (Gotcha en `editor-tiptap.md`.)
+- **El walker recursivo genérico de `extractLinks` recorre cualquier nodo-contenedor nuevo** (tablas incluidas) sin tocar código — pero el path completo (getJSON con tabla → `links/` → backlinks) hay que verificarlo E2E, no asumirlo desde el unit test. El unit test prueba la función aislada; solo el E2E prueba que `getJSON()` incluye la tabla y que `syncLinksFromEditor` sincroniza. (Gotcha en `editor-tiptap.md`.)
+- **El "scroll fantasma" en mobile era un artefacto de la ventana de Playwright** (Chromium en automatización dibuja los scrollbars clásicos de los contenedores `overflow` que el navegador normal muestra como overlay), no de la app. Al diagnosticar "algo cambió en mobile", descartar primero el navegador del QA antes de buscar en el diff: `git diff --stat` (cero cambios en la lista de notas) + verificar que el CSS propio está balanceado y scoped.
+- **Worktree aislado con dependencia nueva:** instalar un paquete cambia el lockfile → NO compartir `node_modules` vía junction (instalar independiente). Además `src/functions` es un subpaquete con su propio lockfile → `npm install --prefix src/functions` aparte, o sus tests fallan por `firebase-functions` ausente (falso rojo ambiental, no regresión). El gotcha `resolve.dedupe` no reapareció (verificado al levantar el dev server: 0 errores de Firebase/React).
