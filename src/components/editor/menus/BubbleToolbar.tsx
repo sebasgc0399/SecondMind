@@ -13,6 +13,7 @@ import {
   Pencil,
   Unlink,
 } from 'lucide-react';
+import { CellSelection } from '@tiptap/pm/tables';
 import LinkInput from '@/components/editor/menus/LinkInput';
 import type { EditorState } from '@tiptap/pm/state';
 
@@ -20,6 +21,8 @@ function shouldShow({ editor, state }: { editor: Editor; state: EditorState }): 
   if (!editor.isEditable) return false;
   if (editor.isActive('codeBlock')) return false;
   if (editor.isActive('wikilink')) return false;
+  // Celdas de tabla seleccionadas (CellSelection) → cederle el paso al TableToolbar.
+  if (state.selection instanceof CellSelection) return false;
   if (state.selection.empty && !editor.isActive('link')) return false;
   return true;
 }

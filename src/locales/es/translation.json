@@ -350,6 +350,10 @@
           "description": "Lista numerada",
           "label": "Numbered List"
         },
+        "table": {
+          "description": "Tabla de filas y columnas",
+          "label": "Table"
+        },
         "taskList": {
           "description": "Lista con checkboxes",
           "label": "Task List"
@@ -370,6 +374,21 @@
     "summaryL3": {
       "placeholder": "¿Qué le explicarías a tu yo del futuro sobre esto? 1-2 frases.",
       "title": "Resumen ejecutivo (L3)"
+    },
+    "table": {
+      "addColumnAfter": "Insertar columna a la derecha",
+      "addColumnBefore": "Insertar columna a la izquierda",
+      "addRowAfter": "Insertar fila abajo",
+      "addRowBefore": "Insertar fila arriba",
+      "alignCenter": "Centrar",
+      "alignLeft": "Alinear a la izquierda",
+      "alignRight": "Alinear a la derecha",
+      "deleteColumn": "Eliminar columna",
+      "deleteRow": "Eliminar fila",
+      "deleteTable": "Eliminar tabla",
+      "mergeOrSplit": "Combinar o dividir celdas",
+      "toggleHeaderColumn": "Columna de encabezado",
+      "toggleHeaderRow": "Fila de encabezado"
     },
     "templates": {
       "literature": {

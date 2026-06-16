@@ -8,12 +8,15 @@ import Placeholder from '@tiptap/extension-placeholder';
 import TaskList from '@tiptap/extension-task-list';
 import TaskItem from '@tiptap/extension-task-item';
 import Highlight from '@tiptap/extension-highlight';
+import { TableKit } from '@tiptap/extension-table';
+import TextAlign from '@tiptap/extension-text-align';
 import Wikilink from '@/components/editor/extensions/wikilink';
 import SlashCommand from '@/components/editor/extensions/slash-command';
 import CodeBlockLowlight from '@/components/editor/extensions/code-block-lowlight';
 import WikilinkMenu from '@/components/editor/menus/WikilinkMenu';
 import SlashMenu from '@/components/editor/menus/SlashMenu';
 import BubbleToolbar from '@/components/editor/menus/BubbleToolbar';
+import TableToolbar from '@/components/editor/menus/TableToolbar';
 import DistillLevelBanner from '@/components/editor/DistillLevelBanner';
 import EditorSuggestionBanner from '@/components/editor/EditorSuggestionBanner';
 import SaveErrorBanner from '@/components/editor/SaveErrorBanner';
@@ -64,6 +67,8 @@ export default function NoteEditor({
       TaskList,
       TaskItem.configure({ nested: true }),
       Highlight,
+      TableKit.configure({ table: { resizable: true } }),
+      TextAlign.configure({ types: ['heading', 'paragraph'] }),
       CodeBlockLowlight,
       Placeholder.configure({ placeholder: t('editor.placeholder', 'Escribe una idea...') }),
       Wikilink.configure({ noteId }),
@@ -112,6 +117,7 @@ export default function NoteEditor({
       <WikilinkMenu noteId={noteId} />
       <SlashMenu />
       <BubbleToolbar editor={editor} />
+      <TableToolbar editor={editor} />
     </div>
   );
 }

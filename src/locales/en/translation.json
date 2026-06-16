@@ -345,6 +345,10 @@
           "description": "Numbered list",
           "label": "Numbered List"
         },
+        "table": {
+          "description": "Rows and columns",
+          "label": "Table"
+        },
         "taskList": {
           "description": "Checklist",
           "label": "Task List"
@@ -365,6 +369,21 @@
     "summaryL3": {
       "placeholder": "What would you explain to your future self about this? 1-2 sentences.",
       "title": "Executive summary (L3)"
+    },
+    "table": {
+      "addColumnAfter": "Insert column right",
+      "addColumnBefore": "Insert column left",
+      "addRowAfter": "Insert row below",
+      "addRowBefore": "Insert row above",
+      "alignCenter": "Center",
+      "alignLeft": "Align left",
+      "alignRight": "Align right",
+      "deleteColumn": "Delete column",
+      "deleteRow": "Delete row",
+      "deleteTable": "Delete table",
+      "mergeOrSplit": "Merge or split cells",
+      "toggleHeaderColumn": "Header column",
+      "toggleHeaderRow": "Header row"
     },
     "templates": {
       "literature": {

@@ -12,6 +12,7 @@ import {
   ListOrdered,
   Minus,
   Quote,
+  Table,
   type LucideIcon,
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
@@ -142,6 +143,16 @@ function buildSlashMenuItems(t: TFunction): SlashMenuItem[] {
       category: 'blocks',
       keywords: ['hr', 'linea', 'separador'],
       action: (editor) => editor.chain().focus().setHorizontalRule().run(),
+    },
+    {
+      id: 'table',
+      label: t('editor.slash.items.table.label', 'Table'),
+      description: t('editor.slash.items.table.description', 'Tabla de filas y columnas'),
+      icon: Table,
+      category: 'blocks',
+      keywords: ['tabla', 'grid', 'cuadricula'],
+      action: (editor) =>
+        editor.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run(),
     },
     {
       id: 'mention-note',
