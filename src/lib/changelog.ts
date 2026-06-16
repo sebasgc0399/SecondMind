@@ -8,7 +8,10 @@
  * `as const`: fija las keys como literales (p. ej. `'v060'`) para que el modal
  * (F6) construya `t('changelog.${key}.title')` como key tipada, sin cast.
  */
-export const CHANGELOG_ENTRIES = [{ version: '0.6.0', key: 'v060' }] as const;
+export const CHANGELOG_ENTRIES = [
+  { version: '0.5.2', key: 'v052' },
+  { version: '0.6.0', key: 'v060' },
+] as const;
 
 export type ChangelogEntry = (typeof CHANGELOG_ENTRIES)[number];
 export type ChangelogKey = ChangelogEntry['key'];
