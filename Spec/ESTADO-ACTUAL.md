@@ -115,6 +115,8 @@ Cada feature comprimida a 1 línea con pointer al SPEC archivado. Para detalles 
 
 - **Feature 59 — Conciencia de versión en runtime + modal what's-new:** accessor único `getRunningVersion()` (`isCapacitor`→`isTauri`→web; web repone el `define __APP_VERSION__` removido en `e349bcf`, leído **POST-reload** → no regresa el bug self-defeating de `useVersionCheck`) que alimenta `AppInfoSection` en los **3 frentes** + un **modal "Novedades" one-time por versión**, catalog-driven. Campo aditivo `lastSeenVersion` en preferences (sin bump de schema); trigger `currentVersion !== lastSeenVersion` por **igualdad de string** (D4) + **supresión en instalación nueva** (D9, mutua exclusión con `WelcomeModal`); catálogo bilingüe **en el repo** (registry `CHANGELOG_ENTRIES` + i18n `changelog.*`, NO Firestore). Modal calca el patrón one-shot de `WelcomeModal`. **Verificación:** lint + tsc + 329 tests + `useWhatsNew` 7 ramas; **smoke web E2E** contra prod (negative / positive / dismiss-persist / no-reaparece / locale es↔en) verde con cleanup server-side. **Smoke nativo Tauri+Android = gate duro de release 0.6.0** (ver § Versionado). 100% cliente, sin CFs. 3 gotchas escalados: `pwa-offline.md` (reintroducción segura de `__APP_VERSION__`), `i18n.md` (array→tupla + `returnObjects`/`as string[]` + key dinámica por `as const`), `tooling-local.md` (hook fail-close al escribir en dir nuevo → `mkdir` antes). → [SPEC](features/SPEC-feature-59-conciencia-version-runtime.md).
 
+- **Feature 61 — Purga del HTTP cache del WebView en update de APK (Android):** cura el bundle viejo que la app sigue mostrando tras instalar una APK nueva hasta que el usuario cierra y borra **"Caché"** (no "Datos"). Causa raíz **verificada en el fuente de Capacitor 8.3.0**: `WebViewLocalServer` sirve los assets locales con `Cache-Control: no-cache` (permite **almacenar**, solo revalida) + nunca llama `setCacheMode` (queda `LOAD_DEFAULT`), sin `ETag`/`304` efectivos → el WebView cachea `index.html` (nombre **estable** entre releases) y lo reusa tras el update → apunta a los chunks JS viejos → bundle viejo. **No es el SW** (no se registra en Capacitor). Fix: purge-on-version-bump nativo en `MainActivity.onCreate` (análogo a `version_check.rs` de Tauri) — gate `BuildConfig.VERSION_CODE > marca` en SharedPreferences propio `secondmind_native`/`lastPurgedVersionCode` (fuera del `app_webview/`) → `getWebView().clearCache(true)` + `webView.post(reload)`; **la 1ª APK con el fix ya autocura** (marca ausente → 0 < versionCode). `clearCache` toca solo "Caché", nunca "Datos". Requirió `buildFeatures { buildConfig = true }` en `app/build.gradle` (AGP 8.0+ lo desactiva por default). 100% Android nativo (1 archivo Java + 1 flag gradle); **compila** (`BUILD SUCCESSFUL`). **QA on-device (Casos A–D) diferido al release** por decisión de Sebastián (solo se activa con un versionCode real mayor; se valida al instalar la APK del release). Upstream sin fix (ionic-team/capacitor discussion #7790). 3 gotchas escalados: `pwa-offline.md` (HTTP cache del WebView + fix F61), `deps-build.md` (AGP `buildConfig` off-by-default + `cap sync` reescribe paths en worktree). → [SPEC](features/SPEC-feature-61-android-webview-cache-purge.md).
+
 ---
 
 ## Cloud Functions
@@ -315,6 +317,7 @@ Cada feature comprimida a 1 línea con pointer al SPEC archivado. Para detalles 
 - [`maximumFileSizeToCacheInBytes: 4MB` en workbox config](gotchas/pwa-offline.md#maximumfilesizetocacheinbytes-4mb-en-workbox-config)
 - [`navigateFallbackDenylist` para rutas golpeadas desde links externos (post-SPEC-54)](gotchas/pwa-offline.md#navigatefallbackdenylist-para-rutas-golpeadas-desde-links-externos-email)
 - [El SW no debe registrarse en native — `immediate:!isNative` no lo impide (cura de instalaciones trabadas; remoción + reintroducción segura de `__APP_VERSION__` F59)](gotchas/pwa-offline.md#el-sw-no-debe-registrarse-en-native--y-immediateisnative-no-lo-impide)
+- [Android — el HTTP cache del WebView sirve el bundle viejo tras update de APK (F61)](gotchas/pwa-offline.md#android--el-http-cache-del-webview-sirve-el-bundle-viejo-tras-update-de-apk-f61)
 
 ### Chrome Extension — [`gotchas/chrome-extension.md`](gotchas/chrome-extension.md)
 
@@ -416,6 +419,8 @@ Cada feature comprimida a 1 línea con pointer al SPEC archivado. Para detalles 
 
 - [El lockfile puede contener peers insatisfechos silenciosos — npm install los detona](gotchas/deps-build.md#el-lockfile-puede-contener-peers-insatisfechos-silenciosos--npm-install-los-detona)
 - [TipTap solo converge en LATEST — nunca fijar versión intermedia](gotchas/deps-build.md#tiptap-solo-converge-en-latest--nunca-fijar-versión-intermedia)
+- [AGP 8.0+ desactiva la generación de `BuildConfig` por default](gotchas/deps-build.md#agp-80-desactiva-la-generación-de-buildconfig-por-default)
+- [`npx cap sync` en un worktree reescribe `capacitor.settings.gradle` con los paths del junction](gotchas/deps-build.md#npx-cap-sync-en-un-worktree-reescribe-capacitorsettingsgradle-con-los-paths-del-junction)
 
 ### Cloud Functions — Tool use con schema enforcement — [`gotchas/cloud-functions-schema.md`](gotchas/cloud-functions-schema.md)
 

@@ -32,6 +32,12 @@ android {
             ignoreAssetsPattern = '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'
         }
     }
+    buildFeatures {
+        // F61: AGP 8.0+ desactiva la generacion de BuildConfig por default.
+        // MainActivity lee BuildConfig.VERSION_CODE/DEBUG para el gate de purga
+        // del HTTP cache del WebView en update de APK.
+        buildConfig = true
+    }
     signingConfigs {
         release {
             storeFile file(keystoreProperties['storeFile'] ?: System.getenv('ANDROID_KEYSTORE_PATH') ?: 'release.keystore')
