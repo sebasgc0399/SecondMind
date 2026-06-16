@@ -11,7 +11,10 @@
 // F60 — orden del array = orden de release: cada entrada se appendea al FINAL en
 // su release (Paso 2.5 de release-ecosystem). El historial (/settings/changelog)
 // lo lista con reverse() = newest-first, sin semver. Solo versiones LIBERADAS.
-export const CHANGELOG_ENTRIES = [{ version: '0.5.2', key: 'v052' }] as const;
+export const CHANGELOG_ENTRIES = [
+  { version: '0.5.2', key: 'v052' },
+  { version: '0.5.3', key: 'v053' },
+] as const;
 
 export type ChangelogEntry = (typeof CHANGELOG_ENTRIES)[number];
 export type ChangelogKey = ChangelogEntry['key'];
