@@ -16,7 +16,7 @@ import ee.forgr.capacitor.social.login.SocialLoginPlugin;
 
 public class MainActivity extends BridgeActivity implements ModifiedMainActivityForSocialLoginPlugin {
 
-    // F60 — Purga del HTTP cache del WebView en update de APK.
+    // F61 — Purga del HTTP cache del WebView en update de APK.
     // Capacitor sirve los assets locales (WebViewLocalServer) con Cache-Control: no-cache
     // (permite ALMACENAR, solo pide revalidar) y nunca llama setCacheMode (queda LOAD_DEFAULT).
     // El WebView guarda index.html (nombre estable entre releases) en su HTTP disk cache y lo

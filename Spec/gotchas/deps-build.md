@@ -19,7 +19,7 @@ Los paquetes `@tiptap/*` declaran sus dependencias internas con rangos `^` → a
 
 ## AGP 8.0+ desactiva la generación de `BuildConfig` por default
 
-Desde Android Gradle Plugin 8.0, la clase `BuildConfig` (con `VERSION_CODE`/`VERSION_NAME`/`DEBUG`) **no se genera salvo `buildFeatures { buildConfig = true }`** en `android/app/build.gradle` (el default cambió a off para mejorar build times). Sin el flag, cualquier código nativo que lea `BuildConfig.*` falla a compilar con `cannot find symbol: variable BuildConfig`. Detectado en F60 al compilar `MainActivity` (un Explore agent había afirmado lo contrario — "se genera siempre en AGP 8.13"; refutado empíricamente al correr `assembleDebug`). Aplica a cualquier feature que toque código nativo Android leyendo build fields. La cohorte de Capacitor no lo trae habilitado por default.
+Desde Android Gradle Plugin 8.0, la clase `BuildConfig` (con `VERSION_CODE`/`VERSION_NAME`/`DEBUG`) **no se genera salvo `buildFeatures { buildConfig = true }`** en `android/app/build.gradle` (el default cambió a off para mejorar build times). Sin el flag, cualquier código nativo que lea `BuildConfig.*` falla a compilar con `cannot find symbol: variable BuildConfig`. Detectado en F61 al compilar `MainActivity` (un Explore agent había afirmado lo contrario — "se genera siempre en AGP 8.13"; refutado empíricamente al correr `assembleDebug`). Aplica a cualquier feature que toque código nativo Android leyendo build fields. La cohorte de Capacitor no lo trae habilitado por default.
 
 ## `npx cap sync` en un worktree reescribe `capacitor.settings.gradle` con los paths del junction
 

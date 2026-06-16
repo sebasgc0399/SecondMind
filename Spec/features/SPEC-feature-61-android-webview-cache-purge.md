@@ -1,4 +1,4 @@
-# SPEC — Feature 60: Purga del HTTP cache del WebView en update de APK (Android)
+# SPEC — Feature 61: Purga del HTTP cache del WebView en update de APK (Android)
 
 > Estado: En implementación — rama `feat/android-webview-cache-purge`
 > Depende de: F36 (patrón purge-on-version-bump; template Tauri `src-tauri/src/version_check.rs`)

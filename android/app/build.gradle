@@ -33,7 +33,7 @@ android {
         }
     }
     buildFeatures {
-        // F60: AGP 8.0+ desactiva la generacion de BuildConfig por default.
+        // F61: AGP 8.0+ desactiva la generacion de BuildConfig por default.
         // MainActivity lee BuildConfig.VERSION_CODE/DEBUG para el gate de purga
         // del HTTP cache del WebView en update de APK.
         buildConfig = true
