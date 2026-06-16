@@ -384,6 +384,7 @@ export default interface Resources {
         "deleteColumn": "Eliminar columna",
         "deleteRow": "Eliminar fila",
         "deleteTable": "Eliminar tabla",
+        "mergeOrSplit": "Combinar o dividir celdas",
         "toggleHeaderColumn": "Columna de encabezado",
         "toggleHeaderRow": "Fila de encabezado"
       },

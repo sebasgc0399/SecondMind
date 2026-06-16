@@ -13,17 +13,21 @@ import {
   AlignLeft,
   AlignCenter,
   AlignRight,
+  Combine,
   Trash2,
 } from 'lucide-react';
+import { CellSelection } from '@tiptap/pm/tables';
 import type { EditorState } from '@tiptap/pm/state';
 
-// Solo cuando el cursor está DENTRO de una tabla y NO hay selección de texto: la
-// selección de texto activa el BubbleToolbar de formato, así que exigir selección
-// vacía hace los dos menús mutuamente exclusivos (sin doble menú superpuesto).
-// La gestión de celdas seleccionadas (merge/split) llega en F4 con su propio caso.
+// Cuándo mostrar el menú de tabla, coordinado con el BubbleToolbar de formato:
+//   - CellSelection (celdas seleccionadas) → mostrar (caso merge de F4).
+//   - Selección de TEXTO dentro de una celda → ocultar, le cede el paso al
+//     BubbleToolbar de formato (que a su vez excluye CellSelection).
+//   - Cursor en celda sin selección → mostrar (gestión + split de celda merged).
 function shouldShow({ editor, state }: { editor: Editor; state: EditorState }): boolean {
   if (!editor.isEditable) return false;
   if (!editor.isActive('table')) return false;
+  if (state.selection instanceof CellSelection) return true;
   if (!state.selection.empty) return false;
   return true;
 }
@@ -40,6 +44,7 @@ export default function TableToolbar({ editor }: TableToolbarProps) {
       alignLeft: editor?.isActive({ textAlign: 'left' }) ?? false,
       alignCenter: editor?.isActive({ textAlign: 'center' }) ?? false,
       alignRight: editor?.isActive({ textAlign: 'right' }) ?? false,
+      canMergeOrSplit: editor?.can().mergeOrSplit() ?? false,
     }),
   });
 
@@ -137,6 +142,14 @@ export default function TableToolbar({ editor }: TableToolbarProps) {
         </TableButton>
         <Divider />
         <TableButton
+          onClick={() => editor.chain().focus().mergeOrSplit().run()}
+          label={t('editor.table.mergeOrSplit', 'Combinar o dividir celdas')}
+          disabled={!state.canMergeOrSplit}
+        >
+          <Combine className="h-4 w-4" />
+        </TableButton>
+        <Divider />
+        <TableButton
           onClick={() => editor.chain().focus().deleteTable().run()}
           label={t('editor.table.deleteTable', 'Eliminar tabla')}
           destructive
@@ -157,18 +170,27 @@ interface TableButtonProps {
   label: string;
   active?: boolean;
   destructive?: boolean;
+  disabled?: boolean;
   children: React.ReactNode;
 }
 
-function TableButton({ onClick, label, active, destructive = false, children }: TableButtonProps) {
+function TableButton({
+  onClick,
+  label,
+  active,
+  destructive = false,
+  disabled = false,
+  children,
+}: TableButtonProps) {
   return (
     <button
       type="button"
       onClick={onClick}
+      disabled={disabled}
       aria-label={label}
       aria-pressed={active}
       title={label}
-      className={`inline-flex h-11 w-11 items-center justify-center rounded-md transition-colors ${
+      className={`inline-flex h-11 w-11 items-center justify-center rounded-md transition-colors disabled:pointer-events-none disabled:opacity-40 ${
         active
           ? 'bg-accent text-accent-foreground'
           : destructive
