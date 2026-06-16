@@ -377,6 +377,15 @@
       "placeholder": "¿Qué le explicarías a tu yo del futuro sobre esto? 1-2 frases.",
       "title": "Resumen ejecutivo (L3)"
     },
+    "table": {
+      "addColumnAfter": "Insertar columna a la derecha",
+      "addColumnBefore": "Insertar columna a la izquierda",
+      "addRowAfter": "Insertar fila abajo",
+      "addRowBefore": "Insertar fila arriba",
+      "deleteColumn": "Eliminar columna",
+      "deleteRow": "Eliminar fila",
+      "deleteTable": "Eliminar tabla"
+    },
     "templates": {
       "literature": {
         "inMyWordsHeading": "En mis palabras",

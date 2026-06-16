@@ -15,6 +15,7 @@ import CodeBlockLowlight from '@/components/editor/extensions/code-block-lowligh
 import WikilinkMenu from '@/components/editor/menus/WikilinkMenu';
 import SlashMenu from '@/components/editor/menus/SlashMenu';
 import BubbleToolbar from '@/components/editor/menus/BubbleToolbar';
+import TableToolbar from '@/components/editor/menus/TableToolbar';
 import DistillLevelBanner from '@/components/editor/DistillLevelBanner';
 import EditorSuggestionBanner from '@/components/editor/EditorSuggestionBanner';
 import SaveErrorBanner from '@/components/editor/SaveErrorBanner';
@@ -114,6 +115,7 @@ export default function NoteEditor({
       <WikilinkMenu noteId={noteId} />
       <SlashMenu />
       <BubbleToolbar editor={editor} />
+      <TableToolbar editor={editor} />
     </div>
   );
 }
