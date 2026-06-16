@@ -123,9 +123,14 @@ export default interface Resources {
     };
     changelog: {
       dismiss: 'Entendido';
+      history: {
+        back: 'Ajustes';
+        description: 'Lo nuevo de cada versión, lo más reciente primero.';
+        title: 'Historial de novedades';
+      };
       v052: {
         items: [
-          'Estrenás este panel de novedades: tras cada actualización con cambios visibles, te mostramos acá lo nuevo, una sola vez.',
+          'Estrenas este panel de novedades: tras cada actualización con cambios visibles, te mostramos aquí lo nuevo, una sola vez.',
           'La versión que estás usando ahora se ve en Ajustes → Información de la app, en escritorio, web y Android.',
         ];
         title: 'Novedades de la 0.5.2';
@@ -951,6 +956,7 @@ export default interface Resources {
         validating: 'Validando…';
       };
       appInfo: {
+        changelogLink: 'Ver novedades anteriores';
         checkUpdates: 'Buscar actualizaciones';
         description: 'Versión actual y actualizaciones.';
         platform: {

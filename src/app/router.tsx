@@ -35,6 +35,12 @@ const router = createBrowserRouter([
       { path: 'objectives', Component: ObjectivesPage },
       { path: 'habits', Component: HabitsPage },
       { path: 'settings', Component: SettingsPage },
+      // F60 — historial de changelog: sub-página lazy (3.er code-split del router,
+      // tras /admin y /auth/action). Solo carga al navegar desde AppInfoSection.
+      {
+        path: 'settings/changelog',
+        lazy: async () => ({ Component: (await import('@/app/settings/changelog/page')).default }),
+      },
       // SPEC-52 F6 — /admin lazy-loaded (primer code-split del router): chunk aparte
       // que solo carga al navegar. Gate por uid (cosmético) dentro de AdminPage.
       {

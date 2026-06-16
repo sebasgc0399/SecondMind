@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { RefreshCw } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import { Link } from 'react-router';
 import { Button } from '@/components/ui/button';
 import { CHECK_UPDATES_EVENT } from '@/hooks/useAutoUpdate';
 import { isCapacitor } from '@/lib/capacitor';
@@ -71,6 +72,14 @@ export default function AppInfoSection() {
           </Button>
         )}
       </div>
+
+      <Link
+        to="/settings/changelog"
+        className="mt-3 inline-flex items-center gap-1 text-xs text-primary transition-colors hover:underline"
+      >
+        {t('settings.appInfo.changelogLink', 'Ver novedades anteriores')}
+        <span aria-hidden>→</span>
+      </Link>
     </section>
   );
 }

@@ -121,6 +121,11 @@
   },
   "changelog": {
     "dismiss": "Got it",
+    "history": {
+      "back": "Settings",
+      "description": "What changed in each version, newest first.",
+      "title": "What's new history"
+    },
     "v052": {
       "items": [
         "This what's-new panel is new: after each update with visible changes, it shows you what changed — once.",
@@ -930,6 +935,7 @@
       "title": "Appearance"
     },
     "appInfo": {
+      "changelogLink": "View past updates",
       "checkUpdates": "Check for updates",
       "description": "Current version and updates.",
       "platform": {

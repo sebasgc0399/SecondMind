@@ -121,6 +121,11 @@
   },
   "changelog": {
     "dismiss": "Entendido",
+    "history": {
+      "back": "Ajustes",
+      "description": "Lo nuevo de cada versión, lo más reciente primero.",
+      "title": "Historial de novedades"
+    },
     "v052": {
       "items": [
         "Estrenas este panel de novedades: tras cada actualización con cambios visibles, te mostramos aquí lo nuevo, una sola vez.",
@@ -953,6 +958,7 @@
       "title": "Apariencia"
     },
     "appInfo": {
+      "changelogLink": "Ver novedades anteriores",
       "checkUpdates": "Buscar actualizaciones",
       "description": "Versión actual y actualizaciones.",
       "platform": {
