@@ -14,8 +14,9 @@ Fuente de verdad única del versionado (los demás docs referencian acá, no dup
 
 - **0.4.9** ✅ (2026-06-09) — SPEC-57 (D13, durabilidad de writes offline subsiguientes).
 - **0.5.0** ✅ (2026-06-11) — sync-indicator, iconografía lucide, cleanup `__APP_VERSION__`.
-- **0.5.1** — **release del arco i18n (SPEC-58)**: app bilingüe es/en completa (UI + AI + errores CF + traducción `en` + QA web). _(este release — F4.3)_
-- **F59 (conciencia de versión + modal what's-new)** ✅ merged a `main` (2026-06-15) — 100% cliente, **sin bump propio**; se libera con el próximo release. La primera entrada de catálogo (`changelog.v060`) apunta a 0.6.0. → [SPEC](features/SPEC-feature-59-conciencia-version-runtime.md).
+- **0.5.1** ✅ (2026-06-15) — **release del arco i18n (SPEC-58)**: app bilingüe es/en completa (UI + AI + errores CF + traducción `en` + QA web).
+- **0.5.2** ✅ (2026-06-15) — **release actual.** Feature 59 (conciencia de versión en runtime + modal what's-new, su debut) + `AppInfoSection` en los 3 frentes + backlog i18n (copy es de sincronización + dedup login). Client-only (sin functions/rules). Tag `v0.5.2`, CI verde (tauri + capacitor).
+- **F59 (conciencia de versión + modal what's-new)** ✅ merged a `main` (2026-06-15), **liberada en 0.5.2**. La entrada **inaugural** del catálogo de changelog es `changelog.v052` (`v060` sigue siendo el placeholder de 0.6.0). → [SPEC](features/SPEC-feature-59-conciencia-version-runtime.md).
 - **0.6.0** — **apertura de beta** (~100 users, gateada por allowlist). Pre-requisitos: `allowBackup=false` en Android (pendiente) + allowlist enforced (ya LIVE). **GATES DUROS de release (F59, no verbales):** (1) **smoke nativo Tauri + Android** — `getRunningVersion()` devuelve el string real del binario/APK **y** el modal what's-new renderiza en el WebView nativo (web ya verificado E2E); (2) **re-autorear `changelog.v060.*`** con los highlights reales de 0.6.0 (apertura de beta / allowlist) per D6 — el draft auto-referencial actual es de arranque, NO el texto final. **Desplazada:** i18n entró en la serie 0.5.x antes de la beta.
 - **Arco i18n (SPEC-58) — COMPLETO y live en 0.5.1:** F1 (infra) + F2 (UI es) + F3 (AI bilingüe + códigos de error CF) + F4 (traducción `en` completa + QA web es/en + offline-en). Arco cerrado 2026-06-15 · [registro](features/SPEC-feature-58-i18n.md).
 
