@@ -114,9 +114,9 @@ Verificar con `git diff --stat` — deben aparecer exactamente 5 archivos, ~6 in
 En el **mismo commit del bump** (no después), decidir según el contenido del release:
 
 - **¿Tiene cambios user-facing?** → **Sí:** agregar la entrada al catálogo de novedades (Feature 59):
-  1. Sumar `{ version: 'X.Y.Z', key: 'v0XY' }` a `CHANGELOG_ENTRIES` en `src/lib/changelog.ts`.
+  1. **Appendear** `{ version: 'X.Y.Z', key: 'v0XY' }` al **FINAL** de `CHANGELOG_ENTRIES` en `src/lib/changelog.ts`. El **orden del array = orden de release** (invariante F60): el historial consultable (`/settings/changelog`) lista el catálogo con `reverse()` = newest-first **sin `semver.compare()`**, así que el append-al-final es lo que mantiene el orden correcto. **Solo versiones LIBERADAS** en el registry — esta es la entrada de la versión que liberás ahora; nunca sembrar drafts de versiones futuras (F60 removió el viejo placeholder `v060`; ahora se **crea fresco** en su propio release 0.6.0, no se reescribe).
   2. Agregar `changelog.v0XY.title` + `changelog.v0XY.items` (los highlights reales del release) en `src/locales/es/translation.json` **y** `src/locales/en/translation.json`.
-  3. Regenerar los tipos i18n.
+  3. Regenerar los tipos i18n con `npx i18next-cli types` (NO `extract`) y luego **correr Prettier** sobre `src/types/resources.d.ts` (el comando lo genera con comillas dobles; el repo lo quiere en formato Prettier y el hook no corre en comandos shell).
 - **No** (patch interno, sin nada visible para el usuario) → **omitir**. Sin entrada para esa versión el modal queda **mudo by design**: `useWhatsNew` hace silent-advance (avanza `lastSeenVersion` sin mostrar nada).
 
 La mecánica exacta —normalización de la key, tipado del array i18n, el comando de regen de tipos, y el caveat crítico de **NUNCA** correr `i18next-cli extract` (purga keys)— vive en [Spec/gotchas/i18n.md](../../../Spec/gotchas/i18n.md) y en el registro [SPEC-feature-59](../../../Spec/features/SPEC-feature-59-conciencia-version-runtime.md). Seguir esas; no reinventarla acá.

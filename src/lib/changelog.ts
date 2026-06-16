@@ -8,6 +8,9 @@
  * `as const`: fija las keys como literales (p. ej. `'v052'`) para que el modal
  * (F6) construya `t('changelog.${key}.title')` como key tipada, sin cast.
  */
+// F60 — orden del array = orden de release: cada entrada se appendea al FINAL en
+// su release (Paso 2.5 de release-ecosystem). El historial (/settings/changelog)
+// lo lista con reverse() = newest-first, sin semver. Solo versiones LIBERADAS.
 export const CHANGELOG_ENTRIES = [{ version: '0.5.2', key: 'v052' }] as const;
 
 export type ChangelogEntry = (typeof CHANGELOG_ENTRIES)[number];
