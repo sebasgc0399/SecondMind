@@ -9,7 +9,7 @@ import { getRunningVersion } from '@/lib/version';
 import { DEFAULT_PREFERENCES, type UserPreferences } from '@/types/preferences';
 
 // Mockeamos auth + preferences + accessor + writer. NO @/lib/changelog: usa el
-// registry real → '0.6.0' resuelve a la entrada { key: 'v060' }.
+// registry real → '0.5.2' resuelve a la entrada { key: 'v052' } (caso 3).
 vi.mock('@/hooks/useAuth', () => ({ default: vi.fn() }));
 vi.mock('@/hooks/usePreferences', () => ({ default: vi.fn() }));
 vi.mock('@/lib/version', () => ({ getRunningVersion: vi.fn() }));
@@ -78,12 +78,12 @@ describe('useWhatsNew', () => {
 
   it('3. inaugural establecido (CRÍTICO): null + welcome visto + hay entry → modal con entryKey, sin write inmediato; dismiss escribe currentVersion', async () => {
     setPrefs({ lastSeenVersion: null, onboardingWelcomeSeen: true });
-    mockGetRunningVersion.mockResolvedValue('0.6.0');
+    mockGetRunningVersion.mockResolvedValue('0.5.2');
 
     const { result } = renderHook(() => useWhatsNew());
     await waitFor(() => expect(result.current.open).toBe(true));
 
-    expect(result.current.entryKey).toBe('v060');
+    expect(result.current.entryKey).toBe('v052');
     // abrir el modal NO escribe; recién el dismiss persiste
     expect(mockSetPreferences).not.toHaveBeenCalled();
 
@@ -93,7 +93,7 @@ describe('useWhatsNew', () => {
 
     expect(result.current.open).toBe(false);
     expect(mockSetPreferences).toHaveBeenCalledTimes(1);
-    expect(mockSetPreferences).toHaveBeenCalledWith(UID, { lastSeenVersion: '0.6.0' });
+    expect(mockSetPreferences).toHaveBeenCalledWith(UID, { lastSeenVersion: '0.5.2' });
   });
 
   it('4. sin entry: currentVersion !== lastSeenVersion && sin entry → silent-advance con currentVersion, sin modal', async () => {

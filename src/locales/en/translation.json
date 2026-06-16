@@ -127,13 +127,6 @@
         "The version you're running now shows in Settings → App info, on desktop, web, and Android."
       ],
       "title": "What's new in 0.5.2"
-    },
-    "v060": {
-      "items": [
-        "Unified version awareness across desktop, web, and Android.",
-        "A what's-new modal that appears once after each update."
-      ],
-      "title": "What's new in 0.6.0"
     }
   },
   "commandPalette": {

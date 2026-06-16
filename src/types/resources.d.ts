@@ -130,13 +130,6 @@ export default interface Resources {
         ];
         title: 'Novedades de la 0.5.2';
       };
-      v060: {
-        items: [
-          'Conciencia de versión unificada en escritorio, web y Android.',
-          'Modal de novedades que aparece una sola vez tras cada actualización.',
-        ];
-        title: 'Novedades de la 0.6.0';
-      };
     };
     commandPalette: {
       actions: 'Acciones';
