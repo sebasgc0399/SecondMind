@@ -378,9 +378,14 @@ export default interface Resources {
         "addColumnBefore": "Insertar columna a la izquierda",
         "addRowAfter": "Insertar fila abajo",
         "addRowBefore": "Insertar fila arriba",
+        "alignCenter": "Centrar",
+        "alignLeft": "Alinear a la izquierda",
+        "alignRight": "Alinear a la derecha",
         "deleteColumn": "Eliminar columna",
         "deleteRow": "Eliminar fila",
-        "deleteTable": "Eliminar tabla"
+        "deleteTable": "Eliminar tabla",
+        "toggleHeaderColumn": "Columna de encabezado",
+        "toggleHeaderRow": "Fila de encabezado"
       },
       "templates": {
         "literature": {

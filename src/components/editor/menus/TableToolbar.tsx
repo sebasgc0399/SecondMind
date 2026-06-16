@@ -8,6 +8,11 @@ import {
   BetweenVerticalEnd,
   Rows3,
   Columns3,
+  PanelTop,
+  PanelLeft,
+  AlignLeft,
+  AlignCenter,
+  AlignRight,
   Trash2,
 } from 'lucide-react';
 import type { EditorState } from '@tiptap/pm/state';
@@ -32,7 +37,9 @@ export default function TableToolbar({ editor }: TableToolbarProps) {
   const state = useEditorState({
     editor,
     selector: ({ editor }) => ({
-      inTable: editor?.isActive('table') ?? false,
+      alignLeft: editor?.isActive({ textAlign: 'left' }) ?? false,
+      alignCenter: editor?.isActive({ textAlign: 'center' }) ?? false,
+      alignRight: editor?.isActive({ textAlign: 'right' }) ?? false,
     }),
   });
 
@@ -50,6 +57,9 @@ export default function TableToolbar({ editor }: TableToolbarProps) {
         shift: { padding: 8 },
       }}
     >
+      {/* z-50: el wrapper flotante del BubbleMenu es z-auto y ningún ancestro crea
+          stacking context, así que sin esto el sidebar (z-30) tapa el menú e
+          intercepta los clics cuando se solapan (tabla cerca del borde izquierdo). */}
       <div className="relative z-50 flex items-center gap-0.5 rounded-lg border border-border bg-popover p-1 text-popover-foreground shadow-xl">
         <TableButton
           onClick={() => editor.chain().focus().addRowBefore().run()}
@@ -70,7 +80,7 @@ export default function TableToolbar({ editor }: TableToolbarProps) {
         >
           <Rows3 className="h-4 w-4" />
         </TableButton>
-        <span aria-hidden className="mx-0.5 h-5 w-px bg-border" />
+        <Divider />
         <TableButton
           onClick={() => editor.chain().focus().addColumnBefore().run()}
           label={t('editor.table.addColumnBefore', 'Insertar columna a la izquierda')}
@@ -90,7 +100,42 @@ export default function TableToolbar({ editor }: TableToolbarProps) {
         >
           <Columns3 className="h-4 w-4" />
         </TableButton>
-        <span aria-hidden className="mx-0.5 h-5 w-px bg-border" />
+        <Divider />
+        <TableButton
+          onClick={() => editor.chain().focus().toggleHeaderRow().run()}
+          label={t('editor.table.toggleHeaderRow', 'Fila de encabezado')}
+        >
+          <PanelTop className="h-4 w-4" />
+        </TableButton>
+        <TableButton
+          onClick={() => editor.chain().focus().toggleHeaderColumn().run()}
+          label={t('editor.table.toggleHeaderColumn', 'Columna de encabezado')}
+        >
+          <PanelLeft className="h-4 w-4" />
+        </TableButton>
+        <Divider />
+        <TableButton
+          onClick={() => editor.chain().focus().setTextAlign('left').run()}
+          label={t('editor.table.alignLeft', 'Alinear a la izquierda')}
+          active={state.alignLeft}
+        >
+          <AlignLeft className="h-4 w-4" />
+        </TableButton>
+        <TableButton
+          onClick={() => editor.chain().focus().setTextAlign('center').run()}
+          label={t('editor.table.alignCenter', 'Centrar')}
+          active={state.alignCenter}
+        >
+          <AlignCenter className="h-4 w-4" />
+        </TableButton>
+        <TableButton
+          onClick={() => editor.chain().focus().setTextAlign('right').run()}
+          label={t('editor.table.alignRight', 'Alinear a la derecha')}
+          active={state.alignRight}
+        >
+          <AlignRight className="h-4 w-4" />
+        </TableButton>
+        <Divider />
         <TableButton
           onClick={() => editor.chain().focus().deleteTable().run()}
           label={t('editor.table.deleteTable', 'Eliminar tabla')}
@@ -103,22 +148,30 @@ export default function TableToolbar({ editor }: TableToolbarProps) {
   );
 }
 
+function Divider() {
+  return <span aria-hidden className="mx-0.5 h-5 w-px bg-border" />;
+}
+
 interface TableButtonProps {
   onClick: () => void;
   label: string;
+  active?: boolean;
   destructive?: boolean;
   children: React.ReactNode;
 }
 
-function TableButton({ onClick, label, destructive = false, children }: TableButtonProps) {
+function TableButton({ onClick, label, active, destructive = false, children }: TableButtonProps) {
   return (
     <button
       type="button"
       onClick={onClick}
       aria-label={label}
+      aria-pressed={active}
       title={label}
       className={`inline-flex h-11 w-11 items-center justify-center rounded-md transition-colors ${
-        destructive
+        active
+          ? 'bg-accent text-accent-foreground'
+          : destructive
           ? 'text-foreground hover:bg-destructive/10 hover:text-destructive'
           : 'text-foreground hover:bg-accent/60'
       }`}

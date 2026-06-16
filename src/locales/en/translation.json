@@ -377,9 +377,14 @@
       "addColumnBefore": "Insert column left",
       "addRowAfter": "Insert row below",
       "addRowBefore": "Insert row above",
+      "alignCenter": "Center",
+      "alignLeft": "Align left",
+      "alignRight": "Align right",
       "deleteColumn": "Delete column",
       "deleteRow": "Delete row",
-      "deleteTable": "Delete table"
+      "deleteTable": "Delete table",
+      "toggleHeaderColumn": "Header column",
+      "toggleHeaderRow": "Header row"
     },
     "templates": {
       "literature": {

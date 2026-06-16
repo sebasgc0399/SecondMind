@@ -9,6 +9,7 @@ import TaskList from '@tiptap/extension-task-list';
 import TaskItem from '@tiptap/extension-task-item';
 import Highlight from '@tiptap/extension-highlight';
 import { TableKit } from '@tiptap/extension-table';
+import TextAlign from '@tiptap/extension-text-align';
 import Wikilink from '@/components/editor/extensions/wikilink';
 import SlashCommand from '@/components/editor/extensions/slash-command';
 import CodeBlockLowlight from '@/components/editor/extensions/code-block-lowlight';
@@ -67,6 +68,7 @@ export default function NoteEditor({
       TaskItem.configure({ nested: true }),
       Highlight,
       TableKit.configure({ table: { resizable: true } }),
+      TextAlign.configure({ types: ['heading', 'paragraph'] }),
       CodeBlockLowlight,
       Placeholder.configure({ placeholder: t('editor.placeholder', 'Escribe una idea...') }),
       Wikilink.configure({ noteId }),
