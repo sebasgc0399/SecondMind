@@ -121,19 +121,17 @@
   },
   "changelog": {
     "dismiss": "Entendido",
+    "history": {
+      "back": "Ajustes",
+      "description": "Lo nuevo de cada versión, lo más reciente primero.",
+      "title": "Historial de novedades"
+    },
     "v052": {
       "items": [
         "Estrenas este panel de novedades: tras cada actualización con cambios visibles, te mostramos aquí lo nuevo, una sola vez.",
         "La versión que estás usando ahora se ve en Ajustes → Información de la app, en escritorio, web y Android."
       ],
       "title": "Novedades de la 0.5.2"
-    },
-    "v060": {
-      "items": [
-        "Conciencia de versión unificada en escritorio, web y Android.",
-        "Modal de novedades que aparece una sola vez tras cada actualización."
-      ],
-      "title": "Novedades de la 0.6.0"
     }
   },
   "commandPalette": {
@@ -960,6 +958,7 @@
       "title": "Apariencia"
     },
     "appInfo": {
+      "changelogLink": "Ver novedades anteriores",
       "checkUpdates": "Buscar actualizaciones",
       "description": "Versión actual y actualizaciones.",
       "platform": {
