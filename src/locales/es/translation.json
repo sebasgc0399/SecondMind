@@ -352,6 +352,10 @@
           "description": "Lista numerada",
           "label": "Numbered List"
         },
+        "table": {
+          "description": "Tabla de filas y columnas",
+          "label": "Table"
+        },
         "taskList": {
           "description": "Lista con checkboxes",
           "label": "Task List"
