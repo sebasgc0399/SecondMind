@@ -121,6 +121,13 @@
   },
   "changelog": {
     "dismiss": "Got it",
+    "v052": {
+      "items": [
+        "This what's-new panel is new: after each update with visible changes, it shows you what changed — once.",
+        "The version you're running now shows in Settings → App info, on desktop, web, and Android."
+      ],
+      "title": "What's new in 0.5.2"
+    },
     "v060": {
       "items": [
         "Unified version awareness across desktop, web, and Android.",

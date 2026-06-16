@@ -121,6 +121,13 @@
   },
   "changelog": {
     "dismiss": "Entendido",
+    "v052": {
+      "items": [
+        "Estrenas este panel de novedades: tras cada actualización con cambios visibles, te mostramos aquí lo nuevo, una sola vez.",
+        "La versión que estás usando ahora se ve en Ajustes → Información de la app, en escritorio, web y Android."
+      ],
+      "title": "Novedades de la 0.5.2"
+    },
     "v060": {
       "items": [
         "Conciencia de versión unificada en escritorio, web y Android.",

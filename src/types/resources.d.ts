@@ -123,6 +123,13 @@ export default interface Resources {
     };
     changelog: {
       dismiss: 'Entendido';
+      v052: {
+        items: [
+          'Estrenás este panel de novedades: tras cada actualización con cambios visibles, te mostramos acá lo nuevo, una sola vez.',
+          'La versión que estás usando ahora se ve en Ajustes → Información de la app, en escritorio, web y Android.',
+        ];
+        title: 'Novedades de la 0.5.2';
+      };
       v060: {
         items: [
           'Conciencia de versión unificada en escritorio, web y Android.',
