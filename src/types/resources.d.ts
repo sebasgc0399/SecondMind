@@ -135,6 +135,13 @@ export default interface Resources {
         ];
         title: 'Novedades de la 0.5.2';
       };
+      v053: {
+        items: [
+          'Ahora puedes agregar tablas a tus notas: insértalas desde el menú de comandos del editor, suma o quita filas y columnas, marca encabezados, alinea el texto y combina celdas.',
+          'El historial de novedades llegó a Ajustes → Historial de novedades: repasa lo nuevo de cada versión cuando quieras.',
+        ];
+        title: 'Novedades de la 0.5.3';
+      };
     };
     commandPalette: {
       actions: 'Acciones';

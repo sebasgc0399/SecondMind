@@ -132,6 +132,13 @@
         "The version you're running now shows in Settings → App info, on desktop, web, and Android."
       ],
       "title": "What's new in 0.5.2"
+    },
+    "v053": {
+      "items": [
+        "You can now add tables to your notes: insert them from the editor's command menu, add or remove rows and columns, set headers, align text, and merge cells.",
+        "The what's-new history arrived in Settings → What's new history: revisit what changed in each version anytime."
+      ],
+      "title": "What's new in 0.5.3"
     }
   },
   "commandPalette": {
