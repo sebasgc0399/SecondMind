@@ -124,7 +124,7 @@
     "history": {
       "back": "Settings",
       "description": "What changed in each version, newest first.",
-      "title": "What's new history"
+      "title": "Release notes"
     },
     "v052": {
       "items": [
@@ -136,7 +136,7 @@
     "v053": {
       "items": [
         "You can now add tables to your notes: insert them from the editor's command menu, add or remove rows and columns, set headers, align text, and merge cells.",
-        "The what's-new history arrived in Settings → What's new history: revisit what changed in each version anytime."
+        "Past updates now live in Settings → Release notes: revisit what changed in any version, anytime."
       ],
       "title": "What's new in 0.5.3"
     }
@@ -961,7 +961,7 @@
       "title": "Appearance"
     },
     "appInfo": {
-      "changelogLink": "View past updates",
+      "changelogLink": "View release notes",
       "checkUpdates": "Check for updates",
       "description": "Current version and updates.",
       "platform": {
