@@ -400,6 +400,7 @@ Cada feature comprimida a 1 línea con pointer al SPEC archivado. Para detalles 
 - [Launcher cache Android no invalida ícono tras reinstalar APK](gotchas/capacitor-mobile.md#launcher-cache-android-no-invalida-ícono-tras-reinstalar-apk)
 - [Email Enumeration Protection altera Firebase Auth behavior (post-F47)](gotchas/capacitor-mobile.md#email-enumeration-protection-altera-firebase-auth-behavior-post-f47)
 - [`user.reload()` NO dispara `onAuthStateChanged` → `refreshUser()` pattern (post-F47)](gotchas/capacitor-mobile.md#userreload-no-dispara-onauthstatechanged--refreshuser-pattern-post-f47)
+- [Verificar cambios de AndroidManifest en el manifest MERGEADO de release, no en el fuente](gotchas/capacitor-mobile.md#verificar-cambios-de-androidmanifest-en-el-manifest-mergeado-de-release-no-en-el-fuente)
 
 ### Tooling local — [`gotchas/tooling-local.md`](gotchas/tooling-local.md)
 
