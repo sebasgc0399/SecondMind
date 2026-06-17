@@ -103,67 +103,73 @@ export default function BubbleToolbar({ editor }: BubbleToolbarProps) {
         shift: { padding: 8 },
       }}
     >
-      {mode === 'link-edit' ? (
-        <LinkInput
-          initialUrl={state.linkHref}
-          onConfirm={applyLink}
-          onCancel={() => setMode('default')}
-          onUnlink={state.isLink ? unlinkCurrent : undefined}
-        />
-      ) : showLinkHover ? (
-        <LinkHoverView
-          href={state.linkHref}
-          onEdit={() => setMode('link-edit')}
-          onOpen={() => openLink(state.linkHref)}
-          onUnlink={unlinkCurrent}
-        />
-      ) : (
-        <div className="flex items-center gap-0.5 rounded-lg border border-border bg-popover p-1 text-popover-foreground shadow-xl">
-          <ToolbarButton
-            active={state.isBold}
-            onClick={() => editor.chain().focus().toggleBold().run()}
-            label={t('editor.toolbar.bold', 'Negrita')}
-          >
-            <Bold className="h-4 w-4" />
-          </ToolbarButton>
-          <ToolbarButton
-            active={state.isItalic}
-            onClick={() => editor.chain().focus().toggleItalic().run()}
-            label={t('editor.toolbar.italic', 'Cursiva')}
-          >
-            <Italic className="h-4 w-4" />
-          </ToolbarButton>
-          <ToolbarButton
-            active={state.isStrike}
-            onClick={() => editor.chain().focus().toggleStrike().run()}
-            label={t('editor.toolbar.strike', 'Tachado')}
-          >
-            <Strikethrough className="h-4 w-4" />
-          </ToolbarButton>
-          <ToolbarButton
-            active={state.isCode}
-            onClick={() => editor.chain().focus().toggleCode().run()}
-            label={t('editor.toolbar.code', 'Código inline')}
-          >
-            <Code className="h-4 w-4" />
-          </ToolbarButton>
-          <span aria-hidden className="mx-0.5 h-5 w-px bg-border" />
-          <ToolbarButton
-            active={state.isHighlight}
-            onClick={() => editor.chain().focus().toggleHighlight().run()}
-            label={t('editor.toolbar.highlight', 'Resaltar')}
-          >
-            <Highlighter className="h-4 w-4" />
-          </ToolbarButton>
-          <ToolbarButton
-            active={state.isLink}
-            onClick={() => setMode('link-edit')}
-            label={t('editor.toolbar.link', 'Link')}
-          >
-            <LinkIcon className="h-4 w-4" />
-          </ToolbarButton>
-        </div>
-      )}
+      {/* z-50 (espejo del TableToolbar): el wrapper flotante del BubbleMenu es
+          z-auto y ningún ancestro crea stacking context; sin esto el sidebar
+          (z-30) lo tapa. Wrapper común porque el contenido es condicional
+          (link-edit / link-hover / formato). */}
+      <div className="relative z-50">
+        {mode === 'link-edit' ? (
+          <LinkInput
+            initialUrl={state.linkHref}
+            onConfirm={applyLink}
+            onCancel={() => setMode('default')}
+            onUnlink={state.isLink ? unlinkCurrent : undefined}
+          />
+        ) : showLinkHover ? (
+          <LinkHoverView
+            href={state.linkHref}
+            onEdit={() => setMode('link-edit')}
+            onOpen={() => openLink(state.linkHref)}
+            onUnlink={unlinkCurrent}
+          />
+        ) : (
+          <div className="flex items-center gap-0.5 rounded-lg border border-border bg-popover p-1 text-popover-foreground shadow-xl">
+            <ToolbarButton
+              active={state.isBold}
+              onClick={() => editor.chain().focus().toggleBold().run()}
+              label={t('editor.toolbar.bold', 'Negrita')}
+            >
+              <Bold className="h-4 w-4" />
+            </ToolbarButton>
+            <ToolbarButton
+              active={state.isItalic}
+              onClick={() => editor.chain().focus().toggleItalic().run()}
+              label={t('editor.toolbar.italic', 'Cursiva')}
+            >
+              <Italic className="h-4 w-4" />
+            </ToolbarButton>
+            <ToolbarButton
+              active={state.isStrike}
+              onClick={() => editor.chain().focus().toggleStrike().run()}
+              label={t('editor.toolbar.strike', 'Tachado')}
+            >
+              <Strikethrough className="h-4 w-4" />
+            </ToolbarButton>
+            <ToolbarButton
+              active={state.isCode}
+              onClick={() => editor.chain().focus().toggleCode().run()}
+              label={t('editor.toolbar.code', 'Código inline')}
+            >
+              <Code className="h-4 w-4" />
+            </ToolbarButton>
+            <span aria-hidden className="mx-0.5 h-5 w-px bg-border" />
+            <ToolbarButton
+              active={state.isHighlight}
+              onClick={() => editor.chain().focus().toggleHighlight().run()}
+              label={t('editor.toolbar.highlight', 'Resaltar')}
+            >
+              <Highlighter className="h-4 w-4" />
+            </ToolbarButton>
+            <ToolbarButton
+              active={state.isLink}
+              onClick={() => setMode('link-edit')}
+              label={t('editor.toolbar.link', 'Link')}
+            >
+              <LinkIcon className="h-4 w-4" />
+            </ToolbarButton>
+          </div>
+        )}
+      </div>
     </BubbleMenu>
   );
 }
