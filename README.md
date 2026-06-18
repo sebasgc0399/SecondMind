@@ -25,7 +25,7 @@ Los principios de diseño, la teoría detrás (CODE de Tiago Forte, Zettelkasten
 
 La fuente primaria de estado y arquitectura vigente es [`Spec/ESTADO-ACTUAL.md`](Spec/ESTADO-ACTUAL.md). Cada fase tiene su SPEC en [`Spec/`](Spec/); cada feature post-MVP en [`Spec/features/`](Spec/features/).
 
-> **Beta cerrada.** La app está LIVE en prod ([secondmind.web.app](https://secondmind.web.app), sobre v0.4.0) pero el acceso está gateado por una **allowlist** enforced en las Firestore rules (F50): hoy opera una única cuenta autorizada. No es registro abierto — toda cuenta fuera de la allowlist recibe `permission-denied`. La apertura real de la beta llega en una versión posterior — ver el roadmap de versionado en [`Spec/ESTADO-ACTUAL.md`](Spec/ESTADO-ACTUAL.md#versionado-y-roadmap).
+> **Beta cerrada.** La app está LIVE en prod ([app.getsecondmind.co](https://app.getsecondmind.co), sobre v0.4.0) pero el acceso está gateado por una **allowlist** enforced en las Firestore rules (F50): hoy opera una única cuenta autorizada. No es registro abierto — toda cuenta fuera de la allowlist recibe `permission-denied`. La apertura real de la beta llega en una versión posterior — ver el roadmap de versionado en [`Spec/ESTADO-ACTUAL.md`](Spec/ESTADO-ACTUAL.md#versionado-y-roadmap).
 
 - **Fase 0 — Setup** ✅ Proyecto compilando, auth con Google, sync TinyBase ↔ Firestore, deploy a Firebase Hosting
 - **Fase 0.1 — Toolkit** ✅ MCPs (Firebase, Context7, Playwright, Brave Search), skills de frontend/UX, hooks de formato automático (Prettier + ESLint en PostToolUse), protección de la rama main
@@ -222,7 +222,7 @@ npm run cap:build         # Build web + sync + gradlew assembleDebug → APK deb
 
 ## Distribución
 
-- **Web / PWA:** https://secondmind.web.app — instalable desde Chrome/Edge
+- **Web / PWA:** https://app.getsecondmind.co — instalable desde Chrome/Edge
 - **Chrome Extension:** código en [`extension/`](extension/) (build separado vía CRXJS)
 - **Desktop Windows:** instaladores en `src-tauri/target/release/bundle/{msi,nsis}/` vía `npm run tauri:build`. Auto-update tag-based (F8)
 - **Android:** APK debug en `android/app/build/outputs/apk/debug/` vía `npm run cap:build`. El release firmado se distribuye por **Firebase App Distribution** (grupo `owner`) con el mismo flujo tag-based (F9). Es el canal del APK — distinto del gate de acceso por allowlist (auth, F50)
