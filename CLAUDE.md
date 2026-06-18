@@ -2,7 +2,7 @@
 
 Sistema de productividad y conocimiento personal construido desde código. Combina ejecución (tareas, proyectos, hábitos) con conocimiento vivo (notas atómicas Zettelkasten, links bidireccionales, grafo, AI copilot).
 
-**Producción:** https://secondmind.web.app
+**Producción:** https://app.getsecondmind.co
 
 ## Stack
 

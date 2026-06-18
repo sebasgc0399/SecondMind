@@ -164,6 +164,8 @@ Este paso tarda ~1 min (build Vite + upload Firebase).
 
 Esperar a que el deploy termine y confirme `Hosting URL: https://secondmind.web.app`. Validar en el navegador si hay dudas.
 
+> **Por qué la verificación apunta al `.web.app` y no al dominio público (`app.getsecondmind.co`) — a propósito, NO cambiar:** el `.web.app` resuelve **directo a Firebase Hosting, sin Cloudflare en el medio**, así que la lectura del deploy (Hosting URL / hash del bundle publicado) es siempre directa y confiable. El dominio público, si algún día se proxia por Cloudflare, podría devolver lecturas **stale** del cache del edge. Por eso la validación del release usa el `.web.app` como fuente de verdad del deploy (la migración del origen web a `app.getsecondmind.co` —Fase A, 2026-06-17— no cambia esta verificación).
+
 ### Paso 7 — Crear y pushear tag
 
 ```bash
