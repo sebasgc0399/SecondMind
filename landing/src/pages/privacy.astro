@@ -1,0 +1,77 @@
+---
+import Layout from '../layouts/Layout.astro';
+import Header from '../components/Header.astro';
+import Footer from '../components/Footer.astro';
+import { SUPPORT_EMAIL } from '../config';
+---
+
+<Layout
+  title="Política de privacidad — SecondMind"
+  description="Política de privacidad de SecondMind — en preparación."
+>
+  <Header />
+
+  <main class="container priv">
+    <p class="eyebrow">Legal</p>
+    <h1>Política de privacidad</h1>
+    <p class="status">En preparación</p>
+    <p class="muted body">
+      Estamos redactando nuestra política de privacidad con el detalle que merece: qué datos toca la
+      app, cómo se guardan, con quién se comparten (spoiler: con nadie que no haga falta) y cuáles
+      son tus derechos. Va a estar publicada acá antes de la apertura de la beta.
+    </p>
+    <p class="muted body">
+      ¿Tenés una duda mientras tanto? Escribinos a
+      <a href={`mailto:${SUPPORT_EMAIL}`}>{SUPPORT_EMAIL}</a>.
+    </p>
+    <a class="back" href="/">← Volver al inicio</a>
+  </main>
+
+  <Footer />
+</Layout>
+
+<style>
+  .priv {
+    min-height: 64vh;
+    max-width: 720px;
+    padding-top: clamp(3.5rem, 8vw, 6rem);
+  }
+  .priv h1 {
+    margin-top: 0.9rem;
+    font-size: clamp(2rem, 5vw, 2.75rem);
+    letter-spacing: -0.03em;
+  }
+  .status {
+    display: inline-block;
+    margin-top: 1rem;
+    padding: 0.3rem 0.8rem;
+    font-size: 0.82rem;
+    font-weight: 500;
+    color: var(--primary);
+    border-radius: 999px;
+    background: color-mix(in oklch, var(--primary) 12%, transparent);
+    border: 1px solid color-mix(in oklch, var(--primary) 24%, transparent);
+  }
+  .body {
+    margin-top: 1.5rem;
+    font-size: 1.05rem;
+    line-height: 1.65;
+    max-width: 60ch;
+  }
+  .body a {
+    color: var(--primary);
+    text-decoration: underline;
+    text-underline-offset: 2px;
+  }
+  .back {
+    display: inline-block;
+    margin-top: 2.5rem;
+    font-size: 0.95rem;
+    font-weight: 500;
+    color: var(--muted-foreground);
+    transition: color 0.18s var(--ease);
+  }
+  .back:hover {
+    color: var(--foreground);
+  }
+</style>
