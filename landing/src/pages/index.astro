@@ -1,0 +1,258 @@
+---
+import Layout from '../layouts/Layout.astro';
+import Header from '../components/Header.astro';
+import Footer from '../components/Footer.astro';
+import { TAGLINE, CTA_URL } from '../config';
+
+// Iconos lucide (MIT), inline (zero-JS). stroke = currentColor.
+const features = [
+  {
+    title: 'Conocimiento vivo',
+    desc: 'Notas atómicas, wikilinks [[ ]], backlinks y un grafo navegable. Tu conocimiento conectado, no carpetas muertas.',
+    icon: `<circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" x2="15.42" y1="13.51" y2="17.49"/><line x1="15.41" x2="8.59" y1="6.51" y2="10.49"/>`,
+  },
+  {
+    title: 'Ejecución integrada',
+    desc: 'Tareas, proyectos, objetivos y hábitos en el mismo lugar que tus notas. Lo que pensás y lo que hacés, juntos.',
+    icon: `<path d="m3 17 2 2 4-4"/><path d="m3 7 2 2 4-4"/><path d="M13 6h8"/><path d="M13 12h8"/><path d="M13 18h8"/>`,
+  },
+  {
+    title: 'AI copiloto, no piloto',
+    desc: 'Sugerencias que aceptás o descartás: conexiones, tags, resúmenes. Vos mandás —la AI nunca decide por vos.',
+    icon: `<path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .962 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.582a.5.5 0 0 1 0 .962L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.962 0z"/><path d="M20 3v4"/><path d="M22 5h-4"/><path d="M4 17v2"/><path d="M5 18H3"/>`,
+  },
+  {
+    title: 'Tuyo y portable',
+    desc: 'Web, desktop y Android · offline-first · tus datos y tus propias API keys. Tu segundo cerebro te pertenece.',
+    icon: `<path d="M18 8V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v7a2 2 0 0 0 2 2h8"/><path d="M7 19h5"/><rect width="6" height="10" x="16" y="12" rx="2"/>`,
+  },
+];
+---
+
+<Layout title={`SecondMind — ${TAGLINE.replace(/\.$/, '')}`}>
+  <Header />
+
+  <main>
+    <!-- ===== HERO =====
+         TAGLINE DECISIÓN (Sebastián): este headline sale de config.ts → TAGLINE.
+         Draft: "Tu segundo cerebro que además ejecuta." · App hoy: "Tu segundo cerebro digital."
+         Cambiá el string en src/config.ts y se actualiza acá + <title> + OG + footer. -->
+    <section class="hero">
+      <div class="container hero-in">
+        <p class="eyebrow" data-reveal style="animation-delay: 40ms">
+          Beta cerrada · por invitación
+        </p>
+        <div class="hero-mark" data-reveal style="animation-delay: 120ms" aria-hidden="true">
+          <img src="/favicon.svg" alt="" width="100" height="100" />
+        </div>
+        <h1 class="hero-title" data-reveal style="animation-delay: 200ms">{TAGLINE}</h1>
+        <p class="hero-sub" data-reveal style="animation-delay: 280ms">
+          Tu conocimiento y tu ejecución en un solo lugar. Notas atómicas conectadas, tareas y
+          proyectos, y un copiloto de AI que conecta los puntos —sin decidir por vos.
+        </p>
+        <div class="hero-cta" data-reveal style="animation-delay: 360ms">
+          <a class="btn btn-primary" href={CTA_URL}>Solicitar acceso a la beta</a>
+          <a class="btn btn-ghost" href="#que-es">Ver qué es</a>
+        </div>
+      </div>
+    </section>
+
+    <hr class="hairline" />
+
+    <!-- ===== QUÉ ES ===== -->
+    <section class="section" id="que-es">
+      <div class="container narrow">
+        <p class="eyebrow" data-reveal>Qué es</p>
+        <p class="lead" data-reveal>
+          SecondMind une dos mundos que las demás herramientas separan:
+          <strong>tu conocimiento</strong> —notas atómicas estilo Zettelkasten, links bidireccionales,
+          un grafo navegable— y <strong>tu ejecución</strong> —tareas, proyectos, objetivos y hábitos.
+          Un copiloto de AI conecta los puntos, <em>sin decidir por vos</em>.
+        </p>
+      </div>
+    </section>
+
+    <!-- ===== FEATURES ===== -->
+    <section class="section features-sec">
+      <div class="container">
+        <p class="eyebrow" data-reveal>Lo que hace</p>
+        <h2 class="sec-title" data-reveal>Una herramienta, dos mundos.</h2>
+        <div class="grid">
+          {
+            features.map((f, i) => (
+              <article class="card" data-reveal style={`animation-delay: ${i * 70}ms`}>
+                <div class="card-icon">
+                  <svg
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="1.6"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    aria-hidden="true"
+                    set:html={f.icon}
+                  />
+                </div>
+                <h3>{f.title}</h3>
+                <p class="muted">{f.desc}</p>
+              </article>
+            ))
+          }
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== CTA DE CIERRE ===== -->
+    <section class="section">
+      <div class="container">
+        <div class="cta-panel" data-reveal>
+          <h2>¿Listo para tu segundo cerebro?</h2>
+          <p class="muted">
+            La beta es cerrada y por invitación. Dejá tu email y, si hay lugar, sumamos tu cuenta.
+          </p>
+          <a class="btn btn-primary" href={CTA_URL}>Solicitar acceso a la beta</a>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <Footer />
+</Layout>
+
+<style>
+  /* ---- hero ---- */
+  .hero {
+    padding-block: clamp(4.5rem, 11vw, 8.5rem) clamp(3.5rem, 7vw, 5.5rem);
+  }
+  .hero-in {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+  }
+  .hero-mark {
+    margin: 1.75rem 0 0.25rem;
+  }
+  .hero-mark img {
+    width: clamp(78px, 12vw, 100px);
+    height: auto;
+    filter: drop-shadow(0 0 34px color-mix(in oklch, var(--primary) 42%, transparent));
+  }
+  .hero-title {
+    margin-top: 1.25rem;
+    max-width: 16ch;
+    font-size: clamp(2.4rem, 6.2vw, 4.25rem);
+    font-weight: 760;
+    letter-spacing: -0.035em;
+    line-height: 1.04;
+    text-wrap: balance;
+  }
+  .hero-sub {
+    margin-top: 1.4rem;
+    max-width: 60ch;
+    font-size: clamp(1.02rem, 1.5vw, 1.2rem);
+    color: var(--muted-foreground);
+    text-wrap: pretty;
+  }
+  .hero-cta {
+    margin-top: 2.25rem;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    justify-content: center;
+  }
+
+  /* ---- qué es ---- */
+  .narrow {
+    max-width: 760px;
+  }
+  .lead {
+    margin-top: 1.1rem;
+    font-size: clamp(1.3rem, 2.6vw, 1.75rem);
+    font-weight: 450;
+    line-height: 1.45;
+    letter-spacing: -0.012em;
+    color: color-mix(in oklch, var(--foreground) 88%, var(--muted-foreground));
+    text-wrap: pretty;
+  }
+  .lead strong {
+    font-weight: 650;
+    color: var(--foreground);
+  }
+  .lead em {
+    font-style: normal;
+    color: var(--primary);
+    font-weight: 550;
+  }
+
+  /* ---- features ---- */
+  .features-sec {
+    background:
+      linear-gradient(
+        to bottom,
+        transparent,
+        color-mix(in oklch, var(--background-deep) 55%, transparent),
+        transparent
+      );
+  }
+  .sec-title {
+    margin-top: 0.6rem;
+    font-size: clamp(1.6rem, 3.4vw, 2.25rem);
+    letter-spacing: -0.025em;
+  }
+  .grid {
+    margin-top: 2.5rem;
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1rem;
+  }
+  .card h3 {
+    margin-top: 1.1rem;
+    font-size: 1.12rem;
+    font-weight: 600;
+    letter-spacing: -0.015em;
+  }
+  .card p {
+    margin-top: 0.5rem;
+    font-size: 0.96rem;
+    line-height: 1.55;
+  }
+
+  /* ---- cta de cierre ---- */
+  .cta-panel {
+    position: relative;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    gap: 1rem;
+    padding: clamp(2.5rem, 6vw, 4rem) 1.5rem;
+    border-radius: calc(var(--radius) * 2);
+    border: 1px solid var(--border-strong);
+    background:
+      radial-gradient(
+        ellipse 70% 130% at 50% 0%,
+        color-mix(in oklch, var(--primary) 18%, transparent),
+        transparent 70%
+      ),
+      color-mix(in oklch, var(--card) 60%, transparent);
+  }
+  .cta-panel h2 {
+    font-size: clamp(1.5rem, 3.2vw, 2.1rem);
+    letter-spacing: -0.025em;
+  }
+  .cta-panel p {
+    max-width: 46ch;
+  }
+  .cta-panel .btn {
+    margin-top: 0.5rem;
+  }
+
+  /* ---- responsive ---- */
+  @media (max-width: 640px) {
+    .grid {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>
