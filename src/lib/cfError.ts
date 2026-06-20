@@ -41,7 +41,13 @@ export function mapCfError(err: unknown, t: TFunction): string {
     case 'admin-unauthenticated':
     case 'verified-unauthenticated':
     case 'check-access-unauthenticated':
+    case 'delete-account-unauthenticated':
       return t('errors.unauthenticated', 'Tenés que iniciar sesión.');
+    case 'reauth-required':
+      return t(
+        'errors.reauthRequired',
+        'Por seguridad, reingresá para confirmar el borrado de tu cuenta.',
+      );
     case 'admin-unauthorized':
       return t('errors.adminUnauthorized', 'No autorizado.');
     case 'email-unverified':
@@ -76,6 +82,7 @@ export function mapCfError(err: unknown, t: TFunction): string {
     case 'submit-access-request-failed':
     case 'save-key-failed':
     case 'delete-key-failed':
+    case 'delete-account-failed':
       return t('errors.operationFailed', 'No se pudo completar la operación. Probá de nuevo.');
     // embed-query-* (consumidor silencioso useHybridSearch) y cualquier slug
     // desconocido o ausente → copy genérico. Nunca devuelve la key cruda.
