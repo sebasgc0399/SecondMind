@@ -1,5 +1,18 @@
 {
   "projects": {
     "default": "secondmindv1"
-  }
+  },
+  "targets": {
+    "secondmindv1": {
+      "hosting": {
+        "app": [
+          "secondmind"
+        ],
+        "landing": [
+          "secondmind-landing"
+        ]
+      }
+    }
+  },
+  "etags": {}
 }

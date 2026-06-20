@@ -155,10 +155,12 @@ git push origin main
 ### Paso 6 — Deploy hosting
 
 ```bash
-npm run deploy   # = npm run build && firebase deploy --only hosting
+npm run deploy   # = npm run build && firebase deploy --only hosting:app   (multi-target: SOLO la app)
 ```
 
 Este paso tarda ~1 min (build Vite + upload Firebase).
+
+> **Multi-target (post-SPEC-63):** `npm run deploy` está acotado a `--only hosting:app` a propósito — el Hosting es multi-site (app + landing). La **landing** del apex `getsecondmind.co` se deploya por separado con `npm run deploy:landing` y **NO entra en el release coordinado** (no se versiona con los 3 artefactos del ecosistema). Nunca usar `firebase deploy --only hosting` pelado: post-array deployaría AMBOS sites.
 
 **Por qué hosting ANTES del tag** (crítico): el tag dispara GitHub Actions que construye desktop + mobile. Si esos artefactos llegan a usuarios (updater de Tauri, Firebase App Distribution) apuntando a una versión de web que todavía no está publicada, hay desync de minutos durante el cual la app nueva puede fallar en features que dependan del bundle web nuevo (ej. CSP, Firebase config, rutas).
 
