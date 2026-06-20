@@ -1,0 +1,60 @@
+---
+import { SUPPORT_EMAIL, TAGLINE } from '../config';
+---
+
+<footer class="ft">
+  <hr class="hairline" />
+  <div class="container ft-inner">
+    <div class="ft-brand">
+      <a class="brand" href="/" aria-label="SecondMind — inicio">
+        <img src="/favicon.svg" alt="" width="22" height="22" />
+        <span>SecondMind</span>
+      </a>
+      <p class="muted ft-tag">{TAGLINE}</p>
+    </div>
+    <nav class="ft-links" aria-label="Pie de página">
+      <a href={`mailto:${SUPPORT_EMAIL}`}>{SUPPORT_EMAIL}</a>
+      <a href="/privacy">Privacidad</a>
+      <span class="muted">© 2026 SecondMind</span>
+    </nav>
+  </div>
+</footer>
+
+<style>
+  .ft {
+    padding-bottom: 3rem;
+  }
+  .ft-inner {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 1.5rem;
+    padding-top: 2.5rem;
+  }
+  .brand {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+  }
+  .ft-tag {
+    margin-top: 0.6rem;
+    font-size: 0.9rem;
+  }
+  .ft-links {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 1.25rem;
+    font-size: 0.9rem;
+  }
+  .ft-links a {
+    color: var(--muted-foreground);
+    transition: color 0.18s var(--ease);
+  }
+  .ft-links a:hover {
+    color: var(--foreground);
+  }
+</style>

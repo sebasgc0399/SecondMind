@@ -1,0 +1,74 @@
+---
+import '../styles/branding.css';
+
+interface Props {
+  title?: string;
+  description?: string;
+  ogImage?: string;
+}
+
+const {
+  title = 'SecondMind — Tu segundo cerebro que además ejecuta',
+  description = 'Tu conocimiento y tu ejecución en un solo lugar: notas atómicas conectadas, tareas y proyectos, y un copiloto de AI que conecta los puntos. Beta cerrada por invitación.',
+  // og:image SIEMPRE absoluta o los scrapers (WhatsApp/redes) la ignoran.
+  ogImage = 'https://getsecondmind.co/og-image.png',
+} = Astro.props;
+
+// URL canónica LIMPIA: con build.format:'file' el pathname trae '/index.html' o
+// '/privacy.html'; lo normalizamos a '/' y '/privacy' (= lo que sirve cleanUrls de
+// Firebase) para no partir la home en dos URLs ante los crawlers.
+const cleanPath = Astro.url.pathname.replace(/index\.html$/, '').replace(/\.html$/, '') || '/';
+const canonical = new URL(cleanPath, Astro.site).href;
+---
+
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="generator" content={Astro.generator} />
+
+    <title>{title}</title>
+    <meta name="description" content={description} />
+    <link rel="canonical" href={canonical} />
+    <meta name="theme-color" content="#17151e" />
+
+    <!-- Favicons (cerebro) -->
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
+    <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+
+    <!-- Geist self-hosted: preload para evitar FOUT en el hero -->
+    <link
+      rel="preload"
+      href="/fonts/geist-latin-wght-normal.woff2"
+      as="font"
+      type="font/woff2"
+      crossorigin
+    />
+
+    <!-- Open Graph -->
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="SecondMind" />
+    <meta property="og:locale" content="es_CO" />
+    <meta property="og:title" content={title} />
+    <meta property="og:description" content={description} />
+    <meta property="og:url" content={canonical} />
+    <meta property="og:image" content={ogImage} />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="SecondMind — tu segundo cerebro que además ejecuta" />
+
+    <!-- Twitter -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content={title} />
+    <meta name="twitter:description" content={description} />
+    <meta name="twitter:image" content={ogImage} />
+  </head>
+  <body>
+    <div class="hero-glow" aria-hidden="true"></div>
+    <div class="grain" aria-hidden="true"></div>
+    <slot />
+  </body>
+</html>
