@@ -14,6 +14,7 @@ export default defineConfig([
     'android/app/build',
     'src-tauri/target',
     'extension',
+    'landing/.astro', // artefactos generados por Astro (content.d.ts/types.d.ts)
   ]),
   {
     files: ['**/*.{ts,tsx}'],
