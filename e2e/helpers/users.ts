@@ -47,3 +47,27 @@ export async function resetAuth(): Promise<void> {
   );
   if (!res.ok) throw new Error(`resetAuth: ${res.status} ${res.statusText}`);
 }
+
+// SPEC-64 F1 — uid del usuario logueado: el Auth emulator lo asigna en el sign-in,
+// así que se lee tras signInAs* para seedear users/{uid}/** con el uid real.
+export function currentUid(): string {
+  const uid = getAuthClient().currentUser?.uid;
+  if (!uid) throw new Error('currentUid: no hay usuario logueado');
+  return uid;
+}
+
+// Verifica si un uid sigue existiendo en el Auth emulator (lookup admin de Identity
+// Toolkit por localId) — para confirmar que deleteAccount borró el Auth user (W6).
+export async function authUserExists(uid: string): Promise<boolean> {
+  const res = await fetch(
+    `http://${EMU.host}:${EMU.authPort}/identitytoolkit.googleapis.com/v1/projects/${EMU.projectId}/accounts:lookup`,
+    {
+      method: 'POST',
+      headers: { Authorization: 'Bearer owner', 'Content-Type': 'application/json' },
+      body: JSON.stringify({ localId: [uid] }),
+    },
+  );
+  if (!res.ok) throw new Error(`authUserExists: ${res.status} ${res.statusText}`);
+  const body = (await res.json()) as { users?: Array<{ localId: string }> };
+  return (body.users ?? []).some((u) => u.localId === uid);
+}

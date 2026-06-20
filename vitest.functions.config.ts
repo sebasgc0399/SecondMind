@@ -9,7 +9,7 @@ export default defineConfig({
   test: {
     environment: 'node',
     globals: true,
-    include: ['e2e/**/*.e2e.test.ts'],
+    include: ['e2e/**/*.e2e.test.ts', 'src/functions/src/**/*.e2e.test.ts'],
     testTimeout: 20000,
     hookTimeout: 40000,
     // Los 5 archivos comparten UN solo emulador (Firestore + Auth). Correrlos en paralelo
