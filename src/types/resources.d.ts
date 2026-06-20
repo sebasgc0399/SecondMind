@@ -91,7 +91,7 @@ export default interface Resources {
         disabledBody: 'Volvé más adelante o iniciá sesión con Google si ya tenés cuenta.';
         error: 'No se pudo verificar disponibilidad. Reintentá.';
       };
-      tagline: 'Tu segundo cerebro digital';
+      tagline: 'Tu segundo cerebro, en acción.';
       validation: {
         emailInvalid: 'Email inválido.';
         minChars: 'Mínimo 8 caracteres.';

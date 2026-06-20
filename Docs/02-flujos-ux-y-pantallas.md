@@ -1004,7 +1004,7 @@ Filtros (panel expandible):
 **Propósito:** Autenticación + gate de acceso a la beta cerrada
 **Fase:** F47 (rediseño Linear-style) + F50 (allowlist)
 
-Hero centrado (logo `favicon.svg` + "SecondMind" + tagline "Tu segundo cerebro digital", radial glow indigo) sobre `LoginCard` con `@base-ui/react/tabs` balanceadas 50/50:
+Hero centrado (logo `favicon.svg` + "SecondMind" + tagline "Tu segundo cerebro, en acción.", radial glow indigo) sobre `LoginCard` con `@base-ui/react/tabs` balanceadas 50/50:
 
 - **Iniciar sesión / Crear cuenta** (tabs): email + password con validación client-side; errores mapeados a español (`authErrors.ts`). El sign-up dispara `sendEmailVerification`.
 - **Google** (`GoogleSignInButton`): branching por plataforma (Capacitor → Tauri → `signInWithPopup`).

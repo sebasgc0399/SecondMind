@@ -6,7 +6,7 @@ Sistema de productividad y conocimiento personal construido desde código. Combi
 
 ## Qué es
 
-SecondMind es un "segundo cerebro" digital: una app para capturar ideas sin fricción, procesarlas en notas atómicas interconectadas, y usar ese conocimiento para alimentar proyectos, decisiones y hábitos diarios.
+SecondMind es tu segundo cerebro en acción: una app para capturar ideas sin fricción, procesarlas en notas atómicas interconectadas, y usar ese conocimiento para alimentar proyectos, decisiones y hábitos diarios.
 
 El proyecto nace de la experiencia de usar Notion como Segundo Cerebro y detectar sus límites: las notas entran y mueren, no hay conexiones entre ideas, la captura es lenta, y el inbox se acumula porque procesarlo es tedioso. SecondMind intenta resolver eso desde código, con un stack optimizado para instantaneidad, offline-first, y AI como copiloto.
 
