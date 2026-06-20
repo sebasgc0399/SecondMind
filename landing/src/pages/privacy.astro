@@ -3,27 +3,252 @@ import Layout from '../layouts/Layout.astro';
 import Header from '../components/Header.astro';
 import Footer from '../components/Footer.astro';
 import { SUPPORT_EMAIL } from '../config';
+
+// ⚠️ DRAFT pendiente de revisión legal — NO hacer deploy hasta GO.
+// Fecha de vigencia: editar acá. Se muestra bajo el título y debe actualizarse
+// con cada cambio relevante (ver sección 12).
+const LAST_UPDATED = '20 de junio de 2026';
 ---
 
+<!-- DRAFT pendiente de revisión legal — NO hacer deploy hasta GO -->
 <Layout
   title="Política de privacidad — SecondMind"
-  description="Política de privacidad de SecondMind — en preparación."
+  description="Política de privacidad de SecondMind: qué datos guardamos, dónde, con quién se comparten y cuáles son tus derechos."
 >
   <Header />
 
   <main class="container priv">
     <p class="eyebrow">Legal</p>
     <h1>Política de privacidad</h1>
-    <p class="status">En preparación</p>
-    <p class="muted body">
-      Estamos redactando nuestra política de privacidad con el detalle que merece: qué datos toca la
-      app, cómo se guardan, con quién se comparten (spoiler: con nadie que no haga falta) y cuáles
-      son tus derechos. Va a estar publicada acá antes de la apertura de la beta.
-    </p>
-    <p class="muted body">
-      ¿Tenés una duda mientras tanto? Escribinos a
+    <p class="updated">Última actualización: {LAST_UPDATED}</p>
+
+    <section class="summary" aria-label="Resumen">
+      <h2>En resumen</h2>
+      <p>
+        SecondMind es tu segundo cerebro: tus notas, tareas, proyectos, objetivos y hábitos. Acá te
+        contamos qué datos guardamos, dónde y con quién se comparten.
+      </p>
+      <ul>
+        <li>
+          Guardamos tu cuenta (correo) y todo el contenido que creás (notas, tareas, etc.) en la
+          infraestructura de Google Firebase, en servidores de Estados Unidos.
+        </li>
+        <li>
+          Para funciones de inteligencia artificial, parte de tu contenido se envía a OpenAI
+          (búsqueda semántica, de forma automática) y —solo si vos lo activás con tu propia clave— a
+          Anthropic (clasificación y etiquetado).
+        </li>
+        <li>
+          No mostramos publicidad, no usamos analítica ni rastreadores, y no vendemos tus datos.
+        </li>
+        <li>
+          Podés pedir el borrado de tu cuenta y tus datos escribiéndonos a
+          <a href={`mailto:${SUPPORT_EMAIL}`}>{SUPPORT_EMAIL}</a>.
+        </li>
+      </ul>
+    </section>
+
+    <h2>1. Quién es responsable de tus datos</h2>
+    <p>
+      SecondMind es operado por Sebastián Gutiérrez Clavijo (persona natural), con sede en Cali,
+      Colombia. Para cualquier asunto de privacidad o para ejercer tus derechos, escribinos a
       <a href={`mailto:${SUPPORT_EMAIL}`}>{SUPPORT_EMAIL}</a>.
     </p>
+    <p>
+      SecondMind está disponible internacionalmente. Según el país donde residas, podés tener
+      derechos adicionales bajo la Ley 1581 de 2012 de Colombia, el Reglamento General de Protección
+      de Datos (GDPR) de la Unión Europea y el Reino Unido, o la CCPA/CPRA de California. Respetamos
+      esos derechos; ver la sección 8.
+    </p>
+
+    <h2>2. Qué datos recogemos</h2>
+
+    <h3>2.1 Datos de tu cuenta</h3>
+    <p>
+      Creás tu cuenta con Google o con correo y contraseña. Tu identidad la maneja Firebase
+      Authentication (Google), que guarda tu correo electrónico, un identificador único de usuario,
+      tu nombre y foto de perfil (si iniciás con Google) y si tu correo está verificado. Tu
+      contraseña, si usás correo y contraseña, la gestiona y cifra Firebase Authentication; nosotros
+      nunca la vemos.
+    </p>
+
+    <h3>2.2 El contenido que vos creás</h3>
+    <p>
+      Todo lo que producís dentro de la app se guarda asociado a tu cuenta y es accesible únicamente
+      por vos: notas (título, contenido, texto plano, resúmenes, etiquetas), tareas, proyectos y
+      objetivos, capturas de tu inbox (incluyendo lo que mandás desde la extensión de navegador),
+      conexiones entre notas, y tu registro de hábitos.
+    </p>
+
+    <h3>2.3 Tu clave de API de Anthropic (opcional)</h3>
+    <p>
+      Si activás las funciones de IA generativa, ingresás tu propia clave de API de Anthropic. Esta
+      clave se cifra antes de guardarse (ver sección 6) y nunca se muestra completa de vuelta en la
+      app: solo verás los últimos 4 caracteres.
+    </p>
+
+    <h3>2.4 Datos derivados</h3>
+    <p>
+      Para la búsqueda semántica generamos representaciones numéricas (embeddings) del texto de tus
+      notas. Son datos derivados de tu contenido y solo vos podés acceder a ellos.
+    </p>
+
+    <h3>2.5 Preferencias y configuración</h3>
+    <p>
+      Guardamos tus preferencias de la app (tema, idioma, días de retención de la papelera, estado de
+      onboarding).
+    </p>
+
+    <h3>2.6 Solicitudes de acceso</h3>
+    <p>
+      Si pedís acceso a la beta, recogemos tu correo y el motivo que escribís en el formulario
+      (máximo 280 caracteres), para evaluar tu solicitud.
+    </p>
+
+    <h3>2.7 Datos técnicos mínimos</h3>
+    <p>
+      Para operar y proteger la app guardamos registros técnicos acotados: identificadores de
+      operación, contadores para limitar abusos y registros de error que no incluyen el contenido de
+      tus notas en crudo.
+    </p>
+
+    <h3>2.8 Lo que NO recogemos</h3>
+    <ul>
+      <li>No mostramos publicidad ni usamos el Identificador de Publicidad de Android.</li>
+      <li>No usamos analítica, telemetría ni rastreadores.</li>
+      <li>No accedemos a tu ubicación, contactos, cámara, micrófono ni archivos del dispositivo.</li>
+      <li>No vendemos tus datos a nadie.</li>
+    </ul>
+
+    <h2>3. Con quién se comparten tus datos</h2>
+    <p>
+      No vendemos ni compartimos tus datos con fines publicitarios. Usamos un conjunto reducido de
+      proveedores que procesan datos para que la app funcione.
+    </p>
+
+    <h3>3.1 Google Firebase (infraestructura)</h3>
+    <p>
+      Tu cuenta, tu contenido y la base de datos viven en Google Firebase / Google Cloud
+      (autenticación, base de datos, funciones en la nube y hosting). Los datos se almacenan en
+      servidores de Estados Unidos. Google procesa estos datos como nuestro proveedor de
+      infraestructura y no los usa para publicidad propia.
+    </p>
+
+    <h3>3.2 OpenAI (búsqueda semántica)</h3>
+    <p>
+      Para la búsqueda semántica, el texto plano de tus notas se envía a OpenAI para generar los
+      embeddings. Esto ocurre automáticamente cada vez que creás o editás una nota, y también cuando
+      hacés una búsqueda (se envía el texto de tu consulta). Según las condiciones de la API de
+      OpenAI, los datos enviados por API no se usan para entrenar sus modelos y se eliminan
+      típicamente dentro de los 30 días, salvo que la ley exija retenerlos más tiempo.
+    </p>
+
+    <h3>3.3 Anthropic (clasificación y etiquetado, opcional)</h3>
+    <p>
+      Si configurás tu clave de Anthropic, al guardar una captura en tu inbox su texto se envía a
+      Anthropic para sugerir cómo clasificarla, y al escribir una nota su texto plano se envía para
+      sugerir etiquetas y un resumen. Esto usa tu propia clave. Según las condiciones de la API
+      comercial de Anthropic, los datos no se usan para entrenar sus modelos y se eliminan
+      típicamente dentro de los 30 días, salvo obligación legal. Si no configurás tu clave, nada de
+      tu contenido se envía a Anthropic.
+    </p>
+
+    <h2>4. Para qué usamos tus datos</h2>
+    <ul>
+      <li><strong>Operar la app:</strong> guardar y sincronizar tu contenido entre tus dispositivos.</li>
+      <li>
+        <strong>Funciones de IA:</strong> búsqueda semántica y, si la activás, clasificación y
+        etiquetado.
+      </li>
+      <li><strong>Seguridad:</strong> verificar tu correo, controlar el acceso y prevenir abusos.</li>
+      <li>
+        <strong>Comunicación esencial:</strong> correos de verificación y de servicio (no marketing).
+      </li>
+    </ul>
+
+    <h2>5. Dónde se almacenan tus datos</h2>
+    <p>
+      Tus datos se almacenan en la infraestructura de Google Cloud en Estados Unidos. Si estás fuera
+      de Estados Unidos, al usar SecondMind tus datos se transfieren y procesan en Estados Unidos y en
+      los países donde operan nuestros proveedores.
+    </p>
+
+    <h2>6. Seguridad</h2>
+    <ul>
+      <li>
+        Tu contenido es privado para tu cuenta: las reglas de la base de datos impiden que otro
+        usuario lea o escriba tus datos.
+      </li>
+      <li>
+        Tu clave de API de Anthropic se cifra con AES-256-GCM antes de guardarse; la clave maestra de
+        cifrado vive en un gestor de secretos separado y nunca está en la app ni en el código. La app
+        nunca te muestra tu clave completa.
+      </li>
+      <li>En Android, el respaldo automático del sistema está deshabilitado.</li>
+      <li>
+        Toda la comunicación va por HTTPS. Los registros de error no guardan el contenido de tus notas
+        en crudo.
+      </li>
+    </ul>
+    <p class="note">
+      <strong>Importante:</strong> el contenido de tus notas no está cifrado de extremo a extremo. Se
+      guarda de forma que la infraestructura de Google y el operador de SecondMind pueden acceder a él
+      para operar el servicio, y se envía a los proveedores de IA descritos en la sección 3. Solo tu
+      clave de API recibe cifrado especial.
+    </p>
+
+    <h2>7. Cuánto tiempo conservamos tus datos</h2>
+    <p>
+      Conservamos tu contenido mientras tu cuenta esté activa. Cuando borrás una nota, va a la
+      papelera y se elimina definitivamente tras el plazo que elijas en ajustes (Nunca, 7, 15 o 30
+      días; por defecto 30). Al eliminarse definitivamente, también se borran sus embeddings y
+      conexiones. Los proveedores de IA conservan los datos enviados por API por su cuenta,
+      típicamente hasta 30 días.
+    </p>
+
+    <h2>8. Tus derechos</h2>
+    <p>
+      Tenés derecho a acceder a tus datos, corregirlos, borrarlos, obtener una copia (portabilidad) y
+      oponerte a ciertos tratamientos. Si residís en California, no vendemos ni compartimos tus datos
+      con fines publicitarios y podés ejercer tus derechos bajo la CCPA/CPRA. Estos derechos se
+      ejercen escribiéndonos a <a href={`mailto:${SUPPORT_EMAIL}`}>{SUPPORT_EMAIL}</a>; respondemos y
+      procesamos tu solicitud lo antes posible y a más tardar en 30 días.
+    </p>
+
+    <h2>9. Borrado de tu cuenta</h2>
+    <p>
+      Para borrar tu cuenta y tus datos asociados, escribinos a
+      <a href={`mailto:${SUPPORT_EMAIL}`}>{SUPPORT_EMAIL}</a> desde el correo de tu cuenta.
+      Eliminaremos tu cuenta y tu contenido (notas, tareas, proyectos, objetivos, hábitos, capturas,
+      conexiones, embeddings y tu clave de API cifrada) lo antes posible y a más tardar en 30 días.
+    </p>
+
+    <h2>10. Menores</h2>
+    <p>
+      SecondMind no está dirigido a menores de 16 años. No recogemos a sabiendas datos de menores de
+      16 años.
+    </p>
+
+    <h2>11. La extensión de navegador</h2>
+    <p>
+      Si instalás la extensión de navegador, al guardar un recorte se envía a tu inbox solo el texto
+      que seleccionaste, el título de la página y su URL (a la que le quitamos parámetros de rastreo).
+      La extensión no captura el HTML completo de la página, ni capturas de pantalla. Se autentica con
+      tu cuenta de Google.
+    </p>
+
+    <h2>12. Cambios a esta política</h2>
+    <p>
+      Si cambiamos esta política, actualizaremos la fecha de vigencia y, si el cambio es relevante, te
+      avisaremos por la app o por correo.
+    </p>
+
+    <h2>13. Contacto</h2>
+    <p>
+      Para cualquier consulta sobre privacidad o tus datos:
+      <a href={`mailto:${SUPPORT_EMAIL}`}>{SUPPORT_EMAIL}</a>.
+    </p>
+
     <a class="back" href="/">← Volver al inicio</a>
   </main>
 
@@ -33,39 +258,95 @@ import { SUPPORT_EMAIL } from '../config';
 <style>
   .priv {
     min-height: 64vh;
-    max-width: 720px;
+    max-width: 760px;
     padding-top: clamp(3.5rem, 8vw, 6rem);
+    padding-bottom: clamp(3rem, 6vw, 4.5rem);
   }
   .priv h1 {
     margin-top: 0.9rem;
     font-size: clamp(2rem, 5vw, 2.75rem);
     letter-spacing: -0.03em;
   }
-  .status {
-    display: inline-block;
-    margin-top: 1rem;
-    padding: 0.3rem 0.8rem;
-    font-size: 0.82rem;
-    font-weight: 500;
-    color: var(--primary);
-    border-radius: 999px;
-    background: color-mix(in oklch, var(--primary) 12%, transparent);
-    border: 1px solid color-mix(in oklch, var(--primary) 24%, transparent);
+  .updated {
+    margin-top: 0.7rem;
+    font-size: 0.9rem;
+    color: var(--muted-foreground);
   }
-  .body {
-    margin-top: 1.5rem;
+
+  /* Bloque TL;DR — usa el lenguaje visual de las cards de la landing. */
+  .summary {
+    margin-top: 2rem;
+    padding: 1.3rem 1.45rem;
+    border-radius: calc(var(--radius) * 1.5);
+    background: color-mix(in oklch, var(--card) 55%, transparent);
+    border: 1px solid var(--border);
+  }
+  .summary h2 {
+    margin-top: 0;
+    font-size: 1.15rem;
+  }
+  .summary p {
+    margin-top: 0.65rem;
+  }
+  .summary ul {
+    margin-top: 0.9rem;
+  }
+
+  /* Secciones de la política. */
+  .priv h2 {
+    margin-top: 2.85rem;
+    font-size: clamp(1.3rem, 3vw, 1.6rem);
+    letter-spacing: -0.02em;
+  }
+  .priv h3 {
+    margin-top: 1.85rem;
     font-size: 1.05rem;
-    line-height: 1.65;
-    max-width: 60ch;
+    font-weight: 600;
+    color: var(--foreground);
   }
-  .body a {
+  .priv p {
+    margin-top: 1rem;
+    font-size: 1.02rem;
+    line-height: 1.7;
+    max-width: 68ch;
+  }
+  .priv ul {
+    margin-top: 1rem;
+    padding-left: 1.3rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.55rem;
+    max-width: 68ch;
+  }
+  .priv li {
+    line-height: 1.65;
+  }
+  .priv li::marker {
+    color: var(--primary);
+  }
+  .priv a {
     color: var(--primary);
     text-decoration: underline;
     text-underline-offset: 2px;
   }
+  .priv strong {
+    font-weight: 600;
+    color: var(--foreground);
+  }
+
+  /* Callout "Importante" (sección 6) — acento sutil a la izquierda. */
+  .note {
+    margin-top: 1.4rem;
+    padding: 1rem 1.2rem;
+    border-radius: calc(var(--radius) * 1.2);
+    border: 1px solid color-mix(in oklch, var(--primary) 24%, transparent);
+    background: color-mix(in oklch, var(--primary) 8%, transparent);
+    border-left: 3px solid var(--primary);
+  }
+
   .back {
     display: inline-block;
-    margin-top: 2.5rem;
+    margin-top: 3rem;
     font-size: 0.95rem;
     font-weight: 500;
     color: var(--muted-foreground);
