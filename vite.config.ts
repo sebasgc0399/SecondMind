@@ -27,7 +27,7 @@ export default defineConfig({
       manifest: {
         name: 'SecondMind',
         short_name: 'SecondMind',
-        description: 'Tu segundo cerebro digital',
+        description: 'Tu segundo cerebro, en acción.',
         // F58: coherencia con la description (el estándar W3C no soporta
         // manifest multi-idioma — esto NO es i18n del manifest).
         lang: 'es',
