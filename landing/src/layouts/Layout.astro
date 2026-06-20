@@ -14,7 +14,11 @@ const {
   ogImage = 'https://getsecondmind.co/og-image.png',
 } = Astro.props;
 
-const canonical = new URL(Astro.url.pathname, Astro.site).href;
+// URL canónica LIMPIA: con build.format:'file' el pathname trae '/index.html' o
+// '/privacy.html'; lo normalizamos a '/' y '/privacy' (= lo que sirve cleanUrls de
+// Firebase) para no partir la home en dos URLs ante los crawlers.
+const cleanPath = Astro.url.pathname.replace(/index\.html$/, '').replace(/\.html$/, '') || '/';
+const canonical = new URL(cleanPath, Astro.site).href;
 ---
 
 <!doctype html>
@@ -47,7 +51,7 @@ const canonical = new URL(Astro.url.pathname, Astro.site).href;
     <!-- Open Graph -->
     <meta property="og:type" content="website" />
     <meta property="og:site_name" content="SecondMind" />
-    <meta property="og:locale" content="es_AR" />
+    <meta property="og:locale" content="es_CO" />
     <meta property="og:title" content={title} />
     <meta property="og:description" content={description} />
     <meta property="og:url" content={canonical} />
