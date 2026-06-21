@@ -21,6 +21,12 @@ import { isReauthExpired } from './reauthGate';
 // paso previo falla, el token sigue válido para reintentar; borrar Auth revoca
 // el token (cierra sesión de facto).
 //
+// CAVEAT del reintento (documentado en el SPEC): si W6 falla DESPUÉS de W3, el
+// allowlist/{email} ya se borró → el gate de la app rechaza el login → el usuario
+// NO puede auto-reintentar. La recuperación ahí es por SOPORTE (borrar el Auth
+// huérfano a mano), no auto-servicio. Por eso W6 reintenta ante errores
+// transitorios: minimiza dejar el email (PII) huérfano en Auth.
+//
 // D7: recursiveDelete(users/{uid}) dispara onNoteDeleted por nota — redundante
 // pero idempotente (queries dan sets vacíos), asíncrono y fuera del path
 // crítico (el callable retorna apenas recursiveDelete completa). Se deja correr
@@ -30,6 +36,7 @@ const BATCH_LIMIT = 500; // límite de ops por WriteBatch (Firestore)
 // Cota superior (exclusiva) del range query de rateLimits sobre documentId(): U+FFFF
 // cubre todo el sufijo tras "{uid}__". String.fromCharCode evita un char no-ASCII literal.
 const UID_RANGE_END = String.fromCharCode(0xffff);
+const DELETE_USER_MAX_ATTEMPTS = 3; // W6: reintentos ante error transitorio de Auth
 
 // Handler exportado SEPARADO del wrapper onCall para poder invocarlo directo en
 // tests con un CallableRequest fabricado: el camino de RECHAZO del gate de reauth
@@ -75,6 +82,13 @@ export async function deleteAccountHandler(request: CallableRequest<void>): Prom
     // (`{uid}__{key}__{window}__{slot}`), así que se borra por range query sobre
     // documentId() (FieldPath, no FieldValue); la cota superior UID_RANGE_END
     // (U+FFFF) cubre todo el espacio de docIds del uid.
+    //
+    // SEGURIDAD DEL BOUND (suposición explícita): que el rango `[uid__ … uid__ + U+FFFF)`
+    // NO barra rateLimits de otro usuario depende de que los UIDs de Firebase Auth sean
+    // longitud-fija (28 chars) alfanuméricos SIN underscore → ningún uid es prefijo de
+    // otro, y el char inmediato tras `{uid}` nunca es `_`. Si alguna vez se introducen
+    // custom UIDs (con `_`, o longitud variable), este bound podría capturar docs de
+    // OTRO uid y borrarlos en silencio. Revisar este query ANTES de habilitar custom UIDs.
     const rateLimitsSnap = await db
       .collection('rateLimits')
       .where(FieldPath.documentId(), '>=', `${uid}__`)
@@ -86,20 +100,39 @@ export async function deleteAccountHandler(request: CallableRequest<void>): Prom
       await batch.commit();
     }
 
-    // W6 — Auth user, ÚLTIMO. user-not-found = éxito idempotente (ya borrado en un
-    // intento previo): el efecto deseado ya ocurrió, no es un fallo.
-    try {
-      await getAuth().deleteUser(uid);
-    } catch (authError) {
-      if ((authError as { code?: string })?.code !== 'auth/user-not-found') throw authError;
+    // W6 — Auth user, ÚLTIMO. Retry ante errores transitorios (hasta 3 intentos): un
+    // huérfano dejaría el EMAIL en Auth —la PII que el borrado total promete eliminar—,
+    // así que vale reintentar ante un blip transitorio antes de rendirse con
+    // delete-account-failed. deleteUser es idempotente; `user-not-found` = éxito
+    // idempotente (ya borrado en un intento previo): el efecto deseado ya ocurrió.
+    let lastAuthError: unknown;
+    for (let attempt = 1; attempt <= DELETE_USER_MAX_ATTEMPTS; attempt++) {
+      try {
+        await getAuth().deleteUser(uid);
+        lastAuthError = undefined;
+        break;
+      } catch (authError) {
+        if ((authError as { code?: string })?.code === 'auth/user-not-found') {
+          lastAuthError = undefined;
+          break;
+        }
+        lastAuthError = authError;
+        if (attempt < DELETE_USER_MAX_ATTEMPTS) {
+          // Backoff lineal corto (300ms, 600ms) entre reintentos transitorios.
+          await new Promise((resolve) => {
+            setTimeout(resolve, 300 * attempt);
+          });
+        }
+      }
     }
+    if (lastAuthError) throw lastAuthError;
 
-    logger.info('deleteAccount: ok', { rateLimitsDeleted: rateLimitsSnap.size });
+    logger.info('deleteAccount: ok', { uid, rateLimitsDeleted: rateLimitsSnap.size });
     return { ok: true };
   } catch (error) {
     if (error instanceof HttpsError) throw error;
     const { code, message } = sanitizeError(error);
-    logger.error('deleteAccount: failed', { code, message });
+    logger.error('deleteAccount: failed', { uid, code, message });
     throw appError('delete-account-failed', 'internal', 'No se pudo borrar la cuenta');
   }
 }
