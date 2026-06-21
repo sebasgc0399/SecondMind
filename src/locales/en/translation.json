@@ -982,6 +982,7 @@
       "description": "Deleting your account permanently and irreversibly removes all your notes, tasks, projects and data. This can't be undone.",
       "modalBody": "This permanently deletes ALL your data. It can't be undone.",
       "modalTitle": "Delete your account?",
+      "nativeHint": "Your browser will open to securely complete the deletion.",
       "passwordLabel": "Your password",
       "title": "Danger zone",
       "working": "Deleting…"

@@ -1005,6 +1005,7 @@
       "description": "Borrar tu cuenta elimina de forma permanente e irreversible todas tus notas, tareas, proyectos y datos. No se puede deshacer.",
       "modalBody": "Esto elimina TODOS tus datos de forma permanente. No se puede deshacer.",
       "modalTitle": "¿Borrar tu cuenta?",
+      "nativeHint": "Se abrirá tu navegador para completar el borrado de forma segura.",
       "passwordLabel": "Tu contraseña",
       "title": "Zona de peligro",
       "working": "Borrando…"

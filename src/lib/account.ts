@@ -49,3 +49,18 @@ export async function reauthenticate(password?: string): Promise<void> {
 export async function deleteAccount(): Promise<void> {
   await deleteAccountFn();
 }
+
+// SPEC-64 F5 — entrada de borrado para el shell nativo Android (Capacitor). El flujo
+// inline (reauth + reauthenticateWithPopup) es web-only y colgaría dentro del WebView, así
+// que en Android el botón abre la danger zone WEB en un navegador real —un Chrome Custom
+// Tab vía @capacitor/browser— donde el reauth de Firebase sí funciona: el Custom Tab NO es
+// el WebView de la app y trae la sesión/cookies del sistema. El hash #delete-account hace
+// scroll directo a la sección. `windowName` es web-only en @capacitor/browser (Android lo
+// ignora y abre Custom Tab igual); se pasa '_system' por contrato, sin efecto en nativo.
+// Import dinámico: la dep solo carga en la rama nativa, no entra al bundle web.
+const WEB_DELETION_URL = 'https://app.getsecondmind.co/settings#delete-account';
+
+export async function openWebDeletion(): Promise<void> {
+  const { Browser } = await import('@capacitor/browser');
+  await Browser.open({ url: WEB_DELETION_URL, windowName: '_system' });
+}
