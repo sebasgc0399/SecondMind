@@ -585,6 +585,7 @@
     "networkError": "Sin conexión. Verificá tu internet.",
     "operationFailed": "No se pudo completar la operación. Probá de nuevo.",
     "rateLimited": "Demasiados intentos. Probá de nuevo más tarde.",
+    "reauthRequired": "Por seguridad, reingresá para confirmar el borrado de tu cuenta.",
     "requestNotFound": "Solicitud no encontrada.",
     "resetGeneric": "Si la cuenta existe, recibirás un enlace en tu email.",
     "saveKeyInvalid": "La API key es inválida.",
@@ -995,6 +996,19 @@
       "productName": "SecondMind Desktop",
       "title": "Información de la app",
       "version": "Versión {{version}}"
+    },
+    "deleteAccount": {
+      "button": "Borrar mi cuenta",
+      "cancel": "Cancelar",
+      "confirm": "Borrar definitivamente",
+      "confirmEmailLabel": "Escribí {{email}} para confirmar",
+      "description": "Borrar tu cuenta elimina de forma permanente e irreversible todas tus notas, tareas, proyectos y datos. No se puede deshacer.",
+      "modalBody": "Esto elimina TODOS tus datos de forma permanente. No se puede deshacer.",
+      "modalTitle": "¿Borrar tu cuenta?",
+      "nativeHint": "Se abrirá tu navegador para completar el borrado de forma segura.",
+      "passwordLabel": "Tu contraseña",
+      "title": "Zona de peligro",
+      "working": "Borrando…"
     },
     "language": {
       "description": "Elegí el idioma de la interfaz. Los textos generados por la IA siguen esta preferencia.",

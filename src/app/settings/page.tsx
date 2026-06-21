@@ -3,6 +3,7 @@ import { useLocation } from 'react-router';
 import { useTranslation } from 'react-i18next';
 import ApiKeysSection from '@/components/settings/ApiKeysSection';
 import AppInfoSection from '@/components/settings/AppInfoSection';
+import DeleteAccountSection from '@/components/settings/DeleteAccountSection';
 import LanguageSelector from '@/components/settings/LanguageSelector';
 import SidebarVisibilitySelector from '@/components/settings/SidebarVisibilitySelector';
 import ThemeSelector from '@/components/settings/ThemeSelector';
@@ -105,6 +106,8 @@ export default function SettingsPage() {
       </section>
 
       <AppInfoSection />
+
+      <DeleteAccountSection />
     </div>
   );
 }
