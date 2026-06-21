@@ -42,8 +42,8 @@ const LAST_UPDATED = '20 de junio de 2026';
           No mostramos publicidad, no usamos analítica ni rastreadores, y no vendemos tus datos.
         </li>
         <li>
-          Podés pedir el borrado de tu cuenta y tus datos escribiéndonos a
-          <a href={`mailto:${SUPPORT_EMAIL}`}>{SUPPORT_EMAIL}</a>.
+          Podés borrar tu cuenta y todos tus datos vos mismo desde la app (Ajustes → Zona de peligro),
+          de forma inmediata e irreversible.
         </li>
       </ul>
     </section>
@@ -76,8 +76,8 @@ const LAST_UPDATED = '20 de junio de 2026';
     <p>
       Todo lo que producís dentro de la app se guarda asociado a tu cuenta y es accesible únicamente
       por vos: notas (título, contenido, texto plano, resúmenes, etiquetas), tareas, proyectos y
-      objetivos, capturas de tu inbox (incluyendo lo que mandás desde la extensión de navegador),
-      conexiones entre notas, y tu registro de hábitos.
+      objetivos, capturas de tu inbox (y, cuando la extensión de navegador esté disponible, lo que
+      mandés desde ella), conexiones entre notas, y tu registro de hábitos.
     </p>
 
     <h3>2.3 Tu clave de API de Anthropic (opcional)</h3>
@@ -210,17 +210,22 @@ const LAST_UPDATED = '20 de junio de 2026';
     <p>
       Tenés derecho a acceder a tus datos, corregirlos, borrarlos, obtener una copia (portabilidad) y
       oponerte a ciertos tratamientos. Si residís en California, no vendemos ni compartimos tus datos
-      con fines publicitarios y podés ejercer tus derechos bajo la CCPA/CPRA. Estos derechos se
-      ejercen escribiéndonos a <a href={`mailto:${SUPPORT_EMAIL}`}>{SUPPORT_EMAIL}</a>; respondemos y
-      procesamos tu solicitud lo antes posible y a más tardar en 30 días.
+      con fines publicitarios y podés ejercer tus derechos bajo la CCPA/CPRA. El <strong>borrado</strong>
+      lo ejercés vos mismo y al instante desde la app (ver §9). Para los demás derechos, escribinos a
+      <a href={`mailto:${SUPPORT_EMAIL}`}>{SUPPORT_EMAIL}</a>; respondemos y procesamos tu solicitud lo
+      antes posible y a más tardar en 30 días.
     </p>
 
     <h2>9. Borrado de tu cuenta</h2>
     <p>
-      Para borrar tu cuenta y tus datos asociados, escribinos a
-      <a href={`mailto:${SUPPORT_EMAIL}`}>{SUPPORT_EMAIL}</a> desde el correo de tu cuenta.
-      Eliminaremos tu cuenta y tu contenido (notas, tareas, proyectos, objetivos, hábitos, capturas,
-      conexiones, embeddings y tu clave de API cifrada) lo antes posible y a más tardar en 30 días.
+      Podés borrar tu cuenta y todos tus datos asociados vos mismo, directamente desde la app: en
+      <strong>Ajustes → Zona de peligro → "Borrar mi cuenta"</strong>. Tras reconfirmar tu identidad,
+      el borrado es <strong>inmediato e irreversible</strong>: eliminamos de forma permanente tu cuenta
+      y todo tu contenido (notas, tareas, proyectos, objetivos, hábitos, capturas, conexiones,
+      embeddings, tu clave de API cifrada y tu usuario de autenticación). No queda copia ni período de
+      gracia. En la app de Android, el botón abre este mismo flujo en tu navegador. Si por algún motivo
+      no pudieras completarlo, escribinos a <a href={`mailto:${SUPPORT_EMAIL}`}>{SUPPORT_EMAIL}</a> desde
+      el correo de tu cuenta y lo procesamos lo antes posible y a más tardar en 30 días.
     </p>
 
     <h2>10. Menores</h2>
@@ -231,10 +236,11 @@ const LAST_UPDATED = '20 de junio de 2026';
 
     <h2>11. La extensión de navegador</h2>
     <p>
-      Si instalás la extensión de navegador, al guardar un recorte se envía a tu inbox solo el texto
-      que seleccionaste, el título de la página y su URL (a la que le quitamos parámetros de rastreo).
-      La extensión no captura el HTML completo de la página, ni capturas de pantalla. Se autentica con
-      tu cuenta de Google.
+      La extensión de navegador <strong>todavía no está disponible</strong> durante la beta; la
+      lanzaremos más adelante. Cuando esté disponible, al guardar un recorte se enviará a tu inbox solo
+      el texto que seleccionaste, el título de la página y su URL (a la que le quitamos parámetros de
+      rastreo); no capturará el HTML completo de la página ni capturas de pantalla, y se autenticará con
+      tu cuenta de Google. Actualizaremos esta sección antes de habilitarla.
     </p>
 
     <h2>12. Cambios a esta política</h2>
