@@ -58,6 +58,12 @@ export default function DeleteAccountSection() {
     setWorking(true);
     setError(null);
     try {
+      // SEGURIDAD-CRÍTICA (SPEC-64 F4): `await reauthenticate()` ANTES de
+      // `await deleteAccount()` + el catch es la ÚNICA defensa del caso "sesión con
+      // auth_time fresco por login (<5 min) + reauth de re-confirmación que falla": el
+      // gate server-side de F1 NO lo frena (el auth_time es legítimamente reciente por el
+      // login, no por el reauth). No invertir/desacoplar sin DeleteAccountSection.test.tsx
+      // en verde (testea exactamente esto: reauth falla → deleteAccount nunca se llama).
       await reauthenticate(isPasswordProvider ? password : undefined);
       await deleteAccount();
       await signOut();
