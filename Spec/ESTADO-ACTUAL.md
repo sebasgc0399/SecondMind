@@ -498,6 +498,11 @@ Cada feature comprimida a 1 línea con pointer al SPEC archivado. Para detalles 
 - [Envío best-effort post-commit: marcar el timestamp solo tras éxito](gotchas/email-resend.md#envío-best-effort-post-commit-marcar-el-timestamp-solo-tras-éxito)
 - [DKIM de Resend como TXT via Cloudflare Auto configure](gotchas/email-resend.md#dkim-de-resend-como-txt-via-cloudflare-auto-configure)
 - [TODO (PII): el message logueado en el primer error real](gotchas/email-resend.md#todo-pii-el-message-logueado-en-el-primer-error-real)
+- [El código de error de `generateLink` depende del entorno — no ramificar sobre él](gotchas/email-resend.md#el-código-de-error-de-generatelink-depende-del-entorno--no-ramificar-sobre-él)
+- [SPF + DKIM del dominio de envío: PASS confirmado](gotchas/email-resend.md#spf--dkim-del-dominio-de-envío-pass-confirmado)
+- [El host del action URL ≠ el dominio del From (deliverability, post-beta)](gotchas/email-resend.md#el-host-del-action-url--el-dominio-del-from-deliverability-post-beta)
+- [DMARC publicado — `p=none` (observación), `rua` in-domain](gotchas/email-resend.md#dmarc-publicado--pnone-observación-rua-in-domain)
+- [Cleanup de un throwaway con SIGNUP no se cierra entero por MCP](gotchas/email-resend.md#cleanup-de-un-throwaway-con-signup-no-se-cierra-entero-por-mcp)
 
 ---
 
