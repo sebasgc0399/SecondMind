@@ -14,12 +14,14 @@ import { resetEmail } from './templates/reset';
 // sendPasswordResetEmail client-side). PÚBLICA (sin auth). ANTI-ENUMERACIÓN ESTRICTA:
 //   - Formato inválido + rate-limit se evalúan ANTES del generateLink → agnósticos a la
 //     existencia del email → pueden BURBUJEAR sin filtrar nada.
-//   - De ahí en más SIEMPRE devuelve { ok: true }. Razón: generatePasswordResetLink + sendEmail
-//     SOLO corren para emails EXISTENTES (el inexistente corta en auth/email-not-found), así que
-//     CUALQUIER error posterior está correlacionado con la existencia → burbujearlo daría
-//     existente→error vs inexistente→éxito = oráculo. La distinción vive solo en los logs.
+//   - De ahí en más SIEMPRE devuelve { ok: true } pase lo que pase. Razón: generatePasswordResetLink
+//     + sendEmail SOLO corren para emails EXISTENTES (el inexistente lanza al generar el link), así
+//     que CUALQUIER error posterior está correlacionado con la existencia → burbujearlo daría
+//     existente→error vs inexistente→éxito = oráculo. El catch NO se ramifica sobre el código de
+//     error: DEPENDE DEL ENTORNO (prod/EEP: auth/internal-error; emulador: auth/email-not-found).
 // Costo aceptado: si Resend cae, el user legítimo no tiene señal (ve "te enviamos el email"); el
-// único diagnóstico es el logger.error('send failed') de abajo. Link AL VUELO (oobCode de reset
+// único diagnóstico es el logger.error('send failed') de abajo (el catch del generateLink loguea
+// WARN, esperado/benigno). Link AL VUELO (oobCode de reset
 // vence ~1h, single-use; hereda el "customize action URL" de la Console → /auth/action). SIN
 // idempotencyKey (oobCode fresco por llamada).
 
@@ -56,21 +58,18 @@ export const sendResetEmail = onCall<{ email?: unknown }, Promise<{ ok: true }>>
         ...resetEmail(link),
         apiKey: resendApiKey.value(),
       });
-      if (!sent.ok) {
-        // Único canal de diagnóstico de esta rama (el cliente ve éxito uniforme). Sin PII.
-        logger.error('sendResetEmail: send failed', {});
-      }
+      // ERROR reservado SOLO para el fallo de envío de Resend: el canal de diagnóstico limpio
+      // (un Resend caído afecta a usuarios REALES). El cliente igual ve éxito uniforme. Sin PII.
+      if (!sent.ok) logger.error('sendResetEmail: send failed', {});
     } catch (err) {
-      const code = (err as { code?: string })?.code;
-      // Email no registrado → NO enviar, NO revelar (defensivo: ambos codes posibles; el real en
-      // firebase-admin 13.x es auth/email-not-found — verificado en el source + smoke).
-      if (code === 'auth/email-not-found' || code === 'auth/user-not-found') {
-        logger.info('sendResetEmail: email not found (uniform success)');
-      } else {
-        const { code: c, message } = sanitizeError(err);
-        logger.error('sendResetEmail: failed', { code: c, message }); // sin email (PII)
-      }
+      // Cualquier fallo de generateLink → caso uniforme por anti-enum. El código de error
+      // DEPENDE DEL ENTORNO (prod con Email Enumeration Protection: auth/internal-error;
+      // emulador de Auth: auth/email-not-found), así que NO se ramifica sobre él — el
+      // `return { ok: true }` de abajo garantiza el anti-enum sin importar el code. WARN (no
+      // ERROR): un email inexistente es uso normal y NO debe contaminar el canal de 'send failed'.
+      const { code, message } = sanitizeError(err);
+      logger.warn('sendResetEmail: link generation skipped (uniform anti-enum)', { code, message });
     }
-    return { ok: true }; // SIEMPRE éxito uniforme
+    return { ok: true }; // SIEMPRE uniforme — sin depender del código de error
   },
 );
