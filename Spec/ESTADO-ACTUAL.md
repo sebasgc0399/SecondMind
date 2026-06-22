@@ -484,6 +484,19 @@ Cada feature comprimida a 1 línea con pointer al SPEC archivado. Para detalles 
 - [Capacity enforced en la aprobación con `count()` (Plan B fuera de tx); `count()` en tx no garantizado en emulador (post-SPEC-53)](gotchas/cloud-functions-guards.md#capacity-enforced-en-la-aprobación-con-count-plan-b-fuera-de-tx-count-en-tx-no-garantizado-en-emulador-post-spec-53)
 - [Borrado total de cuenta self-service: gate reauth server-side, wipe idempotente, range query de rateLimits, Auth huérfano (post-SPEC-64)](gotchas/cloud-functions-guards.md#borrado-total-de-cuenta-self-service-gate-reauth-server-side-wipe-idempotente-range-query-de-ratelimits-auth-huérfano-post-spec-64)
 
+### Emails transaccionales (Resend) — [`gotchas/email-resend.md`](gotchas/email-resend.md)
+
+- [El SDK de Resend no lanza excepción ante errores de API](gotchas/email-resend.md#el-sdk-de-resend-no-lanza-excepción-ante-errores-de-api)
+- [El error de Resend es un objeto plano, no un Error](gotchas/email-resend.md#el-error-de-resend-es-un-objeto-plano-no-un-error)
+- [El SDK de Resend no expone timeout: acotar con Promise.race](gotchas/email-resend.md#el-sdk-de-resend-no-expone-timeout-acotar-con-promiserace)
+- [idempotencyKey para deduplicar el envío concurrente](gotchas/email-resend.md#idempotencykey-para-deduplicar-el-envío-concurrente)
+- [El secret debe existir en Secret Manager antes del deploy](gotchas/email-resend.md#el-secret-debe-existir-en-secret-manager-antes-del-deploy)
+- [El secret en el emulador va por emu-secret.mjs, no por env vars](gotchas/email-resend.md#el-secret-en-el-emulador-va-por-emu-secretmjs-no-por-env-vars)
+- [vi.mock no cruza al proceso del emulador de Functions](gotchas/email-resend.md#vimock-no-cruza-al-proceso-del-emulador-de-functions)
+- [Envío best-effort post-commit: marcar el timestamp solo tras éxito](gotchas/email-resend.md#envío-best-effort-post-commit-marcar-el-timestamp-solo-tras-éxito)
+- [DKIM de Resend como TXT via Cloudflare Auto configure](gotchas/email-resend.md#dkim-de-resend-como-txt-via-cloudflare-auto-configure)
+- [TODO (PII): el message logueado en el primer error real](gotchas/email-resend.md#todo-pii-el-message-logueado-en-el-primer-error-real)
+
 ---
 
 ## Dependencias clave
