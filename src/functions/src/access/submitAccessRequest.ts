@@ -1,7 +1,7 @@
-import { onCall, type CallableRequest } from 'firebase-functions/v2/https';
+import { onCall } from 'firebase-functions/v2/https';
 import { logger } from 'firebase-functions';
 import { getFirestore, FieldValue } from 'firebase-admin/firestore';
-import { createHash } from 'node:crypto';
+import { clientIpHash } from '../lib/clientIp';
 import { enforceRateLimit } from '../lib/rateLimit';
 import { sanitizeError } from '../lib/sanitizeError';
 import { appError } from '../lib/appError';
@@ -77,16 +77,6 @@ export function validateInput(data: SubmitAccessRequestData): { email: string; m
   }
   const motivo = typeof rawMotivo === 'string' ? rawMotivo.trim() : '';
   return motivo ? { email, motivo } : { email };
-}
-
-// Hash estable de la IP del cliente para el rate-limit. En Cloud Run el rawRequest.ip
-// suele ser el LB → preferimos el primer hop de x-forwarded-for. Si no hay nada,
-// 'unknown' agrupa a los sin-IP en un bucket (fail-safe hacia MÁS limitación).
-function clientIpHash(request: CallableRequest): string {
-  const xff = request.rawRequest.headers['x-forwarded-for'];
-  const first = (Array.isArray(xff) ? xff[0] : xff)?.split(',')[0]?.trim();
-  const ip = first || request.rawRequest.ip || 'unknown';
-  return createHash('sha256').update(ip).digest('hex');
 }
 
 export const submitAccessRequest = onCall<

@@ -59,6 +59,7 @@ export function mapCfError(err: unknown, t: TFunction): string {
     case 'access-request-invalid-action':
     case 'revoke-access-invalid-email':
       return t('errors.invalidInput', 'Datos inválidos. Probá de nuevo.');
+    case 'reset-invalid-email':
     case 'submit-access-request-invalid-email':
     case 'submit-access-request-invalid-email-format':
       return t('errors.submitInvalidEmail', 'Revisá el email ingresado.');

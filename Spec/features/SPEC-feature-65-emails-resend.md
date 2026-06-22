@@ -1,8 +1,8 @@
 # SPEC — Feature 65: Migración de emails transaccionales a Resend
 
-> **Estado:** Aprobado (GO de Sebastián, 2026-06-21) — pendiente implementación. Próximo paso: SDD step 2 (Plan mode) de F1. **No codeado.** > **Alcance:** SecondMind manda sus emails transaccionales desde un provider propio (Resend), cerrando el loop de postulación (aviso de aprobación) y habilitando emails de Auth con HTML propio.
+> **Estado:** F1 **cerrado y en producción** (deploy + smoke verde, 2026-06). F2 **detallado** (research cerrado 2026-06-22) — **pendiente GO de Sebastián**, luego SDD step 2 (Plan mode). **F2 no codeado.** > **Alcance:** SecondMind manda sus emails transaccionales desde un provider propio (Resend), cerrando el loop de postulación (aviso de aprobación) y habilitando emails de Auth con HTML propio.
 > **Dependencias:** SPEC-52/53 (postulación + `allowlist`), SPEC-54 Nivel 1 (handler `/auth/action`), SPEC-63 (`getsecondmind.co` live en Cloudflare). Todas **cumplidas**.
-> **Estimado:** F1 ≈ 0.5–1 día dev (+ OPS DNS) · F2 ≈ 2–3 días dev (+ OPS Console). Detalle por sub-feature en cada Fn y en D6.
+> **Estimado:** F1 ≈ 0.5–1 día dev (+ OPS DNS) · F2 ≈ 2–3 días dev (**F2.1 ya verificado → sin OPS externo**: F2.0 + 2 CFs + 2 templates + swap + QA). Detalle por sub-feature en cada Fn y en D6.
 > **Stack:** Resend (`npm resend`), Cloud Functions v2 (Node 22), Admin SDK (`generateLink`), Cloudflare DNS, Secret Manager.
 
 ## Objetivo
@@ -90,27 +90,57 @@ Hoy SecondMind no manda **ningún** email propio: la verificación y el reset de
 
 ## F2 — Reemplazo de emails de Auth (verify + reset) vía Resend
 
-> Mejora de calidad **post-beta**. Reusa el handler `/auth/action` intacto; solo cambia **quién envía** y **el contenido**.
+> Mejora de calidad **post-beta**. **Emitter-swap limpio**: reusa el handler `/auth/action` + `src/lib/authActions.ts` + el custom action URL **intactos** (SPEC-54); solo cambia **quién envía** (client SDK → CF con `generateLink` + Resend) y **el contenido** (HTML propio). Elimina la dependencia de dos sistemas de email y sortea el blocker de templates de Firebase.
 
-### F2.1 — Verificar el custom action URL de la Console `[OPS — pre-requisito duro]`
+### Estado verificado para F2 (research cerrado 2026-06-22 — no re-investigar)
 
-**Qué:** Confirmar que Authentication → Templates → "customize action URL" = `https://secondmind.web.app/auth/action`.
+- **Custom action URL CONFIRMADO en vivo = `https://secondmind.web.app/auth/action`** (= nuestro handler custom, **NO** el default `/__/auth/action` de Firebase) → **F2 es emitter-swap limpio: sin re-apuntar, sin dependencia externa, sin reabrir el Console lock.** El dominio `web.app` da igual (el SPA `/auth/action` se sirve idéntico en todos los hostings; lo que importaba era handler custom vs default).
+- **Firebase NO auto-envía** ningún email (`createUserWithEmailAndPassword` no manda nada; reset solo con la llamada explícita). `generate*Link` (Admin SDK) **solo devuelven el string, no envían** → evitar el doble-envío = **solo dejar de llamar los senders client-side**; no hay toggle server-side. Los templates nativos quedan dormidos.
+- **3 call-sites client-side** a reemplazar: `useAuth.ts:108` (verify auto post-signup), `:129` (verify reenvío), `:116` (reset). Auditado: no hay FirebaseUI ni retries ocultos — **re-auditar igual** en implementación.
+- **`sendEmail` es TEXT-ONLY hoy** (`SendEmailParams` sin `html`) → F2.0 lo extiende.
+- **Scope CONFIRMADO** = exactamente {verify, reset}. No hay email-change / passwordless / MFA / borrado-de-cuenta email; el aviso de aprobación ya está en Resend (F1).
+
+### Patrón de implementación (ambas CFs)
+
+Son **emisores standalone**: a diferencia de `processAccessRequest` (F1), **no** hay write durable previo que proteger — el "disparo" es la llamada del cliente (para verify, la cuenta ya fue creada client-side; para reset no hay write). El patrón:
+
+1. **Gate:** verify → `request.auth` presente (NO `requireVerified`: el user aún no verificó); reset → sin auth + `rateLimit(key, request.rawRequest.ip, {...})`.
+2. **Generar el link AL VUELO** dentro del handler, justo antes del send (no anticipado) → maximiza la ventana del `oobCode` (reset ~1h, verify ~3d, single-use).
+3. **Render** del template es-first con el link.
+4. **`sendEmail({ to, subject, html, text, apiKey })`** best-effort en `try/catch` aislado, **SIN `idempotencyKey`** (D3). El wrapper ya garantiza no-throw.
+5. **Resultado uniforme** al cliente. Reset: el error de email-inexistente (`generatePasswordResetLink` throwea `auth/internal-error`) se captura **antes** del send → éxito uniforme (anti-enum server-side).
+
+### F2.0 — Extender `sendEmail` con HTML (aditivo)
+
+**Qué:** Agregar `html?: string` opcional a `SendEmailParams` y al payload; mandar **`html` + `text`** (multipart: deliverability + clientes sin HTML). No rompe el approval text-only.
 
 **Criterio de done:**
 
-- [ ] La Console muestra esa URL (la fijó el equipo de Firebase en SPEC-54 F8).
+- [ ] `SendEmailParams.html?: string`; el payload incluye `html` solo si está presente.
+- [ ] `sendEmail.test.ts` cubre el nuevo campo sin perder las 3 ramas actuales (el test es el dueño del no-throw guarantee).
+- [ ] El approval (text-only) sigue verde.
 
-**Notas:** **Bloqueante si está mal**: el Admin SDK **hereda** esa URL para rutear el `oobCode` (no se setea por código). Editarla puede estar **server-locked** (`EMAIL_TEMPLATE_UPDATE_NOT_ALLOWED`) → requeriría soporte de Firebase. **Verificar primero** antes de codear F2.
+**Archivos a crear/modificar:** `src/functions/src/email/sendEmail.ts`, `src/functions/src/email/sendEmail.test.ts`.
+
+### F2.1 — Custom action URL `[VERIFICADO ✅ 2026-06-22]`
+
+**Qué:** Confirmado en Console: Authentication → Templates → "customize action URL" = **`https://secondmind.web.app/auth/action`** (lo fijó el equipo de Firebase en SPEC-54 F8).
+
+**Criterio de done:**
+
+- [x] La Console muestra esa URL → es nuestro handler custom → F2 arranca limpio.
+
+**Notas:** Ya **no es bloqueante** (era el gate de F2). El Admin SDK **hereda** esta URL para rutear el `oobCode`. **No tocarla**: re-apuntar a `getsecondmind.co` por estética reabre el riesgo `EMAIL_TEMPLATE_UPDATE_NOT_ALLOWED` y es post-beta (D4).
 
 ### F2.2 — CF `sendVerificationEmail` (autenticada)
 
-**Qué:** Callable que genera el link y manda el email de verificación con HTML propio.
+**Qué:** Callable que genera el link de verificación y manda el email con HTML propio.
 
 **Criterio de done:**
 
-- [ ] Gate = `request.auth` presente (el usuario aún **no** está verificado → `requireVerified` no aplica); lee el email del token.
-- [ ] `generateEmailVerificationLink(email)` → extrae la URL → `sendEmail` con template de F2.5.
-- [ ] `maxInstances` explícito; `sanitizeError` en catch; rate-limit por uid/IP (reenvío abusable).
+- [ ] Gate = `request.auth` presente (NO `requireVerified`: el user aún no verificó); email vía **`admin.auth().getUser(uid)`** (fuente de verdad, no el token).
+- [ ] `generateEmailVerificationLink(email)` al vuelo → render template verify (F2.5) → `sendEmail` (html+text).
+- [ ] `maxInstances` explícito (~5); **rate-limit por uid** (reenvío abusable); `sanitizeError` en catch; secret `RESEND_API_KEY` inline (`defineSecret` + `secrets:[]` + `.value()` — D5).
 
 **Archivos a crear/modificar:** `src/functions/src/email/sendVerificationEmail.ts` (nuevo), `src/functions/src/index.ts`.
 
@@ -120,39 +150,58 @@ Hoy SecondMind no manda **ningún** email propio: la verificación y el reset de
 
 **Criterio de done:**
 
-- [ ] **Sin auth**; `rateLimit('sendResetEmail', request.rawRequest.ip, {...})` por IP.
-- [ ] `generatePasswordResetLink(email)` en `try/catch`; email inexistente throwea `auth/internal-error` → **se captura y se devuelve éxito uniforme** (no oráculo de enumeración).
-- [ ] `maxInstances` explícito; `sanitizeError` en catch.
+- [ ] **Sin auth**; `rateLimit('sendResetEmail', request.rawRequest.ip, {...})` por IP; `maxInstances` explícito (~5).
+- [ ] `generatePasswordResetLink(email)` en `try/catch`; email inexistente (`auth/internal-error`) → **capturado, éxito uniforme** (no oráculo de enumeración).
+- [ ] `sanitizeError` en catch; secret inline (D5).
+
+**Notas (gotcha — endurecimiento futuro, YAGNI ahora):** el rate-limit por IP **no** cubre el bombing dirigido (un atacante con muchas IPs llenando la bandeja de una víctima). Aceptable para la beta (volumen bajo, no somos objetivo masivo). Futuro: rate-limit **por email-target**, **silencioso** (mismo comportamiento observable exista o no el email, para no filtrar enumeración).
 
 **Archivos a crear/modificar:** `src/functions/src/email/sendResetEmail.ts` (nuevo), `src/functions/src/index.ts`.
 
-### F2.4 — Swap de los 2 call-sites client-side
+### F2.4 — Swap de los 3 call-sites client-side
 
-**Qué:** Reemplazar las llamadas al SDK de Firebase por las CFs.
+**Qué:** Reemplazar las llamadas al SDK de Firebase por `httpsCallable` a las CFs.
 
 **Criterio de done:**
 
-- [ ] `useAuth.ts:108` (signup) y `:129` (reenvío) → `sendVerificationEmail` callable.
-- [ ] `useAuth.ts:116` (reset) → `sendResetEmail` callable, **preservando** el silenciado anti-enum del lado cliente.
+- [ ] `useAuth.ts:108` (signup) y `:129` (reenvío) → `sendVerificationEmail`.
+- [ ] `useAuth.ts:116` (reset) → `sendResetEmail`. El **anti-enum ahora vive en la CF** → el cliente deja de necesitar el special-case `user-not-found` (`:121-123`): muestra el mensaje uniforme y solo maneja transporte/rate-limit.
+- [ ] Imports de `sendEmailVerification`/`sendPasswordResetEmail` removidos de `useAuth.ts` si quedan huérfanos; **re-auditar** que no haya otros call-sites.
 - [ ] El flujo verify/reset end-to-end sigue funcionando (el `oobCode` lo consume el handler `/auth/action` intacto).
 
-**Archivos a crear/modificar:** `src/hooks/useAuth.ts` (y un wrapper en `src/lib/` solo si aporta — YAGNI por defecto).
+**Archivos a crear/modificar:** `src/hooks/useAuth.ts` (+ wrapper opcional `src/lib/authEmails.ts`, espejo de `authActions.ts` — YAGNI por defecto, pero mantiene `useAuth` limpio).
+
+**Nota operativa:** post-migración, **no usar** el botón "Reset password" de la Console ni la hosted-UI (disparan los templates nativos, From viejo `noreply@secondmindv1.firebaseapp.com`). Con el swap el From visible pasa a `noreply@getsecondmind.co` (ya en `from.ts`).
 
 ### F2.5 — Templates HTML propios (verify + reset)
 
-**Qué:** Diseñar 2 templates HTML (es/en), **nuevos** (la copy F9 NO está aplicada → no es base).
+**Qué:** 2 templates HTML **es-first** (función que devuelve `{ subject, html, text }`, patrón espejo de `approval.ts` con COPY locale-keyed) + un **layout base liviano** compartido (una función wrapper, NO un sistema de templating).
 
 **Criterio de done:**
 
-- [ ] HTML responsive con `text` fallback; marca SecondMind; un CTA al link; pasa un Mailer-Tester razonable (SPF/DKIM/DMARC pass).
+- [ ] HTML responsive con `text` fallback; marca SecondMind; un CTA al link; Mailer-Tester razonable (SPF/DKIM/DMARC pass).
+- [ ] **Verify:** reusar como base el wording español que ya ven los usuarios en el verify nativo ("Activá tu cuenta de SecondMind", copy paisa) — no arrancar de cero.
+- [ ] es-first (consistente con approval); locale-inference diferido (no en F2).
 
-**Archivos a crear/modificar:** `src/functions/src/email/templates/{verify,reset}.ts` (nuevos).
+**SUB-DECISIÓN ABIERTA (resolver en Plan mode) — cómo escribir el HTML:**
+
+| Eje    | **A · HTML manual inline** _(recomendada)_                                                                                                                   | **B · React Email** (`@react-email/components`, nativo en Resend)                                                                     |
+| ------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------- |
+| Pro    | Cero deps nuevas en functions; control total; 2 templates simples (CTA + texto) manejables; el build de functions no crece                                   | Resuelve compat cross-client (componentes battle-tested → tablas inline-styled); `render()`→HTML; DX en JSX; Resend lo integra nativo |
+| Contra | El HTML de email es un pozo de compat (Outlook ignora flex/grid, Gmail strip-ea `<style>`→todo inline, dark mode invierte colores); test cross-client a mano | Suma `@react-email/*` + React como dep de functions + setup JSX/TSX en el build (runtime Node, no UI); over-kill para 2 templates     |
+
+**Recomendación:** **A** para 2 templates simples — evita la dependencia y el setup JSX. Ir a **B** solo si (a) el test cross-client muestra roturas que no valga pelear a mano, o (b) se prevén más emails HTML pronto. Si hay dudas en Plan mode, evaluar con `research-innovator`.
+
+**Archivos a crear/modificar:** `src/functions/src/email/templates/{verify,reset}.ts` (nuevos) + `src/functions/src/email/templates/layout.ts` (wrapper liviano, si A).
 
 ### F2.6 — QA F2
 
 **Criterio de done:**
 
-- [ ] Action-codes vía Admin SDK (`generate*Link`) contra cuenta **throwaway** + **ADC** (nunca SA key commiteada); visitar `localhost/auth/action?...` con el `oobCode`; verify y reset completan. Borrar la throwaway al cierre.
+- [ ] Emulador: las 2 CFs generan link (Admin SDK) y llaman `sendEmail` (mockeado); reset con email inexistente devuelve éxito uniforme (anti-enum).
+- [ ] Action-codes vía Admin SDK (`generate*Link`) contra cuenta **throwaway** + **ADC** (nunca SA key commiteada); visitar `localhost/auth/action?mode=…&oobCode=…` con el `oobCode`; verify y reset completan end-to-end. Borrar la throwaway al cierre.
+- [ ] **Sin doble-envío**: confirmar que Firebase no manda su template nativo además del de Resend.
+- [ ] (Diferible — D-I) Smoke Android: el link abre en Custom Tab → `/auth/action` valida el `oobCode`.
 
 ---
 
@@ -160,21 +209,21 @@ Hoy SecondMind no manda **ningún** email propio: la verificación y el reset de
 
 1. **F1.1** (OPS DNS) → todo F1 depende del dominio verificado.
 2. **F1.2 → F1.3 → F1.5** → cierra el loop de la beta (entregable de mayor valor, **pre-beta**).
-3. **F2.1** (OPS Console — verificar antes de codear; potencial bloqueo externo).
-4. **F2.5** (templates) → **F2.2 / F2.3** (CFs) → **F2.4** (swap) → **F2.6** (QA).
+3. **F2.1 ✅ verificado** (action URL = `secondmind.web.app/auth/action`, sin bloqueo externo).
+4. **F2.0** (`sendEmail` html) → **F2.5** (templates) → **F2.2 / F2.3** (CFs) → **F2.4** (swap) → **F2.6** (QA).
 
 > **F1 entera antes de F2.** F1 desbloquea la beta y comparte la infra (F1.2) que F2 reusa. F2 es calidad post-beta, no urgencia.
 
 ## Decisiones clave
 
-| #      | Decisión                                       | Detalle                                                                                                                                                                                                                                                                                                              |
-| ------ | ---------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **D1** | **Dominio de envío = apex `getsecondmind.co`** | Elegido por Sebastián. From `noreply@getsecondmind.co`; records simples; Resend parquea el return-path en `send.` → root SPF/MX intactos. _Alternativa NO tomada: subdominio `send.` dedicado (máxima isolación de reputación, pero nesting `send.send`)._                                                           |
-| **D2** | **Fallos/rebotes no rompen el flujo**          | F1: email post-commit best-effort (branch en `{error}`, log, no throw). F2: idem en la CF. Bounces async vía webhooks (F1.4, **diferible**); el mínimo solo loggea el send id.                                                                                                                                       |
-| **D3** | **Idempotencia**                               | F1: guard `status==='approved'` antes de enviar. F2: `generateLink` emite `oobCode` fresco por llamada → dedupe vía **rate-limit por IP + debounce de botón** (no doble-send en doble-click).                                                                                                                        |
-| **D4** | **Coexistencia con templates nativos de Auth** | F2 deja de llamar los senders client-side → los templates nativos de Firebase quedan **dormidos** (fallback, **no se borran**). El custom action URL de la Console **debe seguir** apuntando a `/auth/action` (F2.1).                                                                                                |
-| **D5** | **API key en Secret Manager**                  | `defineSecret('RESEND_API_KEY')` + `.value()` en el handler (nunca top-level). Mismo patrón que `BYOK_MASTER_KEY`/`OPENAI_API_KEY`.                                                                                                                                                                                  |
-| **D6** | **Esfuerzo por fase**                          | **F1 ≈ 0.5–1 día dev** (chica/media; F1.2+F1.3 son chicos, el costo real es OPS + espera de verificación DNS). **F2 ≈ 2–3 días dev** (media/grande: 2 CFs + 2 templates HTML + swap + QA action-codes). Webhook F1.4 sumaría ~0.5 día si se incluye. **F1 es pre-beta (camino crítico); F2 es post-beta (calidad).** |
+| #      | Decisión                                       | Detalle                                                                                                                                                                                                                                                                                                                                                                                                                             |
+| ------ | ---------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **D1** | **Dominio de envío = apex `getsecondmind.co`** | Elegido por Sebastián. From `noreply@getsecondmind.co`; records simples; Resend parquea el return-path en `send.` → root SPF/MX intactos. _Alternativa NO tomada: subdominio `send.` dedicado (máxima isolación de reputación, pero nesting `send.send`)._                                                                                                                                                                          |
+| **D2** | **Fallos/rebotes no rompen el flujo**          | F1: email post-commit best-effort (branch en `{error}`, log, no throw). F2: idem en la CF. Bounces async vía webhooks (F1.4, **diferible**); el mínimo solo loggea el send id.                                                                                                                                                                                                                                                      |
+| **D3** | **Idempotencia**                               | F1: guard `status==='approved'` + `idempotencyKey` (payload estático). **F2: SIN `idempotencyKey`** — `generateLink` emite `oobCode` fresco por llamada, así que una key estática daría 409 / código stale en un reenvío legítimo. El doble-click es **benigno** (2 códigos válidos, se usa uno, el otro expira): alcanza el **cooldown 60s ya existente (sessionStorage) + rate-limit server**. NO time-bucket (over-engineering). |
+| **D4** | **Coexistencia con templates nativos de Auth** | F2 deja de llamar los senders client-side → Firebase **no auto-envía nada**, los templates nativos quedan **dormidos** (fallback, **no se borran**). El custom action URL está **verificado** en `secondmind.web.app/auth/action` (F2.1) y **no se toca** (re-apuntar a `getsecondmind.co` reabre el lock; post-beta). No usar el botón "Reset password" de Console post-migración (dispara el template nativo).                    |
+| **D5** | **API key en Secret Manager**                  | `defineSecret('RESEND_API_KEY')` + `.value()` en el handler (nunca top-level). Mismo patrón que `BYOK_MASTER_KEY`/`OPENAI_API_KEY`.                                                                                                                                                                                                                                                                                                 |
+| **D6** | **Esfuerzo por fase**                          | **F1 ≈ 0.5–1 día dev** (chica/media; F1.2+F1.3 son chicos, el costo real es OPS + espera de verificación DNS). **F2 ≈ 2–3 días dev** (media/grande: 2 CFs + 2 templates HTML + swap + QA action-codes). Webhook F1.4 sumaría ~0.5 día si se incluye. **F1 es pre-beta (camino crítico); F2 es post-beta (calidad).**                                                                                                                |
 
 ## Checklist global de completado
 
@@ -187,14 +236,15 @@ Hoy SecondMind no manda **ningún** email propio: la verificación y el reset de
 
 ## Riesgos
 
-- **F2.1 puede bloquear F2:** si el custom action URL de la Console no está bien o necesita edición, el lock `EMAIL_TEMPLATE_UPDATE_NOT_ALLOWED` puede requerir soporte de Firebase (dependencia externa, sin ETA). **Mitigación:** verificar primero; F1 no depende de esto.
+- **~~F2.1 puede bloquear F2~~ → RESUELTO:** action URL verificado en vivo (2026-06-22) = `secondmind.web.app/auth/action` (handler custom, no el default). F2 es emitter-swap limpio, **sin dependencia externa**. No re-apuntar el dominio (reabriría el lock; post-beta).
+- **Email bombing dirigido (reset):** el rate-limit por IP de F2.3 **no** cubre a un atacante con muchas IPs llenando la bandeja de una víctima. **Aceptado para la beta** (volumen bajo, no somos objetivo masivo); endurecimiento futuro = rate-limit por email-target silencioso (ver F2.3). YAGNI ahora.
 - **Cloudflare Code 1004:** DKIM CNAME proxeado (naranja) rompe la verificación. **Mitigación:** DNS-only explícito en F1.1.
 
 ## Correcciones de docs detectadas (fast-follow, fuera de F65)
 
-- `CLAUDE.md` § Cloud Functions: inventario **stale** — son **15 CFs v2**, no "~11 + 2 triggers v1"; `onUserCreated/onUserDeleted` **ya no existen** (removidos en SPEC-53). Actualizar al cerrar.
-- `Spec/ESTADO-ACTUAL.md` (candidato Nivel 2): el prereq "espera al dominio de Namecheap" está **resuelto** (dominio live en Cloudflare). Esta feature lo materializa.
+- `CLAUDE.md` + `ESTADO-ACTUAL.md` § Cloud Functions: inventario corregido a **15 CFs v2** (`404ed37`). **Al cerrar F2: 15 → 17** (`sendVerificationEmail`, `sendResetEmail`).
+- `Spec/ESTADO-ACTUAL.md:26`: fraseo "action URL esperando desbloqueo" **corregido** (F8 resuelto; action URL verificado en vivo).
 
 ## Siguiente paso (post-GO)
 
-SDD **step 2 (Plan mode)** de F1: Explore agents + Plan agent para afinar la integración antes de codear. (No es parte de este SPEC.)
+Tras GO de Sebastián: SDD **step 2 (Plan mode)** de F2 — Explore agents + Plan agent para afinar la integración (CFs + templates + swap) antes de codear. (No es parte de este SPEC.)

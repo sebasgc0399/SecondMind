@@ -26,6 +26,8 @@ export interface SendEmailParams {
   to: string;
   subject: string;
   text: string;
+  // F2.0: HTML opcional (multipart con `text`). Aditivo — el approval (text-only) no lo usa.
+  html?: string;
   apiKey: string;
   idempotencyKey?: string;
 }
@@ -34,13 +36,15 @@ export async function sendEmail({
   to,
   subject,
   text,
+  html,
   apiKey,
   idempotencyKey,
 }: SendEmailParams): Promise<{ ok: boolean; id?: string }> {
   let timer: ReturnType<typeof setTimeout> | undefined;
   try {
     const resend = new Resend(apiKey);
-    const payload = { from: getFromHeader(), to, subject, text };
+    // `html` solo se incluye si está presente (no forzar `html: undefined`); multipart con `text`.
+    const payload = { from: getFromHeader(), to, subject, text, ...(html ? { html } : {}) };
     // Solo pasamos el 2º arg si hay key (no forzar { idempotencyKey: undefined }).
     const sendPromise = idempotencyKey
       ? resend.emails.send(payload, { idempotencyKey })

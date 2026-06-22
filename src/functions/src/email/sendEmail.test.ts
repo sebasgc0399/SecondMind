@@ -54,4 +54,18 @@ describe('sendEmail (SPEC-65 F1.2)', () => {
     await sendEmail(params);
     expect(sendMock.mock.calls[0]).toHaveLength(1);
   });
+
+  it('con html → lo incluye en el payload (multipart con text)', async () => {
+    sendMock.mockResolvedValue({ data: { id: 'x' }, error: null });
+    await sendEmail({ ...params, html: '<p>hola</p>' });
+    expect(sendMock).toHaveBeenCalledWith(
+      expect.objectContaining({ to: params.to, text: params.text, html: '<p>hola</p>' }),
+    );
+  });
+
+  it('sin html → no agrega la clave html al payload', async () => {
+    sendMock.mockResolvedValue({ data: { id: 'x' }, error: null });
+    await sendEmail(params);
+    expect(sendMock.mock.calls[0][0]).not.toHaveProperty('html');
+  });
 });
