@@ -1006,7 +1006,7 @@ Filtros (panel expandible):
 
 Hero centrado (logo `favicon.svg` + "SecondMind" + tagline "Tu segundo cerebro, en acción.", radial glow indigo) sobre `LoginCard` con `@base-ui/react/tabs` balanceadas 50/50:
 
-- **Iniciar sesión / Crear cuenta** (tabs): email + password con validación client-side; errores mapeados a español (`authErrors.ts`). El sign-up dispara `sendEmailVerification`.
+- **Iniciar sesión / Crear cuenta** (tabs): email + password con validación client-side; errores mapeados a español (`authErrors.ts` para el SDK; `cfError.ts` para los callables). El sign-up dispara el email de verificación vía la **CF `sendVerificationEmail`** (Resend, HTML propio — SPEC-65 F2), ya no el `sendEmailVerification` nativo de Firebase.
 - **Google** (`GoogleSignInButton`): branching por plataforma (Capacitor → Tauri → `signInWithPopup`).
 - **Reset password**: switch inline `mode: 'tabs' | 'reset'`.
 - **Gate de beta (allowlist, F50 + SPEC-51):** gate **post-auth unificado** (email/pw + Google) vía `checkMyAccess` autenticado en `useAuth` — se crea la sesión, se consulta el acceso (el server lee el email del token), y si no está invitado → `signOut` + mensaje genérico (cuenta inerte vía rules). El error sobrevive el re-montaje de `LoginCard` (store reactivo). Cerró el oráculo de enumeración del viejo `checkAllowlist`.
