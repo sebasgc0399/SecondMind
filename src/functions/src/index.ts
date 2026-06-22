@@ -17,3 +17,5 @@ export { processAccessRequest } from './access/processAccessRequest';
 export { listAllowlistMembers } from './access/listAllowlistMembers';
 export { revokeAccess } from './access/revokeAccess';
 export { deleteAccount } from './account/deleteAccount';
+export { sendVerificationEmail } from './email/sendVerificationEmail';
+export { sendResetEmail } from './email/sendResetEmail';

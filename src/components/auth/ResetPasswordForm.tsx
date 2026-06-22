@@ -4,7 +4,7 @@ import { ArrowLeft } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 import useAuth from '@/hooks/useAuth';
-import { mapAuthError } from '@/lib/authErrors';
+import { mapCfError } from '@/lib/cfError';
 
 interface ResetPasswordFormProps {
   onBack: () => void;
@@ -28,8 +28,9 @@ export default function ResetPasswordForm({ onBack }: ResetPasswordFormProps) {
       // El sent: true se muestra siempre que el call resuelve sin throw.
       setSent(true);
     } catch (err) {
-      const code = (err as { code?: string } | null)?.code;
-      setError(mapAuthError(code, 'reset', t));
+      // El anti-enum vive en la CF (éxito uniforme); acá solo llegan reset-invalid-email /
+      // rate-limited. mapCfError lee err.details.code (slug de la CF).
+      setError(mapCfError(err, t));
     } finally {
       setLoading(false);
     }

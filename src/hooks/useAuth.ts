@@ -4,13 +4,12 @@ import {
   signInWithPopup,
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
-  sendEmailVerification,
-  sendPasswordResetEmail,
   signOut as firebaseSignOut,
   GoogleAuthProvider,
 } from 'firebase/auth';
 import { auth } from '@/lib/firebase';
 import { checkMyAccess } from '@/lib/allowlist';
+import { sendVerificationEmail, sendResetEmail } from '@/lib/authEmails';
 import { setLoginError } from '@/lib/loginError';
 import { normalizeEmail } from '@/lib/normalizeEmail';
 import { invalidateEmbeddingsCache } from '@/lib/embeddings';
@@ -95,38 +94,33 @@ export default function useAuth(): UseAuthReturn {
     // SPEC-53 Modelo C: el capacity ya NO se chequea en el signup — se enforce en la
     // APROBACIÓN (CF processAccessRequest). El kill-switch signupsEnabled vive en SignupGate
     // (UI, cliente-only). Acá: crear la cuenta y converger al gate post-auth de allowlist.
-    const credential = await createUserWithEmailAndPassword(auth, normalizeEmail(email), password);
+    await createUserWithEmailAndPassword(auth, normalizeEmail(email), password);
     // SPEC-51 F3: gate post-auth ANTES de enviar la verificación. Si no está
     // autorizado (signOut + throw) o no se pudo verificar (throw sin signOut),
     // enforceAccessGate LANZA → no se envía verificación a un no-invitado y el
     // form muestra el mensaje sin navegar. Email/pw converge al patrón de Google.
     await enforceAccessGate();
-    // Auto-send verification email post-create (solo si pasó el gate). Si el
-    // envío falla (rate limit, network), no rompemos el flow — el banner F4
-    // ofrecerá reenviar.
+    // SPEC-65 F2.4: auto-send de verificación vía CF (Resend), best-effort. Si falla
+    // (rate limit, network, envío), NO rompemos el signup — el banner F4 ofrece reenviar.
     try {
-      await sendEmailVerification(credential.user);
+      await sendVerificationEmail();
     } catch {
       // no-op intencional
     }
   }, []);
 
   const resetPassword = useCallback(async (email: string) => {
-    try {
-      await sendPasswordResetEmail(auth, email);
-    } catch (err) {
-      // user-not-found silenciado: anti-enumeration. El form muestra
-      // "Si la cuenta existe, recibirás un enlace" siempre que no haya
-      // otros errores (invalid-email, too-many-requests, network-failed).
-      const code = (err as { code?: string } | null)?.code;
-      if (code === 'auth/user-not-found') return;
-      throw err;
-    }
+    // SPEC-65 F2.4: el reset lo emite la CF sendResetEmail (Resend). El anti-enumeración vive
+    // en el servidor (éxito uniforme para email inexistente y cualquier fallo post-validación);
+    // al cliente solo le pueden burbujear reset-invalid-email / rate-limited.
+    await sendResetEmail(normalizeEmail(email));
   }, []);
 
   const resendVerification = useCallback(async () => {
-    if (!auth.currentUser) throw new Error('No user logged in');
-    await sendEmailVerification(auth.currentUser);
+    // SPEC-65 F2.4: la CF lee el email del token de la sesión y PROPAGA el fallo de envío →
+    // el reenvío conserva la señal "no se pudo, reintentá" (useEmailVerificationResend no
+    // arranca el cooldown si esto rechaza). Sin sesión, la callable rechaza unauthenticated.
+    await sendVerificationEmail();
   }, []);
 
   // user.reload() refresca el objeto User de Firebase pero NO dispara
