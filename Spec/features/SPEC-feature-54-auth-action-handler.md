@@ -1,41 +1,29 @@
-# SPEC — Feature 54: Custom auth action handler (`/auth/action`) — Nivel 1
+# SPEC — Custom auth action handler (`/auth/action`) (Registro de implementación)
 
-> **Estado:** ✅ **Código completo, en prod y testeado** (`0.4.4`, deploy 2026-06-03/04). F1–F7 implementados, desplegados a `secondmind.web.app` y verificados E2E en prod. **F8 (custom action URL) RESUELTO** (el engineering team de Firebase configuró el callbackUri a `secondmind.web.app/auth/action`); **F9 (copy español de templates) EN CURSO** (copy enviado a soporte para aplicar). Config server-side, no código (ver nota abajo). Las secciones F1–F9 describen lo enviado.
-> **Verificación:** build (tsc+vite) + lint completo + `npm test` **252/252** verdes. E2E Playwright local (fallback · verify ok/error · reset form/validación/golden path · claro/oscuro · 375/1280) + **test en prod real** con oobCodes del Admin SDK contra `secondmind.web.app` (verify success + reset golden path; **G3 confirmado en prod**: usuario logueado igual recibe la landing standalone, sin app shell ni redirect). QA con cuenta descartable `qa-spec54@example.com` (borrada al cierre) + SA key temporal (archivo borrado + revocada en GCP).
-> **Desvío/agregado (decidido en implementación):** se sumó el **fix PWA `navigateFallbackDenylist: /^\/auth\/action/`** ([vite.config.ts](../../vite.config.ts), commit `e7df5b0`) tras detectar en el test de prod que el service worker servía el `index.html` precacheado (bundle viejo sin la ruta → 404 en el `*` del Layout). Crítico porque la landing se golpea desde **links de email externos** y debe cargar siempre el bundle actual. No estaba en el SPEC original; gotcha escalado a `gotchas/pwa-offline.md`.
-> **F8/F9 — config server-side (Console bloqueada para self-service):** la Console devolvía `EMAIL_TEMPLATE_UPDATE_NOT_ALLOWED` al guardar el callbackUri (F8) y al editar los templates (F9) tras varios reintentos → **no es self-service**, lo aplica el engineering team de Firebase vía soporte (NO Google Cloud Support — Blaze es facturación, no incluye soporte técnico de GCP; confirmado por Ruben). **F8 ✅ RESUELTO:** el team configuró el callbackUri a `https://secondmind.web.app/auth/action` (confirmado en la Console, campo "URL de acción"). **F9 🟡 EN CURSO:** copy español (asunto + cuerpo básico con link descriptivo) enviado a soporte, pendiente de aplicación. **Smoke email→landing** pendiente de que F9 se aplique (no bloqueó el merge; el código ya está validado en prod con oobCodes manuales).
-> **Aprendizaje clave (afina el Nivel 2):** los templates de Firebase **sanitizan el styling a propósito** (anti-spam, confirmado en docs) → el diseño HTML elaborado **no es alcanzable** vía templates de Firebase ni vía soporte. Queda **exclusivamente** para el **Nivel 2** (provider propio Resend + CFs + `generateLink` del Admin SDK + dominio verificado). Por eso el diseño rico de emails **no es un nice-to-have de Nivel 2 — es el único camino posible** (Firebase templates tienen techo duro).
-> **Versión:** `0.4.4` (client-side + config; **no abre la beta**, no toca rules ni gate de acceso). 4 commits feat + 1 release + 1 fix PWA en `feat/auth-action-pages` → merge `--no-ff` a `main`.
-> **Depende de:** F47 (LoginCard, verify-email page, `authErrors.ts`, `SignUpForm` validación), SPEC-51 (`enforceAccessGate`, store reactivo `loginError` — **no se tocan**), SPEC-53 (`SignupGate` cliente-only — no se toca).
-> **Origen:** las "action handler pages" genéricas de Firebase (`secondmindv1.firebaseapp.com/__/auth/action`) rompen la coherencia visual del producto en los dos momentos más frágiles del onboarding (activar cuenta / reset password).
+> Estado: Completada junio 2026 — merge `5093823` a main, release `0.4.4` desplegada a prod (secondmind.web.app), verificada E2E con oobCodes del Admin SDK.
+> Commits: `3e58260` F6/F7 wrappers action-code + mapActionError, `0646935` F3 ActionStatus presentacional, `bfcdc6b` F4/F5 máquinas verify-email + reset-password, `318b21c` F1/F2 page /auth/action + ruta lazy pública, `e7df5b0` fix PWA navigateFallbackDenylist, `55d49b4` release 0.4.3→0.4.4, `5093823` merge feat/auth-action-pages, `c8ca462` merge docs F8 resuelto.
+> Gotchas operativos vigentes → `Spec/ESTADO-ACTUAL.md` (+ `Spec/gotchas/pwa-offline.md` para el denylist de service worker y `Spec/gotchas/email-resend.md` para el lock `EMAIL_TEMPLATE_UPDATE_NOT_ALLOWED`)
 
 ## Objetivo
 
 Una página pública `/auth/action` que reemplaza la landing genérica de Firebase para **verificación de email** y **reset de contraseña**, ruteando por `?mode=` y procesando el `oobCode` con el SDK cliente, coherente con el design system (violet oklch 285°, claro/auto/oscuro), reusando el molde visual de `verify-email`.
 
-**Alcance Nivel 1 (este SPEC):**
+El origen: las "action handler pages" genéricas de Firebase (`secondmindv1.firebaseapp.com/__/auth/action`) rompían la coherencia visual del producto en los dos momentos más frágiles del onboarding (activar cuenta / reset password). Nivel 1 dejó listo todo lo que **no depende de un dominio propio**: la landing + el custom action URL como base reusable; los emails diseñados vía provider quedaron para un SPEC futuro (que se materializó en SPEC-65).
 
-1. La **landing** `/auth/action` completa (ruta + state machines + UI) — F1–F7.
-2. El **custom action URL** en Console apuntando a la landing — F8.
-3. La **personalización en COPY** (texto + remitente, en español) de las plantillas de email de Console — F9. **Sin HTML diseñado.**
+## Qué se implementó
 
-**Fuera de scope (Nivel 2, SPEC futuro):** emisor propio (Resend/SendGrid vía CF), templates HTML diseñados, y cualquier cambio a las llamadas `sendEmailVerification` / `sendPasswordResetEmail` del cliente. Esas se quedan **exactamente como están** — Firebase sigue siendo el emisor, ahora con el copy español de F9.
+- **F1 — Ruta pública lazy `/auth/action`:** se agregó la ruta como sibling de `/login` (fuera del `Layout` autenticado), lazy-loaded como `/admin`; el chunk solo carga al visitar la ruta, sin chrome de app ni auth-gate. Archivos tocados: `src/app/router.tsx`.
+- **F2 — Page shell + dispatch por `mode`:** la page lee `mode`/`oobCode` con `useSearchParams` y rutea a `VerifyEmailAction` / `ResetPasswordAction` / fallback (modes desconocidos, `recoverEmail`, o `oobCode` ausente → estado error "Enlace inválido o no soportado" con CTA → /login). Owns el page wrapper (gradiente violet + branding) copiado de `verify-email/page.tsx`. Archivos tocados: `src/app/auth/action/page.tsx` (nuevo).
+- **F3 — `ActionStatus` (estado compartido):** componente presentacional con variants `loading`/`success`/`error`, molde card de `verify-email` (icon badge + h2 + texto + Button CTA opcional). Loading como calm/skeleton, nunca spinner. Único molde para los estados visuales de F4/F5. Archivos tocados: `src/components/auth/ActionStatus.tsx` (nuevo).
+- **F4 — `VerifyEmailAction` (state machine verify):** en mount llama `applyEmailVerification(oobCode)`; máquina verifying → success / error con copy mapeado por `mapActionError`. Guard contra doble-invocación de StrictMode (ref/flag) porque `applyActionCode` es single-use. CTA siempre → /login (no auto-login, el click llega cross-device sin sesión). Archivos tocados: `src/components/auth/VerifyEmailAction.tsx` (nuevo).
+- **F5 — `ResetPasswordAction` (verify-code → form → confirm):** máquina verifying-code → form → submitting → success/error. Mount valida el code con `verifyResetCode` (obtiene el email); form de password+confirmar (molde `SignUpForm`, inputs raw con `aria-invalid`) con validación cliente ≥8 chars + coincidencia antes de llamar; submit con `confirmReset`. Errores mapeados tanto en verify-step como en confirm-step (el oobCode puede expirar en la ventana verify→confirm). Archivos tocados: `src/components/auth/ResetPasswordAction.tsx` (nuevo).
+- **F6 — `lib/authActions.ts` (wrappers de las 3 APIs):** wrappers finos sin estado sobre `auth` — `applyEmailVerification` (`applyActionCode`), `verifyResetCode` (`verifyPasswordResetCode`, devuelve el email), `confirmReset` (`confirmPasswordReset`). Desacoplados de `useAuth` (one-shots pre-login); errores se propagan crudos para que el componente los mapee. Archivos tocados: `src/lib/authActions.ts` (nuevo).
+- **F7 — `mapActionError` en `authErrors.ts`:** función exportada que mapea los códigos action-code a copy español (`expired-action-code`, `user-disabled`, `weak-password` alineado a ≥8, `network-request-failed` → reintentá sin pedir uno nuevo, `too-many-requests` reusa el string existente, `invalid-action-code`/`user-not-found`/default colapsan a "El enlace no es válido" por anti-enumeración). Sin tocar `mapAuthError`. Archivos tocados: `src/lib/authErrors.ts`.
+- **Fix PWA (agregado en implementación):** `navigateFallbackDenylist: /^\/auth\/action/` en `vite.config.ts` (commit `e7df5b0`), tras detectar en el test de prod que el service worker servía el `index.html` precacheado (bundle viejo sin la ruta → 404 en el `*` del Layout). Crítico porque la landing se golpea desde links de email externos y debe cargar siempre el bundle actual. Gotcha escalado a `Spec/gotchas/pwa-offline.md`. Archivos tocados: `vite.config.ts`.
+- **F8 — Custom action URL (config server-side):** resuelto. El engineering team de Firebase configuró el callbackUri global a `https://secondmind.web.app/auth/action` (la Console quedó bloqueada para self-service con `EMAIL_TEMPLATE_UPDATE_NOT_ALLOWED`, no lo pudo aplicar Sebastián). Sin código.
+- **F9 — Copy español de templates nativos (config Console): superseded por SPEC-65.** Quedó "en curso" (copy enviado a soporte, bloqueado por `EMAIL_TEMPLATE_UPDATE_NOT_ALLOWED`) y nunca se aplicó. SPEC-65 F2 (commit `86e6162` "emitir verify/reset vía CFs Resend" + templates HTML propios `a8a6aaa`/CFs `2aa7f39`/`4e87d8f`) dejó los **templates nativos de Firebase dormidos** — verify y reset salen ahora por Resend con HTML propio vía `generateLink` del Admin SDK. El copy de templates nativos quedó MOOT: ya no se emite ningún email por ese canal.
 
-## Contexto / punto de partida (verificado en código esta sesión)
-
-- **No existe ruta `/auth/action`** ni ninguna `/auth/*`. Router en `src/app/router.tsx:21-51`: rutas públicas (siblings, fuera del `Layout` autenticado) = `/login`, `/verify-email`, `/solicitar-acceso`, `/capture`. La ruta nueva va al mismo nivel.
-- **Cero procesamiento de `oobCode` cliente-side hoy.** `applyActionCode`, `verifyPasswordResetCode`, `confirmPasswordReset`, `checkActionCode` **no se usan en ningún lado**. Las únicas action-code APIs en uso son `sendEmailVerification` (`useAuth.ts:108`, post-signup) y `sendPasswordResetEmail` (`useAuth.ts:116`, desde /login), ambas **sin `actionCodeSettings`** → Firebase usa su handler genérico.
-- **`firebase.json`** tiene el rewrite SPA `** → /index.html` → `/auth/action` lo sirve React Router **sin tocar config de hosting**.
-- **La app NO permite cambiar email** (cero `updateEmail`/`verifyBeforeUpdateEmail`; Settings sin email editable) → el `mode=recoverEmail` **no necesita flujo propio**: fallback.
-- **Molde visual (reusar `verify-email`):**
-  - Page wrapper (idéntico en `src/app/login/page.tsx` y `src/app/verify-email/page.tsx`): `relative flex min-h-screen flex-col items-center justify-center overflow-hidden bg-background px-6 py-12` + gradiente radial violet (`radial-gradient(ellipse 55% 42% at 50% 8%, color-mix(in oklch, var(--primary) 45%, transparent) 0%, transparent 65%)`) + branding (`favicon.svg` `h-20 w-20 md:h-24 md:w-24` + wordmark `text-3xl md:text-4xl font-extrabold tracking-tight`).
-  - Card: `w-full max-w-md rounded-2xl border border-border-strong bg-popover p-6 shadow-modal backdrop-blur-md md:p-8`.
-  - Estado centrado (`verify-email/page.tsx`): icon badge (`rounded-full bg-amber-500/15 p-3` + icono `size-6`) + `h2 text-xl font-semibold` + texto `text-sm text-muted-foreground` + `Button variant=default size=lg className="w-full"`. **Es el molde de ok/error/loading.**
-  - Inputs raw (no shadcn — `ui/` solo tiene `button`, `alert-dialog`, `confirm-dialog`): `rounded-lg border border-border bg-card px-3 py-2 text-sm outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-ring/40 aria-invalid:border-destructive`.
-- **Validación de password a reusar** (`SignUpForm.tsx:34-46`): **mínimo 8 caracteres** + **confirmación que coincide** (la validación cliente solo chequea `length < 8`; el copy menciona "con al menos un número" pero no se enforce client-side — replicar la regla **tal cual** para consistencia, no inventar una más estricta).
-- **Copy de errores** centralizado en `src/lib/authErrors.ts` (`mapAuthError`). `auth/weak-password` ya mapeado.
-
-## Decisiones cerradas (con Sebastián, esta sesión)
+## Decisiones clave
 
 | #      | Decisión                                                            | Detalle                                                                                                                                                                                                                                                                                                  |
 | ------ | ------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -47,160 +35,11 @@ Una página pública `/auth/action` que reemplaza la landing genérica de Fireba
 | **D6** | **Nivel 1 sin emails propios; Nivel 2 (provider) es SPEC aparte**   | Sebastián deja listo ahora todo lo que **no depende de un dominio**. Los emails diseñados via provider migran cuando tenga dominio propio (Namecheap). La landing (F1–F7) + el action URL (F8) son **base reusable**: Nivel 2 no los toca. El copy español de F9 se reusa como base del HTML de Nivel 2. |
 | **D7** | **F9 = SOLO copy + remitente, sin HTML**                            | Personalizar asunto/cuerpo/nombre-del-remitente de las plantillas de Console en español branded **en texto**. Nada de HTML diseñado (eso es Nivel 2). Manual, agrupado con F8 en una sola entrada a Console al final. Sebastián lo hace con guía del asesor.                                             |
 
----
+## Lecciones
 
-## Sub-features
-
-### Frente A — Landing `/auth/action` (código)
-
-#### F1 — Ruta pública lazy `/auth/action`
-
-- **Qué:** agregar `{ path: '/auth/action', lazy: async () => ({ Component: (await import('@/app/auth/action/page')).default }) }` como **sibling** de `/login` (fuera del `Layout` autenticado), molde del lazy de `/admin` (`router.tsx:40-43`).
-- **Criterio de done:** navegar a `/auth/action?...` monta la page sin chrome de app ni auth-gate; el chunk solo carga al visitar la ruta.
-- **Archivos:** `src/app/router.tsx`.
-
-#### F2 — Page shell + dispatch por `mode`
-
-- **Qué:** `src/app/auth/action/page.tsx`. Owns el **page wrapper** (wrapper + gradiente + branding, copiados de `verify-email/page.tsx`). Lee `mode` y `oobCode` con `useSearchParams`. Dispatch:
-  - `verifyEmail` → `<VerifyEmailAction oobCode={...} />`
-  - `resetPassword` → `<ResetPasswordAction oobCode={...} />`
-  - cualquier otro (`recoverEmail`, `signIn`, ausente) **o `oobCode` faltante** → `<ActionStatus variant="error" .../>` con copy "Enlace inválido o no soportado" + CTA → /login.
-- **Criterio de done:** las 3 ramas renderizan dentro del molde de page; sin `oobCode` cae al fallback sin crashear.
-- **Archivos:** **nuevo** `src/app/auth/action/page.tsx`.
-
-#### F3 — `ActionStatus` (componente de estado compartido)
-
-- **Qué:** `src/components/auth/ActionStatus.tsx` — presentacional. Props: `{ variant: 'loading' | 'success' | 'error', title, description?, icon?, action? }`. Reusa el molde card de `verify-email`: card + icon badge (verde para success, amber/destructive para error, neutro/animado para loading) + `h2` + texto + `<Button>` opcional (CTA). **Skeleton/calm loading, nunca spinner** (gotcha universal). Un solo molde para los 3 estados visuales de F4/F5.
-- **Criterio de done:** los 3 variants renderizan consistentes con el design system; CTA opcional navega.
-- **Archivos:** **nuevo** `src/components/auth/ActionStatus.tsx`.
-
-#### F4 — `VerifyEmailAction` (flujo verify + state machine)
-
-- **Qué:** `src/components/auth/VerifyEmailAction.tsx`. En mount llama `applyEmailVerification(oobCode)` (F6). Máquina:
-
-  ```
-  verifying ──ok────▶ success  (badge ✓ verde · "Email verificado" · "Ya podés iniciar sesión" · botón → /login)
-      └─────error────▶ error    (badge alerta · mapActionError(code) · botón → /login)
-  ```
-
-  - Llamada **una sola vez** (guard contra doble-invocación en StrictMode dev: ref o flag — `applyActionCode` es single-use; una segunda corrida daría `invalid-action-code` espurio).
-
-- **Criterio de done:** oobCode válido → success; expirado → "El enlace expiró"; inválido/ya usado → "El enlace es inválido o ya fue usado"; deshabilitado → su copy. Loading no es spinner.
-- **Archivos:** **nuevo** `src/components/auth/VerifyEmailAction.tsx`.
-
-#### F5 — `ResetPasswordAction` (flujo reset + form + state machine)
-
-- **Qué:** `src/components/auth/ResetPasswordAction.tsx`. Máquina:
-
-  ```
-  verifying-code ──ok──▶ form ──submit──▶ submitting ──ok──▶ success ("Contraseña actualizada" · botón → /login)
-        │                  │                                    └──error──▶ error (botón → /login)
-        └──error──▶ error  └─ validación cliente: ≥8 chars + confirmación coincide (regla de SignUpForm.tsx:34-46)
-  ```
-
-  1. Mount → `verifyResetCode(oobCode)` (F6) → valida + obtiene el email (mostrar "Restablecer contraseña de **{email}**" opcional). Error → estado error.
-  2. Form (inputs raw, molde `SignUpForm`: password + confirmar, mismos estilos + `aria-invalid`). Validación local **antes** de llamar.
-  3. Submit → `confirmReset(oobCode, newPassword)` (F6). Error (incl. `weak-password`, `expired/invalid` si el code venció entre verify y confirm) → estado error con `mapActionError`.
-  4. Success → CTA /login.
-
-- **Criterio de done:** golden path resetea y termina en success; validación fallida bloquea sin llamar; errores en verify **y** en confirm mapeados; loading sin spinner; botón submit deshabilitado + label dinámico durante `submitting`.
-- **Archivos:** **nuevo** `src/components/auth/ResetPasswordAction.tsx`.
-
-#### F6 — `lib/authActions.ts` (wrappers de las 3 APIs)
-
-- **Qué:** `src/lib/authActions.ts` — lógica fuera del componente (regla "lógica en hooks/lib"), molde de `src/lib/allowlist.ts`. Wrappers finos sobre `auth` (de `@/lib/firebase`):
-  - `applyEmailVerification(oobCode: string): Promise<void>` → `applyActionCode(auth, oobCode)`.
-  - `verifyResetCode(oobCode: string): Promise<string>` → `verifyPasswordResetCode(auth, oobCode)` (devuelve el email).
-  - `confirmReset(oobCode: string, newPassword: string): Promise<void>` → `confirmPasswordReset(auth, oobCode, newPassword)`.
-  - No usan `useAuth` (el usuario no está necesariamente logueado; son one-shots desacoplados de la sesión). Errores se propagan crudos (el componente mapea con `mapActionError`).
-- **Criterio de done:** tres funciones tipadas, testeables, sin estado.
-- **Archivos:** **nuevo** `src/lib/authActions.ts`.
-
-#### F7 — `mapActionError` en `authErrors.ts`
-
-- **Qué:** nueva función exportada en `src/lib/authErrors.ts` (single source of truth del copy de auth). Mapeo de los códigos action-code a español:
-  - `auth/expired-action-code` → "El enlace expiró. Pedí uno nuevo."
-  - `auth/user-disabled` → "Esta cuenta está deshabilitada."
-  - `auth/weak-password` → "Mínimo 8 caracteres." _(alineado a la regla del cliente ≥8, no al copy "con un número" que no se enforce)._
-  - `auth/network-request-failed` → "Hubo un problema de conexión. Reintentá." _(ajuste aprobado: el enlace está bien, falló la red — no mandar a "pedí uno nuevo")._
-  - `auth/too-many-requests` → reusa el string existente de `mapAuthError`.
-  - `auth/invalid-action-code` + `auth/user-not-found` + default → "El enlace no es válido. Pedí uno nuevo." _(invalid colapsa "inválido o ya usado", que Firebase no distingue; user-not-found colapsa al default por anti-enumeración, paranoia F50-53)._
-- **Criterio de done:** todos los códigos del set mapeados; `tsc`/ESLint verdes.
-- **Archivos:** `src/lib/authErrors.ts`. _(No tocar `mapAuthError`.)_
-
-### Frente B — Configuración Console (manual / checklist, al final)
-
-#### F8 — Custom action URL → `https://secondmind.web.app/auth/action` ✅ RESUELTO
-
-- **Estado:** **resuelto** — el engineering team de Firebase configuró el callbackUri a `https://secondmind.web.app/auth/action` (confirmado en la Console, campo "URL de acción"). La Console quedó bloqueada para self-service (`EMAIL_TEMPLATE_UPDATE_NOT_ALLOWED`), por eso lo aplicó el team, no Sebastián. Sin código: la landing ya procesa el callbackUri.
-- **Qué:** en Firebase Console → Authentication → Templates → "Customize action URL" (aplica **global** a todos los templates) → `https://secondmind.web.app/auth/action`.
-- **Orden:** **penúltimo paso**, **después** de desplegar la landing a prod y testearla con un `oobCode` real del Admin SDK (ver Verificación). Antes de este cambio, los emails de prod siguen yendo al handler genérico — la landing nueva queda lista pero no recibe tráfico hasta el switch.
-- **Criterio de done:** un email de prod (verify o reset) lleva un link a `secondmind.web.app/auth/action?mode=...&oobCode=...` y la landing lo procesa.
-- **Archivos:** ninguno (Console). Agrupado con F9 en una sola entrada a Console.
-
-#### F9 — Personalizar plantillas de email en Console (SOLO copy + remitente) 🟡 EN CURSO
-
-- **Estado:** **en curso** — copy español (asunto + cuerpo básico con link descriptivo) **enviado a soporte de Firebase** para aplicar (la edición quedó bloqueada con `EMAIL_TEMPLATE_UPDATE_NOT_ALLOWED`, no es self-service). Pendiente de confirmación. **Techo:** los templates de Firebase sanitizan el styling → solo copy plano; el diseño rico va al Nivel 2.
-- **Qué:** en Console → Authentication → Templates, para **Verificación de email** y **Restablecimiento de contraseña**: asunto + cuerpo + nombre del remitente → **español, branded en COPY**. **SOLO texto y remitente, NADA de HTML diseñado** (eso es Nivel 2). Sebastián lo hace con guía del asesor.
-- **Criterio de done:** los dos emails llegan en español con remitente branded; el resto (emisor Firebase, mecánica del link) intacto.
-- **Archivos:** ninguno (Console). Misma entrada a Console que F8.
-
----
-
-## Orden de implementación
-
-1. **F7** (`mapActionError`) + **F6** (`lib/authActions.ts`) — las bases sin UI.
-2. **F3** (`ActionStatus`) — el molde visual compartido.
-3. **F4** (verify) + **F5** (reset) — las dos máquinas, sobre F3/F6/F7.
-4. **F2** (page shell + dispatch) + **F1** (ruta lazy) — cablear todo.
-5. Lint/build verdes + **E2E local con oobCodes del Admin SDK** (ver Verificación).
-6. Deploy hosting (+ Tauri/Android **opcionales** — la ruta vive en el dist compartido; no se toca `src-tauri/` ni `android/`).
-7. **Test en prod** de la landing con un oobCode real del Admin SDK contra la URL de prod.
-8. **F8 + F9** en Console (una sola entrada): custom action URL → personalización de copy.
-9. Smoke prod final: disparar un reset/verify real (cuenta descartable) → confirmar que el email lleva a la landing branded y el flujo cierra.
-
-## Verificación
-
-**El detalle espinoso:** el custom action URL (F8) es **global a prod**, así que Firebase no puede mandar un link a localhost. Plan de QA **sin tocar la cuenta real de Sebastián** (`gYPP7…`):
-
-- Generar `oobCode`s reales con el **Admin SDK** (`generatePasswordResetLink` / `generateEmailVerificationLink`) contra una **cuenta descartable** (NO la de Sebastián — el reset **cambia la contraseña**), extraer el `oobCode` del link devuelto y visitar `http://localhost:5173/auth/action?mode=...&oobCode=...`. Los callbacks (`confirmPasswordReset`, etc.) pegan al backend de Firebase con la apiKey del SDK, así que el code es **válido independiente del origin** — funciona en localhost antes de tocar Console.
-- La cuenta descartable **no necesita estar allowlisted** (los flujos action-code corren pre-login, antes de `enforceAccessGate`).
-- **Casos a cubrir:** verify ok · verify link expirado · verify link ya usado (segunda visita) · reset golden path · reset con validación cliente fallida (corta <8 / no coinciden) · reset con code inválido en verify-step · fallback (mode desconocido / sin oobCode). Viewports **375 / 768 / 1280**, theme **claro / oscuro / auto**.
-- **Build/lint:** `npm run build` + `npm run lint` completo + `npm test` verdes (lint completo, no solo el hook --fix).
-- **Test en prod (paso 7):** mismo truco de Admin SDK pero apuntando a `https://secondmind.web.app/auth/action` **antes** de cambiar el action URL de Console (la landing ya está desplegada; el link se arma a mano).
-- **Smoke prod final (paso 9, post-F8/F9):** disparar un reset real desde /login a la cuenta descartable → confirmar email español branded + link a la landing + flujo completo. La cuenta de Sebastián **no se usa para reset**.
-- **Limpieza (cierre):** **borrar la cuenta descartable de Auth** tras el smoke (queda con la contraseña cambiada por el test de reset; inofensiva porque no está allowlisted, pero prolijo — mismo criterio que los throwaways de SPEC-52/53).
-
-## Riesgos / cuestiones abiertas
-
-- **StrictMode doble-mount (dev):** `applyActionCode`/`confirmPasswordReset` son single-use; sin guard, el doble-invoke de StrictMode daría un `invalid-action-code` espurio en F4. Guard con ref/flag (no es bug de prod, pero ensucia el QA local).
-- **Ventana verify→confirm en reset:** el `oobCode` puede expirar entre `verifyResetCode` (mount) y `confirmReset` (submit) si el usuario tarda. F5 debe mapear el error también en el confirm-step, no solo en verify.
-- **Gotchas a escalar al cerrar:** (1) procesar action-codes cliente-side (`applyActionCode`/`verifyPasswordResetCode`/`confirmPasswordReset` sobre `auth`; single-use + StrictMode guard; oobCode válido cross-origin) → `Spec/gotchas/` dominio auth. (2) QA de action-codes vía Admin SDK `generate*Link` contra cuenta descartable sin enviar email — patrón reusable. (3) custom action URL es global a prod → no testeable contra localhost vía email, solo vía oobCode manual.
-
-## Nivel 2 — SPEC futuro (anotar en ESTADO-ACTUAL, NO implementar acá)
-
-**Emails propios diseñados vía provider (Resend/SendGrid) + 2 CFs**, prerequisito **dominio propio verificado**.
-
-- **No es un nice-to-have — es el ÚNICO camino para diseño rico.** Los templates de Firebase **sanitizan el styling a propósito** (anti-spam, confirmado en docs); ni el self-service ni el soporte permiten HTML elaborado. Nivel 1 (F9) llega hasta **copy plano** en español. El salto a HTML diseñado **obliga** a emisor propio (`generateLink` del Admin SDK arma el oobCode, la CF lo mete en un template HTML propio y lo envía por el provider). Firebase templates tienen un techo duro.
-
-- **Qué cambia vs Nivel 1:** Nivel 2 toca SOLO el **emisor** (Firebase → CF + provider) y el **contenido** (texto → HTML diseñado). La landing `/auth/action` + el action URL (F8) son **base reusable que Nivel 2 NO toca**. El copy español de F9 se reusa como **base del HTML**.
-- **Las 2 CFs:** `sendVerificationEmail` (autenticada) / `sendResetEmail` (pública con **rate-limit por IP** + **anti-enumeración** — espejo del `user-not-found` silenciado actual).
-- **El swap toca solo 2 callers:** `sendEmailVerification` en `useAuth.signUpWithEmail` y `sendPasswordResetEmail` en /login (la llamada de `resetPassword`). Reemplazo directo por las CFs cuando llegue — **NO** envolverlos en un wrapper ahora (YAGNI: son 2 lugares puntuales).
-- **Prerequisito duro:** dominio propio verificado (SPF/DKIM) para el remitente. Sin dominio, el sandbox del provider solo manda al propio correo del dueño de la cuenta → no se puede enviar a usuarios reales. Por eso Nivel 2 espera al dominio de Namecheap.
-
-## Checklist
-
-- [x] F1 — ruta pública lazy `/auth/action`
-- [x] F2 — page shell (wrapper + branding) + dispatch por `mode`
-- [x] F3 — `ActionStatus` (loading/success/error compartido)
-- [x] F4 — `VerifyEmailAction` (state machine verify + guard StrictMode)
-- [x] F5 — `ResetPasswordAction` (verify-code → form → confirm + validación reusada)
-- [x] F6 — `lib/authActions.ts` (3 wrappers)
-- [x] F7 — `mapActionError` en `authErrors.ts`
-- [x] **Fix PWA** `navigateFallbackDenylist: /^\/auth\/action/` (agregado en implementación tras el test de prod)
-- [x] E2E local (oobCodes Admin SDK, cuenta descartable) + lint/build/test **252/252** verdes
-- [x] Deploy hosting `0.4.4` + test prod real (verify success + reset golden path + G3 con oobCode del Admin SDK)
-- [x] F8 — custom action URL → `secondmind.web.app/auth/action` — ✅ **resuelto** (configurado por el engineering team de Firebase)
-- [ ] F9 — copy español en plantillas verify + reset — 🟡 **en curso** (copy enviado a soporte, pendiente de aplicación)
-- [ ] Smoke prod final email→landing — ⏳ pendiente de que F9 se aplique (no bloquea; código validado en prod)
-- [x] Cierre: merge + registro + gotchas escalados (PWA denylist + action-code) + Nivel 2 en ESTADO-ACTUAL + patrón QA en CLAUDE.md
+- **Procesar action-codes cliente-side desacoplados de la sesión.** `applyActionCode` / `verifyPasswordResetCode` / `confirmPasswordReset` corren sobre `auth` sin `useAuth` (el usuario no está necesariamente logueado; son one-shots pre-login, antes de `enforceAccessGate`). Son **single-use** → guard contra el doble-mount de StrictMode (ref/flag) o el segundo invoke da un `invalid-action-code` espurio. El `oobCode` es válido **cross-origin** (el SDK pega al backend con su apiKey) → sirve en localhost antes de tocar Console. Generaliza a cualquier flujo que consuma oobCodes. Canon en `Spec/gotchas/` dominio auth.
+- **QA de action-codes vía Admin SDK `generate*Link` contra cuenta descartable, sin enviar email.** Genera el link con `generatePasswordResetLink`/`generateEmailVerificationLink`, extrae el `oobCode` del query y visitá `localhost/auth/action?mode=…&oobCode=…`. La cuenta descartable no necesita estar allowlisted (action-codes corren pre-gate). Reset **cambia la contraseña** → nunca usar la cuenta real. Autenticar con ADC (efímero), nunca una SA key commiteada. Patrón reusable, ya canon en CLAUDE.md.
+- **El custom action URL es global a prod → no testeable contra localhost vía email.** El callbackUri aplica a todos los templates y a toda la cuenta; Firebase no manda links a localhost. La única vía de QA pre-switch es el oobCode manual del Admin SDK apuntado a la URL de prod. El switch en Console no recibe tráfico hasta que se cambia.
+- **La cura de un SW que sirve bundle viejo va en config de build, no en el JS.** El service worker precacheaba `index.html`; una ruta nueva golpeada desde links externos caía al 404 del `*` del Layout porque el SW servía un bundle sin esa ruta. `navigateFallbackDenylist` fuerza ir a la red para `/auth/action`. Aplica a cualquier ruta servida exclusivamente desde links externos. Canon en `Spec/gotchas/pwa-offline.md`.
+- **Los templates nativos de Firebase tienen techo duro: sanitizan el styling a propósito (anti-spam).** El diseño HTML elaborado **no es alcanzable** vía templates de Firebase ni vía soporte — solo copy plano. Esto convirtió el provider propio (Resend + CF + `generateLink` del Admin SDK + dominio verificado) en el **único** camino para diseño rico, no un nice-to-have. Lo confirmó SPEC-65, que materializó ese Nivel 2 y dejó **moot el F9 de este SPEC**: los templates nativos quedaron dormidos.
+- **`EMAIL_TEMPLATE_UPDATE_NOT_ALLOWED` solo lo destraba el engineering team de Firebase, no Google Cloud Support.** Editar el callbackUri o los templates de email se bloquea server-side tras varios guardados fallidos; Blaze es facturación, no incluye soporte técnico de GCP. Es config server-side, no código: una vez destrabado aplica sin redeploy. Canon en `Spec/gotchas/email-resend.md` y CLAUDE.md.
