@@ -112,6 +112,10 @@ export const processAccessRequest = onCall<ProcessAccessRequestData, Promise<{ o
             to: email,
             ...approvalEmail('es'),
             apiKey: resendApiKey.value(),
+            // Key estable por postulante (email normalizado) → Resend deduplica server-side (24h):
+            // cierra la ventana concurrente que el guard approvalEmailSentAt no cubre. Payload
+            // estático (copy fijo) → sin riesgo de 409 invalid_idempotent_request.
+            idempotencyKey: `approval/${email}`,
           });
           if (sent.ok) {
             await reqRef.set(

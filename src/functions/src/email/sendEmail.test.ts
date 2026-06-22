@@ -40,4 +40,18 @@ describe('sendEmail (SPEC-65 F1.2)', () => {
     sendMock.mockRejectedValue(new Error('ECONNRESET'));
     await expect(sendEmail(params)).resolves.toEqual({ ok: false });
   });
+
+  it('con idempotencyKey → lo pasa como 2º arg de emails.send', async () => {
+    sendMock.mockResolvedValue({ data: { id: 'x' }, error: null });
+    await sendEmail({ ...params, idempotencyKey: 'approval/a@b.com' });
+    expect(sendMock).toHaveBeenCalledWith(expect.objectContaining({ to: params.to }), {
+      idempotencyKey: 'approval/a@b.com',
+    });
+  });
+
+  it('sin idempotencyKey → no fuerza el 2º arg', async () => {
+    sendMock.mockResolvedValue({ data: { id: 'x' }, error: null });
+    await sendEmail(params);
+    expect(sendMock.mock.calls[0]).toHaveLength(1);
+  });
 });

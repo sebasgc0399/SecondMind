@@ -15,6 +15,10 @@ import { getFromHeader } from './from';
 //  2. Cuelgue de transporte: el SDK no expone timeout/AbortSignal, así que acotamos con un
 //     Promise.race a SEND_TIMEOUT_MS — un Resend lento NO debe bloquear el handler (el approve
 //     ya es durable). El send perdedor se deja morir con un .catch noop + clearTimeout.
+//
+// idempotencyKey (opcional): dedup server-side de Resend (24h). Dos sends con la MISMA key y el
+// MISMO payload cuentan como uno; la 2ª llamada concurrente vuelve con un 409 por el campo
+// `error` → { ok: false } (no setea timestamp). Cierra la ventana de doble-envío concurrente.
 
 const SEND_TIMEOUT_MS = 10_000;
 
@@ -23,6 +27,7 @@ export interface SendEmailParams {
   subject: string;
   text: string;
   apiKey: string;
+  idempotencyKey?: string;
 }
 
 export async function sendEmail({
@@ -30,11 +35,16 @@ export async function sendEmail({
   subject,
   text,
   apiKey,
+  idempotencyKey,
 }: SendEmailParams): Promise<{ ok: boolean; id?: string }> {
   let timer: ReturnType<typeof setTimeout> | undefined;
   try {
     const resend = new Resend(apiKey);
-    const sendPromise = resend.emails.send({ from: getFromHeader(), to, subject, text });
+    const payload = { from: getFromHeader(), to, subject, text };
+    // Solo pasamos el 2º arg si hay key (no forzar { idempotencyKey: undefined }).
+    const sendPromise = idempotencyKey
+      ? resend.emails.send(payload, { idempotencyKey })
+      : resend.emails.send(payload);
     // Evita unhandledRejection si el timeout gana la carrera (el send sigue colgado en bg).
     sendPromise.catch(() => {});
 
@@ -45,9 +55,11 @@ export async function sendEmail({
     const { data, error } = await Promise.race([sendPromise, timeout]);
 
     if (error) {
-      // No logear el destinatario (PII). El message de Resend describe el fallo, no el contenido.
+      // El error de Resend es plano { name, message } (no Error). Lo normalizamos al shape
+      // { code, message } del resto del codebase (saveApiKey/generateEmbedding): code = el
+      // discriminador de Resend (p.ej. 'validation_error'). No logear el destinatario (PII).
       logger.error('sendEmail: failed', {
-        name: error.name,
+        code: error.name,
         message: (error.message ?? '').slice(0, 200),
       });
       return { ok: false };
