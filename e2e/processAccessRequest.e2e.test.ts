@@ -38,6 +38,22 @@ describe('processAccessRequest (E2E)', () => {
     expect((await readAccessRequest('new@x.test'))?.status).toBe('approved');
   });
 
+  // SPEC-65 F1.5 — el aviso de aprobación es best-effort POST-COMMIT. Con RESEND_API_KEY dummy
+  // (emu-secret.mjs) el envío FALLA y se traga: el approve igual devuelve { ok: true } y, como el
+  // envío no fue OK, approvalEmailSentAt queda AUSENTE (single-send D1 → un re-approve reintenta).
+  // Prueba la garantía no-throw end-to-end sin mockear (vi.mock no cruza al proceso del emulador).
+  it('approve: un envío fallido no rompe el approve ni marca approvalEmailSentAt', async () => {
+    await seedConfig(10);
+    await seedAccessRequest('mail@x.test', { status: 'pending' });
+    await signInAsAdmin();
+    const res = await call({ id: 'mail@x.test', action: 'approve' });
+    expect(res.data).toEqual({ ok: true });
+    expect(await readAllowlist('mail@x.test')).not.toBeNull();
+    const req = await readAccessRequest('mail@x.test');
+    expect(req?.status).toBe('approved');
+    expect(req?.approvalEmailSentAt ?? null).toBeNull();
+  });
+
   it('approve sobre límite (beta llena, email nuevo) → resource-exhausted, allowlist no crece', async () => {
     await seedConfig(2);
     await seedAllowlist('m1@x.test');

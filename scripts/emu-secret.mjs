@@ -11,5 +11,12 @@ import { dirname, join } from 'node:path';
 const here = dirname(fileURLToPath(import.meta.url));
 const target = join(here, '..', 'src', 'functions', '.secret.local');
 
-writeFileSync(target, 'ADMIN_EMAIL=admin-e2e@secondmind.test\n');
+writeFileSync(
+  target,
+  'ADMIN_EMAIL=admin-e2e@secondmind.test\n' +
+    // SPEC-65 F1.5 — key dummy para que defineSecret('RESEND_API_KEY').value() resuelva en el
+    // runtime emulado. El envío de aprobación FALLA a propósito (key inválida) y el handler lo
+    // traga (best-effort): el e2e prueba que el approve no se rompe ni marca approvalEmailSentAt.
+    'RESEND_API_KEY=re_dummy_emulator_key\n',
+);
 console.log(`[emu-secret] wrote ${target}`);

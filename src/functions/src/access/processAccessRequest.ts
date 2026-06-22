@@ -1,10 +1,16 @@
 import { onCall, HttpsError } from 'firebase-functions/v2/https';
+import { defineSecret } from 'firebase-functions/params';
 import { logger } from 'firebase-functions';
 import { getFirestore, FieldValue } from 'firebase-admin/firestore';
 import { requireAdmin, adminEmail } from '../lib/requireAdmin';
 import { sanitizeError } from '../lib/sanitizeError';
 import { decideApproval } from './capacity';
 import { appError } from '../lib/appError';
+import { sendEmail } from '../email/sendEmail';
+import { approvalEmail } from '../email/templates/approval';
+
+// SPEC-65 F1.3 — key del provider de email (Resend). .value() solo dentro del handler.
+const resendApiKey = defineSecret('RESEND_API_KEY');
 
 interface ProcessAccessRequestData {
   id?: unknown;
@@ -21,7 +27,7 @@ interface ProcessAccessRequestData {
 // (atómico — todo-o-nada). reject no toca capacity → set simple.
 export const processAccessRequest = onCall<ProcessAccessRequestData, Promise<{ ok: true }>>(
   {
-    secrets: [adminEmail],
+    secrets: [adminEmail, resendApiKey],
     timeoutSeconds: 10,
     region: 'us-central1',
     maxInstances: 2,
@@ -87,6 +93,42 @@ export const processAccessRequest = onCall<ProcessAccessRequestData, Promise<{ o
       });
 
       logger.info('processAccessRequest: ok', { action });
+
+      // SPEC-65 F1.3 — aviso de aprobación, best-effort POST-COMMIT. El approve ya es durable (la
+      // tx commiteó); el envío vive en su PROPIO try/catch para que un fallo de Resend (o de la
+      // re-lectura / el set del timestamp) NUNCA alcance el catch externo y degrade el { ok: true }
+      // a 'internal' (SPEC-65 D2). El email es tx-local (se normaliza dentro de la tx) → se re-lee
+      // del doc. Single-send (D1): approvalEmailSentAt se escribe SOLO tras envío OK → si falla
+      // queda ausente y un re-approve reintenta; si está, se saltea (a-lo-sumo-una-vez tras éxito).
+      // GOTCHA CONSCIENTE: re-leer→enviar→marcar NO es atómico; dos invocaciones concurrentes
+      // podrían doble-enviar (ventana de ms). YAGNI para la beta (se aprueba de a uno); fix futuro
+      // si sube el volumen = compare-and-set transaccional del timestamp antes de enviar.
+      try {
+        const approvedSnap = await reqRef.get();
+        const data = approvedSnap.data();
+        const email = ((data?.email as string | undefined) ?? id).trim().toLowerCase();
+        if (data?.status === 'approved' && email && !data?.approvalEmailSentAt) {
+          const sent = await sendEmail({
+            to: email,
+            ...approvalEmail('es'),
+            apiKey: resendApiKey.value(),
+            // Key estable por postulante (email normalizado) → Resend deduplica server-side (24h):
+            // cierra la ventana concurrente que el guard approvalEmailSentAt no cubre. Payload
+            // estático (copy fijo) → sin riesgo de 409 invalid_idempotent_request.
+            idempotencyKey: `approval/${email}`,
+          });
+          if (sent.ok) {
+            await reqRef.set(
+              { approvalEmailSentAt: FieldValue.serverTimestamp() },
+              { merge: true },
+            );
+          }
+        }
+      } catch (emailError) {
+        const { code, message } = sanitizeError(emailError);
+        logger.error('processAccessRequest: approval email failed', { code, message });
+      }
+
       return { ok: true };
     } catch (error) {
       // Re-lanzar los HttpsError ya mapeados (not-found, resource-exhausted, etc.) sin
