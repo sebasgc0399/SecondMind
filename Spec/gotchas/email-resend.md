@@ -1,6 +1,6 @@
 # Gotchas — Emails transaccionales (Resend)
 
-> Canon de gotchas del envío de emails transaccionales vía Resend (provider propio, dominio `getsecondmind.co`). Nacen en SPEC-65 F1 (aviso de aprobación de postulantes). Indexado en `Spec/ESTADO-ACTUAL.md` § "Gotchas por dominio (índice)". Código: `src/functions/src/email/` (`sendEmail.ts`, `from.ts`, `templates/`).
+> Canon de gotchas del envío de emails transaccionales vía Resend (provider propio, dominio `getsecondmind.co`). Nacen en SPEC-65 F1 (aviso de aprobación de postulantes) + F2 (emails de Auth verify/reset vía Admin SDK `generateLink`). Indexado en `Spec/ESTADO-ACTUAL.md` § "Gotchas por dominio (índice)". Código: `src/functions/src/email/` (`sendEmail.ts`, `from.ts`, `templates/`, `sendVerificationEmail.ts`, `sendResetEmail.ts`).
 
 ## El SDK de Resend no lanza excepción ante errores de API
 
@@ -41,3 +41,23 @@ Al verificar el dominio de envío con el **Auto configure** de Cloudflare, el DK
 ## TODO (PII): el message logueado en el primer error real
 
 `sendEmail` loguea `{ code: error.name, message: error.message.slice(0, 200) }`. El smoke de F1 salió `Delivered` **sin error**, así que falta confirmar — en el **primer error real** de Resend que aparezca en logs — que ese `message` **no arrastre el email del postulante**. Si lo hiciera, dejar **solo el `code`**. No bloqueante; pendiente de la primera observación real.
+
+## El código de error de `generateLink` DEPENDE DEL ENTORNO — no ramificar sobre él
+
+`admin.auth().generatePasswordResetLink(email)` / `generateEmailVerificationLink(email)` lanzan cuando el email no existe, **pero el código de error NO es estable entre entornos**: en **prod con Email Enumeration Protection** activado el backend enmascara `EMAIL_NOT_FOUND` y el Admin SDK lo surfacea como **`auth/internal-error`**; el **emulador de Auth** devuelve **`auth/email-not-found`**. Confirmado empíricamente en el smoke de F2 (2026-06-22): el source-mapping de `firebase-admin` dice `email-not-found`, pero prod dio `internal-error`. **Regla (gotcha estrella):** un `try/catch` anti-enumeración **NO debe depender del código de error exacto** de `generateLink` — trata **CUALQUIER** fallo como el caso uniforme (`return { ok: true }` incondicional) y usa el código solo para decidir el **nivel de log** (WARN para el catch; ERROR reservado al fallo de envío de Resend). Ramificar por `auth/email-not-found` (como sugería el source) deja la rama **muerta en prod** y loguea cada reset a un inexistente como ERROR (falsa alarma). Patrón vivo en [`sendResetEmail.ts`](../../src/functions/src/email/sendResetEmail.ts) (fix `fc324b8`). Corolario: el anti-enum del reset es uniforme porque `generateLink` + `sendEmail` **solo corren para emails existentes** → cualquier fallo posterior está correlacionado con la existencia; solo formato + rate-limit (pre-`generateLink`) pueden burbujear.
+
+## SPF + DKIM del dominio de envío: PASS confirmado
+
+El smoke de F2 confirmó la autenticación del From (por DNS + el header DKIM del email real — **Mailinator NO agrega `Authentication-Results`**, así que el veredicto se valida por DNS): **DKIM** firma con `d=getsecondmind.co; s=resend` (**alineado con el From** → DKIM alignment OK) y la clave pública vive en `resend._domainkey.getsecondmind.co`; **SPF** pasa por el Return-Path `send.getsecondmind.co` (`v=spf1 include:amazonses.com ~all` + MX `feedback-smtp.us-east-1.amazonses.com`). Resend envía vía Amazon SES. Ambos autentican → el From queda firmado para verify/reset/approval.
+
+## El host del action URL ≠ el dominio del From (deliverability, post-beta)
+
+Los links de los emails de Auth apuntan al **action URL de la Console** (`secondmind.web.app/auth/action`, heredado por `generateLink`), pero el From es `noreply@getsecondmind.co` → **mismatch link-host vs sending-domain** que Mailer-Tester flaggea (señal de phishing → resta deliverability). **No es blocker** (SPF+DKIM pasan). **Fix post-beta:** re-apuntar el "customize action URL" a `app.getsecondmind.co/auth/action` (el SPA se sirve idéntico ahí, ya está en authorized domains) para alinear link y From — pero eso **reabre el riesgo `EMAIL_TEMPLATE_UPDATE_NOT_ALLOWED`** (Console lock, ver SPEC-54), por eso es decisión post-beta con Sebastián.
+
+## DMARC no publicado en getsecondmind.co
+
+`getsecondmind.co` **no tiene record DMARC** (`_dmarc`). No bloquea (DMARC solo se exige a senders de alto volumen, >5k/día) y SPF+DKIM ya autentican. Mejora de reputación pendiente, **OPS sin código**: 1 TXT en Cloudflare **DNS-only** → `_dmarc` → `v=DMARC1; p=none; rua=mailto:sebasgc0399@gmail.com`. Estaba listado como "recomendado" en F1.1 y no se publicó.
+
+## Cleanup de un throwaway con SIGNUP no se cierra entero por MCP
+
+El smoke de F2 (a diferencia de F1) crea una **cuenta de Auth** (signup del throwaway). El **Firebase MCP no expone `auth_delete_user`** (solo `auth_get_users`/`auth_update_user`) y el CLI no borra users arbitrarios → el borrado del Auth user es **manual por Console** (Authentication → Users → Delete), o reservar la contraseña del reset para llamar el self-service `deleteAccount`. Lo demás (`allowlist/{email}`, `rateLimits/` del smoke, `users/{uid}/**`) sí se borra por MCP (`firestore_delete_document`) y se verifica NOT_FOUND server-side. Preverlo en cualquier smoke futuro con signup. En F1 no aplicaba (el postulante no tenía cuenta de Auth).
