@@ -1,6 +1,6 @@
 # SPEC — Feature 65: Migración de emails transaccionales a Resend
 
-> **Estado:** F1 **cerrado y en producción** (deploy + smoke verde, 2026-06). F2 **detallado** (research cerrado 2026-06-22) — **pendiente GO de Sebastián**, luego SDD step 2 (Plan mode). **F2 no codeado.** > **Alcance:** SecondMind manda sus emails transaccionales desde un provider propio (Resend), cerrando el loop de postulación (aviso de aprobación) y habilitando emails de Auth con HTML propio.
+> **Estado:** F1 **cerrado y en producción**. F2 **implementado + verificado en prod** (smoke 2026-06-22, fix `fc324b8`) — queda **done al mergear el cierre de docs**. **SPEC viva** (no archivar): cabos pendientes — TODO PII de F1, action URL post-beta, DMARC, F1.4 diferido. > **Alcance:** SecondMind manda sus emails transaccionales desde un provider propio (Resend), cerrando el loop de postulación (aviso de aprobación) y habilitando emails de Auth con HTML propio.
 > **Dependencias:** SPEC-52/53 (postulación + `allowlist`), SPEC-54 Nivel 1 (handler `/auth/action`), SPEC-63 (`getsecondmind.co` live en Cloudflare). Todas **cumplidas**.
 > **Estimado:** F1 ≈ 0.5–1 día dev (+ OPS DNS) · F2 ≈ 2–3 días dev (**F2.1 ya verificado → sin OPS externo**: F2.0 + 2 CFs + 2 templates + swap + QA). Detalle por sub-feature en cada Fn y en D6.
 > **Stack:** Resend (`npm resend`), Cloud Functions v2 (Node 22), Admin SDK (`generateLink`), Cloudflare DNS, Secret Manager.
@@ -19,7 +19,7 @@ Hoy SecondMind no manda **ningún** email propio: la verificación y el reset de
 - **Envío hoy = 100% client-side.** `sendEmailVerification()` en `useAuth.ts:108` (signup) y `:129` (reenvío); `sendPasswordResetEmail()` en `useAuth.ts:116` (anti-enum silencia `user-not-found` en `:121-123`). El handler `/auth/action` (`src/app/auth/action/page.tsx`) procesa `oobCode` client-side y **se reusa intacto** en F2.
 - **`processAccessRequest.ts`** aprueba en tx atómica (`allowlist/{email}` + `accessRequests/{id}.status='approved'`), **sin notificación**. Punto de inserción del email: **post-commit**, re-leer status, guard `status==='approved' && email`, `try/catch` best-effort que **no throwea**.
 - **DNS `getsecondmind.co`** en Cloudflare. Email Routing inbound ya activo (MX `route1/2/3.mx.cloudflare.net`, SPF root `v=spf1 include:_spf.mx.cloudflare.net ~all`). **No** hay DMARC ni `resend._domainkey`. A root `199.36.158.100` (Firebase, DNS-only).
-- **`generateLink` (Admin SDK):** devuelve la URL completa con `oobCode`. **El ruteo a `/auth/action` lo da el "customize action URL" de la Console (el Admin SDK lo HEREDA)**, no `actionCodeSettings.url` (eso solo setea `continueUrl`). Email inexistente **throwea `auth/internal-error`** (no `user-not-found`).
+- **`generateLink` (Admin SDK):** devuelve la URL completa con `oobCode`. **El ruteo a `/auth/action` lo da el "customize action URL" de la Console (el Admin SDK lo HEREDA)**, no `actionCodeSettings.url` (eso solo setea `continueUrl`). Email inexistente **throwea, pero el código DEPENDE DEL ENTORNO**: prod (Email Enumeration Protection) devuelve `auth/internal-error`; el emulador de Auth, `auth/email-not-found` (confirmado en el smoke 2026-06-22). → el catch **NO ramifica por código** (ver F2.3 + `gotchas/email-resend.md`).
 - **Secrets/guards reusables:** `defineSecret('RESEND_API_KEY')` + `.value()` en handler; `requireVerified`/`assertAllowlisted`/`requireAdmin`; `rateLimit(key, ip, {...})`; `appError`/`sanitizeError`.
 
 ---
@@ -91,6 +91,8 @@ Hoy SecondMind no manda **ningún** email propio: la verificación y el reset de
 ## F2 — Reemplazo de emails de Auth (verify + reset) vía Resend
 
 > Mejora de calidad **post-beta**. **Emitter-swap limpio**: reusa el handler `/auth/action` + `src/lib/authActions.ts` + el custom action URL **intactos** (SPEC-54); solo cambia **quién envía** (client SDK → CF con `generateLink` + Resend) y **el contenido** (HTML propio). Elimina la dependencia de dos sistemas de email y sortea el blocker de templates de Firebase.
+>
+> **Estado: implementado + verificado en prod (smoke 2026-06-22, `fc324b8`).** F2.0–F2.6 verdes end-to-end: lint + tsc + 360 unit + 39 e2e + smoke real (verify/reset con throwaway, SPF/DKIM pass, sin doble-envío, anti-enum confirmado). _Done_ al mergear este cierre de docs.
 
 ### Estado verificado para F2 (research cerrado 2026-06-22 — no re-investigar)
 
@@ -108,7 +110,7 @@ Son **emisores standalone**: a diferencia de `processAccessRequest` (F1), **no**
 2. **Generar el link AL VUELO** dentro del handler, justo antes del send (no anticipado) → maximiza la ventana del `oobCode` (reset ~1h, verify ~3d, single-use).
 3. **Render** del template es-first con el link.
 4. **`sendEmail({ to, subject, html, text, apiKey })`** best-effort en `try/catch` aislado, **SIN `idempotencyKey`** (D3). El wrapper ya garantiza no-throw.
-5. **Resultado uniforme** al cliente. Reset: el error de email-inexistente (`generatePasswordResetLink` throwea `auth/internal-error`) se captura **antes** del send → éxito uniforme (anti-enum server-side).
+5. **Resultado uniforme** al cliente. Reset: el catch trata **cualquier** fallo de `generateLink` como el caso uniforme (`return { ok: true }` incondicional, **sin ramificar por código** — varía por entorno) y loguea **WARN**; el `logger.error('send failed')` queda reservado solo para el fallo de envío de Resend (anti-enum server-side).
 
 ### F2.0 — Extender `sendEmail` con HTML (aditivo)
 
@@ -151,7 +153,7 @@ Son **emisores standalone**: a diferencia de `processAccessRequest` (F1), **no**
 **Criterio de done:**
 
 - [ ] **Sin auth**; `rateLimit('sendResetEmail', request.rawRequest.ip, {...})` por IP; `maxInstances` explícito (~5).
-- [ ] `generatePasswordResetLink(email)` en `try/catch`; email inexistente (`auth/internal-error`) → **capturado, éxito uniforme** (no oráculo de enumeración).
+- [ ] `generatePasswordResetLink(email)` en `try/catch`; **cualquier** fallo (email inexistente — código entorno-dependiente: prod/EEP `auth/internal-error`, emulador `auth/email-not-found` — o cualquier otro) → **WARN + `return { ok: true }` uniforme, SIN ramificar por código** (no oráculo). Fix `fc324b8`.
 - [ ] `sanitizeError` en catch; secret inline (D5).
 
 **Notas (gotcha — endurecimiento futuro, YAGNI ahora):** el rate-limit por IP **no** cubre el bombing dirigido (un atacante con muchas IPs llenando la bandeja de una víctima). Aceptable para la beta (volumen bajo, no somos objetivo masivo). Futuro: rate-limit **por email-target**, **silencioso** (mismo comportamiento observable exista o no el email, para no filtrar enumeración).
