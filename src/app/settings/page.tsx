@@ -5,6 +5,7 @@ import ApiKeysSection from '@/components/settings/ApiKeysSection';
 import AppInfoSection from '@/components/settings/AppInfoSection';
 import DeleteAccountSection from '@/components/settings/DeleteAccountSection';
 import LanguageSelector from '@/components/settings/LanguageSelector';
+import SemanticSearchSection from '@/components/settings/SemanticSearchSection';
 import SidebarVisibilitySelector from '@/components/settings/SidebarVisibilitySelector';
 import ThemeSelector from '@/components/settings/ThemeSelector';
 import TrashAutoPurgeSelector from '@/components/settings/TrashAutoPurgeSelector';
@@ -58,6 +59,25 @@ export default function SettingsPage() {
           </p>
         </div>
         <LanguageSelector />
+      </section>
+
+      <section
+        id="semantic-search"
+        aria-labelledby="semantic-search-heading"
+        className="scroll-mt-14"
+      >
+        <div className="mb-3">
+          <h2 id="semantic-search-heading" className="text-sm font-semibold text-foreground">
+            {t('settings.semanticSearch.title', 'Búsqueda semántica')}
+          </h2>
+          <p className="mt-0.5 text-xs text-muted-foreground">
+            {t(
+              'settings.semanticSearch.description',
+              'Encontrá notas por significado, no solo por palabras clave. Al activarla, el texto de tus notas y búsquedas se procesa con OpenAI; podés desactivarla cuando quieras.',
+            )}
+          </p>
+        </div>
+        <SemanticSearchSection />
       </section>
 
       <section aria-labelledby="sidebar-visibility-heading" className="hidden lg:block">

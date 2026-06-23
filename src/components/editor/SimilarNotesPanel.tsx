@@ -10,7 +10,7 @@ interface SimilarNotesPanelProps {
 
 export default function SimilarNotesPanel({ noteId }: SimilarNotesPanelProps) {
   const { t } = useTranslation();
-  const { notes, isLoading, noEmbedding } = useSimilarNotes(noteId);
+  const { notes, isLoading, noEmbedding, disabled } = useSimilarNotes(noteId);
   const isOnline = useOnlineStatus();
 
   return (
@@ -31,13 +31,24 @@ export default function SimilarNotesPanel({ noteId }: SimilarNotesPanelProps) {
 
       {isOnline && isLoading && <SimilarNotesSkeleton />}
 
-      {isOnline && !isLoading && noEmbedding && (
+      {/* SPEC-66 F4 — sin consentimiento la semántica está inerte: guiar a
+          activarla (banner de búsqueda / Ajustes), no decir "sin similares". */}
+      {isOnline && !isLoading && disabled && (
+        <p className="text-xs text-muted-foreground">
+          {t(
+            'editor.similar.disabled',
+            'Activá la búsqueda semántica en Ajustes para ver notas similares.',
+          )}
+        </p>
+      )}
+
+      {isOnline && !isLoading && !disabled && noEmbedding && (
         <p className="text-xs text-muted-foreground">
           {t('editor.similar.noEmbedding', 'Guarda la nota para ver sugerencias.')}
         </p>
       )}
 
-      {isOnline && !isLoading && !noEmbedding && notes.length === 0 && (
+      {isOnline && !isLoading && !disabled && !noEmbedding && notes.length === 0 && (
         <p className="text-xs text-muted-foreground">
           {t('editor.similar.empty', 'Sin notas similares aún.')}
         </p>

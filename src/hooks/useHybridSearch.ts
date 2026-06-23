@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { notesStore } from '@/stores/notesStore';
 import useAuth from '@/hooks/useAuth';
 import useNoteSearch from '@/hooks/useNoteSearch';
+import useSemanticConsent from '@/hooks/useSemanticConsent';
 import { cosineSimilarity, embedQueryText, getEmbeddingsCache } from '@/lib/embeddings';
 import { rowToOramaDoc, type NoteOramaDoc } from '@/lib/orama';
 
@@ -17,6 +18,10 @@ interface UseHybridSearchReturn {
   semanticResults: SemanticResult[];
   isInitializing: boolean;
   isLoadingSemantic: boolean;
+  // SPEC-66 F3/F4: estado del consentimiento para que la UI muestre el banner de
+  // activación cuando hay query pero la búsqueda semántica está inerte.
+  semanticEnabled: boolean;
+  semanticConsentLoaded: boolean;
 }
 
 const SEMANTIC_DEBOUNCE_MS = 500;
@@ -42,13 +47,19 @@ function getNoteDoc(id: string): NoteOramaDoc | null {
 export default function useHybridSearch(): UseHybridSearchReturn {
   const { user } = useAuth();
   const { query, setQuery, results: keywordResults, isInitializing } = useNoteSearch();
+  const { consent, isLoaded: consentLoaded } = useSemanticConsent();
   const [semanticResults, setSemanticResults] = useState<SemanticResult[]>([]);
   const [isLoadingSemantic, setIsLoadingSemantic] = useState(false);
 
   const timerRef = useRef<number | null>(null);
 
   const trimmed = query.trim();
-  const shouldSearch = !!user && trimmed.length >= MIN_QUERY_LENGTH;
+  const hasQuery = !!user && trimmed.length >= MIN_QUERY_LENGTH;
+  // SPEC-66 F3: la búsqueda semántica corre SOLO con consentimiento confirmado.
+  // Sin él (o mientras carga) degrada a keyword (Orama, independiente) — no se
+  // llama a embedQuery en vano. El server igual es la defensa autoritativa: si
+  // el cliente fallara, embedQuery rechaza con 'semantic-search-disabled'.
+  const semanticActive = hasQuery && consentLoaded && consent.enabled;
 
   useEffect(() => {
     if (timerRef.current !== null) {
@@ -56,7 +67,7 @@ export default function useHybridSearch(): UseHybridSearchReturn {
       timerRef.current = null;
     }
 
-    if (!shouldSearch || !user) return;
+    if (!semanticActive || !user) return;
 
     const userId = user.uid;
     const frozenQuery = trimmed;
@@ -103,14 +114,16 @@ export default function useHybridSearch(): UseHybridSearchReturn {
         timerRef.current = null;
       }
     };
-  }, [trimmed, shouldSearch, user, keywordResults, query]);
+  }, [trimmed, semanticActive, user, keywordResults, query]);
 
   return {
     query,
     setQuery,
     keywordResults,
-    semanticResults: shouldSearch ? semanticResults : EMPTY_SEMANTIC_RESULTS,
+    semanticResults: semanticActive ? semanticResults : EMPTY_SEMANTIC_RESULTS,
     isInitializing,
-    isLoadingSemantic: shouldSearch ? isLoadingSemantic : false,
+    isLoadingSemantic: semanticActive ? isLoadingSemantic : false,
+    semanticEnabled: consent.enabled,
+    semanticConsentLoaded: consentLoaded,
   };
 }

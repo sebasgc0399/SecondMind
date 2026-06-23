@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import i18n from '@/lib/i18n';
 import { notesStore } from '@/stores/notesStore';
 import useAuth from '@/hooks/useAuth';
+import useSemanticConsent from '@/hooks/useSemanticConsent';
 import {
   cosineSimilarity,
   fetchEmbedding,
@@ -19,6 +20,9 @@ interface UseSimilarNotesReturn {
   notes: SimilarNote[];
   isLoading: boolean;
   noEmbedding: boolean;
+  // SPEC-66 F3: la búsqueda semántica está desactivada (sin consentimiento). El
+  // consumidor muestra el prompt de activación en vez de "sin notas similares".
+  disabled: boolean;
 }
 
 const SIMILARITY_THRESHOLD = 0.5;
@@ -26,9 +30,12 @@ const MAX_RESULTS = 5;
 
 export default function useSimilarNotes(noteId: string): UseSimilarNotesReturn {
   const { user } = useAuth();
+  const { consent, isLoaded: consentLoaded } = useSemanticConsent();
   const [notes, setNotes] = useState<SimilarNote[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [noEmbedding, setNoEmbedding] = useState(false);
+
+  const disabled = consentLoaded && !consent.enabled;
 
   useEffect(() => {
     if (!user || !noteId) return;
@@ -37,6 +44,16 @@ export default function useSimilarNotes(noteId: string): UseSimilarNotesReturn {
     const userId = user.uid;
 
     async function compute() {
+      // SPEC-66 F3 — gating de UX (NO es la defensa del invariante; el server es
+      // autoritativo). Sin consentimiento, los embeddings están purgados/ausentes:
+      // no computamos similares y señalamos `disabled` para el prompt de activación.
+      if (consentLoaded && !consent.enabled) {
+        setNotes([]);
+        setNoEmbedding(false);
+        setIsLoading(false);
+        return;
+      }
+
       setIsLoading(true);
       setNoEmbedding(false);
 
@@ -78,7 +95,7 @@ export default function useSimilarNotes(noteId: string): UseSimilarNotesReturn {
     return () => {
       cancelled = true;
     };
-  }, [noteId, user]);
+  }, [noteId, user, consent.enabled, consentLoaded]);
 
-  return { notes, isLoading, noEmbedding };
+  return { notes, isLoading, noEmbedding, disabled };
 }

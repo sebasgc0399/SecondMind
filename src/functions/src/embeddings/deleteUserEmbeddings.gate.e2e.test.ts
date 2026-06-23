@@ -1,0 +1,91 @@
+import { describe, it, expect, beforeAll, beforeEach, vi } from 'vitest';
+import { initializeApp, getApps } from 'firebase-admin/app';
+import { getFirestore } from 'firebase-admin/firestore';
+import { deleteAllUserEmbeddings, handleSemanticConsentChange } from './deleteUserEmbeddings';
+
+// SPEC-66 F7 — bulk-delete de embeddings al desactivar (D4-D-B). Dos cosas:
+//  (1) deleteAllUserEmbeddings purga la colección entera (contra el emulador).
+//  (2) handleSemanticConsentChange dispara la purga SOLO en la transición
+//      enabled true→false (incluido el borrado del doc), nunca al activar / sin
+//      cambio — el spy verifica el guard sin tocar Firestore.
+
+const UID = 'consent-change-uid';
+
+function changeEvent(
+  userId: string,
+  before: Record<string, unknown> | undefined,
+  after: Record<string, unknown> | undefined,
+) {
+  return {
+    params: { userId },
+    data: { before: { data: () => before }, after: { data: () => after } },
+  };
+}
+
+describe('deleteAllUserEmbeddings (SPEC-66 F7)', () => {
+  beforeAll(() => {
+    if (getApps().length === 0) initializeApp({ projectId: 'demo-secondmind' });
+  });
+
+  beforeEach(async () => {
+    const db = getFirestore();
+    await db.recursiveDelete(db.doc(`users/${UID}`));
+  });
+
+  it('purga toda la colección users/{uid}/embeddings y devuelve el conteo', async () => {
+    const db = getFirestore();
+    await db.doc(`users/${UID}/embeddings/n1`).set({ vector: [0.1, 0.2] });
+    await db.doc(`users/${UID}/embeddings/n2`).set({ vector: [0.3, 0.4] });
+    await db.doc(`users/${UID}/embeddings/n3`).set({ vector: [0.5, 0.6] });
+
+    const deleted = await deleteAllUserEmbeddings(UID);
+
+    expect(deleted).toBe(3);
+    const snap = await db.collection(`users/${UID}/embeddings`).get();
+    expect(snap.empty).toBe(true);
+  });
+
+  it('idempotente: sin embeddings → devuelve 0, sin error', async () => {
+    expect(await deleteAllUserEmbeddings(UID)).toBe(0);
+  });
+});
+
+describe('handleSemanticConsentChange — guard de transición (SPEC-66 F7)', () => {
+  it('enabled true→false → purga (deleteEmbeddings invocado con el uid)', async () => {
+    const deleteEmbeddings = vi.fn().mockResolvedValue(0);
+    await handleSemanticConsentChange(
+      changeEvent(UID, { enabled: true, acknowledgedAt: 1 }, { enabled: false, acknowledgedAt: 1 }),
+      { deleteEmbeddings },
+    );
+    expect(deleteEmbeddings).toHaveBeenCalledWith(UID);
+  });
+
+  it('enabled true→(doc borrado) → purga (consentimiento retirado)', async () => {
+    const deleteEmbeddings = vi.fn().mockResolvedValue(0);
+    await handleSemanticConsentChange(
+      changeEvent(UID, { enabled: true, acknowledgedAt: 1 }, undefined),
+      {
+        deleteEmbeddings,
+      },
+    );
+    expect(deleteEmbeddings).toHaveBeenCalledWith(UID);
+  });
+
+  it('activar (ausente→enabled:true) → NO purga', async () => {
+    const deleteEmbeddings = vi.fn().mockResolvedValue(0);
+    await handleSemanticConsentChange(
+      changeEvent(UID, undefined, { enabled: true, acknowledgedAt: 1 }),
+      { deleteEmbeddings },
+    );
+    expect(deleteEmbeddings).not.toHaveBeenCalled();
+  });
+
+  it('sin cambio (enabled:true→true) → NO purga', async () => {
+    const deleteEmbeddings = vi.fn().mockResolvedValue(0);
+    await handleSemanticConsentChange(
+      changeEvent(UID, { enabled: true, acknowledgedAt: 1 }, { enabled: true, acknowledgedAt: 1 }),
+      { deleteEmbeddings },
+    );
+    expect(deleteEmbeddings).not.toHaveBeenCalled();
+  });
+});

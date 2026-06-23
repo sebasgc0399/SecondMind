@@ -82,3 +82,30 @@ export async function embedQueryText(text: string): Promise<number[]> {
   const result = await embedQueryFn({ text });
   return result.data.vector;
 }
+
+interface BackfillResponse {
+  processed: number;
+  skipped: number;
+  done: boolean;
+  cursor: string | null;
+}
+
+const backfillFn = httpsCallable<{ cursor?: string }, BackfillResponse>(
+  functions,
+  'backfillEmbeddings',
+);
+
+// SPEC-66 F6 (cliente): corre el backfill paginado tras habilitar la búsqueda
+// semántica — re-llama la CF con el cursor hasta `done`. Idempotente (la CF
+// saltea lo ya embebido por contentHash). Al terminar invalida la cache para que
+// la búsqueda recargue los vectores recién generados. El guard de 1000 páginas
+// (~20k notas) corta cualquier loop por si la CF nunca devuelve done.
+export async function runBackfillEmbeddings(): Promise<void> {
+  let cursor: string | undefined;
+  for (let i = 0; i < 1000; i++) {
+    const res = await backfillFn(cursor ? { cursor } : {});
+    cursor = res.data.cursor ?? undefined;
+    if (res.data.done) break;
+  }
+  invalidateEmbeddingsCache();
+}
