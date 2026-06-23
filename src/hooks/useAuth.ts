@@ -15,6 +15,7 @@ import { normalizeEmail } from '@/lib/normalizeEmail';
 import { invalidateEmbeddingsCache } from '@/lib/embeddings';
 import { invalidatePreferencesCache } from '@/lib/preferences';
 import { invalidateAiKeysCache } from '@/lib/apiKeys';
+import { invalidateSemanticConsentCache } from '@/lib/semanticConsent';
 import { isCapacitor } from '@/lib/capacitor';
 import { signInWithCapacitor } from '@/lib/capacitorAuth';
 import { isTauri } from '@/lib/tauri';
@@ -160,6 +161,7 @@ export default function useAuth(): UseAuthReturn {
     invalidateEmbeddingsCache();
     invalidatePreferencesCache();
     invalidateAiKeysCache();
+    invalidateSemanticConsentCache();
     // SPEC-51 F3: limpiar el error de login persistente para que no quede stale
     // al volver a /login tras un logout (el store sobrevive entre montajes).
     setLoginError('');
