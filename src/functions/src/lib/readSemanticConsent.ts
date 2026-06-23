@@ -1,4 +1,5 @@
 import * as admin from 'firebase-admin';
+import { appError } from './appError';
 
 // SPEC-66 F2/D2 — lectura server-side autoritativa del consentimiento de
 // búsqueda semántica. Vive en el doc dedicado `users/{uid}/settings/semanticSearch`
@@ -32,4 +33,20 @@ export async function readSemanticConsent(userId: string): Promise<SemanticConse
 // [Cabo legal: la forma del acknowledgedAt es pregunta del abogado, junto a D3/D4.]
 export function isSemanticConsentGranted(consent: SemanticConsentState): boolean {
   return consent.enabled === true && typeof consent.acknowledgedAt === 'number';
+}
+
+// SPEC-66 F3 — gate para callables (embedQuery): re-lee el consentimiento
+// server-side y lanza permission-denied si no hay reconocimiento registrado. Es
+// la defensa AUTORITATIVA del egreso de la query: el gating cliente
+// (useHybridSearch) es solo UX para no llamar en vano; si el cliente fallara,
+// este assert igual rechaza. Slug `semantic-search-disabled` para el cliente.
+export async function assertSemanticConsent(userId: string): Promise<void> {
+  const consent = await readSemanticConsent(userId);
+  if (!isSemanticConsentGranted(consent)) {
+    throw appError(
+      'semantic-search-disabled',
+      'permission-denied',
+      'La búsqueda semántica no está habilitada',
+    );
+  }
 }

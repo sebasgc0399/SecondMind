@@ -4,6 +4,7 @@ import { logger } from 'firebase-functions';
 import OpenAI from 'openai';
 import { requireVerified } from '../lib/requireVerified';
 import { assertAllowlisted } from '../lib/assertAllowlisted';
+import { assertSemanticConsent } from '../lib/readSemanticConsent';
 import { enforceRateLimit } from '../lib/rateLimit';
 import { sanitizeError } from '../lib/sanitizeError';
 import { appError } from '../lib/appError';
@@ -42,6 +43,11 @@ export const embedQuery = onCall<EmbedQueryRequest, Promise<EmbedQueryResponse>>
     // no puede gastar la OpenAI compartida por endpoint directo. Va ANTES del try de
     // OpenAI (no dentro, o el HttpsError 'permission-denied' se degradaría a 'internal').
     await assertAllowlisted(request.auth?.token.email);
+    // SPEC-66 F3 — gate de consentimiento AUTORITATIVO: la query no se embebe
+    // sin reconocimiento afirmativo registrado. Va antes de la validación de
+    // input y del rate-limit (un usuario sin consentimiento ni consume cuota).
+    // Lanza 'semantic-search-disabled' → el cliente degrada a keyword.
+    await assertSemanticConsent(userId);
 
     const rawText = request.data?.text;
 
