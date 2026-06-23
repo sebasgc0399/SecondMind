@@ -19,14 +19,15 @@ export async function createNoteEmbedding(
   userId: string,
   noteId: string,
   contentPlain: string,
-): Promise<void> {
+): Promise<'created' | 'skipped'> {
   const contentHash = crypto.createHash('sha256').update(contentPlain).digest('hex');
   const embeddingRef = admin.firestore().doc(`users/${userId}/embeddings/${noteId}`);
   const existingDoc = await embeddingRef.get();
 
   // Idempotente: si el contenido no cambió, no se re-genera (ni se re-paga OpenAI).
+  // El backfill (F6) usa este retorno para contar; el trigger lo ignora.
   if (existingDoc.exists && existingDoc.data()?.contentHash === contentHash) {
-    return;
+    return 'skipped';
   }
 
   const client = new OpenAI({ apiKey: openaiApiKey.value() });
@@ -42,6 +43,8 @@ export async function createNoteEmbedding(
   });
 
   logger.info('generateEmbedding: ok', { userId, noteId, dimensions: vector.length });
+
+  return 'created';
 }
 
 // Dependencias inyectables para test: el gate (readConsent) y el creador de
@@ -50,7 +53,7 @@ export async function createNoteEmbedding(
 // por eso la DI por argumento — el handler corre en el proceso del test).
 export interface GenerateEmbeddingDeps {
   readConsent: typeof readSemanticConsent;
-  embed: (userId: string, noteId: string, contentPlain: string) => Promise<void>;
+  embed: typeof createNoteEmbedding;
 }
 
 const defaultDeps: GenerateEmbeddingDeps = {

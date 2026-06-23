@@ -7,6 +7,8 @@ export { autoTagNote } from './notes/autoTagNote';
 export { onNoteDeleted } from './notes/onNoteDeleted';
 export { autoPurgeTrash } from './notes/autoPurgeTrash';
 export { generateEmbedding } from './embeddings/generateEmbedding';
+export { onSemanticConsentChanged } from './embeddings/deleteUserEmbeddings';
+export { backfillEmbeddings } from './embeddings/backfillEmbeddings';
 export { embedQuery } from './search/embedQuery';
 export { saveApiKey } from './settings/saveApiKey';
 export { deleteApiKey } from './settings/deleteApiKey';
