@@ -13,7 +13,8 @@ Sistema de productividad y conocimiento personal construido desde código. Combi
 - **Graph:** Reagraph 4.x (MVP) — Sigma.js + Graphology en roadmap v2
 - **Backend:** Firebase (Firestore + Cloud Functions v2 + Auth)
 - **AI:** Claude Haiku para generación (inbox processing + auto-tagging) con la **API key del usuario (BYOK)** — sin key, la IA de generación queda deshabilitada; embeddings con OpenAI `text-embedding-3-small` (key del proyecto)
-- **Deploy:** Firebase Hosting
+- **Landing:** sitio estático aparte en `landing/` (Astro 6, `output: 'static'`, zero-JS, sin adapter ni integraciones) — apex público `https://getsecondmind.co` (SPEC-feature-63). Tiene su **propio `package.json`/lockfile** y se despliega a `hosting:landing`, independiente del bundle de la app. No confundir con la app (que **no** es Astro): es React 19 + Vite 8 servido en `app.getsecondmind.co`
+- **Deploy:** Firebase Hosting — dos targets: `hosting:app` (la SPA) y `hosting:landing` (el sitio Astro)
 
 ## Comandos
 
@@ -24,7 +25,9 @@ npm run lint         # ESLint (eslint .)
 npm test             # Vitest (unit tests — repos, tinybase, etc.)
 npm run test:rules   # Vitest sobre security rules (emulador Firestore, requiere JDK)
 npm run preview      # Preview del build local
-npm run deploy       # Deploy a Firebase Hosting
+npm run deploy       # Build + deploy de la SPA a Firebase Hosting (target hosting:app)
+npm run build:landing     # Build de la landing Astro (npm --prefix landing run build)
+npm run deploy:landing    # Build + deploy de la landing (target hosting:landing)
 npm run deploy:rules      # Deploy solo Firestore security rules
 npm run deploy:functions  # Deploy solo Cloud Functions
 npm run logs:functions    # Logs de Cloud Functions
