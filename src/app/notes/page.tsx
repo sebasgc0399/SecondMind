@@ -9,6 +9,7 @@ import useTrashNotes from '@/hooks/useTrashNotes';
 import useReviewQueue from '@/hooks/useReviewQueue';
 import usePreferences from '@/hooks/usePreferences';
 import NoteCard from '@/components/editor/NoteCard';
+import SemanticSearchPrompt from '@/components/search/SemanticSearchPrompt';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import type { NoteOramaDoc } from '@/lib/orama';
 import type { TrashNote } from '@/types/note';
@@ -300,6 +301,9 @@ export default function NotesListPage() {
           ))}
         </ul>
       )}
+
+      {/* SPEC-66 F4 — banner de activación cuando la semántica está inerte. */}
+      <SemanticSearchPrompt hasQuery={!isTrashView && !isReviewView && hasQuery} />
 
       {!isTrashView && !isReviewView && hasQuery && (
         <SemanticSection
