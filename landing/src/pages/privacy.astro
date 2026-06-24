@@ -7,7 +7,7 @@ import { SUPPORT_EMAIL } from '../config';
 // ⚠️ DRAFT pendiente de revisión legal — NO hacer deploy hasta GO.
 // Fecha de vigencia: editar acá. Se muestra bajo el título y debe actualizarse
 // con cada cambio relevante (ver sección 12).
-const LAST_UPDATED = '20 de junio de 2026';
+const LAST_UPDATED = '24 de junio de 2026';
 ---
 
 <!-- DRAFT pendiente de revisión legal — NO hacer deploy hasta GO -->
@@ -137,10 +137,13 @@ const LAST_UPDATED = '20 de junio de 2026';
     <h3>3.2 OpenAI (búsqueda semántica)</h3>
     <p>
       Para la búsqueda semántica, el texto plano de tus notas se envía a OpenAI para generar los
-      embeddings. Esto ocurre automáticamente cada vez que creás o editás una nota, y también cuando
-      hacés una búsqueda (se envía el texto de tu consulta). Según las condiciones de la API de
-      OpenAI, los datos enviados por API no se usan para entrenar sus modelos y se eliminan
-      típicamente dentro de los 30 días, salvo que la ley exija retenerlos más tiempo.
+      embeddings. Esta función es opcional: la primera vez que la usás, te mostramos un aviso y solo se
+      activa cuando lo aceptás de forma expresa. Mientras esté activa, el texto de tus notas y el de
+      tus búsquedas se envía a OpenAI; podés desactivarla cuando quieras desde Ajustes, y en ese caso
+      tu texto deja de enviarse y la búsqueda funciona de forma local en tu dispositivo. No estás
+      obligado a usar la búsqueda semántica. Según las condiciones de la API de OpenAI, los datos
+      enviados por API no se usan para entrenar sus modelos y se eliminan típicamente dentro de los 30
+      días, salvo que la ley exija retenerlos más tiempo.
     </p>
 
     <h3>3.3 Anthropic (clasificación y etiquetado, opcional)</h3>
@@ -202,18 +205,29 @@ const LAST_UPDATED = '20 de junio de 2026';
       Conservamos tu contenido mientras tu cuenta esté activa. Cuando borrás una nota, va a la
       papelera y se elimina definitivamente tras el plazo que elijas en ajustes (Nunca, 7, 15 o 30
       días; por defecto 30). Al eliminarse definitivamente, también se borran sus embeddings y
-      conexiones. Los proveedores de IA conservan los datos enviados por API por su cuenta,
-      típicamente hasta 30 días.
+      conexiones.
+    </p>
+    <p>
+      Cuando borrás contenido o tu cuenta, lo eliminamos de inmediato de nuestros sistemas en uso. A
+      partir de ese momento, las copias de seguridad internas de la infraestructura de nuestro
+      proveedor (Google Cloud / Firebase) pueden conservarlo de forma temporal e inerte, y se purgan
+      definitivamente en un plazo máximo de seis meses (180 días) desde el borrado. Durante ese
+      período, esas copias no se usan para ningún fin distinto de la recuperación ante desastres.
+    </p>
+    <p>
+      Los proveedores de IA conservan los datos enviados por API por su cuenta, típicamente hasta 30
+      días.
     </p>
 
     <h2>8. Tus derechos</h2>
     <p>
       Tenés derecho a acceder a tus datos, corregirlos, borrarlos, obtener una copia (portabilidad) y
-      oponerte a ciertos tratamientos. Si residís en California, no vendemos ni compartimos tus datos
-      con fines publicitarios y podés ejercer tus derechos bajo la CCPA/CPRA. El <strong>borrado</strong>
-      lo ejercés vos mismo y al instante desde la app (ver §9). Para los demás derechos, escribinos a
-      <a href={`mailto:${SUPPORT_EMAIL}`}>{SUPPORT_EMAIL}</a>; respondemos y procesamos tu solicitud lo
-      antes posible y a más tardar en 30 días.
+      oponerte a ciertos tratamientos. Podés exportar una copia de tu contenido vos mismo desde la app
+      (Ajustes → Exportar). El <strong>borrado</strong> también lo ejercés vos mismo y al instante
+      desde la app (ver §9). Si residís en California, no vendemos ni compartimos tus datos con fines
+      publicitarios y podés ejercer tus derechos bajo la CCPA/CPRA. Para los demás derechos, escribinos
+      a <a href={`mailto:${SUPPORT_EMAIL}`}>{SUPPORT_EMAIL}</a>; respondemos y procesamos tu solicitud
+      lo antes posible y a más tardar en 30 días.
     </p>
 
     <h2>9. Borrado de tu cuenta</h2>
@@ -230,8 +244,8 @@ const LAST_UPDATED = '20 de junio de 2026';
 
     <h2>10. Menores</h2>
     <p>
-      SecondMind no está dirigido a menores de 16 años. No recogemos a sabiendas datos de menores de
-      16 años.
+      SecondMind no está dirigido a menores de 18 años. No recogemos a sabiendas datos de menores de
+      18 años.
     </p>
 
     <h2>11. La extensión de navegador</h2>
