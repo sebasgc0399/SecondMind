@@ -160,7 +160,7 @@ Se evaluó y **se descartó para v1**. Habría ganado **solo si** el producto ex
 - [x] **Análisis de wikilinks** (el punto clave): representación actual + riesgo identidad-vs-presentación + mitigación.
 - [x] **Las 6 decisiones CERRADAS** — D1, D2, D3, **D4 (client-side, web-primary, rebote nativo)**, D5, D6 (GO Claude web + Sebastián).
 - [x] **Gaps que gateaban D4 verificados** (payload 32 MB · Storage moderado+IAM · shapes desde código · cross-plataforma) con fuentes.
-- [ ] **Plan refinado (SDD step 2)** — Explore/Plan agents, foco en dimensionar el serializador TipTap→Markdown.
+- [x] **Plan refinado (SDD step 2)** — `~/.claude/plans/export-de-contenido.md` (Explore/Plan agents; serializador dimensionado = `@tiptap/static-renderer/pm/markdown`, F1-F7).
 - [ ] **GO/NO-GO del plan en Claude web** antes de codear.
 - [ ] (Opcional) Confirmación empírica de `tagId`/`areaId` + links `ai-suggested` vía Firebase MCP cuando esté disponible.
 - [ ] Implementación (rama `feat/export-de-contenido`).
