@@ -566,6 +566,13 @@ export default interface Resources {
           onHold: 'En pausa';
         };
       };
+      taskStatus: {
+        completed: 'Completada';
+        delegated: 'Delegada';
+        inProgress: 'En progreso';
+        inbox: 'Sin clasificar';
+        waiting: 'En espera';
+      };
     };
     errors: {
       accessCheckUnavailable: 'No pudimos verificar tu acceso. Reintentá en un momento.';
@@ -587,6 +594,7 @@ export default interface Resources {
       networkError: 'Sin conexión. Verificá tu internet.';
       operationFailed: 'No se pudo completar la operación. Probá de nuevo.';
       rateLimited: 'Demasiados intentos. Probá de nuevo más tarde.';
+      reauthRequired: 'Por seguridad, reingresá para confirmar el borrado de tu cuenta.';
       requestNotFound: 'Solicitud no encontrada.';
       resetGeneric: 'Si la cuenta existe, recibirás un enlace en tu email.';
       saveKeyInvalid: 'La API key es inválida.';
@@ -598,6 +606,54 @@ export default interface Resources {
       unauthenticated: 'Tenés que iniciar sesión.';
       weakPassword: 'Mínimo 8 caracteres con al menos un número.';
       weakPasswordShort: 'Mínimo 8 caracteres.';
+    };
+    export: {
+      common: {
+        archived: 'archivada';
+        empty: '(sin elementos)';
+        emptyContent: '(vacío)';
+        untitled: 'Sin nombre';
+      };
+      field: {
+        deadline: 'límite';
+        due: 'vence';
+      };
+      habits: {
+        none: 'ninguno';
+      };
+      note: {
+        fmArchived: 'archivada';
+        fmCategory: 'categoría';
+        fmCreated: 'creada';
+        fmSource: 'fuente';
+        fmType: 'tipo';
+        summary: 'Resumen';
+        untitled: 'Sin título';
+      };
+      readme: {
+        catAreas: 'Áreas';
+        catHabits: 'Hábitos';
+        catNoteTypes: 'Tipos de nota';
+        catObjectiveStatus: 'Estados de objetivo';
+        catParaTypes: 'Categorías';
+        catPriorities: 'Prioridades';
+        catProjectStatus: 'Estados de proyecto';
+        catTaskStatus: 'Estados de tarea';
+        catalogsIntro: 'El significado de las claves internas usadas arriba:';
+        catalogsTitle: 'Catálogos de etiquetas';
+        filesEntities: 'el resto de tu contenido';
+        filesNotes: 'una nota por archivo `.md`';
+        filesTitle: 'Qué hay en este archivo';
+        intro: 'Esta es una copia de tu Contenido en Markdown. Las notas usan wikilinks `[[...]]` entre sí; importá la carpeta en Obsidian, Logseq u otro editor compatible.';
+        title: 'Exportación de SecondMind';
+      };
+      section: {
+        habits: 'Hábitos';
+        inbox: 'Bandeja de entrada';
+        objectives: 'Objetivos';
+        projects: 'Proyectos';
+        tasks: 'Tareas';
+      };
     };
     graph: {
       createNotes: 'Crear notas →';
@@ -997,6 +1053,19 @@ export default interface Resources {
       appearance: {
         description: 'Elegí el modo de color. Automático sigue la preferencia del sistema.';
         title: 'Apariencia';
+      };
+      deleteAccount: {
+        button: 'Borrar mi cuenta';
+        cancel: 'Cancelar';
+        confirm: 'Borrar definitivamente';
+        confirmEmailLabel: 'Escribí {{email}} para confirmar';
+        description: 'Borrar tu cuenta elimina de forma permanente e irreversible todas tus notas, tareas, proyectos y datos. No se puede deshacer.';
+        modalBody: 'Esto elimina TODOS tus datos de forma permanente. No se puede deshacer.';
+        modalTitle: '¿Borrar tu cuenta?';
+        nativeHint: 'Se abrirá tu navegador para completar el borrado de forma segura.';
+        passwordLabel: 'Tu contraseña';
+        title: 'Zona de peligro';
+        working: 'Borrando…';
       };
       language: {
         description: 'Elegí el idioma de la interfaz. Los textos generados por la IA siguen esta preferencia.';
