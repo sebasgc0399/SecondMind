@@ -18,11 +18,17 @@ export function triggerZipDownload(bytes: Uint8Array, filename: string): void {
   const anchor = document.createElement('a');
   anchor.href = url;
   anchor.download = filename;
+  anchor.rel = 'noopener';
+  anchor.style.display = 'none';
   document.body.appendChild(anchor);
   anchor.click();
-  anchor.remove();
-  // Revocar tras un tick: revocar sincrónicamente cancelaría la descarga.
-  setTimeout(() => URL.revokeObjectURL(url), 1000);
+  // Cleanup DIFERIDO (no sincrónico): Chrome lee el atributo `download` un tick
+  // después del click. Remover el anchor o revocar el object URL antes hace que
+  // la descarga pierda el nombre y caiga al UUID del blob (sin extensión .zip).
+  setTimeout(() => {
+    anchor.remove();
+    URL.revokeObjectURL(url);
+  }, 1000);
 }
 
 // Rebote nativo: import dinámico (la dep solo carga en la rama nativa, no entra al
