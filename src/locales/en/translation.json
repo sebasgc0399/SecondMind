@@ -1048,6 +1048,15 @@
         "label": "Never"
       },
       "title": "Notes trash"
+    },
+    "export": {
+      "button": "Export",
+      "description": "Download a copy of all your content (notes, tasks, projects, objectives, habits and inbox) as a Markdown ZIP, ready to open in Obsidian, Logseq or another editor.",
+      "done": "Done. Check your downloads.",
+      "error": "The export couldn't be generated. Try again.",
+      "nativeHint": "Your browser will open to download the file.",
+      "title": "Export my data",
+      "working": "Generating…"
     }
   },
   "sync": {

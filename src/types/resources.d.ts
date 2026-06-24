@@ -1067,6 +1067,15 @@ export default interface Resources {
         title: 'Zona de peligro';
         working: 'Borrando…';
       };
+      export: {
+        button: 'Exportar';
+        description: 'Descargá una copia de todo tu contenido (notas, tareas, proyectos, objetivos, hábitos e inbox) en un ZIP de Markdown, listo para abrir en Obsidian, Logseq u otro editor.';
+        done: 'Listo. Revisá tus descargas.';
+        error: 'No se pudo generar la exportación. Intentá de nuevo.';
+        nativeHint: 'Se abrirá tu navegador para descargar el archivo.';
+        title: 'Exportar mis datos';
+        working: 'Generando…';
+      };
       language: {
         description: 'Elegí el idioma de la interfaz. Los textos generados por la IA siguen esta preferencia.';
         en: {
