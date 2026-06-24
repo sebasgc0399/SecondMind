@@ -563,6 +563,13 @@
         "notStarted": "No empezado",
         "onHold": "En pausa"
       }
+    },
+    "taskStatus": {
+      "completed": "Completada",
+      "delegated": "Delegada",
+      "inbox": "Sin clasificar",
+      "inProgress": "En progreso",
+      "waiting": "En espera"
     }
   },
   "errors": {
@@ -1064,6 +1071,15 @@
         "label": "Nunca"
       },
       "title": "Papelera de notas"
+    },
+    "export": {
+      "button": "Exportar",
+      "description": "Descargá una copia de todo tu contenido (notas, tareas, proyectos, objetivos, hábitos e inbox) en un ZIP de Markdown, listo para abrir en Obsidian, Logseq u otro editor.",
+      "done": "Listo. Revisá tus descargas.",
+      "error": "No se pudo generar la exportación. Intentá de nuevo.",
+      "nativeHint": "Se abrirá tu navegador para descargar el archivo.",
+      "title": "Exportar mis datos",
+      "working": "Generando…"
     }
   },
   "sync": {
@@ -1134,5 +1150,53 @@
     "unsynced_other": "{{count}} cambios sin sincronizar.",
     "updateNow": "Actualizar ahora",
     "updating": "Actualizando…"
+  },
+  "export": {
+    "common": {
+      "archived": "archivada",
+      "empty": "(sin elementos)",
+      "emptyContent": "(vacío)",
+      "untitled": "Sin nombre"
+    },
+    "field": {
+      "deadline": "límite",
+      "due": "vence"
+    },
+    "habits": {
+      "none": "ninguno"
+    },
+    "note": {
+      "fmArchived": "archivada",
+      "fmCategory": "categoría",
+      "fmCreated": "creada",
+      "fmSource": "fuente",
+      "fmType": "tipo",
+      "summary": "Resumen",
+      "untitled": "Sin título"
+    },
+    "readme": {
+      "catalogsIntro": "El significado de las claves internas usadas arriba:",
+      "catalogsTitle": "Catálogos de etiquetas",
+      "catAreas": "Áreas",
+      "catHabits": "Hábitos",
+      "catNoteTypes": "Tipos de nota",
+      "catObjectiveStatus": "Estados de objetivo",
+      "catParaTypes": "Categorías",
+      "catPriorities": "Prioridades",
+      "catProjectStatus": "Estados de proyecto",
+      "catTaskStatus": "Estados de tarea",
+      "filesEntities": "el resto de tu contenido",
+      "filesNotes": "una nota por archivo `.md`",
+      "filesTitle": "Qué hay en este archivo",
+      "intro": "Esta es una copia de tu Contenido en Markdown. Las notas usan wikilinks `[[...]]` entre sí; importá la carpeta en Obsidian, Logseq u otro editor compatible.",
+      "title": "Exportación de SecondMind"
+    },
+    "section": {
+      "habits": "Hábitos",
+      "inbox": "Bandeja de entrada",
+      "objectives": "Objetivos",
+      "projects": "Proyectos",
+      "tasks": "Tareas"
+    }
   }
 }

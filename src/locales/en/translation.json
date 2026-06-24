@@ -558,6 +558,13 @@
         "notStarted": "Not started",
         "onHold": "On hold"
       }
+    },
+    "taskStatus": {
+      "completed": "Completed",
+      "delegated": "Delegated",
+      "inbox": "Unsorted",
+      "inProgress": "In progress",
+      "waiting": "Waiting"
     }
   },
   "errors": {
@@ -1041,6 +1048,15 @@
         "label": "Never"
       },
       "title": "Notes trash"
+    },
+    "export": {
+      "button": "Export",
+      "description": "Download a copy of all your content (notes, tasks, projects, objectives, habits and inbox) as a Markdown ZIP, ready to open in Obsidian, Logseq or another editor.",
+      "done": "Done. Check your downloads.",
+      "error": "The export couldn't be generated. Try again.",
+      "nativeHint": "Your browser will open to download the file.",
+      "title": "Export my data",
+      "working": "Generating…"
     }
   },
   "sync": {
@@ -1107,5 +1123,53 @@
     "unsynced_other": "{{count}} unsynced changes.",
     "updateNow": "Update now",
     "updating": "Updating…"
+  },
+  "export": {
+    "common": {
+      "archived": "archived",
+      "empty": "(no items)",
+      "emptyContent": "(empty)",
+      "untitled": "Untitled"
+    },
+    "field": {
+      "deadline": "deadline",
+      "due": "due"
+    },
+    "habits": {
+      "none": "none"
+    },
+    "note": {
+      "fmArchived": "archived",
+      "fmCategory": "category",
+      "fmCreated": "created",
+      "fmSource": "source",
+      "fmType": "type",
+      "summary": "Summary",
+      "untitled": "Untitled"
+    },
+    "readme": {
+      "catalogsIntro": "The meaning of the internal keys used above:",
+      "catalogsTitle": "Label catalogs",
+      "catAreas": "Areas",
+      "catHabits": "Habits",
+      "catNoteTypes": "Note types",
+      "catObjectiveStatus": "Objective statuses",
+      "catParaTypes": "Categories",
+      "catPriorities": "Priorities",
+      "catProjectStatus": "Project statuses",
+      "catTaskStatus": "Task statuses",
+      "filesEntities": "the rest of your content",
+      "filesNotes": "one note per `.md` file",
+      "filesTitle": "What's in this file",
+      "intro": "This is a copy of your Content in Markdown. Notes use `[[...]]` wikilinks between each other; import the folder into Obsidian, Logseq or another compatible editor.",
+      "title": "SecondMind export"
+    },
+    "section": {
+      "habits": "Habits",
+      "inbox": "Inbox",
+      "objectives": "Objectives",
+      "projects": "Projects",
+      "tasks": "Tasks"
+    }
   }
 }

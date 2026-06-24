@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import ApiKeysSection from '@/components/settings/ApiKeysSection';
 import AppInfoSection from '@/components/settings/AppInfoSection';
 import DeleteAccountSection from '@/components/settings/DeleteAccountSection';
+import ExportSection from '@/components/settings/ExportSection';
 import LanguageSelector from '@/components/settings/LanguageSelector';
 import SemanticSearchSection from '@/components/settings/SemanticSearchSection';
 import SidebarVisibilitySelector from '@/components/settings/SidebarVisibilitySelector';
@@ -126,6 +127,8 @@ export default function SettingsPage() {
       </section>
 
       <AppInfoSection />
+
+      <ExportSection />
 
       <DeleteAccountSection />
     </div>

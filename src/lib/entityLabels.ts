@@ -1,6 +1,13 @@
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import type { Priority, ObjectiveStatus, ProjectStatus, NoteType, ParaType } from '@/types/common';
+import type {
+  Priority,
+  ObjectiveStatus,
+  ProjectStatus,
+  TaskStatus,
+  NoteType,
+  ParaType,
+} from '@/types/common';
 import type { InboxResultType } from '@/types/inbox';
 import type { AreaKey } from '@/types/area';
 import type { HabitKey } from '@/types/habit';
@@ -93,6 +100,22 @@ export function buildProjectStatusLabels(t: TFunction): Record<ProjectStatus, st
 export function useProjectStatusLabels(): Record<ProjectStatus, string> {
   const { t } = useTranslation();
   return useMemo(() => buildProjectStatusLabels(t), [t]);
+}
+
+// --- TaskStatus (agregado para el export F67; antes no existía un labeler) ---
+export function buildTaskStatusLabels(t: TFunction): Record<TaskStatus, string> {
+  return {
+    inbox: t('entities.taskStatus.inbox', 'Sin clasificar'),
+    'in-progress': t('entities.taskStatus.inProgress', 'En progreso'),
+    waiting: t('entities.taskStatus.waiting', 'En espera'),
+    delegated: t('entities.taskStatus.delegated', 'Delegada'),
+    completed: t('entities.taskStatus.completed', 'Completada'),
+  };
+}
+
+export function useTaskStatusLabels(): Record<TaskStatus, string> {
+  const { t } = useTranslation();
+  return useMemo(() => buildTaskStatusLabels(t), [t]);
 }
 
 // --- InboxResultType (sugerencia AI: nota/tarea/proyecto/descartar) ---
