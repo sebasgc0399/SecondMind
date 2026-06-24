@@ -1,6 +1,6 @@
 # SPEC — Feature 67: Export de contenido del usuario
 
-> **Estado:** **GO COMPLETO** (Claude web + Sebastián). **Las 6 decisiones CERRADAS** — D1, D2, D3, D4, D5, D6 (abajo). **D4 = CLIENT-SIDE** (web-primary con rebote nativo). **En Plan mode (SDD step 2)** — el plan refinado vuelve a **Claude web para GO/NO-GO antes de codear** (mismo flujo que SPEC-66). **NO implementado.**
+> **Estado:** **IMPLEMENTADO y MERGEADO a `main`** (`a326225`, F1-F7) — **client-side, cero backend**. Las 6 decisiones D1-D6 cerradas (abajo); D4 = CLIENT-SIDE (web-primary con rebote nativo). **NO DEPLOYADO:** el deploy a hosting va en el **release coordinado con SPEC-66 + la publicación del ToS** (OK legal pendiente) — deployar el export antes desincroniza «lo que la app hace» de «lo que el ToS dice», mismo patrón que SPEC-66. **SPEC viva (no archivada)** por los cabos vivos → ver "Implementación y cierre" abajo.
 >
 > **Por qué existe:** prerrequisito de **publicación del ToS**. El ToS (en revisión legal) afirma en **§14** que «el Servicio le permite exportar su Contenido en un formato de uso común». Hoy **eso NO existe**. Conecta también con el **derecho de portabilidad de la Ley 1581** (Colombia). Es el segundo prerrequisito del ToS que falta implementar (el toggle de búsqueda semántica de SPEC-66 ya está mergeado).
 >
@@ -152,6 +152,26 @@ Se evaluó y **se descartó para v1**. Habría ganado **solo si** el producto ex
 
 ---
 
+## Implementación y cierre
+
+**Implementado F1-F7 y mergeado a `main`** (`a326225`, merge `--no-ff` de `feat/export-de-contenido`). Commits: F1+F2 `e8d2197` (serializador + wikilink resolver) · F3 `2aeb372` (lectura + D6) · F4 `e7bc5ed` (entidades + catálogos + i18n) · F5 `fc28884` (zip jszip lazy) · F6 `7d3bb47` (entrega + hook) · F7 `ea9a162` (UI) · fix `44d4336` (filename de descarga).
+
+**Módulos** (`src/lib/export/`): `serializeNote` (`@tiptap/static-renderer/pm/markdown` headless + `nodeMapping` custom: wikilink/codeBlock/taskList/tableCell) · `wikilinkResolver` (D3 fresh-resolve) · `filenames` (basenames únicos) · `shapeExportData` (filtros D6 **puros**, testeables) · `collectExportData` (I/O `getDocs`+`getTable`) · `exportLabels`/`exportMarkdown`/`serializeNoteFile`/`serializeEntities` (Markdown + catálogos) · `buildExportZip` (jszip lazy) · `deliverExport` (download web + rebote nativo). + hook `useExport` + `ExportSection` en Ajustes + `buildTaskStatusLabels` en `entityLabels`.
+
+**Validación:** 422 tests (unit + corpus E2E `raw → shapeExportData → buildExportZip`) + **smoke web real** contra la cuenta de Sebastián (23 notas reales, Markdown limpio, frontmatter con labels localizados, wikilinks `[[Título]]` fresh, code fences con lenguaje, summaryL3 blockquote, D6 consistente — papelera vacía / cero fuga, archivados dentro). 3 gotchas escalados (descarga / i18n dinámico / QA Playwright-CDP).
+
+**Bug cazado en la validación web:** la descarga bajaba con el **UUID del blob sin `.zip`** (anchor removido sincrónico tras `.click()`; Chrome lee `download` un tick después → cae al nombre del blob). Fix: cleanup **diferido** (`44d4336`). Playwright lo había enmascarado (captura el `suggestedFilename` vía CDP). Canonizado en `gotchas/ui-componentes.md` + `gotchas/tooling-local.md`.
+
+### Cabos VIVOS (por esto la SPEC no se archiva)
+
+1. **⚖ Deploy diferido** — el export **NO está deployado** a hosting. Va en el **release coordinado con SPEC-66 (toggle semántico) + la publicación del ToS**, con el OK legal. Deployarlo solo desincroniza app ↔ ToS.
+2. **⚖ Cabo legal D6** — si el abogado exige incluir la papelera por Ley 1581, es quitar el filtro `deletedAt>0` en `shapeExportData` (cambio chico).
+3. **Smoke device del rebote Android** — para el release (Custom Tab → `#export` → descarga en el navegador del sistema). No automatizable; no bloquea el merge.
+4. **Confirmación empírica `tagId`/`areaId`** — vía Firebase MCP cuando reconecte (el smoke web ya mostró labels legibles en el `LEEME.md` real; confianza estructural alta).
+5. **Tauri diferido** — botón oculto (`return null`); se suma ampliando el allowlist `shell:allow-open` + rebuild en una versión futura si hay demanda.
+
+---
+
 ## Checklist (estado)
 
 - [x] Objetivo acotado al §14 articulado.
@@ -161,6 +181,9 @@ Se evaluó y **se descartó para v1**. Habría ganado **solo si** el producto ex
 - [x] **Las 6 decisiones CERRADAS** — D1, D2, D3, **D4 (client-side, web-primary, rebote nativo)**, D5, D6 (GO Claude web + Sebastián).
 - [x] **Gaps que gateaban D4 verificados** (payload 32 MB · Storage moderado+IAM · shapes desde código · cross-plataforma) con fuentes.
 - [x] **Plan refinado (SDD step 2)** — `~/.claude/plans/export-de-contenido.md` (Explore/Plan agents; serializador dimensionado = `@tiptap/static-renderer/pm/markdown`, F1-F7).
-- [ ] **GO/NO-GO del plan en Claude web** antes de codear.
-- [ ] (Opcional) Confirmación empírica de `tagId`/`areaId` + links `ai-suggested` vía Firebase MCP cuando esté disponible.
-- [ ] Implementación (rama `feat/export-de-contenido`).
+- [x] **GO/NO-GO del plan en Claude web** + GO de implementación (Sebastián).
+- [x] **Implementación F1-F7 + merge `--no-ff` a `main`** (`a326225`) + **validación web real** (smoke contra la cuenta de Sebastián) + fix del filename de descarga.
+- [x] **SDD step 8** — 3 gotchas escalados + ESTADO-ACTUAL actualizado + SPEC como registro de implementación (no archivada por cabos vivos).
+- [ ] **Deploy a hosting** — diferido al **release coordinado** (SPEC-66 + publicación del ToS, OK legal pendiente).
+- [ ] (Cabo) Smoke device del rebote Android — para el release.
+- [ ] (Cabo) Confirmación empírica de `tagId`/`areaId` + links `ai-suggested` vía Firebase MCP cuando reconecte.

@@ -124,6 +124,8 @@ Cada feature comprimida a 1 línea con pointer al SPEC archivado. Para detalles 
 
 - **Feature 63 — Landing + infra del apex (`getsecondmind.co`):** landing de marketing **Astro estática** (dark Linear/Raycast, zero-JS, voseo, OG branded 1200×630) en el apex, **separada de la app** (cierra la **Fase B** de la migración de dominio). Migró Firebase Hosting de single-site a **multi-target** (`firebase.json` array, targets `app`/`landing`, site nuevo `secondmind-landing`) **sin tocar la app** — validado con un **preview channel** del target `app` (gate **funcional**, no byte-hash; prod intacta; `--no-authorized-domains`). Geist self-hosted, tokens oklch portados, `/privacy` placeholder, CTA → `app.getsecondmind.co/solicitar-acceso`. F2 (DNS apex+`www`, parking removido, correo intacto) = handoff Cloudflare + Console. 1 gotcha escalado: `hosting-dominio.md` (borrar el parking es prerequisito del SSL). → [SPEC](features/SPEC-feature-63-landing-apex-infra.md).
 
+- **Feature 67 — Export de contenido del usuario (client-side):** export del Contenido a un **ZIP de Markdown** (`secondmind-export-YYYY-MM-DD.zip`: un `.md` por nota en `notas/` + `tareas`/`proyectos`/`objetivos`/`habitos`/`inbox.md` + `LEEME.md` con catálogos key→label) — hace verdad al **§14 del ToS** (portabilidad, Ley 1581). **100% client-side, cero backend** (sin functions/rules/Storage): serializador TipTap→Markdown con `@tiptap/static-renderer` headless (overrides GFM puntuales — taskList, codeBlock-null, escape de pipes; distill L1/L2 del default) + wikilinks D3 **fresh-resolved** por noteId (dangling→texto marcado); filtros D6 (papelera/dismissed FUERA, archivados DENTRO, content corrupto no aborta); entrega ruteada (web `<a download>` con **cleanup diferido**; nativo rebota a `#export` en el navegador del sistema, molde `deleteAccount`); UI en Ajustes. 422 tests + corpus E2E + **smoke web real** contra la cuenta de Sebastián (23 notas, Markdown limpio, descarga OK tras el fix de filename). 3 gotchas escalados (descarga, i18n dinámico, QA Playwright). **MERGEADO a `main` (`a326225`) pero NO DEPLOYADO:** el deploy va en el **release coordinado con SPEC-66 (toggle semántico) + la publicación del ToS**, cuando el abogado dé el OK — deployar el export antes desincroniza "lo que la app hace" de "lo que el ToS dice". **Cabos vivos:** cabo legal D6 (si el abogado exige incluir papelera por Ley 1581 = cambio de filtro chico), smoke device del rebote Android (release), confirmación empírica `tagId`/`areaId` (Firebase MCP). Tauri diferido. → [SPEC](features/SPEC-feature-67-export-de-contenido.md).
+
 ---
 
 ## Cloud Functions
@@ -279,6 +281,7 @@ Cada feature comprimida a 1 línea con pointer al SPEC archivado. Para detalles 
 - [Tokens `--shadow-modal`, `--background-deep`, `--border-strong`](gotchas/ui-componentes.md#tokens---shadow-modal---background-deep---border-strong)
 - [Avatar `<img>` con URL remota: onError + state fallback obligatorio (post-F42.5)](gotchas/ui-componentes.md#avatar-img-con-url-remota-onerror--state-fallback-obligatorio-post-f425)
 - [Tokens `design-system/secondmind/MASTER.md` desincronizados del runtime `src/index.css` (post-F47)](gotchas/ui-componentes.md#tokens-design-systemsecondmindmastermd-desincronizados-del-runtime-srcindexcss-post-f47)
+- [Descarga client-side con Blob y anchor download: cleanup diferido, no sincrónico (sino baja con UUID sin extensión) (SPEC-67)](gotchas/ui-componentes.md#descarga-client-side-con-blob-y-anchor-download-cleanup-diferido-no-sincrónico)
 
 ### i18n — [`gotchas/i18n.md`](gotchas/i18n.md)
 
@@ -290,6 +293,7 @@ Cada feature comprimida a 1 línea con pointer al SPEC archivado. Para detalles 
 - [Cleanup final con `removeUnusedKeys: true` — contar antes/después + vigilar 2 clases que el AST puede no ver (form defaultValue + instrumentScorer→null); hallazgo del huérfano sync.unsaved (F4)](gotchas/i18n.md#cleanup-final-con-removeunusedkeys-true--contar-antesdespués-y-vigilar-2-clases-que-el-ast-puede-no-ver)
 - [Traducir a en: `_many` jamás (CLDR en = one/other), enum interpolado puede necesitar el sustantivo ("{{type}} note"), tiempo relativo reordena es→en (F4)](gotchas/i18n.md#traducir-a-en-_many-jamás-enums-interpolados-pueden-necesitar-el-sustantivo-tiempo-relativo-reordena)
 - [Array en el catálogo: `i18next-cli` lo tipa como tupla de literales → `returnObjects` + `as string[]`; key dinámica tipa por el `as const` del registry (F59)](gotchas/i18n.md#array-en-el-catálogo-i18next-cli-lo-tipa-como-tupla-de-literales--returnobjects--cast-y-la-key-dinámica-tipa-por-el-as-const-del-registry)
+- [Claves i18n dinámicas (template literal) se purgan con un `extract` full-scope → agregarlas con script determinístico, no con el extract (SPEC-67)](gotchas/i18n.md#claves-i18n-dinámicas-se-purgan-con-un-extract-full-scope-agregarlas-con-script-determinístico)
 
 ### Responsive & Mobile UX — [`gotchas/responsive-mobile-ux.md`](gotchas/responsive-mobile-ux.md)
 
@@ -436,6 +440,7 @@ Cada feature comprimida a 1 línea con pointer al SPEC archivado. Para detalles 
 - [Context7 MCP expone `query-docs`, no `get-library-docs` (nombre viejo)](gotchas/tooling-local.md#context7-mcp-expone-query-docs-no-get-library-docs-nombre-viejo)
 - [Los subagentes leen archivos del cwd del proceso Claude Code, no del árbol del dev server](gotchas/tooling-local.md#los-subagentes-leen-archivos-del-cwd-del-proceso-claude-code-no-del-árbol-del-dev-server)
 - [Hooks de Windows que tocan `file_path`: el separador es BACKSLASH (normalizar con `tr`, no parameter expansion)](gotchas/tooling-local.md#hooks-de-windows-que-tocan-file_path-el-separador-es-backslash-normalizar-con-tr-no-parameter-expansion)
+- [QA de descargas client-side: Playwright via CDP enmascara bugs de naming → validar el archivo bajado de verdad (SPEC-67)](gotchas/tooling-local.md#qa-de-descargas-client-side-playwright-via-cdp-enmascara-bugs-de-naming)
 
 ### Dependencias y build — [`gotchas/deps-build.md`](gotchas/deps-build.md)
 
