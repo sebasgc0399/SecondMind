@@ -1,6 +1,6 @@
 # SPEC — Feature 67: Export de contenido del usuario
 
-> **Estado:** **GO PARCIAL** (Claude web + Sebastián). **5 de 6 decisiones CERRADAS** — D1, D2, D3, D5, D6 (abajo). **D4 (client vs server) ABIERTA** con **recomendación fundamentada + gaps verificados** — se cierra con Sebastián y de ahí sale el plan (SDD step 2). **NO implementado.**
+> **Estado:** **GO COMPLETO** (Claude web + Sebastián). **Las 6 decisiones CERRADAS** — D1, D2, D3, D4, D5, D6 (abajo). **D4 = CLIENT-SIDE** (web-primary con rebote nativo). **En Plan mode (SDD step 2)** — el plan refinado vuelve a **Claude web para GO/NO-GO antes de codear** (mismo flujo que SPEC-66). **NO implementado.**
 >
 > **Por qué existe:** prerrequisito de **publicación del ToS**. El ToS (en revisión legal) afirma en **§14** que «el Servicio le permite exportar su Contenido en un formato de uso común». Hoy **eso NO existe**. Conecta también con el **derecho de portabilidad de la Ley 1581** (Colombia). Es el segundo prerrequisito del ToS que falta implementar (el toggle de búsqueda semántica de SPEC-66 ya está mergeado).
 >
@@ -87,13 +87,15 @@ La identidad real es el `noteId` (opaco, autogenerado). El Markdown `[[Título]]
 
 ---
 
-## D4 — ABIERTA: recomendación fundamentada (cerrar con Sebastián)
+> **D4 (la 6ª decisión) está CERRADA** — por su complejidad va en sección propia. Resumen: **CLIENT-SIDE, web-primary, rebote nativo** (no es requisito de v1 una UX 100% in-app en nativo; el rebote al navegador del sistema es aceptable, mismo patrón que `deleteAccount`).
 
-> Los 4 gaps que gateaban D4 quedaron **verificados** (sección siguiente). Integrados con el alcance, apuntan a un ganador con **una salvedad de validación en device**.
+## D4 — CERRADA: client-side, web-primary, rebote nativo (GO)
 
-### Recomendación: **generación CLIENT-SIDE, entrega ruteada por plataforma, web como superficie primaria** (mismo molde que `deleteAccount`)
+> Los 4 gaps que gateaban D4 quedaron **verificados** (sección "Gaps verificados"). Integrados con el alcance, cerraron la decisión a favor de **client-side**. Sebastián confirmó que **no es requisito de v1** una UX 100% in-app en nativo — el rebote al navegador del sistema es aceptable (mismo patrón que `deleteAccount`).
 
-**Razones, en orden de peso:**
+### Arquitectura elegida: **generación CLIENT-SIDE, entrega ruteada por plataforma, web como superficie primaria** (mismo molde que `deleteAccount`)
+
+**Por qué se eligió, en orden de peso:**
 
 1. **Alineación con el ALCANCE (decisivo).** El SPEC prohíbe explícitamente «persistir el archivo del lado servidor». Client-side mantiene el export **efímero dentro de la sesión del usuario** — cero copia server-side, máxima privacidad, encaja limpio con "copia one-way". El server-side robusto (zip → Storage → signed URL) crea **exactamente** esa copia server-side (aunque sea con TTL) que el alcance descarta.
 2. **Labels (Gap 3, decisivo).** Todas las keys opacas son **locale-dependientes** y se resuelven SOLO en el cliente vía i18n `t()` (`buildAreaLabels`/`buildHabitLabels`/…). Client-side las reusa directo. Server-side tendría que **duplicar cada catálogo + leer el `locale`** del usuario — duplicación frágil que driftea de la fuente i18n real. (`tagIds` ya son labels → no necesitan catálogo.)
@@ -108,16 +110,9 @@ La identidad real es el `noteId` (opaco, autogenerado). El Markdown `[[Título]]
 - La lógica de export (serializador TipTap→MD + `jszip` ~94 KB) va en el bundle → **lazy-load** de la ruta de export para no inflar el bundle principal.
 - **⚑ Validación en device** (Tauri Windows + Android físico) del rebote/download — no verificable solo por config (Gap 4 lo marca como `needsDeviceValidation`).
 
-### Alternativa honesta — server-side (CF v2 + Admin SDK → zip → Storage → signed URL → abrir en navegador del sistema)
+### Alternativa DESCARTADA — server-side (CF v2 + Admin SDK → zip → Storage → signed URL)
 
-El agente de cross-plataforma **la prefería** por el patrón signed-URL (resuelve el download con piezas ya probadas en el repo, sin plugins nativos, y sin rebote/re-login). **Gana SI** el producto exige **UX de export 100% in-app en nativo** (sin rebote ni re-login) **y** se acepta el costo: Storage **moderado** + el **gotcha de IAM** (rol `Service Account Token Creator` sobre la default Compute SA para que `getSignedUrl` firme vía `signBlob`) + la **copia server-side efímera** (mitigable con URL corta ~15 min + TTL lifecycle + delete explícito post-descarga). Reusa los moldes server-side probados (iteración paginada `deleteUserEmbeddings.ts:22-30`, callable `saveApiKey`/`embedQuery`) y el Admin SDK lee el `content` verbatim sin fan-out de `getDocs`.
-
-### La pregunta que cierra D4 (para Sebastián)
-
-**¿Es requisito de v1 una UX de export 100% in-app en las apps nativas (sin rebote al navegador del sistema, sin re-login)?**
-
-- **NO** (web-primary aceptable, como `deleteAccount`) → **client-side** (recomendado): cero infra nueva, mejores labels, cero copia server-side, alineado al alcance.
-- **SÍ** → **server-side** (CF + Storage + signed URL): asume Storage moderado + IAM + copia efímera, a cambio de UX nativa sin rebote.
+Se evaluó y **se descartó para v1**. Habría ganado **solo si** el producto exigiera UX de export 100% in-app en nativo (sin rebote ni re-login) — y Sebastián confirmó que **no es requisito de v1**. Su costo: Storage **moderado** + el **gotcha de IAM** (rol `Service Account Token Creator` sobre la default Compute SA para que `getSignedUrl` firme vía `signBlob`) + la **copia server-side efímera** (que el alcance descarta). Reusaba los moldes server-side probados (iteración paginada `deleteUserEmbeddings.ts:22-30`, callable `saveApiKey`/`embedQuery`) y el Admin SDK leía el `content` verbatim sin fan-out de `getDocs`. Queda documentada como la vía si en una versión futura el rebote nativo resulta inaceptable.
 
 ---
 
@@ -130,9 +125,9 @@ El agente de cross-plataforma **la prefería** por el patrón signed-URL (resuel
 
 ---
 
-## Archivos que tocaría (tentativo — el plan afina tras cerrar D4)
+## Archivos que tocaría (tentativo — el plan refinado afina)
 
-> Inventario preliminar. **Si D4 = client-side (recomendado):**
+> Inventario preliminar para la arquitectura cerrada (**D4 = client-side**):
 
 - Nuevo `src/lib/export/` — **serializador TipTap-JSON→Markdown** (**código nuevo, no existe en el repo** — debe cubrir marks de progressive summarization L1/L2/L3, tablas TableKit, code blocks lowlight, y wikilinks como nodos) + builder del ZIP (`jszip`) + resolución fresh de wikilinks (D3) + anexado de catálogos de labels (`build*Labels(t)`).
 - Nuevo hook `useExportContent` — orquesta lectura de TinyBase (metadata + `contentPlain`) + `getDocs(collection notes)` para el `content` rico (crítico #1).
@@ -141,9 +136,7 @@ El agente de cross-plataforma **la prefería** por el patrón signed-URL (resuel
 - Deps nuevas: serializador MD (`@tiptap/static-renderer` o walker custom) + `jszip`.
 - i18n `es`/`en`.
 
-> **Si D4 = server-side:** nueva CF callable `exportContent` (`src/functions/src/export/`, reusa `requireVerified`/`assertAllowlisted`/`sanitizeError` + iteración paginada `deleteUserEmbeddings.ts:22-30` + `timeoutSeconds`/`maxInstances` altos) · `src/functions/src/index.ts` · **infra Storage** (bucket default + `storage.rules` deny-all + bloque `firebase.json` + IAM `signBlob` + TTL) · replicar catálogos de labels + leer `locale` server-side · cliente abre la signed URL en el navegador del sistema.
-
-**Rules:** sin cambios (lectura owner-only ya cubierta; server-side bypassa). **Docs al cerrar:** `Spec/ESTADO-ACTUAL.md`, gotchas (candidato fuerte: el `signBlob`/IAM de `getSignedUrl` en CF v2 si se va server-side).
+**Sin backend:** ni Cloud Functions, ni rules, ni Storage — todo client-side (D4). **Docs al cerrar:** `Spec/ESTADO-ACTUAL.md`, gotchas (candidato: el serializador TipTap→Markdown y/o el rebote nativo de descarga si dan lecciones reusables).
 
 ---
 
@@ -165,10 +158,9 @@ El agente de cross-plataforma **la prefería** por el patrón signed-URL (resuel
 - [x] Inventario del Contenido exportable con archivo:línea (7 entidades reales + exclusiones).
 - [x] Hallazgos críticos: `content` fuera de TinyBase (#1) · `areas`/`tags` no existen como colecciones (#2).
 - [x] **Análisis de wikilinks** (el punto clave): representación actual + riesgo identidad-vs-presentación + mitigación.
-- [x] **Decisiones D1, D2, D3, D5, D6 CERRADAS** (GO Claude web + Sebastián).
+- [x] **Las 6 decisiones CERRADAS** — D1, D2, D3, **D4 (client-side, web-primary, rebote nativo)**, D5, D6 (GO Claude web + Sebastián).
 - [x] **Gaps que gateaban D4 verificados** (payload 32 MB · Storage moderado+IAM · shapes desde código · cross-plataforma) con fuentes.
-- [x] **D4 con recomendación fundamentada** (client-side, web-primary, rebote nativo) + alternativa server-side + la pregunta que la cierra.
-- [ ] **Cerrar D4 con Sebastián** (¿UX in-app nativa requisito de v1?).
+- [ ] **Plan refinado (SDD step 2)** — Explore/Plan agents, foco en dimensionar el serializador TipTap→Markdown.
+- [ ] **GO/NO-GO del plan en Claude web** antes de codear.
 - [ ] (Opcional) Confirmación empírica de `tagId`/`areaId` + links `ai-suggested` vía Firebase MCP cuando esté disponible.
-- [ ] **Plan refinado (SDD step 2)** tras cerrar D4.
 - [ ] Implementación (rama `feat/export-de-contenido`).
