@@ -1,5 +1,12 @@
 import * as admin from 'firebase-admin';
+import { FieldValue } from 'firebase-admin/firestore';
 import { SEMANTIC_NOTICE_VERSION } from './semanticNoticeVersion';
+
+// GOTCHA: usar FieldValue del submódulo modular `firebase-admin/firestore`, NO
+// `admin.firestore.FieldValue.serverTimestamp()`. Este último solo está poblado si
+// el submódulo firestore ya fue cargado en el grafo de imports; en un TRIGGER con
+// grafo magro queda `undefined` → TypeError en runtime (detectado en el emulador:
+// la purga del mismo trigger escribía bien pero el serverTimestamp del log tiraba).
 
 // SPEC consent server-authoritative — registro de evidencia del consentimiento de
 // búsqueda semántica. Vive en la colección top-level DENY-ALL `consentLog/`
@@ -39,6 +46,6 @@ export async function appendConsentStateEvent(
     uid,
     action,
     noticeVersion: SEMANTIC_NOTICE_VERSION,
-    recordedAt: admin.firestore.FieldValue.serverTimestamp(),
+    recordedAt: FieldValue.serverTimestamp(),
   });
 }

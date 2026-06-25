@@ -2,6 +2,7 @@ import { describe, it, expect, beforeAll, beforeEach, vi } from 'vitest';
 import { initializeApp, getApps } from 'firebase-admin/app';
 import { getFirestore } from 'firebase-admin/firestore';
 import { deleteAllUserEmbeddings, handleSemanticConsentChange } from './deleteUserEmbeddings';
+import { appendConsentStateEvent } from '../lib/consentLog';
 
 // SPEC-66 F7 — bulk-delete de embeddings al desactivar (D4-D-B). Dos cosas:
 //  (1) deleteAllUserEmbeddings purga la colección entera (contra el emulador).
@@ -104,5 +105,23 @@ describe('handleSemanticConsentChange — guard de transición + log de estado (
     );
     // El log falló pero la purga corrió igual (no se propagó el error del log).
     expect(deleteEmbeddings).toHaveBeenCalledWith(UID);
+  });
+});
+
+describe('appendConsentStateEvent (consent server-auth — escribe el evento REAL)', () => {
+  beforeEach(async () => {
+    const db = getFirestore();
+    await db.recursiveDelete(db.doc(`consentLog/${UID}`));
+  });
+
+  it('appendea un evento en consentLog/{uid}/events con action + uid + serverTimestamp', async () => {
+    const db = getFirestore();
+    await appendConsentStateEvent(UID, 'enabled');
+    const snap = await db.collection(`consentLog/${UID}/events`).get();
+    expect(snap.size).toBe(1);
+    const data = snap.docs[0]!.data();
+    expect(data.action).toBe('enabled');
+    expect(data.uid).toBe(UID);
+    expect(data.recordedAt).toBeDefined();
   });
 });
