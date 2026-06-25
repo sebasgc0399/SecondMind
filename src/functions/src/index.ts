@@ -12,6 +12,7 @@ export { backfillEmbeddings } from './embeddings/backfillEmbeddings';
 export { embedQuery } from './search/embedQuery';
 export { saveApiKey } from './settings/saveApiKey';
 export { deleteApiKey } from './settings/deleteApiKey';
+export { markSemanticConsent } from './settings/markSemanticConsent';
 export { checkMyAccess } from './auth/checkMyAccess';
 export { submitAccessRequest } from './access/submitAccessRequest';
 export { listAccessRequests } from './access/listAccessRequests';
