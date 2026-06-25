@@ -1031,6 +1031,14 @@ export default interface Resources {
       status: 'Estado';
       title: 'Proyectos';
     };
+    search: {
+      semanticPrompt: {
+        activate: 'Activar búsqueda semántica';
+        activating: 'Activando…';
+        description: 'Activá la búsqueda semántica para encontrar notas relacionadas aunque no compartan las mismas palabras.';
+        title: 'Buscá también por significado';
+      };
+    };
     settings: {
       apiKeys: {
         configured: 'Configurada';
@@ -1094,6 +1102,18 @@ export default interface Resources {
           label: 'Español';
         };
         title: 'Idioma';
+      };
+      semanticSearch: {
+        description: 'Encontrá notas por significado, no solo por palabras clave. Al activarla, el texto de tus notas y búsquedas se procesa con OpenAI; podés desactivarla cuando quieras.';
+        off: {
+          description: 'Solo búsqueda por palabras clave, 100% en tu dispositivo.';
+          label: 'Desactivada';
+        };
+        on: {
+          description: 'Encontrá notas por significado, además de por palabras clave.';
+          label: 'Activada';
+        };
+        title: 'Búsqueda semántica';
       };
       sidebar: {
         description: 'Elegí si el menú lateral aparece o se oculta para maximizar espacio. Aplica solo a pantallas grandes.';

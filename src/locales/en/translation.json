@@ -958,6 +958,14 @@
     "status": "Status",
     "title": "Projects"
   },
+  "search": {
+    "semanticPrompt": {
+      "activate": "Enable semantic search",
+      "activating": "Enabling…",
+      "description": "Turn on semantic search to find related notes even when they don't share the same words.",
+      "title": "Search by meaning too"
+    }
+  },
   "settings": {
     "apiKeys": {
       "configured": "Configured",
@@ -1012,6 +1020,18 @@
         "label": "Español"
       },
       "title": "Language"
+    },
+    "semanticSearch": {
+      "description": "Find notes by meaning, not just by keywords. When you turn it on, the text of your notes and searches is processed with OpenAI; you can turn it off anytime.",
+      "off": {
+        "description": "Keyword search only, 100% on your device.",
+        "label": "Off"
+      },
+      "on": {
+        "description": "Find notes by meaning, in addition to keywords.",
+        "label": "On"
+      },
+      "title": "Semantic search"
     },
     "sidebar": {
       "description": "Choose whether the sidebar shows or hides to maximize space. Applies to large screens only.",
