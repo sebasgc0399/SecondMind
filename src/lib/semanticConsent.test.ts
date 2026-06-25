@@ -23,7 +23,7 @@ const { httpsCallableMock, markConsentCallableMock } = vi.hoisted(() => {
   const markConsentCallableMock = vi
     .fn()
     .mockResolvedValue({ data: { ok: true, acknowledgedAt: 1700000000000 } });
-  const httpsCallableMock = vi.fn((..._args: unknown[]) => markConsentCallableMock);
+  const httpsCallableMock = vi.fn().mockReturnValue(markConsentCallableMock);
   return { httpsCallableMock, markConsentCallableMock };
 });
 
