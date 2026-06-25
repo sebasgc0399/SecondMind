@@ -50,42 +50,59 @@ describe('deleteAllUserEmbeddings (SPEC-66 F7)', () => {
   });
 });
 
-describe('handleSemanticConsentChange — guard de transición (SPEC-66 F7)', () => {
-  it('enabled true→false → purga (deleteEmbeddings invocado con el uid)', async () => {
+describe('handleSemanticConsentChange — guard de transición + log de estado (SPEC-66 F7 + consent server-auth)', () => {
+  it('enabled true→false → purga + loggea "disabled"', async () => {
     const deleteEmbeddings = vi.fn().mockResolvedValue(0);
+    const logStateChange = vi.fn().mockResolvedValue(undefined);
     await handleSemanticConsentChange(
       changeEvent(UID, { enabled: true, acknowledgedAt: 1 }, { enabled: false, acknowledgedAt: 1 }),
-      { deleteEmbeddings },
+      { deleteEmbeddings, logStateChange },
     );
     expect(deleteEmbeddings).toHaveBeenCalledWith(UID);
+    expect(logStateChange).toHaveBeenCalledWith(UID, 'disabled');
   });
 
-  it('enabled true→(doc borrado) → purga (consentimiento retirado)', async () => {
+  it('enabled true→(doc borrado) → purga + loggea "disabled" (consentimiento retirado)', async () => {
     const deleteEmbeddings = vi.fn().mockResolvedValue(0);
+    const logStateChange = vi.fn().mockResolvedValue(undefined);
     await handleSemanticConsentChange(
       changeEvent(UID, { enabled: true, acknowledgedAt: 1 }, undefined),
-      {
-        deleteEmbeddings,
-      },
+      { deleteEmbeddings, logStateChange },
     );
     expect(deleteEmbeddings).toHaveBeenCalledWith(UID);
+    expect(logStateChange).toHaveBeenCalledWith(UID, 'disabled');
   });
 
-  it('activar (ausente→enabled:true) → NO purga', async () => {
+  it('activar (ausente→enabled:true) → NO purga, loggea "enabled"', async () => {
     const deleteEmbeddings = vi.fn().mockResolvedValue(0);
+    const logStateChange = vi.fn().mockResolvedValue(undefined);
     await handleSemanticConsentChange(
       changeEvent(UID, undefined, { enabled: true, acknowledgedAt: 1 }),
-      { deleteEmbeddings },
+      { deleteEmbeddings, logStateChange },
     );
     expect(deleteEmbeddings).not.toHaveBeenCalled();
+    expect(logStateChange).toHaveBeenCalledWith(UID, 'enabled');
   });
 
-  it('sin cambio (enabled:true→true) → NO purga', async () => {
+  it('sin cambio (enabled:true→true) → NO purga, NO loggea', async () => {
     const deleteEmbeddings = vi.fn().mockResolvedValue(0);
+    const logStateChange = vi.fn().mockResolvedValue(undefined);
     await handleSemanticConsentChange(
       changeEvent(UID, { enabled: true, acknowledgedAt: 1 }, { enabled: true, acknowledgedAt: 1 }),
-      { deleteEmbeddings },
+      { deleteEmbeddings, logStateChange },
     );
     expect(deleteEmbeddings).not.toHaveBeenCalled();
+    expect(logStateChange).not.toHaveBeenCalled();
+  });
+
+  it('fallo al loggear el estado NO bloquea la purga legal (best-effort)', async () => {
+    const deleteEmbeddings = vi.fn().mockResolvedValue(0);
+    const logStateChange = vi.fn().mockRejectedValue(new Error('log down'));
+    await handleSemanticConsentChange(
+      changeEvent(UID, { enabled: true, acknowledgedAt: 1 }, { enabled: false, acknowledgedAt: 1 }),
+      { deleteEmbeddings, logStateChange },
+    );
+    // El log falló pero la purga corrió igual (no se propagó el error del log).
+    expect(deleteEmbeddings).toHaveBeenCalledWith(UID);
   });
 });
