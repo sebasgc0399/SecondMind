@@ -9,11 +9,13 @@ export interface SemanticConsent {
   // afirmativo. Ausente/inválido → false = INERTE: ni un embedding se genera,
   // ni un carácter de texto sale a OpenAI (el invariante legal de §7.1).
   enabled: boolean;
-  // Timestamp (epoch ms, Date.now()) del reconocimiento afirmativo. Es la
-  // evidencia de que el usuario vio y aceptó el aviso. Persiste aunque luego
-  // desactive (re-activar no requiere re-reconocer, D6). null = nunca reconoció.
-  // [Cabo legal: la forma client (Date.now) vs server-authoritative del
-  // acknowledgedAt es pregunta para el abogado, junto a D3/D4.]
+  // Timestamp (epoch ms) del reconocimiento afirmativo, en el doc VIVO. Lo
+  // escribe el callable server-side `markSemanticConsent` (no más setDoc client).
+  // Es señal de UX/D6 (decidir si re-prompt), client-readable: persiste aunque
+  // luego desactive (re-activar no requiere re-reconocer, D6). null = nunca
+  // reconoció. FORJABLE pero INOCUO: el gate de egreso NO lo usa como prueba —
+  // la prueba server-authoritative (no forjable) vive en el doc resumen deny-all
+  // `consentLog/{uid}` que solo el server lee. Acá es intención, no evidencia.
   acknowledgedAt: number | null;
 }
 
@@ -21,3 +23,9 @@ export const DEFAULT_SEMANTIC_CONSENT: SemanticConsent = {
   enabled: false,
   acknowledgedAt: null,
 };
+
+// Versión del aviso §7.1 que el usuario reconoce (gemela de la constante FUNCTIONS
+// en src/functions/src/lib/semanticNoticeVersion.ts; un test de paridad las obliga
+// a coincidir). Co-locada con el modal del aviso. Bumpear SOLO cuando el texto del
+// aviso cambie materialmente — y en lockstep con la gemela functions.
+export const SEMANTIC_NOTICE_VERSION = 1;
