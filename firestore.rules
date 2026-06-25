@@ -70,5 +70,18 @@ service cloud.firestore {
     match /accessRequests/{id} {
       allow read, write: if false;
     }
+
+    // SPEC consent server-authoritative — consentLog/: evidencia del consentimiento
+    // de búsqueda semántica (§7.1). Deny-all client-side (mismo patrón que
+    // userSecrets/allowlist/rateLimits/accessRequests): solo el Admin SDK (Cloud
+    // Functions: markSemanticConsent + onSemanticConsentChanged) escribe/lee.
+    // El {document=**} cubre el doc resumen consentLog/{uid} (el ack-proof NO
+    // forjable que el gate de egreso lee) Y el log append-only consentLog/{uid}/events/*.
+    // El doc vivo users/{uid}/settings/semanticSearch sigue client-writable (intención
+    // de UX) pero su acknowledgedAt ya NO es la prueba — la prueba vive acá, fuera de
+    // alcance del cliente.
+    match /consentLog/{document=**} {
+      allow read, write: if false;
+    }
   }
 }

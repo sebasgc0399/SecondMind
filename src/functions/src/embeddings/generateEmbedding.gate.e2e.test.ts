@@ -32,6 +32,8 @@ describe('generateEmbedding — gate del invariante (SPEC-66 F2)', () => {
   beforeEach(async () => {
     const db = getFirestore();
     await db.recursiveDelete(db.doc(`users/${UID}`));
+    // El ack-proof vive fuera de users/{uid} (top-level deny-all) → limpiarlo aparte.
+    await db.recursiveDelete(db.doc(`consentLog/${UID}`));
   });
 
   it('consentimiento AUSENTE → CERO embedding, CERO llamada a OpenAI', async () => {
@@ -51,8 +53,9 @@ describe('generateEmbedding — gate del invariante (SPEC-66 F2)', () => {
     expect(snap.exists).toBe(false);
   });
 
-  it('enabled:true SIN acknowledgedAt → CERO embedding (el gate exige reconocimiento registrado)', async () => {
+  it('enabled:true (doc vivo) SIN ack-proof en consentLog → CERO embedding (el gate exige reconocimiento registrado)', async () => {
     const db = getFirestore();
+    // enabled forjado en el doc vivo, pero SIN doc resumen → el gate niega igual.
     await db.doc(`users/${UID}/settings/semanticSearch`).set({ enabled: true });
     const embed = vi.fn().mockResolvedValue(undefined);
 
@@ -64,11 +67,12 @@ describe('generateEmbedding — gate del invariante (SPEC-66 F2)', () => {
     expect(embed).not.toHaveBeenCalled();
   });
 
-  it('control: enabled:true + acknowledgedAt → SÍ genera (embed invocado con el contenido)', async () => {
+  it('control: enabled (doc vivo) + acknowledgedAt en consentLog → SÍ genera (embed con el contenido)', async () => {
     const db = getFirestore();
-    await db
-      .doc(`users/${UID}/settings/semanticSearch`)
-      .set({ enabled: true, acknowledgedAt: Date.now() });
+    // enabled en el doc vivo; el ack-proof SOLO en el doc resumen deny-all (prueba
+    // que el gate lo lee de ahí, no del doc vivo — revertir el gate rompe este test).
+    await db.doc(`users/${UID}/settings/semanticSearch`).set({ enabled: true });
+    await db.doc(`consentLog/${UID}`).set({ acknowledgedAt: Date.now() });
     const embed = vi.fn().mockResolvedValue(undefined);
 
     await generateEmbeddingHandler(fakeEvent(UID, NOTE_ID, 'texto de la nota'), {
