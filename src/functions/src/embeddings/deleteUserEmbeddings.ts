@@ -2,6 +2,7 @@ import * as admin from 'firebase-admin';
 import { onDocumentWritten } from 'firebase-functions/v2/firestore';
 import { logger } from 'firebase-functions';
 import { sanitizeError } from '../lib/sanitizeError';
+import { appendConsentStateEvent } from '../lib/consentLog';
 
 const BATCH_LIMIT = 500; // límite de ops por WriteBatch (Firestore)
 
@@ -31,12 +32,16 @@ export async function deleteAllUserEmbeddings(uid: string): Promise<number> {
   return total;
 }
 
-// Dependencia inyectable para test (el borrado real vs un spy).
+// Dependencias inyectables para test (el borrado real / el log de evidencia vs spies).
 export interface ConsentChangeDeps {
   deleteEmbeddings: (uid: string) => Promise<number>;
+  logStateChange: (uid: string, action: 'enabled' | 'disabled') => Promise<void>;
 }
 
-const defaultDeps: ConsentChangeDeps = { deleteEmbeddings: deleteAllUserEmbeddings };
+const defaultDeps: ConsentChangeDeps = {
+  deleteEmbeddings: deleteAllUserEmbeddings,
+  logStateChange: appendConsentStateEvent,
+};
 
 // Estructura mínima del evento (params + before/after.data()). `onDocumentWritten`
 // pasa un FirestoreEvent estructuralmente compatible; el test fabrica este shape.
@@ -55,6 +60,20 @@ export async function handleSemanticConsentChange(
   const { userId } = event.params;
   const wasEnabled = event.data?.before?.data()?.enabled === true;
   const isEnabled = event.data?.after?.data()?.enabled === true;
+
+  // Log append-only de cambios de estado (activó/desactivó/reactivó) — el único
+  // observador server-side del toggle on/off, que el cliente escribe directo. La
+  // evidencia atómica del reconocimiento la sella markSemanticConsent; esto es el
+  // historial. BEST-EFFORT: un fallo acá NO debe bloquear la purga legal de abajo
+  // (ni disparar su retry), así que se loggea y sigue.
+  if (wasEnabled !== isEnabled) {
+    try {
+      await deps.logStateChange(userId, isEnabled ? 'enabled' : 'disabled');
+    } catch (error) {
+      const { code, message } = sanitizeError(error);
+      logger.error('onSemanticConsentChanged: state-event log failed', { userId, code, message });
+    }
+  }
 
   // SPEC-66 F7/D4-D-B — purga SOLO en la transición enabled true→false (incluye
   // que el doc se borre: after.enabled deja de ser true). Coherente con "apago

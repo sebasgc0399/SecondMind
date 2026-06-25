@@ -1,5 +1,6 @@
 import { doc, getDoc, onSnapshot, setDoc } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
+import { httpsCallable } from 'firebase/functions';
+import { db, functions } from '@/lib/firebase';
 import { DEFAULT_SEMANTIC_CONSENT, type SemanticConsent } from '@/types/semanticConsent';
 
 // SPEC-66 F1: capa de datos del consentimiento de búsqueda semántica. Doc
@@ -10,11 +11,13 @@ import { DEFAULT_SEMANTIC_CONSENT, type SemanticConsent } from '@/types/semantic
 // "default pre-snapshot" del valor real — crítico para no mostrar el banner de
 // activación contra defaults antes de que llegue el doc.
 //
-// IMPORTANTE: las escrituras son client-side directas (setDoc) — las rules
-// dejan al owner escribir su propio doc. Esto NO es la fuente de verdad del
-// egreso: el server (readSemanticConsent en las CFs) SIEMPRE re-lee y verifica
-// el flag, nunca confía en el cliente (D2). El cliente escribe para reflejar la
-// intención del usuario; el gate server-side es lo que blinda el invariante.
+// IMPORTANTE (consent server-authoritative / Opción 3): el RECONOCIMIENTO ya NO
+// se escribe client-side — pasa por el callable `markSemanticConsent`, que mintea
+// el ack-proof NO forjable en un doc resumen deny-all que solo el server lee. El
+// toggle on/off (setSemanticSearchEnabled) SÍ sigue client-side (setDoc al doc
+// vivo): es la intención del usuario, inocua, y el gate de egreso exige ADEMÁS el
+// ack-proof server-only. Las LECTURAS del cliente siguen sobre el doc vivo (única
+// fuente client-readable): su `acknowledgedAt` es señal de UX/D6, no la evidencia.
 
 type SemanticConsentListener = (state: SemanticConsent, isLoaded: boolean) => void;
 
@@ -91,13 +94,42 @@ export async function loadSemanticConsent(uid: string): Promise<SemanticConsent>
   return snap.exists() ? parseSemanticConsent(snap.data()) : DEFAULT_SEMANTIC_CONSENT;
 }
 
-// Reconocimiento afirmativo (§7.1): setea `enabled` + `acknowledgedAt` de forma
-// ATÓMICA en un solo write. Date.now() (number) y NO serverTimestamp(): el
-// modelo es `number | null`, y serverTimestamp() resolvería a null en el
-// snapshot optimista local antes de confirmar server → el banner reaparecería /
-// D6 fallaría. [Cabo legal: forma del acknowledgedAt, pregunta del abogado.]
-export async function markSemanticConsentAcknowledged(uid: string): Promise<void> {
-  await setDoc(pathFor(uid), { enabled: true, acknowledgedAt: Date.now() }, { merge: true });
+// Refleja un estado en la cache ANTES de que llegue el onSnapshot (optimista).
+// Solo si ya hay una suscripción viva para el uid (si no, el próximo subscribe
+// levanta el valor real del server igual). El onSnapshot posterior re-emite el
+// mismo estado → idempotente. Restaura el reflejo inmediato que daba el setDoc
+// local (Firestore optimistic write) antes de migrar el ack a un callable RPC.
+function optimisticConsentUpdate(uid: string, next: SemanticConsent): void {
+  const entry = cache.get(uid);
+  if (!entry) return;
+  entry.state = next;
+  entry.isLoaded = true;
+  entry.listeners.forEach((cb) => cb(next, true));
+}
+
+const markSemanticConsentFn = httpsCallable<
+  { locale: string; appVersion?: string },
+  { ok: true; acknowledgedAt: number }
+>(functions, 'markSemanticConsent');
+
+// Reconocimiento afirmativo (§7.1) — consent server-authoritative (Opción 3): ya
+// NO es un setDoc client-side, sino el callable `markSemanticConsent`. El server
+// (requireVerified + assertAllowlisted) escribe atómico el doc vivo + el ack-proof
+// NO forjable en consentLog/{uid} + el evento de evidencia. `locale`/`appVersion`
+// = metadata del aviso mostrado (evidencia). Tras resolver, reflejamos el ack en
+// la cache local (el onSnapshot del doc vivo tarda ~100-500ms vs el reflejo
+// instantáneo del viejo setDoc; sin esto D6 podría reabrir el modal en un toggle
+// rápido).
+export async function markSemanticConsentAcknowledged(
+  uid: string,
+  locale: string,
+  appVersion?: string,
+): Promise<void> {
+  const res = await markSemanticConsentFn({ locale, appVersion });
+  const ackAt = res.data?.acknowledgedAt;
+  if (typeof ackAt === 'number') {
+    optimisticConsentUpdate(uid, { enabled: true, acknowledgedAt: ackAt });
+  }
 }
 
 // Activar/desactivar SIN tocar acknowledgedAt — re-activar tras desactivar no

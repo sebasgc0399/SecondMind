@@ -1,8 +1,10 @@
 import { useCallback, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import useAuth from '@/hooks/useAuth';
 import useSemanticConsent from '@/hooks/useSemanticConsent';
 import { runBackfillEmbeddings } from '@/lib/embeddings';
 import { markSemanticConsentAcknowledged, setSemanticSearchEnabled } from '@/lib/semanticConsent';
+import { getRunningVersion } from '@/lib/version';
 
 interface UseSemanticSearchToggleReturn {
   isLoaded: boolean;
@@ -27,6 +29,7 @@ interface UseSemanticSearchToggleReturn {
 export default function useSemanticSearchToggle(): UseSemanticSearchToggleReturn {
   const { user } = useAuth();
   const { consent, isLoaded } = useSemanticConsent();
+  const { i18n } = useTranslation();
   const [busy, setBusy] = useState(false);
 
   const enable = useCallback(async () => {
@@ -34,7 +37,10 @@ export default function useSemanticSearchToggle(): UseSemanticSearchToggleReturn
     setBusy(true);
     try {
       if (consent.acknowledgedAt == null) {
-        await markSemanticConsentAcknowledged(user.uid);
+        // Primer cruce → callable que registra el reconocimiento server-side, con
+        // locale del aviso mostrado + versión de la app como evidencia.
+        const appVersion = await getRunningVersion();
+        await markSemanticConsentAcknowledged(user.uid, i18n.language, appVersion);
       } else {
         await setSemanticSearchEnabled(user.uid, true);
       }
@@ -42,7 +48,7 @@ export default function useSemanticSearchToggle(): UseSemanticSearchToggleReturn
     } finally {
       setBusy(false);
     }
-  }, [user, busy, consent.acknowledgedAt]);
+  }, [user, busy, consent.acknowledgedAt, i18n.language]);
 
   const disable = useCallback(async () => {
     if (!user || busy) return;

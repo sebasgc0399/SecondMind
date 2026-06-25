@@ -19,6 +19,8 @@ describe('embedQuery — gate de consentimiento (SPEC-66 F3)', () => {
   beforeEach(async () => {
     const db = getFirestore();
     await db.recursiveDelete(db.doc(`users/${UID}`));
+    // El ack-proof vive fuera de users/{uid} (top-level deny-all) → limpiarlo aparte.
+    await db.recursiveDelete(db.doc(`consentLog/${UID}`));
   });
 
   it('consentimiento AUSENTE → permission-denied (semantic-search-disabled)', async () => {
@@ -35,17 +37,18 @@ describe('embedQuery — gate de consentimiento (SPEC-66 F3)', () => {
     );
   });
 
-  it('enabled:true SIN acknowledgedAt → permission-denied (exige reconocimiento registrado)', async () => {
+  it('enabled:true (doc vivo) SIN ack-proof en consentLog → permission-denied (exige reconocimiento registrado)', async () => {
     const db = getFirestore();
+    // enabled forjado en el doc vivo, pero SIN doc resumen → el gate niega igual.
     await db.doc(`users/${UID}/settings/semanticSearch`).set({ enabled: true });
     await expect(assertSemanticConsent(UID)).rejects.toMatchObject({ code: 'permission-denied' });
   });
 
-  it('control: enabled:true + acknowledgedAt → resuelve sin throw', async () => {
+  it('control: enabled (doc vivo) + acknowledgedAt en consentLog → resuelve sin throw', async () => {
     const db = getFirestore();
-    await db
-      .doc(`users/${UID}/settings/semanticSearch`)
-      .set({ enabled: true, acknowledgedAt: Date.now() });
+    // El ack-proof SOLO en el doc resumen deny-all (prueba que el gate lo lee de ahí).
+    await db.doc(`users/${UID}/settings/semanticSearch`).set({ enabled: true });
+    await db.doc(`consentLog/${UID}`).set({ acknowledgedAt: Date.now() });
     await expect(assertSemanticConsent(UID)).resolves.toBeUndefined();
   });
 });

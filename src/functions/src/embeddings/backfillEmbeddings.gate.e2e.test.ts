@@ -22,9 +22,10 @@ function fakeRequest(cursor?: string): CallableRequest<{ cursor?: string }> {
 async function seedConsentAndAllowlist() {
   const db = getFirestore();
   await db.collection('allowlist').doc(EMAIL).set({});
-  await db
-    .doc(`users/${UID}/settings/semanticSearch`)
-    .set({ enabled: true, acknowledgedAt: Date.now() });
+  // enabled en el doc vivo; el ack-proof en el doc resumen deny-all (de donde el
+  // gate lo lee tras Opción 3).
+  await db.doc(`users/${UID}/settings/semanticSearch`).set({ enabled: true });
+  await db.doc(`consentLog/${UID}`).set({ acknowledgedAt: Date.now() });
 }
 
 describe('backfillEmbeddings (SPEC-66 F6)', () => {
@@ -36,6 +37,8 @@ describe('backfillEmbeddings (SPEC-66 F6)', () => {
     const db = getFirestore();
     await db.recursiveDelete(db.doc(`users/${UID}`));
     await db.collection('allowlist').doc(EMAIL).delete();
+    // El ack-proof vive fuera de users/{uid} (top-level deny-all) → limpiarlo aparte.
+    await db.recursiveDelete(db.doc(`consentLog/${UID}`));
   });
 
   it('SIN consentimiento → permission-denied y NO backfillea', async () => {

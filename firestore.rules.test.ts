@@ -107,6 +107,33 @@ describe('firestore.rules — accessRequests (SPEC-52 F1)', () => {
   });
 });
 
+describe('firestore.rules — consentLog (consent server-authoritative)', () => {
+  it('el cliente NO puede LEER su doc resumen de consentLog (deny-all; el ack-proof es server-only)', async () => {
+    const db = testEnv
+      .authenticatedContext('uid-invited', { email: INVITED, email_verified: true })
+      .firestore();
+    await assertFails(getDoc(doc(db, 'consentLog/uid-invited')));
+  });
+
+  it('el cliente NO puede FORJAR el ack-proof escribiendo el doc resumen (deny-all)', async () => {
+    const db = testEnv
+      .authenticatedContext('uid-invited', { email: INVITED, email_verified: true })
+      .firestore();
+    // El núcleo de Opción 3: aunque sea su propio uid + allowlisted, no puede
+    // mintear el acknowledgedAt que el gate de egreso lee.
+    await assertFails(setDoc(doc(db, 'consentLog/uid-invited'), { acknowledgedAt: 123 }));
+  });
+
+  it('el cliente tampoco puede escribir el log de eventos (subcolección, {document=**} recursivo)', async () => {
+    const db = testEnv
+      .authenticatedContext('uid-invited', { email: INVITED, email_verified: true })
+      .firestore();
+    await assertFails(
+      setDoc(doc(db, 'consentLog/uid-invited/events/e1'), { action: 'acknowledged' }),
+    );
+  });
+});
+
 describe('firestore.rules — backstop de revoke (SPEC-53 F3)', () => {
   // Ambos polos sobre el MISMO usuario para que el test no pase por la razón equivocada:
   // con allowlist/{email} presente accede; tras revocar (borrar el doc, lo que hace la CF
