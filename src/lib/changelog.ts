@@ -14,6 +14,7 @@
 export const CHANGELOG_ENTRIES = [
   { version: '0.5.2', key: 'v052' },
   { version: '0.5.3', key: 'v053' },
+  { version: '0.6.0', key: 'v060' },
 ] as const;
 
 export type ChangelogEntry = (typeof CHANGELOG_ENTRIES)[number];

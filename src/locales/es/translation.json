@@ -139,6 +139,13 @@
         "El historial de novedades llegó a Ajustes → Historial de novedades: repasa lo nuevo de cada versión cuando quieras."
       ],
       "title": "Novedades de la 0.5.3"
+    },
+    "v060": {
+      "items": [
+        "Estrenamos la búsqueda semántica: encuentra notas relacionadas por su significado, aunque no usen las mismas palabras. La primera vez que la uses verás un aviso sobre cómo se tratan tus datos; al aceptarlo se activa, y puedes apagarla cuando quieras desde Ajustes. Mientras tanto, la búsqueda por palabras sigue funcionando igual.",
+        "Ya puedes descargar una copia de todo tu contenido —notas, tareas, proyectos, objetivos, hábitos e inbox— en un ZIP de archivos Markdown listo para abrir en Obsidian, Logseq u otro editor, desde Ajustes → Exportar mis datos. Tus notas conservan el formato, los enlaces [[entre notas]] y las tablas."
+      ],
+      "title": "Novedades de la 0.6.0"
     }
   },
   "commandPalette": {
