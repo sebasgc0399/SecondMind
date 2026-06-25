@@ -13,8 +13,23 @@ import { DEFAULT_SEMANTIC_CONSENT } from '@/types/semanticConsent';
 const setDocMock = vi.fn();
 const docMock = vi.fn((_db: object, path: string) => ({ __path: path }));
 
+// consent server-authoritative — el reconocimiento pasa por el callable
+// markSemanticConsent. httpsCallable se invoca al CARGAR el módulo (const a nivel
+// módulo) con ('markSemanticConsent'); el callable resuelto se llama por uso. Por
+// eso los mocks van en vi.hoisted: el setDoc/doc se llaman recién en test-run (los
+// const alcanzan a inicializarse), pero httpsCallable corre durante el import →
+// necesita estar disponible ANTES (vi.hoisted corre antes que todo).
+const { httpsCallableMock, markConsentCallableMock } = vi.hoisted(() => {
+  const markConsentCallableMock = vi
+    .fn()
+    .mockResolvedValue({ data: { ok: true, acknowledgedAt: 1700000000000 } });
+  const httpsCallableMock = vi.fn((..._args: unknown[]) => markConsentCallableMock);
+  return { httpsCallableMock, markConsentCallableMock };
+});
+
 vi.mock('@/lib/firebase', () => ({
   db: {} as object,
+  functions: {} as object,
 }));
 
 vi.mock('firebase/firestore', () => ({
@@ -24,9 +39,16 @@ vi.mock('firebase/firestore', () => ({
   onSnapshot: vi.fn(),
 }));
 
+vi.mock('firebase/functions', () => ({
+  httpsCallable: (...args: unknown[]) => httpsCallableMock(...args),
+}));
+
 beforeEach(() => {
   setDocMock.mockReset();
   docMock.mockClear();
+  // NO limpiar httpsCallableMock: su única llamada fue al cargar el módulo (la
+  // assertion del nombre del callable depende de ese registro).
+  markConsentCallableMock.mockClear();
 });
 
 describe('parseSemanticConsent (SPEC-66 F1)', () => {
@@ -63,15 +85,20 @@ describe('parseSemanticConsent (SPEC-66 F1)', () => {
   });
 });
 
-describe('markSemanticConsentAcknowledged (SPEC-66 F1)', () => {
-  it('escribe enabled:true + acknowledgedAt number ATÓMICO en el doc dedicado, merge', async () => {
-    await markSemanticConsentAcknowledged('uid-1');
-    expect(docMock).toHaveBeenCalledWith(expect.anything(), 'users/uid-1/settings/semanticSearch');
-    expect(setDocMock).toHaveBeenCalledTimes(1);
-    const [, payload, options] = setDocMock.mock.calls[0]!;
-    expect(payload.enabled).toBe(true);
-    expect(typeof payload.acknowledgedAt).toBe('number');
-    expect(options).toEqual({ merge: true });
+describe('markSemanticConsentAcknowledged (consent server-authoritative)', () => {
+  it('invoca el callable markSemanticConsent con locale + appVersion, NO escribe el doc desde el cliente', async () => {
+    await markSemanticConsentAcknowledged('uid-1', 'es', '1.2.3');
+    // El callable se resolvió desde httpsCallable(functions, 'markSemanticConsent').
+    expect(httpsCallableMock).toHaveBeenCalledWith(expect.anything(), 'markSemanticConsent');
+    expect(markConsentCallableMock).toHaveBeenCalledTimes(1);
+    expect(markConsentCallableMock).toHaveBeenCalledWith({ locale: 'es', appVersion: '1.2.3' });
+    // El reconocimiento ya NO es un setDoc client-side (es server-authoritative).
+    expect(setDocMock).not.toHaveBeenCalled();
+  });
+
+  it('appVersion es opcional (se pasa undefined si no se provee)', async () => {
+    await markSemanticConsentAcknowledged('uid-1', 'en');
+    expect(markConsentCallableMock).toHaveBeenCalledWith({ locale: 'en', appVersion: undefined });
   });
 });
 
