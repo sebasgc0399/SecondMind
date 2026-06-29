@@ -143,7 +143,7 @@
     "v060": {
       "items": [
         "Estrenamos la búsqueda semántica: encuentra notas relacionadas por su significado, aunque no usen las mismas palabras. La primera vez que la uses verás un aviso sobre cómo se tratan tus datos; al aceptarlo se activa, y puedes apagarla cuando quieras desde Ajustes. Mientras tanto, la búsqueda por palabras sigue funcionando igual.",
-        "Ya puedes descargar una copia de todo tu contenido —notas, tareas, proyectos, objetivos, hábitos e inbox— en un ZIP de archivos Markdown listo para abrir en Obsidian, Logseq u otro editor, desde Ajustes → Exportar mis datos. Tus notas conservan el formato, los enlaces [[entre notas]] y las tablas."
+        "Ya puedes descargar una copia de todo tu contenido —notas, tareas, proyectos, objetivos, hábitos e inbox— en un ZIP de archivos Markdown listo para abrir en Obsidian, Logseq u otro editor, desde Ajustes → Exportar mis datos. Tus notas conservan el formato, los enlaces entre notas y las tablas."
       ],
       "title": "Novedades de la 0.6.0"
     }
@@ -1220,7 +1220,7 @@
       "filesEntities": "el resto de tu contenido",
       "filesNotes": "una nota por archivo `.md`",
       "filesTitle": "Qué hay en este archivo",
-      "intro": "Esta es una copia de tu Contenido en Markdown. Las notas usan wikilinks `[[...]]` entre sí; importá la carpeta en Obsidian, Logseq u otro editor compatible.",
+      "intro": "Esta es una copia de tu Contenido en Markdown. Las notas se enlazan entre sí; importá la carpeta en Obsidian, Logseq u otro editor compatible para navegar los enlaces.",
       "title": "Exportación de SecondMind"
     },
     "section": {

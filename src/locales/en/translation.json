@@ -143,7 +143,7 @@
     "v060": {
       "items": [
         "Semantic search is here: find related notes by meaning, even when they don't use the same words. The first time you use it, you'll see a notice about how your data is handled; once you accept, it turns on — and you can turn it off anytime from Settings. Meanwhile, keyword search keeps working just the same.",
-        "You can now download a copy of all your content —notes, tasks, projects, objectives, habits and inbox— as a ZIP of Markdown files ready to open in Obsidian, Logseq, or any other editor, from Settings → Export my data. Your notes keep their formatting, [[wikilinks]] and tables."
+        "You can now download a copy of all your content —notes, tasks, projects, objectives, habits and inbox— as a ZIP of Markdown files ready to open in Obsidian, Logseq, or any other editor, from Settings → Export my data. Your notes keep their formatting, the links between notes, and tables."
       ],
       "title": "What's new in 0.6.0"
     }
@@ -1193,7 +1193,7 @@
       "filesEntities": "the rest of your content",
       "filesNotes": "one note per `.md` file",
       "filesTitle": "What's in this file",
-      "intro": "This is a copy of your Content in Markdown. Notes use `[[...]]` wikilinks between each other; import the folder into Obsidian, Logseq or another compatible editor.",
+      "intro": "This is a copy of your Content in Markdown. Notes link to each other; import the folder into Obsidian, Logseq or another compatible editor to follow the links.",
       "title": "SecondMind export"
     },
     "section": {
