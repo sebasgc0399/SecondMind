@@ -14,7 +14,7 @@ describe('SEMANTIC_NOTICE_VERSION — paridad cliente/functions', () => {
     expect(CLIENT_VERSION).toBe(FUNCTIONS_VERSION);
   });
 
-  it('sentinel = 1 (un bump deliberado del aviso §7.1 debe tocar este test → visible en review)', () => {
-    expect(CLIENT_VERSION).toBe(1);
+  it('sentinel = 2 (un bump deliberado del aviso §7.1 debe tocar este test → visible en review)', () => {
+    expect(CLIENT_VERSION).toBe(2);
   });
 });

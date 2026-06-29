@@ -982,6 +982,11 @@
     "title": "Proyectos"
   },
   "search": {
+    "semanticConsent": {
+      "button": "Entiendo y activar la búsqueda semántica",
+      "notice": "Para buscar por significado, el texto de tus notas y de tus búsquedas se envía a OpenAI (en Estados Unidos) para generar las representaciones que permiten la búsqueda semántica. Te recomendamos no incluir información especialmente sensible (datos de salud, creencias, orientación sexual, opiniones políticas o datos biométricos) en tus notas mientras esta función esté activa. No estás obligado a activarla: la búsqueda por palabras funciona sin enviar nada a OpenAI. Podés desactivarla cuando quieras desde Ajustes, y tu texto dejará de enviarse.",
+      "title": "Activar búsqueda semántica"
+    },
     "semanticPrompt": {
       "activate": "Activar búsqueda semántica",
       "activating": "Activando…",

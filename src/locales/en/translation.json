@@ -959,6 +959,11 @@
     "title": "Projects"
   },
   "search": {
+    "semanticConsent": {
+      "button": "I understand and enable semantic search",
+      "notice": "To search by meaning, the text of your notes and searches is sent to OpenAI (in the United States) to generate the representations that power semantic search. We recommend not including especially sensitive information (health data, beliefs, sexual orientation, political opinions, or biometric data) in your notes while this feature is active. You're not required to enable it: keyword search works without sending anything to OpenAI. You can turn it off anytime from Settings, and your text will stop being sent.",
+      "title": "Enable semantic search"
+    },
     "semanticPrompt": {
       "activate": "Enable semantic search",
       "activating": "Enabling…",

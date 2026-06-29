@@ -53,7 +53,7 @@ describe('markSemanticConsentHandler (consent server-authoritative)', () => {
     // (b) Doc resumen deny-all: ack-proof number + metadata + serverTimestamp RESUELTO.
     const summary = (await db.doc(`consentLog/${UID}`).get()).data();
     expect(typeof summary?.acknowledgedAt).toBe('number');
-    expect(summary?.noticeVersion).toBe(1);
+    expect(summary?.noticeVersion).toBe(2);
     expect(summary?.scope).toContain('semantic-search-activation');
     expect(summary?.mechanism).toBe('affirmative-acknowledgment-first-use');
     expect(summary?.updatedAt).toBeDefined(); // serverTimestamp resolvió (no tiró undefined)

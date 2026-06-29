@@ -28,4 +28,4 @@ export const DEFAULT_SEMANTIC_CONSENT: SemanticConsent = {
 // en src/functions/src/lib/semanticNoticeVersion.ts; un test de paridad las obliga
 // a coincidir). Co-locada con el modal del aviso. Bumpear SOLO cuando el texto del
 // aviso cambie materialmente — y en lockstep con la gemela functions.
-export const SEMANTIC_NOTICE_VERSION = 1;
+export const SEMANTIC_NOTICE_VERSION = 2;
