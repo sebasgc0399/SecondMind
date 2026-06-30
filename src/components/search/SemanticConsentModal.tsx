@@ -16,10 +16,10 @@ interface SemanticConsentModalProps {
  * Al aceptar, el padre persiste enabled + acknowledgedAt y dispara el backfill;
  * cancelar/Esc/backdrop deja todo INERTE (no escribe nada) — el invariante de §7.1.
  *
- * COPY PLACEHOLDER: el texto del aviso (qué datos salen, a quién, retención) DEBE
- * alinearse con el texto final de §7.1 del ToS, que sigue en revisión legal. NO
- * fijar este copy hasta que el ToS cierre. Las defaults de i18n abajo son
- * provisionales y están marcadas como tales.
+ * El copy del aviso (search.semanticConsent.*) está alineado con §7.1 del ToS +
+ * §3.2 de la Privacy. Versionado por SEMANTIC_NOTICE_VERSION: la evidencia sella
+ * QUÉ aviso reconoció el usuario, así que bumpear esa constante (cliente + functions,
+ * lockstep) si el texto cambia materialmente.
  */
 export default function SemanticConsentModal({
   open,
@@ -38,15 +38,10 @@ export default function SemanticConsentModal({
               <Sparkles className="h-6 w-6" aria-hidden />
             </span>
             <Dialog.Title className="text-xl font-semibold text-foreground">
-              {/* PLACEHOLDER — atar a §7.1 del ToS */}
-              {t('search.semanticConsent.title', 'Activar búsqueda semántica')}
+              {t('search.semanticConsent.title')}
             </Dialog.Title>
             <Dialog.Description className="mt-2 text-sm leading-relaxed text-muted-foreground">
-              {/* PLACEHOLDER — atar a §7.1 del ToS */}
-              {t(
-                'search.semanticConsent.description',
-                '[Texto provisional — pendiente §7.1 del ToS] Para buscar por significado, el texto de tus notas y de tus búsquedas se envía a OpenAI (EE. UU.) para generar los vectores de búsqueda. Podés desactivarla cuando quieras desde Ajustes.',
-              )}
+              {t('search.semanticConsent.notice')}
             </Dialog.Description>
           </div>
 
@@ -64,8 +59,7 @@ export default function SemanticConsentModal({
               onClick={onAccept}
               className="inline-flex min-h-11 flex-1 items-center justify-center rounded-lg bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90"
             >
-              {/* PLACEHOLDER — atar a §7.1 del ToS */}
-              {t('search.semanticConsent.accept', 'Entiendo y activar')}
+              {t('search.semanticConsent.button')}
             </button>
           </div>
         </Dialog.Popup>

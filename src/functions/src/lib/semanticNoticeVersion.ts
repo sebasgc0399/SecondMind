@@ -15,7 +15,7 @@
 
 // Módulo SIN dependencias (ni firebase-admin) — seguro de cross-importar desde el
 // test de paridad del app src.
-export const SEMANTIC_NOTICE_VERSION = 1;
+export const SEMANTIC_NOTICE_VERSION = 2;
 
 // Alcance/acción consentida — qué autoriza el reconocimiento (evidencia legal).
 export const SEMANTIC_CONSENT_SCOPE = 'semantic-search-activation — egress a OpenAI';

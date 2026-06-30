@@ -142,6 +142,13 @@ export default interface Resources {
         ];
         title: 'Novedades de la 0.5.3';
       };
+      v060: {
+        items: [
+          'Estrenamos la búsqueda semántica: encuentra notas relacionadas por su significado, aunque no usen las mismas palabras. La primera vez que la uses verás un aviso sobre cómo se tratan tus datos; al aceptarlo se activa, y puedes apagarla cuando quieras desde Ajustes. Mientras tanto, la búsqueda por palabras sigue funcionando igual.',
+          'Ya puedes descargar una copia de todo tu contenido —notas, tareas, proyectos, objetivos, hábitos e inbox— en un ZIP de archivos Markdown listo para abrir en Obsidian, Logseq u otro editor, desde Ajustes → Exportar mis datos. Tus notas conservan el formato, los enlaces [[entre notas]] y las tablas.',
+        ];
+        title: 'Novedades de la 0.6.0';
+      };
     };
     commandPalette: {
       actions: 'Acciones';
@@ -1024,6 +1031,19 @@ export default interface Resources {
       status: 'Estado';
       title: 'Proyectos';
     };
+    search: {
+      semanticConsent: {
+        button: 'Entiendo y activar la búsqueda semántica';
+        notice: 'Para buscar por significado, el texto de tus notas y de tus búsquedas se envía a OpenAI (en Estados Unidos) para generar las representaciones que permiten la búsqueda semántica. Te recomendamos no incluir información especialmente sensible (datos de salud, creencias, orientación sexual, opiniones políticas o datos biométricos) en tus notas mientras esta función esté activa. No estás obligado a activarla: la búsqueda por palabras funciona sin enviar nada a OpenAI. Podés desactivarla cuando quieras desde Ajustes, y tu texto dejará de enviarse.';
+        title: 'Activar búsqueda semántica';
+      };
+      semanticPrompt: {
+        activate: 'Activar búsqueda semántica';
+        activating: 'Activando…';
+        description: 'Activá la búsqueda semántica para encontrar notas relacionadas aunque no compartan las mismas palabras.';
+        title: 'Buscá también por significado';
+      };
+    };
     settings: {
       apiKeys: {
         configured: 'Configurada';
@@ -1087,6 +1107,18 @@ export default interface Resources {
           label: 'Español';
         };
         title: 'Idioma';
+      };
+      semanticSearch: {
+        description: 'Encontrá notas por significado, no solo por palabras clave. Al activarla, el texto de tus notas y búsquedas se procesa con OpenAI; podés desactivarla cuando quieras.';
+        off: {
+          description: 'Solo búsqueda por palabras clave, 100% en tu dispositivo.';
+          label: 'Desactivada';
+        };
+        on: {
+          description: 'Encontrá notas por significado, además de por palabras clave.';
+          label: 'Activada';
+        };
+        title: 'Búsqueda semántica';
       };
       sidebar: {
         description: 'Elegí si el menú lateral aparece o se oculta para maximizar espacio. Aplica solo a pantallas grandes.';

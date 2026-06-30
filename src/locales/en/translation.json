@@ -139,6 +139,13 @@
         "Past updates now live in Settings → Release notes: revisit what changed in any version, anytime."
       ],
       "title": "What's new in 0.5.3"
+    },
+    "v060": {
+      "items": [
+        "Semantic search is here: find related notes by meaning, even when they don't use the same words. The first time you use it, you'll see a notice about how your data is handled; once you accept, it turns on — and you can turn it off anytime from Settings. Meanwhile, keyword search keeps working just the same.",
+        "You can now download a copy of all your content —notes, tasks, projects, objectives, habits and inbox— as a ZIP of Markdown files ready to open in Obsidian, Logseq, or any other editor, from Settings → Export my data. Your notes keep their formatting, the links between notes, and tables."
+      ],
+      "title": "What's new in 0.6.0"
     }
   },
   "commandPalette": {
@@ -951,6 +958,19 @@
     "status": "Status",
     "title": "Projects"
   },
+  "search": {
+    "semanticConsent": {
+      "button": "I understand and enable semantic search",
+      "notice": "To search by meaning, the text of your notes and searches is sent to OpenAI (in the United States) to generate the representations that power semantic search. We recommend not including especially sensitive information (health data, beliefs, sexual orientation, political opinions, or biometric data) in your notes while this feature is active. You're not required to enable it: keyword search works without sending anything to OpenAI. You can turn it off anytime from Settings, and your text will stop being sent.",
+      "title": "Enable semantic search"
+    },
+    "semanticPrompt": {
+      "activate": "Enable semantic search",
+      "activating": "Enabling…",
+      "description": "Turn on semantic search to find related notes even when they don't share the same words.",
+      "title": "Search by meaning too"
+    }
+  },
   "settings": {
     "apiKeys": {
       "configured": "Configured",
@@ -1005,6 +1025,18 @@
         "label": "Español"
       },
       "title": "Language"
+    },
+    "semanticSearch": {
+      "description": "Find notes by meaning, not just by keywords. When you turn it on, the text of your notes and searches is processed with OpenAI; you can turn it off anytime.",
+      "off": {
+        "description": "Keyword search only, 100% on your device.",
+        "label": "Off"
+      },
+      "on": {
+        "description": "Find notes by meaning, in addition to keywords.",
+        "label": "On"
+      },
+      "title": "Semantic search"
     },
     "sidebar": {
       "description": "Choose whether the sidebar shows or hides to maximize space. Applies to large screens only.",
@@ -1161,7 +1193,7 @@
       "filesEntities": "the rest of your content",
       "filesNotes": "one note per `.md` file",
       "filesTitle": "What's in this file",
-      "intro": "This is a copy of your Content in Markdown. Notes use `[[...]]` wikilinks between each other; import the folder into Obsidian, Logseq or another compatible editor.",
+      "intro": "This is a copy of your Content in Markdown. Notes link to each other; import the folder into Obsidian, Logseq or another compatible editor to follow the links.",
       "title": "SecondMind export"
     },
     "section": {
