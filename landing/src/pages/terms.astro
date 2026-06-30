@@ -1,0 +1,574 @@
+---
+import Layout from '../layouts/Layout.astro';
+import Header from '../components/Header.astro';
+import Footer from '../components/Footer.astro';
+import { SUPPORT_EMAIL } from '../config';
+
+// ⚠️ DRAFT pendiente de revisión legal (Borrador 2 — segunda revisión) — NO hacer deploy hasta GO.
+// Fechas: completar AMBAS el día de la publicación (ver §16). Mientras tanto quedan
+// como placeholder visible para que no se publique con una fecha falsa.
+const EFFECTIVE_DATE = '29 de junio de 2026';
+const LAST_UPDATED = '29 de junio de 2026';
+
+// NOTA INTERNA (build-time, no se renderiza) — PENDIENTE DE REVISIÓN LEGAL, PRIORITARIO sobre §12:
+// la cláusula de exención/limitación de responsabilidad debe ser revisada y ajustada por un abogado
+// colombiano. En particular: (a) confirmar el alcance de las exclusiones frente al Estatuto del
+// Consumidor (Ley 1480 de 2011, arts. 42-43 sobre cláusulas abusivas y garantía legal irrenunciable);
+// (b) evaluar sustituir la exclusión total por un tope nominal de responsabilidad; y (c) considerar
+// que el operador es persona natural con patrimonio personal expuesto. Va como comentario de
+// frontmatter (no como comentario HTML) para que NO llegue al navegador ni sea visible en el source.
+---
+
+<!-- DRAFT pendiente de revisión legal — NO hacer deploy hasta GO -->
+<Layout
+  title="Términos de servicio — SecondMind"
+  description="Términos de servicio de SecondMind: condiciones de uso, cuentas, contenido, funciones de IA, responsabilidades y ley aplicable."
+>
+  <Header />
+
+  <main class="container tos">
+    <p class="eyebrow">Legal</p>
+    <h1>Términos de servicio</h1>
+    <p class="updated">Fecha de entrada en vigencia: {EFFECTIVE_DATE}</p>
+    <p class="updated">Última actualización: {LAST_UPDATED}</p>
+
+    <p class="note">
+      <strong>Aviso:</strong> Este es un documento contractual. Al usar SecondMind, usted acepta estos
+      Términos. Le recomendamos leerlos con atención. Si no está de acuerdo con ellos, no utilice el
+      servicio.
+    </p>
+
+    <h2>1. Aceptación y objeto</h2>
+    <p>
+      Estos Términos de Servicio (los “<strong>Términos</strong>”) regulan el acceso y uso de
+      SecondMind (el “<strong>Servicio</strong>”), una aplicación de gestión de conocimiento personal y
+      productividad que permite crear notas, vincularlas, organizar tareas y proyectos, y utilizar
+      funciones asistidas por inteligencia artificial.
+    </p>
+    <p>
+      El Servicio es operado por <strong>Sebastián Gutiérrez Clavijo</strong>, persona natural,
+      domiciliada en Cali, Colombia (en adelante, “<strong>SecondMind</strong>”,
+      “<strong>nosotros</strong>” o “<strong>el operador</strong>”).
+    </p>
+    <p>
+      Al crear una cuenta, acceder o utilizar el Servicio, usted (el “<strong>Usuario</strong>”)
+      declara que ha leído, entendido y aceptado estos Términos en su totalidad, así como la{' '}
+      <a href="/privacy">Política de Privacidad</a>, que forma parte integral de este acuerdo. La
+      aceptación de estos Términos es condición indispensable para usar el Servicio.
+    </p>
+
+    <h2>2. Naturaleza del servicio: fase beta y gratuidad</h2>
+    <p>
+      SecondMind se encuentra actualmente en <strong>fase beta</strong>, es decir, en una etapa de
+      evaluación y desarrollo activo. Esto significa que:
+    </p>
+    <ul>
+      <li>
+        El Servicio puede contener errores, fallos o comportamientos inesperados, y puede cambiar,
+        interrumpirse o suspenderse en cualquier momento.
+      </li>
+      <li>El acceso se otorga de forma <strong>gratuita</strong> durante la fase beta.</li>
+      <li>
+        Nos reservamos el derecho de <strong>introducir planes pagos o modificar las condiciones
+        comerciales</strong> del Servicio en el futuro. En caso de hacerlo, le notificaremos con
+        antelación razonable, y usted podrá decidir si continúa utilizando el Servicio bajo las nuevas
+        condiciones.
+      </li>
+    </ul>
+    <p>
+      El uso gratuito durante la beta no genera ningún derecho a la gratuidad permanente ni a la
+      continuidad indefinida del Servicio.
+    </p>
+
+    <h2>3. Elegibilidad y edad</h2>
+    <p>
+      Para usar SecondMind, usted declara y garantiza que tiene <strong>al menos 18 años
+      cumplidos</strong> y que tiene la capacidad legal para celebrar este acuerdo.
+    </p>
+    <p>
+      El Servicio no está dirigido a menores de edad. Al aceptar estos Términos, usted confirma que
+      cumple con el requisito de edad mediante la casilla de verificación correspondiente durante el
+      registro. Si tenemos conocimiento de que un menor de 18 años ha creado una cuenta,{' '}
+      <strong>procederemos a eliminar la cuenta y los datos asociados</strong>.
+    </p>
+
+    <h2>4. Cuenta, acceso y curación</h2>
+    <p>
+      El acceso a SecondMind durante la fase beta se otorga mediante un proceso de{' '}
+      <strong>postulación y curación</strong>: el Usuario solicita acceso, y el operador decide de
+      forma discrecional a quién admitir a la lista de acceso.
+    </p>
+    <p>Usted es responsable de:</p>
+    <ul>
+      <li>Mantener la confidencialidad de sus credenciales de acceso.</li>
+      <li>Toda actividad que ocurra en su cuenta.</li>
+      <li>Proporcionar información veraz al registrarse.</li>
+    </ul>
+    <p>
+      Nos reservamos el derecho de <strong>otorgar, denegar, suspender o revocar el acceso</strong> a
+      cualquier Usuario, en cualquier momento y a nuestra discreción, especialmente en caso de
+      incumplimiento de estos Términos.
+    </p>
+    <p>
+      Salvo en casos de abuso grave, actividad ilícita o requerimiento legal, antes de revocar el
+      acceso de forma definitiva le daremos un <strong>plazo razonable para exportar o respaldar su
+      Contenido</strong> conforme a la Sección 14.
+    </p>
+
+    <h2>5. Contenido del Usuario y propiedad</h2>
+    <p>
+      Todo el contenido que usted crea en SecondMind —notas, tareas, proyectos, vínculos y cualquier
+      texto o dato que usted ingrese (su “<strong>Contenido</strong>”)— <strong>le pertenece a
+      usted</strong>. SecondMind no reclama propiedad alguna sobre su Contenido.
+    </p>
+    <p>
+      Para poder operar el Servicio, usted nos otorga una <strong>licencia limitada, no exclusiva y
+      sublicenciable</strong> —únicamente a los proveedores que actúan como encargados del tratamiento
+      descritos en la Sección 7, y solo para los fines aquí señalados— para almacenar, procesar,
+      mostrar y transmitir su Contenido <strong>con el único fin de prestarle el Servicio</strong> y
+      sus funciones (por ejemplo: sincronización entre dispositivos, búsqueda, vínculos entre notas y
+      las funciones de inteligencia artificial descritas en la Sección 7).
+    </p>
+    <p>
+      Esta licencia se mantiene mientras su Contenido permanezca en el Servicio y <strong>se revoca
+      automáticamente cuando usted elimina su Contenido o su cuenta</strong>, sin perjuicio de los
+      plazos técnicos de eliminación descritos en la Sección 13 y en la{' '}
+      <a href="/privacy">Política de Privacidad</a>. La licencia no nos autoriza a usar su Contenido
+      para ningún otro propósito.
+    </p>
+    <p>
+      Usted es el único responsable de su Contenido y declara que tiene los derechos necesarios sobre
+      él y que no infringe derechos de terceros ni leyes aplicables.
+    </p>
+
+    <h2>6. Propiedad intelectual del Servicio</h2>
+    <p>
+      El Servicio en sí mismo —incluyendo el software, el código, el diseño, la interfaz, las marcas,
+      el logotipo y el nombre “<strong>SecondMind</strong>”— es propiedad del operador y está protegido
+      por las leyes de propiedad intelectual aplicables.
+    </p>
+    <p>
+      Estos Términos le otorgan únicamente una <strong>licencia limitada, personal, no exclusiva e
+      intransferible</strong> para usar el Servicio conforme a lo aquí dispuesto. No se le transfiere
+      ningún derecho de propiedad sobre el Servicio. Usted no podrá copiar, modificar, distribuir,
+      vender, ni explotar el Servicio o sus componentes, ni usar el nombre o las marcas de SecondMind
+      sin autorización previa y por escrito.
+    </p>
+
+    <h2>7. Procesamiento por proveedores externos (encargados)</h2>
+    <p>
+      Para prestar ciertas funciones, SecondMind transmite parte de su Contenido a proveedores externos
+      que actúan como encargados del tratamiento. Le explicamos con transparencia cuáles son, qué
+      reciben y bajo qué condiciones, porque las funciones operan de manera distinta.
+    </p>
+
+    <h3>7.0. Infraestructura — Google Cloud / Firebase</h3>
+    <p>
+      Su cuenta, su Contenido y la base de datos del Servicio se almacenan y procesan en la
+      infraestructura de <strong>Google Cloud / Firebase</strong> (autenticación, base de datos,
+      funciones en la nube y alojamiento), en servidores ubicados en Estados Unidos. Google actúa como{' '}
+      <strong>encargado del tratamiento</strong> por cuenta de SecondMind, procesando estos datos
+      únicamente para operar el Servicio, y no los utiliza para publicidad propia.
+    </p>
+
+    <h3>7.1. Búsqueda semántica — OpenAI</h3>
+    <p>
+      SecondMind ofrece una función de <strong>búsqueda semántica</strong> que permite encontrar notas
+      por significado y no solo por palabras exactas. Para habilitarla, el Servicio genera
+      representaciones numéricas (“embeddings”) del texto de sus notas y de sus búsquedas mediante{' '}
+      <strong>OpenAI</strong>, un proveedor ubicado fuera de Colombia (en Estados Unidos).
+    </p>
+    <p>Es importante que entienda lo siguiente:</p>
+    <ul>
+      <li>
+        <strong>La búsqueda semántica requiere su reconocimiento afirmativo antes de transmitir su
+        texto por primera vez.</strong> Antes del primer envío, el Servicio le presenta un aviso sobre
+        el procesamiento descrito en esta sección, y solo comienza a transmitir su texto a OpenAI una
+        vez que usted lo reconoce de forma expresa. Puede <strong>desactivar la búsqueda semántica en
+        cualquier momento</strong> desde la configuración; si la desactiva, el texto de sus notas y
+        búsquedas <strong>no se transmite a OpenAI</strong> y la búsqueda funciona de manera local en
+        su dispositivo, por palabras clave (ver Sección 7.3).
+      </li>
+      <li>
+        Mientras la función esté activa, el envío se realiza bajo la cuenta y responsabilidad del
+        operador de SecondMind. Frente a esta función, <strong>SecondMind es el responsable del
+        tratamiento y OpenAI actúa como encargado</strong> de los datos enviados, procesándolos por
+        cuenta de SecondMind.
+      </li>
+      <li>
+        <strong>Consentimiento informado:</strong> al mantener activa la búsqueda semántica, usted
+        entiende y acepta que el texto de sus notas y búsquedas se procesa mediante un proveedor
+        ubicado fuera de Colombia (Estados Unidos) con el único fin de habilitar esta función.
+      </li>
+      <li>
+        <strong>Datos sensibles:</strong> le recomendamos <strong>no almacenar información
+        especialmente sensible</strong> (por ejemplo, datos de salud, creencias religiosas, orientación
+        sexual, opiniones políticas o datos biométricos) en notas mientras la búsqueda semántica esté
+        activa. <strong>Usted no está obligado a autorizar el tratamiento de datos sensibles: puede
+        usar el Servicio con la búsqueda semántica desactivada.</strong> Si decide mantenerla activa y
+        almacenar ese tipo de contenido, lo hace bajo su criterio.
+      </li>
+      <li>
+        Según la política vigente de OpenAI para su API, los datos enviados no se utilizan para
+        entrenar sus modelos y se retienen por un período limitado para fines de monitoreo de abuso. El
+        tratamiento que OpenAI haga de estos datos se rige por sus términos y su acuerdo de tratamiento
+        de datos vigentes.
+      </li>
+    </ul>
+
+    <h3>7.2. Funciones de copiloto de inteligencia artificial — Anthropic (opcional, con su propia clave)</h3>
+    <p>
+      SecondMind ofrece funciones asistidas por inteligencia artificial (por ejemplo, procesamiento de
+      su bandeja de entrada y sugerencia de etiquetas) que utilizan los modelos de{' '}
+      <strong>Anthropic (Claude)</strong>.
+    </p>
+    <p>A diferencia de la búsqueda semántica:</p>
+    <ul>
+      <li>
+        Estas funciones son <strong>opcionales</strong> y solo se activan si usted <strong>provee su
+        propia clave de API</strong> de Anthropic (modelo conocido como “BYOK”, <em>Bring Your Own
+        Key</em>). Si usted no configura una clave propia, <strong>ningún Contenido suyo se transmite a
+        Anthropic</strong>.
+      </li>
+      <li>
+        Cuando usted provee su clave, el tratamiento de sus datos <strong>por parte de
+        Anthropic</strong> se rige por la relación entre <strong>usted y Anthropic</strong>, bajo su
+        propia cuenta y los términos que usted aceptó con dicho proveedor.
+      </li>
+      <li>
+        No obstante, <strong>SecondMind sí realiza su propio tramo de procesamiento</strong>: nuestro
+        sistema descifra su clave, construye la solicitud con su Contenido y la transmite a Anthropic.
+        Por ese tramo —el procesamiento que ocurre dentro de nuestra infraestructura— <strong>SecondMind
+        responde conforme a su Política de Privacidad</strong> y a estos Términos. No nos consideramos
+        un mero intermediario respecto de esa parte del tratamiento.
+      </li>
+      <li>
+        Según la política vigente de Anthropic para su API comercial, los datos enviados no se utilizan
+        para entrenar sus modelos por defecto y se retienen por un período limitado. El tratamiento se
+        rige por los términos de Anthropic aplicables a la cuenta del Usuario.
+      </li>
+    </ul>
+
+    <h3>7.3. Lo que NO sale de su control</h3>
+    <p>En aras de la transparencia, le informamos qué <strong>no</strong> ocurre con su Contenido:</p>
+    <ul>
+      <li>
+        La <strong>búsqueda por palabras clave se ejecuta localmente</strong> en su dispositivo y nunca
+        se transmite a terceros. Únicamente la <strong>búsqueda semántica</strong> (Sección 7.1),
+        cuando está activa, genera un embedding de su consulta que se envía a OpenAI.
+      </li>
+      <li>
+        SecondMind <strong>no utiliza herramientas de analítica de comportamiento, rastreo publicitario
+        ni publicidad de terceros</strong>. El Servicio mantiene registros operativos mínimos (por
+        ejemplo, registros técnicos de errores y funcionamiento) que no incluyen el texto de su
+        Contenido.
+      </li>
+      <li>
+        Sus representaciones semánticas (embeddings) se almacenan en la infraestructura del Servicio
+        dentro de Google Cloud (Sección 7.0), bajo nuestro control y aisladas por cuenta, y no en un
+        servicio de base de datos vectorial de terceros distinto.
+      </li>
+    </ul>
+    <p>
+      Para el detalle completo del tratamiento de datos, consulte la{' '}
+      <a href="/privacy">Política de Privacidad</a>.
+    </p>
+
+    <h2>8. Inteligencia artificial: naturaleza y limitaciones</h2>
+    <p>
+      Las funciones de inteligencia artificial de SecondMind están diseñadas como una{' '}
+      <strong>herramienta de asistencia</strong>, no como una autoridad. Usted reconoce y acepta que:
+    </p>
+    <ul>
+      <li>
+        Las salidas generadas por IA <strong>pueden contener errores, imprecisiones o información
+        incompleta</strong>, y no deben tomarse como verdades absolutas.
+      </li>
+      <li>
+        En las funciones de copiloto, las sugerencias de la IA <strong>siempre quedan bajo su
+        control</strong>: usted decide si las acepta o las descarta antes de que se apliquen a su
+        Contenido.
+      </li>
+      <li>
+        Las salidas de IA <strong>no constituyen asesoría profesional</strong> de ningún tipo (legal,
+        médica, financiera, psicológica u otra). No debe basar decisiones importantes únicamente en
+        ellas.
+      </li>
+    </ul>
+
+    <h2>9. Claves de API del Usuario (BYOK)</h2>
+    <p>
+      Si usted decide usar las funciones de IA que requieren su propia clave de API (Sección 7.2),
+      aplican las siguientes condiciones:
+    </p>
+    <ul>
+      <li>
+        Usted es responsable de <strong>obtener y custodiar su clave</strong>, de los costos derivados
+        de su uso ante el proveedor correspondiente y del cumplimiento de los términos de dicho
+        proveedor.
+      </li>
+      <li>
+        Su clave se <strong>almacena cifrada</strong> en reposo mediante cifrado estándar de la
+        industria. No obstante, para poder ejecutar las funciones de IA, el Servicio <strong>descifra
+        su clave en el momento de uso</strong>; por lo tanto, el almacenamiento <strong>no es de
+        conocimiento cero</strong> (“zero-knowledge”). Le informamos esto con transparencia para que
+        tome una decisión informada.
+      </li>
+      <li>
+        Su clave nunca se comparte con otros Usuarios ni se devuelve al navegador una vez guardada.
+        Usted puede eliminar su clave en cualquier momento desde la configuración del Servicio.
+      </li>
+      <li>
+        <strong>Reparto de responsabilidad:</strong> SecondMind responderá únicamente por los daños o
+        costos que se deriven de una brecha de seguridad o negligencia atribuibles directamente al
+        operador en el almacenamiento o manejo de su clave. Usted responde por los costos y daños
+        derivados del uso de su clave dentro de su propia esfera de control (por ejemplo, su exposición
+        por parte suya, el compromiso de su propia cuenta ante el proveedor, o el incumplimiento de los
+        términos del proveedor).
+      </li>
+    </ul>
+
+    <h2>10. Uso aceptable</h2>
+    <p>Usted se compromete a no utilizar SecondMind para:</p>
+    <ul>
+      <li>Realizar actividades ilegales o que infrinjan derechos de terceros.</li>
+      <li>
+        Almacenar o transmitir contenido que sea ilícito, que vulnere derechos de propiedad
+        intelectual, o que constituya material dañino o malicioso.
+      </li>
+      <li>
+        Intentar vulnerar, sobrecargar, interrumpir o acceder sin autorización a la infraestructura del
+        Servicio o a las cuentas de otros Usuarios.
+      </li>
+      <li>
+        Usar el Servicio para enviar comunicaciones no solicitadas, abusar de las funciones de IA, o
+        eludir los límites de uso establecidos.
+      </li>
+      <li>Realizar ingeniería inversa, copiar o explotar el Servicio con fines no autorizados.</li>
+    </ul>
+    <p>
+      El incumplimiento de esta sección puede resultar en la suspensión o terminación inmediata de su
+      acceso.
+    </p>
+
+    <h2>11. Indemnización</h2>
+    <p>
+      Usted se compromete a mantener indemne al operador de SecondMind frente a reclamaciones, daños o
+      costos (incluidos gastos legales razonables) que surjan de: (i) su Contenido; (ii) su uso del
+      Servicio en violación de estos Términos o de la ley; o (iii) la infracción de derechos de
+      terceros por parte de usted.
+    </p>
+    <p>
+      Esta obligación se entiende sin perjuicio de los derechos irrenunciables que la ley reconozca al
+      Usuario en su calidad de consumidor.
+    </p>
+
+    <h2>12. Exención de garantías y limitación de responsabilidad</h2>
+    <p>
+      <strong>El Servicio se proporciona “tal cual” y “según disponibilidad”, sin garantías de ningún
+      tipo.</strong> Dada su naturaleza de fase beta, no garantizamos que el Servicio sea
+      ininterrumpido, libre de errores, seguro, ni que cumpla con sus expectativas particulares.
+    </p>
+    <p>En la máxima medida permitida por la ley aplicable:</p>
+    <ul>
+      <li>
+        SecondMind no será responsable por la pérdida de datos <strong>no atribuible al
+        operador</strong>, ni por el lucro cesante, daños indirectos, incidentales o consecuenciales
+        derivados del uso o la imposibilidad de uso del Servicio.
+      </li>
+      <li>
+        Usted es responsable de mantener sus propias copias de seguridad de su Contenido cuando lo
+        considere necesario.
+      </li>
+    </ul>
+    <p>
+      <strong>Nada en estos Términos excluye o limita la responsabilidad del operador en los casos en
+      que dicha exclusión esté prohibida por la ley</strong>, incluyendo los derechos irrenunciables
+      que la legislación colombiana de protección al consumidor reconoce al Usuario, ni la
+      responsabilidad derivada de dolo o culpa grave del operador.
+    </p>
+    <h2>13. Terminación</h2>
+    <p>
+      <strong>Por parte del Usuario:</strong> Usted puede dejar de usar el Servicio y <strong>eliminar
+      su cuenta en cualquier momento</strong> mediante la función de eliminación de cuenta disponible en
+      la aplicación. Esta eliminación borra su Contenido de los sistemas activos de forma inmediata; las
+      copias de respaldo se eliminan dentro del plazo descrito en la{' '}
+      <a href="/privacy">Política de Privacidad</a>.
+    </p>
+    <p>
+      <strong>Por parte del operador:</strong> Podemos suspender o terminar su acceso al Servicio, con o
+      sin previo aviso, en caso de incumplimiento de estos Términos, por requerimiento legal, o por
+      decisión de discontinuar el Servicio. Salvo en casos de abuso grave o requerimiento legal, le
+      daremos un plazo razonable para exportar su Contenido (Sección 4 y Sección 14).
+    </p>
+    <p>
+      En caso de terminación del Servicio en su totalidad, procuraremos avisarle con antelación
+      razonable para que pueda exportar o respaldar su Contenido.
+    </p>
+
+    <h2>14. Portabilidad y exportación del Contenido</h2>
+    <p>
+      Usted tiene derecho a obtener una copia de su Contenido. El Servicio le permite <strong>exportar
+      su Contenido</strong> en un formato de uso común, de modo que pueda conservarlo o migrarlo. Este
+      derecho es adicional a los derechos que le reconoce la legislación de protección de datos
+      personales, descritos en la <a href="/privacy">Política de Privacidad</a>.
+    </p>
+
+    <h2>15. Comentarios y sugerencias</h2>
+    <p>
+      Si usted nos envía comentarios, ideas o sugerencias sobre el Servicio (“<strong>Feedback</strong>”),
+      nos otorga el derecho de usarlos libremente para mejorar el Servicio, sin obligación de
+      compensación ni confidencialidad respecto de dicho Feedback. Esto no afecta la propiedad de su
+      Contenido (Sección 5), que es cosa distinta del Feedback.
+    </p>
+
+    <h2>16. Modificaciones al Servicio y a los Términos</h2>
+    <p>
+      Podemos modificar el Servicio o estos Términos en cualquier momento. Cuando los cambios sean
+      sustanciales, le notificaremos por un medio razonable (por ejemplo, dentro de la aplicación o por
+      correo electrónico) con antelación a su entrada en vigencia.
+    </p>
+    <p>
+      El uso continuado del Servicio después de la entrada en vigencia de los cambios constituye su
+      aceptación de los Términos modificados. Si no está de acuerdo con los cambios, debe dejar de usar
+      el Servicio.
+    </p>
+
+    <h2>17. Ley aplicable y jurisdicción</h2>
+    <p>
+      Estos Términos se rigen por las <strong>leyes de la República de Colombia</strong>.
+    </p>
+    <p>
+      Cualquier controversia que surja en relación con estos Términos o con el uso del Servicio se
+      someterá a la jurisdicción de los jueces y tribunales competentes de Cali, Colombia, sin perjuicio
+      de los derechos que la ley reconozca al Usuario como consumidor.
+    </p>
+
+    <h2>18. Disposiciones generales</h2>
+    <ul>
+      <li>
+        <strong>Divisibilidad:</strong> Si alguna disposición de estos Términos se considera inválida o
+        inejecutable, las demás disposiciones permanecerán en pleno vigor.
+      </li>
+      <li>
+        <strong>No renuncia:</strong> El hecho de que no ejerzamos un derecho en un momento dado no
+        constituye renuncia a ejercerlo después.
+      </li>
+      <li>
+        <strong>Cesión:</strong> Usted no puede ceder estos Términos sin nuestro consentimiento.
+        Nosotros podemos cederlos en el contexto de una reorganización, fusión o transferencia del
+        Servicio, notificándoselo.
+      </li>
+      <li>
+        <strong>Notificaciones:</strong> Las notificaciones se realizarán por los medios de contacto
+        indicados (correo electrónico de la cuenta o el canal de contacto de la Sección 19).
+      </li>
+      <li>
+        <strong>Acuerdo completo:</strong> Estos Términos, junto con la Política de Privacidad,
+        constituyen el acuerdo completo entre usted y SecondMind respecto del uso del Servicio.
+      </li>
+    </ul>
+
+    <h2>19. Contacto</h2>
+    <p>Si tiene preguntas sobre estos Términos, puede contactarnos en:</p>
+    <p>
+      <strong>Correo electrónico:</strong>{' '}
+      <a href={`mailto:${SUPPORT_EMAIL}`}>{SUPPORT_EMAIL}</a>
+    </p>
+    <p>
+      Para asuntos relacionados con el tratamiento de sus datos personales y el ejercicio de sus
+      derechos (habeas data), consulte los canales indicados en la{' '}
+      <a href="/privacy">Política de Privacidad</a>.
+    </p>
+
+    <a class="back" href="/">← Volver al inicio</a>
+  </main>
+
+  <Footer />
+</Layout>
+
+<style>
+  .tos {
+    min-height: 64vh;
+    max-width: 760px;
+    padding-top: clamp(3.5rem, 8vw, 6rem);
+    padding-bottom: clamp(3rem, 6vw, 4.5rem);
+  }
+  .tos h1 {
+    margin-top: 0.9rem;
+    font-size: clamp(2rem, 5vw, 2.75rem);
+    letter-spacing: -0.03em;
+  }
+  .updated {
+    margin-top: 0.7rem;
+    font-size: 0.9rem;
+    color: var(--muted-foreground);
+  }
+  .updated + .updated {
+    margin-top: 0.2rem;
+  }
+
+  /* Callout "Aviso" — mismo lenguaje visual que el callout "Importante" de la Privacy. */
+  .note {
+    margin-top: 2rem;
+    padding: 1rem 1.2rem;
+    border-radius: calc(var(--radius) * 1.2);
+    border: 1px solid color-mix(in oklch, var(--primary) 24%, transparent);
+    background: color-mix(in oklch, var(--primary) 8%, transparent);
+    border-left: 3px solid var(--primary);
+  }
+
+  /* Secciones del documento. */
+  .tos h2 {
+    margin-top: 2.85rem;
+    font-size: clamp(1.3rem, 3vw, 1.6rem);
+    letter-spacing: -0.02em;
+  }
+  .tos h3 {
+    margin-top: 1.85rem;
+    font-size: 1.05rem;
+    font-weight: 600;
+    color: var(--foreground);
+  }
+  .tos p {
+    margin-top: 1rem;
+    font-size: 1.02rem;
+    line-height: 1.7;
+    max-width: 68ch;
+  }
+  .tos ul {
+    margin-top: 1rem;
+    padding-left: 1.3rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.55rem;
+    max-width: 68ch;
+  }
+  .tos li {
+    line-height: 1.65;
+  }
+  .tos li::marker {
+    color: var(--primary);
+  }
+  .tos a {
+    color: var(--primary);
+    text-decoration: underline;
+    text-underline-offset: 2px;
+  }
+  .tos strong {
+    font-weight: 600;
+    color: var(--foreground);
+  }
+
+  .back {
+    display: inline-block;
+    margin-top: 3rem;
+    font-size: 0.95rem;
+    font-weight: 500;
+    color: var(--muted-foreground);
+    transition: color 0.18s var(--ease);
+  }
+  .back:hover {
+    color: var(--foreground);
+  }
+</style>
