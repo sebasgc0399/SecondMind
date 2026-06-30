@@ -1,6 +1,6 @@
 # SPEC — Feature 68: Consentimiento server-authoritative (ack-proof no forjable)
 
-> **Estado:** ✅ Implementado y mergeado a `main` (`--no-ff`, 2026-06-24). **NO deployado** — parte del release coordinado futuro (junto con las CFs de SPEC-66, también en main sin deployar). **Registro de implementación** (no archivado: tiene un cabo vivo, ver § Cabos).
+> **Estado:** ✅ Implementado, mergeado a `main` (`--no-ff`, 2026-06-24) y **deployado en v0.6.0** (2026-06-29, junto con las CFs de SPEC-66 — 20 CFs en us-central1). **Registro de implementación** (no archivado del todo: conserva un cabo vivo de seudonimización post-borrado, ver § Cabos).
 > **Tipo:** "SPEC-chico" — hardening sobre SPEC-66. Nació de research/plan cerrados (no tuvo SPEC prescriptivo propio en el repo).
 > **Por qué existe:** el gate de egreso a OpenAI de SPEC-66 derivaba el ack-proof (`acknowledgedAt`) del doc vivo `users/{uid}/settings/semanticSearch`, que es **client-writable** (catch-all `users/**`). Un cliente podía escribir `{ enabled:true, acknowledgedAt: Date.now() }` sin cruzar el modal → **forjar el consentimiento** y burlar el invariante legal de §7.1. Opción 3 mueve la prueba a un store server-only.
 
@@ -63,4 +63,4 @@
 ## Cabos vivos (por qué NO se archiva este registro)
 
 - **⚖ Derecho al olvido vs. evidencia de consentimiento.** `deleteAccount` **no** purga `consentLog/{uid}` → el registro sobrevive al borrado de cuenta con **`uid` CRUDO**. El diseño preveía "uid seudonimizado que sobrevive al borrado"; la seudonimización post-borrado **quedó pendiente**. Es parte de lo que el abogado real debe revisar en el **gate pre-monetización** (junto a §12 del ToS y consentimiento de datos sensibles Ley 1581). Anotado en la nota **ESTADO LEGAL** de [`Spec/ESTADO-ACTUAL.md`](../ESTADO-ACTUAL.md).
-- **Deploy pendiente.** Las CFs nuevas (`markSemanticConsent` + las de SPEC-66) están en `main` sin deployar — salen en el release coordinado futuro.
+- ✅ **Deploy — RESUELTO en v0.6.0** (2026-06-29). Las CFs (`markSemanticConsent` + las de SPEC-66) se deployaron en el release coordinado (20 CFs en us-central1).
