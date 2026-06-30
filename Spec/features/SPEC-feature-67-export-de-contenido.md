@@ -1,6 +1,6 @@
 # SPEC — Feature 67: Export de contenido del usuario
 
-> **Estado:** **IMPLEMENTADO y MERGEADO a `main`** (`a326225`, F1-F7) — **client-side, cero backend**. Las 6 decisiones D1-D6 cerradas (abajo); D4 = CLIENT-SIDE (web-primary con rebote nativo). **NO DEPLOYADO:** el deploy a hosting va en el **release coordinado con SPEC-66 + la publicación del ToS** (OK legal pendiente) — deployar el export antes desincroniza «lo que la app hace» de «lo que el ToS dice», mismo patrón que SPEC-66. **SPEC viva (no archivada)** por los cabos vivos → ver "Implementación y cierre" abajo.
+> **Estado:** **IMPLEMENTADO, MERGEADO y DEPLOYADO.** Mergeado a `main` (`a326225`, F1-F7, client-side cero backend), **deployado en v0.6.0** (2026-06-29, en el bundle `hosting:app` del release coordinado con SPEC-66/68 + la publicación del ToS/Privacy). Las 6 decisiones D1-D6 cerradas (abajo); D4 = CLIENT-SIDE (web-primary con rebote nativo). **SPEC viva (no archivada del todo)** por los cabos vivos restantes (legal D6 + verificación) → ver "Implementación y cierre" abajo.
 >
 > **Por qué existe:** prerrequisito de **publicación del ToS**. El ToS (en revisión legal) afirma en **§14** que «el Servicio le permite exportar su Contenido en un formato de uso común». Hoy **eso NO existe**. Conecta también con el **derecho de portabilidad de la Ley 1581** (Colombia). Es el segundo prerrequisito del ToS que falta implementar (el toggle de búsqueda semántica de SPEC-66 ya está mergeado).
 >
@@ -164,7 +164,7 @@ Se evaluó y **se descartó para v1**. Habría ganado **solo si** el producto ex
 
 ### Cabos VIVOS (por esto la SPEC no se archiva)
 
-1. **⚖ Deploy diferido** — el export **NO está deployado** a hosting. Va en el **release coordinado con SPEC-66 (toggle semántico) + la publicación del ToS**, con el OK legal. Deployarlo solo desincroniza app ↔ ToS.
+1. ✅ **Deploy — RESUELTO en v0.6.0** (2026-06-29). El export se deployó a `hosting:app` en el release coordinado con SPEC-66/68 + la publicación del ToS/Privacy. Era el bloqueante principal de archivado; ya no.
 2. **⚖ Cabo legal D6** — si el abogado exige incluir la papelera por Ley 1581, es quitar el filtro `deletedAt>0` en `shapeExportData` (cambio chico).
 3. **Smoke device del rebote Android** — para el release (Custom Tab → `#export` → descarga en el navegador del sistema). No automatizable; no bloquea el merge.
 4. **Confirmación empírica `tagId`/`areaId`** — vía Firebase MCP cuando reconecte (el smoke web ya mostró labels legibles en el `LEEME.md` real; confianza estructural alta).
@@ -184,6 +184,6 @@ Se evaluó y **se descartó para v1**. Habría ganado **solo si** el producto ex
 - [x] **GO/NO-GO del plan en Claude web** + GO de implementación (Sebastián).
 - [x] **Implementación F1-F7 + merge `--no-ff` a `main`** (`a326225`) + **validación web real** (smoke contra la cuenta de Sebastián) + fix del filename de descarga.
 - [x] **SDD step 8** — 3 gotchas escalados + ESTADO-ACTUAL actualizado + SPEC como registro de implementación (no archivada por cabos vivos).
-- [ ] **Deploy a hosting** — diferido al **release coordinado** (SPEC-66 + publicación del ToS, OK legal pendiente).
+- [x] **Deploy a hosting** — ✅ deployado en v0.6.0 (2026-06-29, release coordinado).
 - [ ] (Cabo) Smoke device del rebote Android — para el release.
 - [ ] (Cabo) Confirmación empírica de `tagId`/`areaId` + links `ai-suggested` vía Firebase MCP cuando reconecte.
