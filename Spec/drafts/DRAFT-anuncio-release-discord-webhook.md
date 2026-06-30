@@ -1,8 +1,8 @@
 # DRAFT — Anuncio automático de release en Discord (#anuncios vía Webhook)
 
-> **Estado:** **DISCOVERY / GO–NO-GO.** Exploración para decidir si automatizar el anuncio de cada release en el canal `#anuncios` del Discord de la beta, posteando vía **Discord Webhook** como último paso del pipeline de release en GitHub Actions. **NADA implementado:** no se tocó `.github/workflows/`, no se creó el webhook en Discord. Este draft reporta el estado real verificado contra el repo y propone el plan para que Sebastián valide GO/NO-GO. NO es un SPEC ni código.
+> **Estado:** **GO — decisiones cerradas, listo para SPEC.** Exploración para automatizar el anuncio de cada release en el canal `#anuncios` del Discord de la beta, posteando vía **Discord Webhook** como último paso del pipeline de release en GitHub Actions. **NADA implementado todavía:** no se tocó `.github/workflows/`, no se creó el webhook en Discord. Este draft reportó el estado real verificado contra el repo; Sebastián dio **GO** y aceptó las 3 recomendaciones (2026-06-30). Próximo paso: escribir el SPEC. NO es un SPEC ni código.
 >
-> **Decisiones que requieren tu visto bueno antes de SPEC** (marcadas ⚠️ abajo): (D1) fuente del changelog, (D2) qué hacer en releases SIN entrada de changelog, (D3) si los prereleases (`-rc`/`-beta`) se anuncian o no.
+> **Decisiones cerradas (ver §6 para detalle):** **D1 = changelog i18n en ES**; **D2 = anuncio mínimo** (versión + link) cuando no hay entrada de changelog; **D3 = skip de prereleases** (`-rc`/`-beta`).
 >
 > **Restricciones honradas:** Webhook (no bot), sin interacción bidireccional. **Cero dependencias nuevas** — `curl` + `jq` ya vienen en los runners `ubuntu-latest`. Sin fuente de changelog pesada inventada (P7/YAGNI).
 
@@ -120,12 +120,12 @@ curl -sS -H "Content-Type: application/json" -d "$PAYLOAD" "$DISCORD_WEBHOOK_ANU
 5. Verificar en un release real (o re-disparo) que el anuncio aparece solo tras ambos frentes verdes.
 6. Cerrar: documentar el nuevo paso en la skill `release-ecosystem` (Paso 11 — "el anuncio es automático, no postear a mano").
 
-## 6. Decisiones abiertas para tu GO/NO-GO
+## 6. Decisiones (CERRADAS — GO 2026-06-30)
 
-- **⚠️ D1 — Fuente del changelog:** propongo la **i18n ES** (§1). Validá que querés ES (no EN, no ambos).
-- **⚠️ D2 — Releases sin entrada de changelog:** ¿qué hacés cuando no hay `changelog.vXXX`? Opciones: **(a)** postear un anuncio mínimo ("Nueva versión vX.Y.Z disponible" + link, sin bullets) — *mi recomendación*, el release igual ocurrió; **(b)** **skip** total del anuncio. Tu decisión.
-- **⚠️ D3 — Prereleases:** los tags `-rc`/`-beta` se marcan `prerelease` en el workflow. ¿Anunciar en `#anuncios` (canal de usuarios) un `-rc`? Recomiendo **skip** (no spamear con candidatos). Nota: un prerelease tampoco tendría key i18n (`v060-rc1` no matchea) → naturalmente caería en D2; conviene **skip explícito** igual.
-- **Color del embed:** confirmar hex de marca exacto desde `src/index.css` (hoy puse `9145590` ≈ púrpura como placeholder).
+- **✅ D1 — Fuente del changelog: i18n en ES.** Se lee `changelog.vXXX` de `src/locales/es/translation.json` (§1). No EN, no ambos — el server de beta es en español.
+- **✅ D2 — Releases sin entrada de changelog: anuncio mínimo.** Cuando `changelog.vXXX` no existe (Paso 2.5 condicional), postear igual un embed **mínimo** ("Nueva versión vX.Y.Z disponible" + link al Release, sin bullets). El release ocurrió → se anuncia. NO se hace skip total ni se postea embed vacío.
+- **✅ D3 — Prereleases: skip.** Los tags `-rc`/`-beta` (marcados `prerelease` en el workflow) **no** se anuncian en `#anuncios`. El job debe guardar explícitamente contra esos sufijos (además, un `-rc` tampoco matchea key i18n, así que sin el guard caería en D2 — el skip explícito lo corta antes).
+- **Pendiente menor (no bloquea SPEC):** confirmar el hex de marca exacto desde `src/index.css` (hue 285) para el `color` del embed; hoy el ejemplo usa `9145590` (≈ púrpura) como placeholder.
 
 ## 7. Referencias cruzadas (archivos reales verificados)
 
