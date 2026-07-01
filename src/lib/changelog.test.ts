@@ -2,13 +2,17 @@ import { describe, expect, it } from 'vitest';
 import { CHANGELOG_ENTRIES, findChangelogEntry } from '@/lib/changelog';
 
 describe('findChangelogEntry', () => {
-  it('versión con entrada → la devuelve', () => {
-    expect(findChangelogEntry('0.5.2')).toEqual({ version: '0.5.2', key: 'v052' });
+  // Data-driven sobre el catálogo real: NO se desincroniza al liberar una versión
+  // nueva. Root cause del test stale post-release v0.6.0 (fix): la guardia vieja
+  // hardcodeaba `0.6.0 → undefined` como proxy del invariante F60, pero el release
+  // re-agregó la entrada al catálogo y nadie tocó el test → rojo en main.
+  it('toda versión del catálogo → devuelve su entrada exacta', () => {
+    CHANGELOG_ENTRIES.forEach((e) => expect(findChangelogEntry(e.version)).toEqual(e));
   });
 
-  it('versión sin entrada → undefined (incl. 0.6.0: removida por no liberada, F60 invariante)', () => {
-    expect(findChangelogEntry('0.5.1')).toBeUndefined();
-    expect(findChangelogEntry('0.6.0')).toBeUndefined();
+  it('versión fuera del catálogo → undefined', () => {
+    expect(findChangelogEntry('0.5.1')).toBeUndefined(); // gap real entre liberadas
+    expect(findChangelogEntry('99.99.99')).toBeUndefined(); // sentinel nunca liberado
   });
 
   it('match por igualdad exacta de string (sin semver)', () => {
