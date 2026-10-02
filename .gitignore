@@ -67,3 +67,7 @@ temp/
 
 # gotchas-search: índice BM25 generado por reindex.py
 .claude/skills/gotchas-search/corpus.json
+
+# agent-guard (SPEC-69 T2): sentinels locales del loop y de la ventana de mantenimiento
+.claude/loop.active
+.claude/guard.unlock
