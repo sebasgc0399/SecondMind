@@ -25,23 +25,29 @@ test('smoke: login, dashboard, wikilink, backlinks y papelera', async ({ page },
       fullPage: true,
     });
 
+  // La tarjeta "Hubs activos" (section con ese h2): el hub debe estar ahí, no en otra tarjeta.
+  const hubsCard = page
+    .locator('section')
+    .filter({ has: page.getByRole('heading', { name: 'Hubs activos' }) });
+
   await test.step('login con el usuario seed', async () => {
     await page.goto('/login');
+    // I1: antes de teclear credenciales, comprobar que el servidor es el emulador (un server en
+    // 5180 con config de producción también mostraría el login). Va PRIMERO a propósito.
+    await expect(page.getByTestId('environment-badge')).toHaveText('EMULADOR · demo-secondmind');
     await page.getByLabel('Email').fill(SEED_EMAIL);
     await page.getByLabel('Contraseña', { exact: true }).fill(SEED_PASSWORD);
     await page.getByRole('button', { name: 'Iniciar sesión', exact: true }).click();
-    await expect(page.getByText('EMULADOR · demo-secondmind')).toBeVisible();
   });
 
   await test.step('dashboard con datos del seed', async () => {
     await expect(page.getByText(SEED_TASK).first()).toBeVisible();
-    await expect(page.getByText('Hubs activos')).toBeVisible();
-    await expect(page.getByText(hubTitle).first()).toBeVisible();
+    await expect(hubsCard.getByRole('link', { name: hubTitle })).toBeVisible();
     await shot('dashboard');
   });
 
   await test.step('abrir la nota hub y seguir un wikilink', async () => {
-    await page.getByText(hubTitle).first().click();
+    await hubsCard.getByRole('link', { name: hubTitle }).click();
     await expect(page).toHaveURL(/\/notes\/nota-segundo-cerebro$/);
     const wikilink = page.locator('.ProseMirror a.wikilink', { hasText: LINKED_TITLE });
     await expect(wikilink).toBeVisible();

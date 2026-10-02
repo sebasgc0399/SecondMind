@@ -19,7 +19,10 @@ export default defineConfig({
     command: 'npm run dev:emu',
     url: BASE_URL,
     timeout: 240_000,
-    reuseExistingServer: true,
+    // I1: por defecto NO se reutiliza lo que haya en 5180 (podría ser un dev server con config de
+    // producción); si el puerto está ocupado Playwright se niega a arrancar. `E2E_REUSE=1` lo
+    // permite para iterar con un `npm run dev:emu` propio (el spec igual exige el badge EMULADOR).
+    reuseExistingServer: process.env.E2E_REUSE === '1',
     stdout: 'pipe',
     stderr: 'pipe',
   },
