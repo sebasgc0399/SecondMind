@@ -144,6 +144,26 @@ _(una entrada por tanda: qué se hizo, commits, verificación con números, revi
 - **Revisión:** APROBADA CON CORRECCIONES (2 MINOR, 1 NIT). Aplicadas: (m1) los pasos `tsc`/`vitest`/`vite` invocan el binario local con `node node_modules/<pkg>/…` (un binario ausente falla en vez de instalar un paquete sin auditar; se observó el placeholder `tsc@2.0.4`). Desviación con evidencia: `npx --no-install` y `npm exec --no --` NO sirven en npm 11.10.1: con un binario inexistente igual consultan el registry (E404); la invocación directa falla sin red; (m2) parseo estricto de argumentos: `--only <lista>` y `--only=<lista>`, cualquier otro argumento desconocido (p. ej. `--quik`) sale con exit 2 y línea de uso; (nit) bandera `settled` para no cerrar el log ni resolver dos veces si disparan `error` y `close`. CI: se agregan `Guard tests` y `Agents check` (E0-T3-d).
 - **Pendientes / abiertos:** el build no corre en CI (ver E0-T3-d). `npm test` sigue siendo `vitest` (watch fuera de CI); verify usa `vitest run`.
 
+### T4 — Modo emulador
+
+- **Qué se hizo:** `src/lib/firebaseEmulator.ts` (pura: `resolveEmulatorMode(env)` = `DEV && VITE_USE_EMULATOR === 'true'`, y con el flag exige projectId `demo-*` o tira; constantes `127.0.0.1`, `http://127.0.0.1:9099`, 8080, 5001). `src/lib/firebase.ts`: `isEmulatorMode = import.meta.env.DEV && resolveEmulatorMode(…)`; en modo emulador `memoryLocalCache()` y `connect{Auth,Firestore,Functions}Emulator` justo después de cada `get*/initialize*`; fuera, la misma config de antes (I4). `vite.config.ts` pasa a forma función y llama `assertEmulatorEnv(command, mode)` con `loadEnv(mode, __dirname, '')`: build con `VITE_USE_EMULATOR=true` → error (I2); `--mode emulator` sin flag + projectId `demo-*` → error (E0-T4-b). `src/components/layout/EnvironmentBadge.tsx` montado en `main.tsx` solo si `isEmulatorMode`. `scripts/emu-secret.mjs`: `OPENAI_API_KEY`, `BYOK_MASTER_KEY` dummy + base URLs sin egreso (E0-T4-d). `scripts/smoke-emu-app.mjs` (smoke del dev server). `package.json`: `dev:emu:app`.
+- **NO hecho — `.env.emulator`:** el permiso de usuario (`~/.claude/settings.json` deny `Edit(.env.*)`/`Read(.env.*)`) rechazó crear el archivo y no se rodeó. Hasta que exista, `npm run dev:emu:app` **se niega a arrancar** (guard de E0-T4-b, medido). Contenido listo en Pasos manuales. `.gitignore` no lo ignora (`git check-ignore -v .env.emulator` → exit 1).
+- **Commits:** `5fd38df` feat(emulator): conectar la app a los emuladores en modo emulator; `8beecd2` feat(build): impedir builds con el flag de emulador y modo emulator sin config; `6c53fee` feat(layout): chip de entorno EMULADOR en modo emulador; `17e6165` chore(emulator): secretos dummy y base URLs sin egreso para las functions; `187b45b` test(emulator): smoke del dev server en modo emulador; + el docs(spec) de esta entrada.
+- **Verificación:**
+  - `vitest run src/lib/firebaseEmulator.test.ts`: 17 pass. Control positivo: sin `!env.DEV` → 2 fail; sin el chequeo `demo-` → 5 fail; restaurado → 17 pass.
+  - I2: `VITE_USE_EMULATOR=true node node_modules/vite/bin/vite.js build` → exit 1 con `[vite.config] VITE_USE_EMULATOR=true en un build (mode "production")…`. Build normal → exit 0.
+  - Bundle de producción (`dist/assets/*.js`, 32 archivos): `demo-secondmind` 0, `127.0.0.1:9099` 0, `fake-api-key` 0, `EMULADOR` 0, `environment-badge` 0, `[emulator]` 0. Control positivo del grep: build con `NODE_ENV=development --mode development` (al scratchpad) → `127.0.0.1:9099` 1, `EMULADOR` 1, `environment-badge` 1 (la rama sobrevive con `DEV` true y el grep la ve). Nota: `--mode development` solo no alcanza, Vite sigue con `NODE_ENV=production` y la elimina (medido: 0). `demo-secondmind`/`fake-api-key` vienen del env del modo: el smoke los vio servidos en el módulo de dev.
+  - Guard de modo: `node scripts/smoke-emu-app.mjs` sin la config del modo → vite no arranca (`--mode emulator exige…`), smoke exit 1.
+  - Smoke en vivo (valores de `.env.emulator` pasados como variables de entorno, que en Vite pisan a los archivos): `firebase emulators:exec --project demo-secondmind --only auth,firestore "node scripts/smoke-emu-app.mjs"` → 6/6 OK, PASS (responde :5180, sirve index, projectId servido `demo-secondmind`, flag `"true"`, `connectAuthEmulator(auth`, helper con `127.0.0.1:9099`).
+  - Playwright MCP en http://localhost:5180 (emuladores auth+firestore): redirige a `/login`, chip `EMULADOR · demo-secondmind` en (618,4) 181×21, color `--destructive`; 0 errores/warnings de consola; 0 requests a `googleapis|firebase|9099|8080` en el login. Captura: `.playwright-mcp/t4-login-emulador.png` (gitignored).
+  - `emu-secret`: `.secret.local` con 6 claves; `encryptSecret`/`decryptSecret` de `src/functions/lib/lib/crypto.js` con la master dummy → roundtrip ok; control: master de 31 bytes → `debe ser de 32 bytes`. OpenAI SDK 4.104 con `OPENAI_BASE_URL=http://127.0.0.1:9/v1` → `APIConnectionError` (sin egreso).
+  - `npm run verify:quick`: PASS (lint 26.0s, typecheck 19.7s, typecheck:e2e 1.9s, unit 23.9s, guard 2.0s, agents 0.1s).
+  - `npm run verify -- --only functions,build`: PASS (functions 110.9s, 15 archivos / 62 tests; build 11.0s).
+- **Pendientes / abiertos:**
+  - Crear `.env.emulator` (Pasos manuales) y re-correr el smoke sin variables inline.
+  - `validateProviderKey` (`saveApiKey`) llama a `https://api.anthropic.com/v1/models` con URL fija: guardar una key en el emulador sí sale a Anthropic. `RESEND_API_KEY` dummy (SPEC-65) también sale a Resend y falla. No se tocó código de functions (fuera de alcance de T4).
+  - Con la app logueada en el emulador no se probó todavía (no hay usuario ni seed: T5).
+
 ## Límites aceptados del guard
 
 **Modelo de amenaza:** el guard evita **accidentes de agentes bienintencionados** (un subagente o el loop que, por error o por una instrucción inyectada en un archivo, intenta publicar, deployar o tocar `secondmindv1`). **No** es un sandbox contra un actor malicioso que busca evadirlo a propósito. La defensa final es del lado del servidor: el ruleset de GitHub sobre `main` y los tags `v*` (ver Pasos manuales), los permisos de Firebase y que los agentes no tengan credenciales distintas de las de Sebastián.
@@ -175,6 +195,11 @@ _(numeradas E0-T<n>-a…)_
 - **E0-T3-a** — `verify` usa `npx vitest run` y `npx vite build` (no `npm test` ni `npm run build`) y fija `CI=1`. Porqué: `npm test` es `vitest` en modo watch fuera de CI y `npm run build` repetiría `tsc`, que ya cubre el paso `typecheck`.
 - **E0-T3-b** — El directorio de hooks de Claude se excluye de `test.exclude` en `vite.config.ts`. Porqué: sus tests usan `node:test` y vitest fallaba con "No test suite found" (FAIL medido antes, PASS después). No afloja nada: siguen corriendo en el paso `guard`.
 - **E0-T3-c** — Sin Java, `rules`/`functions` son FAIL (no SKIP) y `--quick` es la salida explícita. Porqué: un chequeo omitido en silencio no es verde.
+- **E0-T4-a** — `isEmulatorMode = import.meta.env.DEV && resolveEmulatorMode(…)`: el `DEV &&` va literal en `firebase.ts` aunque el helper también lo chequee. Porqué: el helper es una llamada que el minificador no puede plegar; el `false &&` literal es lo que elimina la rama y sus constantes del bundle de producción (medido: 0 ocurrencias en prod, 1 en un build con `NODE_ENV=development`).
+- **E0-T4-b** — `vite.config.ts` además se niega a arrancar `--mode emulator` sin `VITE_USE_EMULATOR=true` y projectId `demo-*`. Porqué: sin el archivo del modo, Vite carga los `VITE_FIREBASE_*` reales de `.env.local` y la app de :5180 hablaría con producción sin chip; pasó en esta tanda (el archivo no se pudo crear).
+- **E0-T4-c** — Chip con borde y texto `destructive` sobre `bg-background/90`, arriba al centro (`top: --sai-top + 0.25rem`), `pointer-events-none`, `z-[60]`, montado fuera del router; texto sin i18n. Porqué: no existe `--destructive-foreground`; borde+texto rojo se lee en light y dark con tokens existentes; no tapa clicks; es una etiqueta técnica de desarrollo que nunca llega a producción, así que traducirla sumaría claves en `es/en` sin usuario que las lea.
+- **E0-T4-d** — `.secret.local` del emulador incluye `OPENAI_BASE_URL=http://127.0.0.1:9/v1` y `ANTHROPIC_BASE_URL=http://127.0.0.1:9`, y `BYOK_MASTER_KEY` = base64 del literal de 32 bytes `emulator-dummy-byok-master-key!!`. Porqué: firebase-tools 15.14 (`resolveSecretEnvs`) inyecta todas las claves del archivo en el entorno del runtime y los SDKs (openai 4.104, @anthropic-ai/sdk 0.40.1) leen esas variables cuando el código no pasa `baseURL`; así la IA falla con conexión rechazada sin enviar contenido afuera. Constante para que una key cifrada en una corrida siga descifrándose en la siguiente.
+- **E0-T4-e** — `.env.emulator` deja `VITE_ADMIN_UID=` vacío. Porqué: el UID real de `.env.local` no aplica al emulador; `/admin` queda fail-closed hasta que T5 defina un admin del seed.
 - **E0-T3-d** — `ci.yml` suma `Guard tests` (`npm run test:guard`) y `Agents check` (`node scripts/check-agents.mjs`) tras `Test`. Porqué: son baratos, no necesitan secretos y sin CI un cambio posterior podría romper el guard o las definiciones de agentes en silencio. El build queda fuera: `tsc -b` ya type-checkea y `vite build` suma ~47s.
 
 ## Estacionadas para Sebastián
@@ -186,6 +211,28 @@ _(decisiones visuales o de producto)_
 _(lo que solo un humano verifica)_
 
 - **T2:** para cerrar un loop, borrar a mano `.claude/loop.active` (el guard no deja que ningún agente ni la sesión en loop lo toque). Para una ventana de mantenimiento del guard, crear `.claude/guard.unlock` (Sebastián, o la sesión principal fuera del loop) y borrarlo al terminar.
+- **T4 — Crear `.env.emulator`** (los permisos de agente no dejan escribir `.env.*`). En la raíz del repo, archivo `.env.emulator` con este contenido exacto (valores falsos, se commitea), y `git add .env.emulator` + commit `chore(emulator): agregar .env.emulator con config falsa demo-secondmind`:
+
+  ```
+  # SPEC-69 T4 — Modo emulador (vite --mode emulator, ver npm run dev:emu:app).
+  # Valores FALSOS y no secretos del proyecto demo-secondmind, que solo existe en el
+  # Firebase Emulator Suite. Se commitea a propósito. Por precedencia de Vite pisan los
+  # VITE_FIREBASE_* de .env.local en este modo. firebase.ts exige además DEV y projectId
+  # demo-*, y vite.config.ts hace fallar cualquier build con VITE_USE_EMULATOR=true (I2).
+  VITE_USE_EMULATOR=true
+  VITE_FIREBASE_PROJECT_ID=demo-secondmind
+  VITE_FIREBASE_API_KEY=fake-api-key
+  VITE_FIREBASE_AUTH_DOMAIN=demo-secondmind.firebaseapp.com
+  VITE_FIREBASE_STORAGE_BUCKET=demo-secondmind.appspot.com
+  VITE_FIREBASE_MESSAGING_SENDER_ID=000000000000
+  VITE_FIREBASE_APP_ID=1:000000000000:web:0000000000000000000000
+  VITE_FIREBASE_MEASUREMENT_ID=G-EMULATOR00
+  # Vacío a propósito: /admin fail-closed en el emulador (E0-T4-e).
+  VITE_ADMIN_UID=
+  ```
+
+  _Qué deberías ver:_ `npx firebase emulators:exec --project demo-secondmind --only auth,firestore "node scripts/smoke-emu-app.mjs"` termina con `[smoke-emu] PASS`, y `npm run dev:emu:app` muestra el chip rojo `EMULADOR · demo-secondmind` arriba al centro del login.
+
 - **T2 — Ruleset de GitHub (defensa del lado del servidor).** Si un push escapa al guard, que no pueda publicar un release ni reescribir `main`:
   1. En GitHub, abrir el repo → **Settings** → **Rules** → **Rulesets** → **New ruleset** → **New tag ruleset**.
      - Nombre: `release-tags`. Enforcement status: **Active**.
