@@ -96,7 +96,7 @@ Principio rector: **la síntesis no se delega**. El subagente recolecta; la deci
 Configurados en `.claude/settings.json`. Se ejecutan automáticamente sin intervención:
 
 - **PostToolUse** (tras Write/Edit/MultiEdit): Prettier + ESLint --fix sobre el archivo editado. NO correr manualmente.
-- **PreToolUse** (`.claude/hooks/agent-guard.mjs`, SPEC-69): **siempre** bloquea editar (`Edit`/`Write`/`MultiEdit`/`NotebookEdit`) con la rama en `main` (`exit 2`; crear `feat/[x]` antes de codear). Además, en **modo restringido** (llamada de un subagente, o existe el sentinel `.claude/loop.active`) bloquea push, tags `v*`, merge a `main`, deploys y todo acceso a `secondmindv1`. La sesión principal fuera del loop conserva su flujo normal. Detalle en [Docs/05](Docs/05-metodo-trabajo-autonomo.md).
+- **PreToolUse** (`.claude/hooks/agent-guard.mjs`, SPEC-69): **siempre** bloquea editar (`Edit`/`Write`/`MultiEdit`/`NotebookEdit`) con la rama en `main` (`exit 2`; crear `feat/[x]` antes de codear). Además, en **modo restringido** (llamada de un subagente, o existe el sentinel `.claude/loop.active`) bloquea push, tags `v*`, merge a `main`, deploys y el CLI y el MCP de Firebase sobre `secondmindv1` (los caminos conocidos; no es un sandbox, ver Docs/05 § Límites). La sesión principal fuera del loop conserva su flujo normal. Detalle en [Docs/05](Docs/05-metodo-trabajo-autonomo.md).
 
 ### Setup específico Windows
 
@@ -156,7 +156,7 @@ Siete niveles de docs, cada uno con propósito único. **Fuente primaria para es
 | `Docs/SETUP-WINDOWS.md`           | Patches one-time de entorno (TS LSP, symlinks, Cargo)                                                                                               | Solo onboarding/troubleshooting setup                        |
 | `.claude/design-principles.md`    | Criterio de diseño que consume el agente `design-review`: tokens factuales (de `src/index.css`) + jerarquía, densidad, color, motion, anti-patrones | Al implementar UI o correr `/design-review`                  |
 
-Docs teóricos en `Docs/00-04-*.md` — leer **solo el que aplique** a la tarea, nunca los 5 a la vez. **Antes de escribir código nuevo, siempre consultar `01` (schemas Firestore) y `03` (convenciones de código)**:
+Docs teóricos en `Docs/00-05-*.md` (el 05 es de método de trabajo) — leer **solo el que aplique** a la tarea, nunca todos a la vez. **Antes de escribir código nuevo, siempre consultar `01` (schemas Firestore) y `03` (convenciones de código)**:
 
 | Archivo                                      | Contenido                                                                                 |
 | -------------------------------------------- | ----------------------------------------------------------------------------------------- |
