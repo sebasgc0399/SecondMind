@@ -1,43 +1,18 @@
 import path from 'path';
 import { readFileSync } from 'node:fs';
-import { loadEnv } from 'vite';
 import { defineConfig, configDefaults } from 'vitest/config';
 import react from '@vitejs/plugin-react';
 import { VitePWA } from 'vite-plugin-pwa';
+import { assertEmulatorModeAllowed } from './src/lib/firebaseEmulator';
 
 const pkg = JSON.parse(readFileSync('./package.json', 'utf-8')) as { version: string };
 
-// SPEC-69 T4 (I2): el modo emulador nunca llega a un build. Se mira el env ya resuelto
-// (archivos del modo + process.env, sin filtro de prefijo): un VITE_USE_EMULATOR=true
-// olvidado en el .env.local también se carga en producción.
-// Además, `--mode emulator` sin su config (flag + projectId demo-*) se niega a arrancar: sin
-// el archivo del modo, el dev server cargaría los VITE_FIREBASE_* reales del .env.local y la
-// app de :5180 hablaría con producción sin chip.
-function assertEmulatorEnv(command: string, mode: string): void {
-  // envDir = root = este directorio (no hay `root`/`envDir` custom).
-  const env = loadEnv(mode, __dirname, '');
-  if (command === 'build' && env.VITE_USE_EMULATOR === 'true') {
-    throw new Error(
-      `[vite.config] VITE_USE_EMULATOR=true en un build (mode "${mode}"). El modo emulador es ` +
-        'solo para el dev server (npm run dev:emu:app). Quitá el flag del entorno o de los ' +
-        'archivos de env del modo antes de buildear.',
-    );
-  }
-  if (
-    mode === 'emulator' &&
-    (env.VITE_USE_EMULATOR !== 'true' || !env.VITE_FIREBASE_PROJECT_ID?.startsWith('demo-'))
-  ) {
-    throw new Error(
-      '[vite.config] --mode emulator exige VITE_USE_EMULATOR=true y VITE_FIREBASE_PROJECT_ID ' +
-        `demo-* (recibido "${env.VITE_FIREBASE_PROJECT_ID ?? ''}"). Falta o está incompleto ` +
-        'el archivo de env del modo emulador.',
-    );
-  }
-}
-
 // https://vite.dev/config/
-export default defineConfig(({ command, mode }) => {
-  assertEmulatorEnv(command, mode);
+export default defineConfig(({ command, mode, isPreview }) => {
+  // SPEC-69 T4 (I2, E0-T4-f): `--mode emulator` solo en el dev server con DEV true. Al cargar
+  // este archivo Vite ya puso NODE_ENV=development por defecto si no venía seteado, y DEV es
+  // exactamente `NODE_ENV !== 'production'`.
+  assertEmulatorModeAllowed({ command, mode, isPreview, nodeEnv: process.env.NODE_ENV });
   return {
     clearScreen: false,
     server: {

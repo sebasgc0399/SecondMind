@@ -5,7 +5,7 @@ import { Provider } from 'tinybase/ui-react';
 import router from '@/app/router';
 import TauriIntegration from '@/app/TauriIntegration';
 import EnvironmentBadge from '@/components/layout/EnvironmentBadge';
-import { isEmulatorMode } from '@/lib/firebase';
+import { auth, isEmulatorMode } from '@/lib/firebase';
 import { isCapacitor } from '@/lib/capacitor';
 import { initCapacitorAuth } from '@/lib/capacitorAuth';
 // i18n: side-effect import — init síncrono del singleton ANTES del render
@@ -86,9 +86,7 @@ createRoot(document.getElementById('root')!).render(
         <RouterProvider router={router} />
       </TauriIntegration>
       {/* SPEC-69 T4: en producción `isEmulatorMode` es `false` literal y esto se elimina. */}
-      {isEmulatorMode && (
-        <EnvironmentBadge projectId={import.meta.env.VITE_FIREBASE_PROJECT_ID as string} />
-      )}
+      {isEmulatorMode && <EnvironmentBadge projectId={auth.app.options.projectId ?? ''} />}
     </Provider>
   </StrictMode>,
 );

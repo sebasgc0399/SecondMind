@@ -10,32 +10,32 @@ import {
 import { connectFunctionsEmulator, getFunctions } from 'firebase/functions';
 import {
   EMULATOR_AUTH_URL,
+  EMULATOR_FIREBASE_CONFIG,
   EMULATOR_FIRESTORE_PORT,
   EMULATOR_FUNCTIONS_PORT,
   EMULATOR_HOST,
   resolveEmulatorMode,
 } from '@/lib/firebaseEmulator';
 
-const firebaseConfig = {
-  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
-  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
-  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
-  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
-  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
-  appId: import.meta.env.VITE_FIREBASE_APP_ID,
-  measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID,
-};
-
-// SPEC-69 T4: modo emulador solo en el dev server (`vite --mode emulator`). El `DEV &&`
-// literal va acá (no solo dentro del helper) para que el build de producción lo reduzca a
-// `false` y elimine la rama entera; el helper exige además projectId `demo-*` (I3).
+// SPEC-69 T4 (E0-T4-f): modo emulador solo en el dev server con `vite --mode emulator`. El
+// `DEV &&` literal va acá (no solo dentro del helper) para que el build de producción lo
+// reduzca a `false` y elimine la rama entera, config falsa incluida.
 export const isEmulatorMode =
   import.meta.env.DEV &&
-  resolveEmulatorMode({
-    DEV: import.meta.env.DEV,
-    VITE_USE_EMULATOR: import.meta.env.VITE_USE_EMULATOR as string | undefined,
-    VITE_FIREBASE_PROJECT_ID: import.meta.env.VITE_FIREBASE_PROJECT_ID as string | undefined,
-  });
+  resolveEmulatorMode({ DEV: import.meta.env.DEV, MODE: import.meta.env.MODE });
+
+// En modo emulador se ignoran todos los `VITE_FIREBASE_*`: config falsa `demo-secondmind` (I3).
+const firebaseConfig = isEmulatorMode
+  ? EMULATOR_FIREBASE_CONFIG
+  : {
+      apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
+      authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+      projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
+      storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
+      messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
+      appId: import.meta.env.VITE_FIREBASE_APP_ID,
+      measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID,
+    };
 
 const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);

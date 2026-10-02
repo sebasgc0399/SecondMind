@@ -1,74 +1,79 @@
 import { describe, expect, it } from 'vitest';
-import { resolveEmulatorMode } from '@/lib/firebaseEmulator';
-
-const DEMO = 'demo-secondmind';
-const REAL = 'secondmindv1';
+import {
+  assertEmulatorModeAllowed,
+  EMULATOR_FIREBASE_CONFIG,
+  resolveEmulatorMode,
+} from '@/lib/firebaseEmulator';
 
 describe('resolveEmulatorMode', () => {
-  it('DEV + flag true + projectId demo-* → true', () => {
-    expect(
-      resolveEmulatorMode({ DEV: true, VITE_USE_EMULATOR: 'true', VITE_FIREBASE_PROJECT_ID: DEMO }),
-    ).toBe(true);
+  it('DEV + MODE emulator → true', () => {
+    expect(resolveEmulatorMode({ DEV: true, MODE: 'emulator' })).toBe(true);
   });
 
-  it('build (DEV false) con flag true → false, aunque el projectId sea demo-*', () => {
-    expect(
-      resolveEmulatorMode({
-        DEV: false,
-        VITE_USE_EMULATOR: 'true',
-        VITE_FIREBASE_PROJECT_ID: DEMO,
-      }),
-    ).toBe(false);
+  it('build (DEV false) con MODE emulator → false', () => {
+    expect(resolveEmulatorMode({ DEV: false, MODE: 'emulator' })).toBe(false);
   });
 
-  it('build (DEV false) con flag true y projectId real → false sin tirar', () => {
-    expect(
-      resolveEmulatorMode({
-        DEV: false,
-        VITE_USE_EMULATOR: 'true',
-        VITE_FIREBASE_PROJECT_ID: REAL,
+  it.each([['development'], ['production'], ['Emulator'], ['emulator '], ['']])(
+    'DEV + MODE %j → false',
+    (mode) => {
+      expect(resolveEmulatorMode({ DEV: true, MODE: mode })).toBe(false);
+    },
+  );
+});
+
+describe('EMULATOR_FIREBASE_CONFIG', () => {
+  it('apunta a un proyecto demo-* con valores falsos (I3)', () => {
+    expect(EMULATOR_FIREBASE_CONFIG.projectId).toBe('demo-secondmind');
+    expect(EMULATOR_FIREBASE_CONFIG.projectId.startsWith('demo-')).toBe(true);
+    expect(EMULATOR_FIREBASE_CONFIG.apiKey).toBe('fake-api-key');
+    expect(EMULATOR_FIREBASE_CONFIG.authDomain).toBe('demo-secondmind.firebaseapp.com');
+    expect('measurementId' in EMULATOR_FIREBASE_CONFIG).toBe(false);
+  });
+});
+
+describe('assertEmulatorModeAllowed', () => {
+  it('dev server + NODE_ENV development → permitido', () => {
+    expect(() =>
+      assertEmulatorModeAllowed({ command: 'serve', mode: 'emulator', nodeEnv: 'development' }),
+    ).not.toThrow();
+  });
+
+  it('dev server sin NODE_ENV → permitido', () => {
+    expect(() => assertEmulatorModeAllowed({ command: 'serve', mode: 'emulator' })).not.toThrow();
+  });
+
+  it('build --mode emulator → tira', () => {
+    expect(() =>
+      assertEmulatorModeAllowed({ command: 'build', mode: 'emulator', nodeEnv: 'production' }),
+    ).toThrow(/solo para el dev server/);
+    expect(() =>
+      assertEmulatorModeAllowed({ command: 'build', mode: 'emulator', nodeEnv: 'development' }),
+    ).toThrow(/solo para el dev server/);
+  });
+
+  it('dev server con NODE_ENV=production (DEV false) → tira', () => {
+    expect(() =>
+      assertEmulatorModeAllowed({ command: 'serve', mode: 'emulator', nodeEnv: 'production' }),
+    ).toThrow(/NODE_ENV "production"/);
+  });
+
+  it('vite preview --mode emulator → tira', () => {
+    expect(() =>
+      assertEmulatorModeAllowed({
+        command: 'serve',
+        mode: 'emulator',
+        isPreview: true,
+        nodeEnv: 'production',
       }),
-    ).toBe(false);
+    ).toThrow(/solo para el dev server/);
   });
 
   it.each([
-    ['false', DEMO],
-    [undefined, DEMO],
-    ['', DEMO],
-    ['TRUE', DEMO],
-    ['1', DEMO],
-    ['false', REAL],
-    [undefined, REAL],
-  ])('DEV true + flag %s (projectId %s) → false', (flag, projectId) => {
-    expect(
-      resolveEmulatorMode({
-        DEV: true,
-        VITE_USE_EMULATOR: flag,
-        VITE_FIREBASE_PROJECT_ID: projectId,
-      }),
-    ).toBe(false);
+    ['build', 'production', 'production'],
+    ['serve', 'development', 'production'],
+    ['serve', 'development', 'development'],
+  ])('command %s + mode %s + NODE_ENV %s → no aplica, no tira', (command, mode, nodeEnv) => {
+    expect(() => assertEmulatorModeAllowed({ command, mode, nodeEnv })).not.toThrow();
   });
-
-  it.each([[false], [undefined]])('DEV false + flag %s → false', (dev) => {
-    expect(
-      resolveEmulatorMode({
-        DEV: Boolean(dev),
-        VITE_USE_EMULATOR: undefined,
-        VITE_FIREBASE_PROJECT_ID: REAL,
-      }),
-    ).toBe(false);
-  });
-
-  it.each([[REAL], [''], [undefined], ['secondmind-demo'], ['Demo-secondmind']])(
-    'DEV + flag true + projectId %s (no demo-*) → tira (I3)',
-    (projectId) => {
-      expect(() =>
-        resolveEmulatorMode({
-          DEV: true,
-          VITE_USE_EMULATOR: 'true',
-          VITE_FIREBASE_PROJECT_ID: projectId,
-        }),
-      ).toThrow(/demo-\*/);
-    },
-  );
 });
