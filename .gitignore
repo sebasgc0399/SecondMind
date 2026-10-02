@@ -67,3 +67,14 @@ temp/
 
 # gotchas-search: índice BM25 generado por reindex.py
 .claude/skills/gotchas-search/corpus.json
+
+# agent-guard (SPEC-69 T2): sentinels locales del loop y de la ventana de mantenimiento
+.claude/loop.active
+.claude/guard.unlock
+
+# verify (SPEC-69 T3): logs locales
+.verify/
+
+# Playwright (SPEC-69 T6) — reportes, trazas y capturas de e2e:ui
+test-results/
+playwright-report/

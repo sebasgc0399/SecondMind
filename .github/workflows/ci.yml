@@ -59,10 +59,23 @@ jobs:
       - name: Type-check e2e harness
         run: npm run typecheck:e2e
 
+      # SPEC-69 T6 — type-check del smoke de UI (e2e-ui/, tsconfig.e2e-ui.json standalone).
+      - name: Type-check e2e-ui
+        run: npm run typecheck:e2e-ui
+
       # vitest detecta CI=true (lo setea GitHub Actions) y corre una sola vez,
       # sin watch mode. Cubre los tests unit (repos, tinybase, saveQueue, etc).
       - name: Test
         run: npm test
+
+      # E0-T3-d — gate barato y sin secretos del guard de agentes y de las definiciones de
+      # agentes: sin esto un cambio posterior los rompería en silencio. El build queda fuera
+      # de CI a propósito (`tsc -b` ya type-checkea; `vite build` suma ~47s).
+      - name: Guard tests
+        run: npm run test:guard
+
+      - name: Agents check
+        run: node scripts/check-agents.mjs
 
       # JDK para el Firebase Emulator Suite (Firestore/Auth lo requieren). Compartido por
       # el gate de rules (test:rules, D8) y el E2E de callables (test:functions, SPEC-55).

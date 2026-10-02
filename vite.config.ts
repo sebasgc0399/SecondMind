@@ -3,113 +3,128 @@ import { readFileSync } from 'node:fs';
 import { defineConfig, configDefaults } from 'vitest/config';
 import react from '@vitejs/plugin-react';
 import { VitePWA } from 'vite-plugin-pwa';
+import { assertEmulatorModeAllowed } from './src/lib/firebaseEmulator';
 
 const pkg = JSON.parse(readFileSync('./package.json', 'utf-8')) as { version: string };
 
 // https://vite.dev/config/
-export default defineConfig({
-  clearScreen: false,
-  server: {
-    port: 5173,
-    strictPort: true,
-  },
-  envPrefix: ['VITE_', 'TAURI_ENV_'],
-  // F59: __APP_VERSION__ build-time = versión de package.json. Se lee POST-reload
-  // (no para detectar updates: eso fue el bug self-defeating de useVersionCheck).
-  define: {
-    __APP_VERSION__: JSON.stringify(pkg.version),
-  },
-  plugins: [
-    react(),
-    VitePWA({
-      registerType: 'prompt',
-      includeAssets: ['favicon.svg', 'apple-touch-icon.png'],
-      manifest: {
-        name: 'SecondMind',
-        short_name: 'SecondMind',
-        description: 'Tu segundo cerebro, en acción.',
-        // F58: coherencia con la description (el estándar W3C no soporta
-        // manifest multi-idioma — esto NO es i18n del manifest).
-        lang: 'es',
-        start_url: '/',
-        display: 'standalone',
-        theme_color: '#878bf9',
-        background_color: '#0a0a0a',
-        icons: [
-          {
-            src: 'pwa-192x192.png',
-            sizes: '192x192',
-            type: 'image/png',
-          },
-          {
-            src: 'pwa-512x512.png',
-            sizes: '512x512',
-            type: 'image/png',
-          },
-          {
-            src: 'pwa-maskable-512x512.png',
-            sizes: '512x512',
-            type: 'image/png',
-            purpose: 'maskable',
-          },
-        ],
-      },
-      workbox: {
-        globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
-        maximumFileSizeToCacheInBytes: 4 * 1024 * 1024,
-        navigateFallback: 'index.html',
-        // SPEC-54: /auth/action se golpea desde links de email externos → debe cargar
-        // SIEMPRE el bundle actual desde la red, nunca el index.html precacheado (que con
-        // un SW viejo no tiene la ruta → 404 en el Layout). La ruta necesita red igual
-        // (llama a Firebase Auth), así que no perdemos nada offline.
-        navigateFallbackDenylist: [/^\/api/, /^\/__\//, /^\/auth\/action/],
-        // prompt mode requiere skipWaiting: false explícito — el SW nuevo
-        // queda en `waiting` hasta que el cliente llame updateSW(true).
-        // clientsClaim: false complementa: tabs abiertos no migran al SW
-        // nuevo automáticamente; esperan el reload disparado por el prompt.
-        skipWaiting: false,
-        clientsClaim: false,
-        runtimeCaching: [
-          {
-            urlPattern: /^https:\/\/fonts\.googleapis\.com\/.*/i,
-            handler: 'StaleWhileRevalidate',
-            options: {
-              cacheName: 'google-fonts-stylesheets',
-              expiration: { maxEntries: 10, maxAgeSeconds: 365 * 24 * 60 * 60 },
-            },
-          },
-          {
-            urlPattern: /^https:\/\/fonts\.gstatic\.com\/.*/i,
-            handler: 'CacheFirst',
-            options: {
-              cacheName: 'google-fonts-webfonts',
-              expiration: { maxEntries: 30, maxAgeSeconds: 365 * 24 * 60 * 60 },
-              cacheableResponse: { statuses: [0, 200] },
-            },
-          },
-        ],
-      },
-    }),
-  ],
-  resolve: {
-    alias: {
-      '@': path.resolve(__dirname, './src'),
+export default defineConfig(({ command, mode, isPreview }) => {
+  // SPEC-69 T4 (I2, E0-T4-f): `--mode emulator` solo en el dev server con DEV true. Al cargar
+  // este archivo Vite ya puso NODE_ENV=development por defecto si no venía seteado, y DEV es
+  // exactamente `NODE_ENV !== 'production'`.
+  assertEmulatorModeAllowed({ command, mode, isPreview, nodeEnv: process.env.NODE_ENV });
+  return {
+    clearScreen: false,
+    server: {
+      port: 5173,
+      strictPort: true,
     },
-    dedupe: [
-      'react',
-      'react-dom',
-      'firebase',
-      '@firebase/app',
-      '@firebase/component',
-      '@firebase/auth',
-      '@firebase/firestore',
+    envPrefix: ['VITE_', 'TAURI_ENV_'],
+    // F59: __APP_VERSION__ build-time = versión de package.json. Se lee POST-reload
+    // (no para detectar updates: eso fue el bug self-defeating de useVersionCheck).
+    define: {
+      __APP_VERSION__: JSON.stringify(pkg.version),
+    },
+    plugins: [
+      react(),
+      VitePWA({
+        registerType: 'prompt',
+        includeAssets: ['favicon.svg', 'apple-touch-icon.png'],
+        manifest: {
+          name: 'SecondMind',
+          short_name: 'SecondMind',
+          description: 'Tu segundo cerebro, en acción.',
+          // F58: coherencia con la description (el estándar W3C no soporta
+          // manifest multi-idioma — esto NO es i18n del manifest).
+          lang: 'es',
+          start_url: '/',
+          display: 'standalone',
+          theme_color: '#878bf9',
+          background_color: '#0a0a0a',
+          icons: [
+            {
+              src: 'pwa-192x192.png',
+              sizes: '192x192',
+              type: 'image/png',
+            },
+            {
+              src: 'pwa-512x512.png',
+              sizes: '512x512',
+              type: 'image/png',
+            },
+            {
+              src: 'pwa-maskable-512x512.png',
+              sizes: '512x512',
+              type: 'image/png',
+              purpose: 'maskable',
+            },
+          ],
+        },
+        workbox: {
+          globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
+          maximumFileSizeToCacheInBytes: 4 * 1024 * 1024,
+          navigateFallback: 'index.html',
+          // SPEC-54: /auth/action se golpea desde links de email externos → debe cargar
+          // SIEMPRE el bundle actual desde la red, nunca el index.html precacheado (que con
+          // un SW viejo no tiene la ruta → 404 en el Layout). La ruta necesita red igual
+          // (llama a Firebase Auth), así que no perdemos nada offline.
+          navigateFallbackDenylist: [/^\/api/, /^\/__\//, /^\/auth\/action/],
+          // prompt mode requiere skipWaiting: false explícito — el SW nuevo
+          // queda en `waiting` hasta que el cliente llame updateSW(true).
+          // clientsClaim: false complementa: tabs abiertos no migran al SW
+          // nuevo automáticamente; esperan el reload disparado por el prompt.
+          skipWaiting: false,
+          clientsClaim: false,
+          runtimeCaching: [
+            {
+              urlPattern: /^https:\/\/fonts\.googleapis\.com\/.*/i,
+              handler: 'StaleWhileRevalidate',
+              options: {
+                cacheName: 'google-fonts-stylesheets',
+                expiration: { maxEntries: 10, maxAgeSeconds: 365 * 24 * 60 * 60 },
+              },
+            },
+            {
+              urlPattern: /^https:\/\/fonts\.gstatic\.com\/.*/i,
+              handler: 'CacheFirst',
+              options: {
+                cacheName: 'google-fonts-webfonts',
+                expiration: { maxEntries: 30, maxAgeSeconds: 365 * 24 * 60 * 60 },
+                cacheableResponse: { statuses: [0, 200] },
+              },
+            },
+          ],
+        },
+      }),
     ],
-  },
-  test: {
-    environment: 'node',
-    globals: true,
-    // El test de security rules (F4) necesita el emulador de Firestore — corre
-    // aparte con `npm run test:rules`, no en el `npm test` default.
-    exclude: [...configDefaults.exclude, '**/firestore.rules.test.ts', '**/*.e2e.test.ts'],
-  },
+    resolve: {
+      alias: {
+        '@': path.resolve(__dirname, './src'),
+      },
+      dedupe: [
+        'react',
+        'react-dom',
+        'firebase',
+        '@firebase/app',
+        '@firebase/component',
+        '@firebase/auth',
+        '@firebase/firestore',
+      ],
+    },
+    test: {
+      environment: 'node',
+      globals: true,
+      // El test de security rules (F4) necesita el emulador de Firestore — corre
+      // aparte con `npm run test:rules`, no en el `npm test` default.
+      // Los tests del guard (hooks de Claude) usan node:test y corren con `npm run test:guard`.
+      exclude: [
+        ...configDefaults.exclude,
+        '**/firestore.rules.test.ts',
+        '**/*.e2e.test.ts',
+        '.claude/**',
+        // SPEC-69 T6: specs de Playwright (`npm run e2e:ui`), no de vitest.
+        'e2e-ui/**',
+      ],
+    },
+  };
 });

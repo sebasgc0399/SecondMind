@@ -9,7 +9,10 @@ const TIMEOUT_MS = 5000;
 export async function validateProviderKey(provider: string, key: string): Promise<KeyValidation> {
   if (provider === 'anthropic') {
     try {
-      const res = await fetch('https://api.anthropic.com/v1/models', {
+      // ANTHROPIC_BASE_URL solo existe en el emulador (scripts/emu-secret.mjs, sin egreso); en
+      // producción no está definida y se usa la API real.
+      const baseUrl = process.env.ANTHROPIC_BASE_URL ?? 'https://api.anthropic.com';
+      const res = await fetch(`${baseUrl}/v1/models`, {
         method: 'GET',
         headers: { 'x-api-key': key, 'anthropic-version': '2023-06-01' },
         signal: AbortSignal.timeout(TIMEOUT_MS),

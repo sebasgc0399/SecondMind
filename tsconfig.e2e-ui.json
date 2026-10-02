@@ -1,0 +1,20 @@
+{
+  // SPEC-69 T6 — type-check standalone de e2e-ui/ y playwright.config.ts (mismo patrón que
+  // tsconfig.e2e.json: no entra por `references`). Gate: `npm run typecheck:e2e-ui`.
+  "compilerOptions": {
+    "target": "es2023",
+    "lib": ["ES2023", "DOM"],
+    "module": "esnext",
+    "types": ["node"],
+    "skipLibCheck": true,
+    "moduleResolution": "bundler",
+    "verbatimModuleSyntax": true,
+    "moduleDetection": "force",
+    "noEmit": true,
+    "strict": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noFallthroughCasesInSwitch": true
+  },
+  "include": ["e2e-ui", "playwright.config.ts"]
+}

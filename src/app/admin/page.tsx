@@ -7,6 +7,7 @@ import useAccessRequestsQueue from '@/hooks/useAccessRequestsQueue';
 import useAllowlistMembers from '@/hooks/useAllowlistMembers';
 import AccessRequestQueue from '@/components/admin/AccessRequestQueue';
 import AllowlistMembers from '@/components/admin/AllowlistMembers';
+import { isEmulatorMode } from '@/lib/firebase';
 
 type AdminTab = 'requests' | 'members';
 
@@ -22,7 +23,11 @@ type AdminTab = 'requests' | 'members';
 export default function AdminPage() {
   const { t } = useTranslation();
   const { user, isLoading } = useAuth();
-  const adminUid = import.meta.env.VITE_ADMIN_UID as string | undefined;
+  // SPEC-69 T4 (E0-T4-e): en modo emulador se ignora VITE_ADMIN_UID (es el UID real de
+  // `.env.local`) → /admin fail-closed hasta que el seed defina su propio admin.
+  const adminUid = isEmulatorMode
+    ? undefined
+    : (import.meta.env.VITE_ADMIN_UID as string | undefined);
   const requests = useAccessRequestsQueue();
   const members = useAllowlistMembers();
   const [tab, setTab] = useState<AdminTab>('requests');
