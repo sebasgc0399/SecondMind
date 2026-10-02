@@ -114,10 +114,36 @@ _(una entrada por tanda: qué se hizo, commits, verificación con números, revi
   - `node -e "JSON.parse(...settings.json)"`: ok.
   - En vivo en esta sesión (subagente, hook ya registrado): `git push --dry-run origin HEAD` → BLOQUEADO (`agent-guard [shell]: [git-push]`); `git tag -l "e0-*"` → permitido (lista `e0-T0`, `e0-T1`); `Edit` sobre `.claude/settings.json` → BLOQUEADO (`protected-path`).
   - `npx prettier --check .claude/hooks/`: ok. `npx eslint .claude/hooks/`: exit 0, pero la config solo define reglas para `ts/tsx` (sonda por stdin con `undefinedVar()` en un `.mjs` → exit 0), así que no aporta señal sobre estos archivos.
+- **Revisión:** APROBADA CON CORRECCIONES (2 MAJOR, 2 MINOR, 1 NIT).
+- **Correcciones aplicadas** (`e3e9e7e` fix(guard): aplicar revisión adversarial de T2; ventana de mantenimiento abierta por el orquestador con `guard.unlock`):
+  - **M1** `git clean` con `-x`/`-X` en cualquier combinación de flags y `git stash -u/-a/--include-untracked/--all` → `[git-ignored]`; `rm/mv/Remove-Item/del/erase/move/ren/-delete…` sobre `.env*` → `[env-file]`.
+  - **M2** `npm|pnpm|yarn|bun` resuelven el script real (`run`/`run-script`/`start`/`test`/`install` + `pre`/`post`) desde el `package.json` de `--prefix`/`-C`/`--dir`/`--cwd` o el más cercano al cwd efectivo (se siguen los `cd`), y su cuerpo pasa por el mismo chequeo, recursivo hasta 5 niveles (E0-T2-i). Consecuencia: `npm --prefix src/functions run serve` y `npm run logs:functions` quedan bloqueados; `test:rules`, `test:functions`, `test:guard`, `lint`, `build`, `build:landing` siguen permitidos (probado contra los `package.json` reales). Se mantienen las reglas por nombre (`deploy*`, `cap:*`…).
+  - **m3** refspecs `…:main` / `…:refs/heads/main` (`git fetch . HEAD:main`, `+x:main`, `:main`) y `git worktree add … main` → `[git-history]`.
+  - **m4** re-análisis dirigido (E0-T2-h): solo se re-analizan los strings que la shell ejecuta; los argumentos con comillas de `grep/rg/findstr/Select-String/git grep` se blanquean antes de la red cruda. `grep -rn 'firebase\|deploy' src` y `rg "firebase|tauri" src` pasan; `bash -c`, `pwsh -Command`, `cmd /c`, `node -e`, `python -c`, `$(…)` siguen bloqueando.
+  - **n5** controles positivos para la rama `cwdInClaude`, la regla `[dynamic]`, `node` en `PREFIXES` y el alias `firebase-tools`.
+  - Orquestador: línea de `git commit -F` en `tanda-writer.md`/`tanda-fixer.md`; sección "Límites aceptados del guard"; ruleset de GitHub en Pasos manuales.
+- **Verificación de las correcciones:**
+  - `npm run test:guard`: 301 tests, 19 suites, 301 pass, 0 fail (eran 191; incluye un end-to-end nuevo: el wrapper real lee un `package.json` temporal, `npm run x` con `firebase emulators:start` → 2, script inocuo → 0, `package.json` roto → 2).
+  - Mutaciones (copias de `.claude/hooks` + los `package.json` reales en el scratchpad; baseline sin mutar 301 pass / 0 fail): sin regla `git clean -X` → 6 fail; sin `git stash -u/-a` → 6; sin `[env-file]` → 8; sin resolución de scripts → 24; sin refspec `:main` → 4; sin `worktree add main` → 3; sin enmascarar búsquedas → 6; re-análisis genérico como antes → 8; sin re-análisis de `bash -c` → 5; `cwdInClaude` → 1; `[dynamic]` → 1; `'node'` en `PREFIXES` → 1; alias `firebase-tools` → 1.
+  - En vivo (subagente): `grep -rn 'firebase\|deploy' .claude/hooks/agent-guard.test.mjs | head -1` → permitido; `evaluate()` de `npm --prefix src/functions run serve` → `[npm-script] script "serve" (…/src/functions) → [firebase] firebase emulators:start sin --project demo-*`.
+  - `npx prettier --check .claude/hooks/`: ok.
 - **Pendientes / abiertos:**
-  - En modo restringido, un mensaje de commit (o heredoc) que mencione un comando prohibido se bloquea (ver E0-T2-g): los agentes deben usar `git commit -F <archivo>`. Falta decirlo en los `.claude/agents/tanda-*.md` (no son rutas protegidas; T7 o el orquestador).
   - Con el loop activo, nadie dentro de Claude puede borrar `.claude/loop.active` (es sentinel): salir del loop requiere que Sebastián lo borre a mano (ver Pasos manuales).
-  - El guard es un cinturón, no un sandbox: un intérprete que arma la ruta o el comando por partes (`'.cla'+'ude'`, variables) lo evade; `git apply`/`stash` sobre rutas protegidas solo se detecta si la ruta aparece en el comando. Si `node` no está en el PATH el hook sale 127 (no bloqueante).
+  - Límites del guard: ver § Límites aceptados del guard.
+  - Seguimiento (no corregido, fuera de alcance): la red cruda de push toma `git stash push` como push (falso positivo; usar `git stash -m`); la regla de refspec toma `git show HEAD:main` (archivo `main` en la raíz) como escritura a main; `rm .env.emulator` (T4 lo commitea) queda bloqueado para agentes: editarlo con Write/Edit.
+
+## Límites aceptados del guard
+
+**Modelo de amenaza:** el guard evita **accidentes de agentes bienintencionados** (un subagente o el loop que, por error o por una instrucción inyectada en un archivo, intenta publicar, deployar o tocar `secondmindv1`). **No** es un sandbox contra un actor malicioso que busca evadirlo a propósito. La defensa final es del lado del servidor: el ruleset de GitHub sobre `main` y los tags `v*` (ver Pasos manuales), los permisos de Firebase y que los agentes no tengan credenciales distintas de las de Sebastián.
+
+Clases residuales conocidas (no se bloquean, o solo las ve la red cruda):
+
+- **Script escrito y después ejecutado:** un agente escribe `x.sh`/`x.mjs` con Write y luego corre `bash x.sh` o `node x.mjs`. El guard no lee el contenido de archivos arbitrarios (solo `package.json` para los scripts de npm).
+- **Intérpretes que arman el comando por partes:** `node -e "execSync('gi'+'t pu'+'sh')"`, `python -c` con concatenaciones, rutas armadas (`'.cla'+'ude'`). El modo `code` solo ve literales completos.
+- **Indirección por variables:** `X=push; git $X`, `$(echo git) push` en combinaciones que el tokenizador no resuelve. Se bloquea el programa dado por una variable (`$CMD …`), no los argumentos.
+- **Wrappers fuera de la lista de E0-T2-h** (`find -exec`, `watchexec`, `ssh host "…"`…): su argumento no se re-analiza; solo los cubre la red cruda (`git push`, `git tag v*`, `firebase deploy`, `gcloud`, `npm run deploy*`, `secondmindv1`).
+- **`git apply`/`git stash` sobre rutas protegidas** solo se detectan si la ruta aparece en el comando.
+- **Fail-open del hook:** si `node` no está en el PATH el hook sale 127, y si el propio wrapper `agent-guard.mjs` tiene un error de sintaxis sale 1; Claude Code trata ambos como no bloqueantes. Los errores dentro de la lib sí caen en el fail-safe (E0-T2-b).
 
 ## Decisiones del juez (a ratificar)
 
@@ -131,7 +157,9 @@ _(numeradas E0-T<n>-a…)_
 - **E0-T2-d** — En modo restringido `git merge` se bloquea siempre (el SPEC decía "mientras HEAD es main") y el MCP de Firebase se bloquea entero, lecturas incluidas (el SPEC decía escrituras). Porqué: lo pidió así el orquestador, es más conservador y ningún rol del ciclo los necesita.
 - **E0-T2-e** — Se agregan al alcance la tool `PowerShell` (mismo análisis que `Bash`) y los `settings*.json` de `~/.claude` como rutas protegidas. Porqué: en Windows puede existir la tool PowerShell y sería un bypass directo; un `disableAllHooks` en los settings de usuario apaga el guard.
 - **E0-T2-f** — La regla `main-branch` resuelve la rama subiendo hasta el primer directorio existente. Porqué: el guard inline hacía `git -C <dir del archivo>`, que falla si el directorio aún no existe y bloqueaba crear archivos en carpetas nuevas aunque la rama no fuera `main`. Se mantiene el resto: rama `main` o irresoluble → bloquea, mismo alcance de rutas ("Proyectos VS CODE/…SecondMind…").
-- **E0-T2-g** — Los strings se re-analizan como comandos aunque sean datos (mensajes de commit, heredocs). Porqué: `bash -c "git push"` y `git commit -m "… git push …"` no se distinguen sin un parser de shell completo, y un falso positivo en modo restringido es aceptable; la salida es `git commit -F <archivo>`.
+- **E0-T2-g** — Los strings se re-analizan como comandos aunque sean datos (mensajes de commit, heredocs). Porqué: `bash -c "git push"` y `git commit -m "… git push …"` no se distinguen sin un parser de shell completo, y un falso positivo en modo restringido es aceptable; la salida es `git commit -F <archivo>`. _(Acotada por E0-T2-h: hoy un mensaje de commit solo se bloquea si contiene un literal de la red cruda, como `git push` o `firebase deploy`.)_
+- **E0-T2-h** — Re-análisis dirigido en vez de genérico (revisión T2, m4). En modo `shell` solo se re-analizan los strings que algo ejecuta: argumento de `bash/sh/zsh/… -c`, `powershell/pwsh` (todo tras `-Command`, o cada posicional), `cmd /c|/k`, `eval`/`iex`/`wsl`/`concurrently`/`Start-Process`, `firebase emulators:exec`, `npx/npm -c`, `nodemon --exec` y los cuerpos `$(…)`/backticks. El código de `node -e`, `bun -e`, `deno eval`, `python -c`, `perl/ruby -e` se analiza en modo `code`, igual que un comando con heredoc: ahí se re-analiza todo token con sintaxis de shell, porque sus literales (`execSync('…')`, `os.system("…")`) son comandos. Los argumentos con comillas de `grep/egrep/fgrep/rg/ag/ack/findstr/Select-String/sls/git grep` se blanquean antes de la red cruda (no los destinos de redirección ni los tokens con `$(…)`). Porqué: el re-análisis de cualquier token con `|` bloqueaba búsquedas legítimas; la lista explícita mantiene los wrappers reales y el modo `code` conserva la cobertura de intérpretes. Un wrapper que no está en la lista solo queda cubierto por la red cruda (ver Límites).
+- **E0-T2-i** — Scripts de package managers: se resuelven leyendo el `package.json` real por medio de `env.readScripts` (inyectado por el wrapper; la lib sigue sin tocar disco). Se analizan también `pre<x>`/`post<x>` y, para `install`/`ci`/`add`/`rebuild`, los lifecycle `preinstall/install/postinstall/prepare`. En `yarn/pnpm/bun` cualquier subcomando que coincida con un script cuenta como script. Se bloquean por no verificables: más de 5 niveles de scripts anidados, script o directorio dado por variable, `cd` dinámico previo, `--workspace/-w/--filter/-r`, `package.json` ilegible y la ausencia del lector. Un script inexistente pasa (npm falla solo). Porqué: el nombre del script no dice qué ejecuta (`serve` arrancaba un emulador contra `secondmindv1`); leer el cuerpo es determinista y barato.
 
 ## Estacionadas para Sebastián
 
@@ -142,3 +170,19 @@ _(decisiones visuales o de producto)_
 _(lo que solo un humano verifica)_
 
 - **T2:** para cerrar un loop, borrar a mano `.claude/loop.active` (el guard no deja que ningún agente ni la sesión en loop lo toque). Para una ventana de mantenimiento del guard, crear `.claude/guard.unlock` (Sebastián, o la sesión principal fuera del loop) y borrarlo al terminar.
+- **T2 — Ruleset de GitHub (defensa del lado del servidor).** Si un push escapa al guard, que no pueda publicar un release ni reescribir `main`:
+  1. En GitHub, abrir el repo → **Settings** → **Rules** → **Rulesets** → **New ruleset** → **New tag ruleset**.
+     - Nombre: `release-tags`. Enforcement status: **Active**.
+     - **Bypass list** → **Add bypass** → elegir **Repository admin** (vos) → modo **Always allow**.
+     - **Target tags** → **Add target** → **Include by pattern** → `v*`.
+     - En **Rules**, marcar **Restrict creations**, **Restrict updates** y **Restrict deletions**.
+     - **Create**.
+     - _Qué deberías ver:_ el ruleset `release-tags` en la lista con estado **Active**, 1 target (`v*`) y 1 bypass (Repository admin).
+  2. Otra vez **New ruleset** → **New branch ruleset**.
+     - Nombre: `main`. Enforcement status: **Active**.
+     - **Bypass list** → **Repository admin**, **Always allow**.
+     - **Target branches** → **Add target** → **Include default branch** (o por patrón `main`).
+     - En **Rules**, dejar marcadas **Restrict deletions** y **Block force pushes** (vienen por defecto). Opcional, si querés que todo cambio a `main` pase por PR: **Require a pull request before merging** (tu bypass de admin te deja seguir mergeando a mano).
+     - **Create**.
+     - _Qué deberías ver:_ el ruleset `main` **Active**, target "Default" o `main`, 1 bypass. En la página principal del repo, la rama `main` muestra el ícono de protección.
+  3. Comprobación sin riesgo: en **Settings → Rules → Rulesets → release-tags → Insights** (o al intentar crear un tag `v*` desde una cuenta sin bypass) se ve el rechazo. No hace falta pushear nada para probarlo.

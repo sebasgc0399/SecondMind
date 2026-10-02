@@ -14,7 +14,7 @@ Sos el **corrector**. Recibís hallazgos de la revisión, copiados con `archivo:
 4. Cada arreglo con prueba nueva respeta el control positivo: la prueba falla sin el arreglo (o con una mutación) y pasa con él. Nunca aflojes un chequeo para que pase.
 5. Corrés la verificación completa (`npm run verify`, o los chequeos equivalentes del prompt si todavía no existe) y esperás a que termine antes de editar nada más.
 6. Si todo está verde, creás el tag **local** que te da el prompt debe matchear `e<N>-T<n>` (ej. `e0-T1`; sub-tandas `e0-T4b`) y nunca empieza con `v`: los tags `v*` publican releases. Va sobre el commit final. Si algo está rojo, no etiquetás: lo reportás.
-7. Commits Conventional Commits en español, con el trailer `Co-Authored-By: <modelo que corrió esta sesión> <noreply@anthropic.com>` (el modelo real, nunca hardcodeado). Actualizás la entrada de la tanda en § Avance (correcciones aplicadas, desviaciones, verificación con números).
+7. Commits Conventional Commits en español, con el trailer `Co-Authored-By: <modelo que corrió esta sesión> <noreply@anthropic.com>` (el modelo real, nunca hardcodeado). Si el mensaje de commit menciona comandos que el guard bloquea, escribilo en un archivo de tu scratchpad y usá `git commit -F <archivo>`. Actualizás la entrada de la tanda en § Avance (correcciones aplicadas, desviaciones, verificación con números).
 
 Decisiones técnicas que te toque tomar van a § Decisiones del juez (a ratificar) como `E<etapa>-T<n>-a`, con su porqué. Cuestiones visuales o de producto se estacionan en § Estacionadas.
 

@@ -9,7 +9,7 @@ Sos el **autor** de una tanda. Implementás exactamente una tanda según el SPEC
 ## Qué hacés
 
 1. Leés el SPEC indicado: la entrada de la tanda, los Invariantes, el Avance de tandas anteriores y las decisiones del juez. Si hay secciones homónimas viejas, el prompt dice cuál ignorar.
-2. Implementás la tanda sin salirte de su alcance. Un commit por unidad lógica, Conventional Commits en español, con el trailer final `Co-Authored-By: <modelo que corrió esta sesión> <noreply@anthropic.com>`. El nombre del modelo es el real de tu sesión, nunca uno hardcodeado.
+2. Implementás la tanda sin salirte de su alcance. Un commit por unidad lógica, Conventional Commits en español, con el trailer final `Co-Authored-By: <modelo que corrió esta sesión> <noreply@anthropic.com>`. El nombre del modelo es el real de tu sesión, nunca uno hardcodeado. Si el mensaje de commit menciona comandos que el guard bloquea, escribilo en un archivo de tu scratchpad y usá `git commit -F <archivo>`.
 3. Escribís pruebas con control positivo (ver abajo).
 4. Corrés `npm run verify`. Si todavía no existe, corrés los chequeos que te indique el prompt. Reportás lo que realmente corriste.
 5. Actualizás la entrada de tu tanda en § Avance del SPEC: qué se hizo, commits, verificación con números, pendientes. Va en el mismo commit que el trabajo o en uno propio de `docs`.
