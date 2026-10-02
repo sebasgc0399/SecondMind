@@ -752,14 +752,43 @@ describe('navegador MCP (seguimiento E0-T7)', () => {
       }).reason,
       /mcp-browser/,
     ));
-  test('bloquea run_code con fetch a Firestore REST', () =>
-    assert.match(
-      blocked({
-        tool_name: 'mcp__plugin_playwright_playwright__browser_run_code_unsafe',
-        tool_input: { code: "await fetch('https://firestore.googleapis.com/v1/x')" },
-      }).reason,
-      /mcp-browser/,
-    ));
+  // run_code corre JS en el proceso del server MCP (llega al `process` real): se bloquea
+  // entero, con código en línea, ofuscado o cargado de un archivo (`filename`).
+  for (const [tool, ti] of [
+    [
+      'mcp__plugin_playwright_playwright__browser_run_code_unsafe',
+      { code: "await fetch('https://firestore.googleapis.com/v1/x')" },
+    ],
+    ['mcp__playwright__browser_run_code_unsafe', { filename: 'scratch/nav.js' }],
+    [
+      'mcp__playwright__browser_run_code_unsafe',
+      { code: "async (page) => page.goto(atob('aHR0cHM6Ly9leGFtcGxlLmNvbQ=='))" },
+    ],
+    [
+      'mcp__playwright__browser_run_code_unsafe',
+      { code: "async () => process.mainModule.require('child_process').execSync('git push')" },
+    ],
+    ['mcp__playwright__browser_run_code_unsafe', { code: 'async (page) => page.title()' }],
+    ['mcp__plugin_playwright_playwright__browser_run_code', {}],
+  ]) {
+    test(`bloquea run_code: ${tool.split('__').pop()} ${JSON.stringify(ti)}`, () =>
+      assert.match(blocked({ tool_name: tool, tool_input: ti }).reason, /mcp-browser.*run_code/));
+  }
+  test('filename de salida (screenshot, snapshot, consola, evaluate) sigue permitido', () => {
+    for (const [t, ti] of [
+      ['browser_take_screenshot', { filename: 'shots/dashboard-375.png' }],
+      ['browser_snapshot', { filename: 'snap.md' }],
+      ['browser_console_messages', { filename: 'consola.txt' }],
+      ['browser_evaluate', { function: '() => document.title', filename: 'out.json' }],
+      ['browser_file_upload', { paths: ['D:/fixtures/nota.md'] }],
+    ])
+      allowedSub({ tool_name: `mcp__playwright__${t}`, tool_input: ti });
+  });
+  test('sesión principal puede usar run_code', () =>
+    allowedMain({
+      tool_name: 'mcp__playwright__browser_run_code_unsafe',
+      tool_input: { filename: 'x.js' },
+    }));
   for (const url of [
     'http://localhost:5180/',
     'http://localhost:5180/notes/abc?x=1',

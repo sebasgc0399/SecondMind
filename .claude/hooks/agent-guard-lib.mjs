@@ -799,10 +799,15 @@ export const RULES = [
   {
     id: 'mcp-browser',
     description:
-      'Restringido: el navegador MCP (Playwright) solo abre la app del emulador (:5180) o la landing (:4321).',
+      'Restringido: el navegador MCP (Playwright) solo abre la app del emulador (:5180) o la landing (:4321); run_code bloqueado.',
     restrictedOnly: true,
     match({ input }) {
       if (!/^mcp__.*playwright/i.test(input.tool_name ?? '')) return null;
+      // run_code ejecuta JS arbitrario en el proceso del server MCP (vm con el `process`
+      // real): puede correr comandos sin pasar por el hook de Bash. Su `filename` además
+      // carga el código desde un archivo que el guard no lee. Se bloquea entero.
+      if (/run_?code/i.test(input.tool_name))
+        return `${input.tool_name} (ejecuta código arbitrario en el proceso del server MCP)`;
       const text = JSON.stringify(input.tool_input ?? {});
       if (PROD_REFS.test(text)) return `${input.tool_name} con una referencia a producción`;
       // navigate/tabs: el destino es exactamente la app local (data:/file:/javascript: no tienen `://`).
