@@ -64,6 +64,15 @@ jobs:
       - name: Test
         run: npm test
 
+      # E0-T3-d — gate barato y sin secretos del guard de agentes y de las definiciones de
+      # agentes: sin esto un cambio posterior los rompería en silencio. El build queda fuera
+      # de CI a propósito (`tsc -b` ya type-checkea; `vite build` suma ~47s).
+      - name: Guard tests
+        run: npm run test:guard
+
+      - name: Agents check
+        run: node scripts/check-agents.mjs
+
       # JDK para el Firebase Emulator Suite (Firestore/Auth lo requieren). Compartido por
       # el gate de rules (test:rules, D8) y el E2E de callables (test:functions, SPEC-55).
       - name: Setup Java (Firebase emulators)

@@ -12,21 +12,38 @@ const TAIL_LINES = 40;
 
 const STEPS = [
   { name: 'lint', cmd: 'npm run lint' },
-  { name: 'typecheck', cmd: 'npx tsc -b' },
+  { name: 'typecheck', cmd: 'node node_modules/typescript/bin/tsc -b' },
   { name: 'typecheck:e2e', cmd: 'npm run typecheck:e2e' },
-  { name: 'unit', cmd: 'npx vitest run' },
+  { name: 'unit', cmd: 'node node_modules/vitest/vitest.mjs run' },
   { name: 'guard', cmd: 'npm run test:guard' },
   { name: 'agents', cmd: 'node scripts/check-agents.mjs' },
   { name: 'rules', cmd: 'npm run test:rules', slow: true, java: true },
   { name: 'functions', cmd: 'npm run test:functions', slow: true, java: true },
-  { name: 'build', cmd: 'npx vite build', slow: true },
+  { name: 'build', cmd: 'node node_modules/vite/bin/vite.js build', slow: true },
 ];
 
+const USAGE = 'uso: node scripts/verify.mjs [--quick] [--fail-fast] [--only <a,b> | --only=<a,b>]';
 const args = process.argv.slice(2);
-const quick = args.includes('--quick');
-const failFast = args.includes('--fail-fast');
-const onlyIdx = args.indexOf('--only');
-const only = onlyIdx >= 0 ? (args[onlyIdx + 1] ?? '').split(',').filter(Boolean) : null;
+let quick = false;
+let failFast = false;
+let only = null;
+for (let i = 0; i < args.length; i++) {
+  const a = args[i];
+  if (a === '--quick') quick = true;
+  else if (a === '--fail-fast') failFast = true;
+  else if (a === '--only') {
+    const v = args[++i];
+    if (v === undefined || v.startsWith('--')) {
+      console.error('verify: --only requiere una lista. ' + USAGE);
+      process.exit(2);
+    }
+    only = v.split(',').filter(Boolean);
+  } else if (a.startsWith('--only=')) only = a.slice(7).split(',').filter(Boolean);
+  else {
+    console.error('verify: argumento desconocido: ' + a + '. ' + USAGE);
+    process.exit(2);
+  }
+}
 
 if (only) {
   const unknown = only.filter((n) => !STEPS.some((s) => s.name === n));

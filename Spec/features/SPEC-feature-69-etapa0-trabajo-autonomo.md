@@ -141,7 +141,8 @@ _(una entrada por tanda: qué se hizo, commits, verificación con números, revi
   - `npm run verify:quick`: PASS. lint 24.6s, typecheck 20.8s, typecheck:e2e 1.9s, unit 24.1s, guard 2.0s, agents 0.1s; rules/functions/build SKIP.
   - Control positivo unit: `src/__verify_canary__.test.ts` con `expect(1).toBe(2)` → `unit: FAIL`, exit 1; borrado → PASS. Control lint: archivo temporal con errores en `src/` → `lint: FAIL`, exit 1; borrado → PASS.
   - Hallazgo real: la primera corrida de `unit` dio FAIL (1 archivo): vitest recogía el test del guard (formato node:test, "No test suite found"). Era una regresión de T2 que también rompía `npm test` en CI. Se corrigió excluyendo el directorio de hooks de Claude en `test.exclude` de `vite.config.ts` (E0-T3-b); tras el fix, unit PASS.
-- **Pendientes / abiertos:** `ci.yml` no ejecuta `test:guard`, `check-agents` ni build (T3 no toca CI; decidir si agregarlos). `npm test` sigue siendo `vitest` (watch fuera de CI); verify usa `vitest run`.
+- **Revisión:** APROBADA CON CORRECCIONES (2 MINOR, 1 NIT). Aplicadas: (m1) los pasos `tsc`/`vitest`/`vite` invocan el binario local con `node node_modules/<pkg>/…` (un binario ausente falla en vez de instalar un paquete sin auditar; se observó el placeholder `tsc@2.0.4`). Desviación con evidencia: `npx --no-install` y `npm exec --no --` NO sirven en npm 11.10.1: con un binario inexistente igual consultan el registry (E404); la invocación directa falla sin red; (m2) parseo estricto de argumentos: `--only <lista>` y `--only=<lista>`, cualquier otro argumento desconocido (p. ej. `--quik`) sale con exit 2 y línea de uso; (nit) bandera `settled` para no cerrar el log ni resolver dos veces si disparan `error` y `close`. CI: se agregan `Guard tests` y `Agents check` (E0-T3-d).
+- **Pendientes / abiertos:** el build no corre en CI (ver E0-T3-d). `npm test` sigue siendo `vitest` (watch fuera de CI); verify usa `vitest run`.
 
 ## Límites aceptados del guard
 
@@ -174,6 +175,7 @@ _(numeradas E0-T<n>-a…)_
 - **E0-T3-a** — `verify` usa `npx vitest run` y `npx vite build` (no `npm test` ni `npm run build`) y fija `CI=1`. Porqué: `npm test` es `vitest` en modo watch fuera de CI y `npm run build` repetiría `tsc`, que ya cubre el paso `typecheck`.
 - **E0-T3-b** — El directorio de hooks de Claude se excluye de `test.exclude` en `vite.config.ts`. Porqué: sus tests usan `node:test` y vitest fallaba con "No test suite found" (FAIL medido antes, PASS después). No afloja nada: siguen corriendo en el paso `guard`.
 - **E0-T3-c** — Sin Java, `rules`/`functions` son FAIL (no SKIP) y `--quick` es la salida explícita. Porqué: un chequeo omitido en silencio no es verde.
+- **E0-T3-d** — `ci.yml` suma `Guard tests` (`npm run test:guard`) y `Agents check` (`node scripts/check-agents.mjs`) tras `Test`. Porqué: son baratos, no necesitan secretos y sin CI un cambio posterior podría romper el guard o las definiciones de agentes en silencio. El build queda fuera: `tsc -b` ya type-checkea y `vite build` suma ~47s.
 
 ## Estacionadas para Sebastián
 
