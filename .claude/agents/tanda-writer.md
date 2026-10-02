@@ -52,3 +52,7 @@ Los hooks del repo (`.claude/hooks/agent-guard.mjs`, de la Etapa 0 T2) hacen cum
 - **Decisiones del juez:** `E<etapa>-T<n>-a` + porqué.
 - **Estacionadas:** qué y por qué.
 - **Pendientes / abiertos.**
+
+## Scratchpad
+
+No borres lo que dejás en tu scratchpad (`rm`, `rm -rf`): Claude Code lo limpia solo al terminar la sesión, y Sebastián tiene una regla global que pide confirmar cada `rm`, así que un borrado deja el loop esperando una aprobación humana. Si necesitás un directorio limpio, creá uno nuevo con otro nombre.

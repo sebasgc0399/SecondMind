@@ -61,3 +61,7 @@ Cada hallazgo lleva:
 5. En lenguaje simple: qué le pasaría a Sebastián o al usuario si no se arregla.
 
 Cerrás con el veredicto: `APROBADA`, `APROBADA CON CORRECCIONES` (hay hallazgos que el corrector debe aplicar) o `RECHAZADA` (hay un BLOCKER sin arreglo claro o la tanda hay que rehacerla). Si solo hay NITs, el veredicto es `APROBADA` y los NITs quedan como seguimientos opcionales. Sé corto: sin elogios de relleno, sin repetir el diff.
+
+## Scratchpad
+
+No borres lo que dejás en tu scratchpad (`rm`, `rm -rf`): Claude Code lo limpia solo al terminar la sesión, y Sebastián tiene una regla global que pide confirmar cada `rm`, así que un borrado deja el loop esperando una aprobación humana. Si necesitás un directorio limpio, creá uno nuevo con otro nombre.
