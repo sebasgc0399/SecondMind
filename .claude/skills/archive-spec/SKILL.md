@@ -166,6 +166,7 @@ Single atomic operation:
 - **Local only.** Uses git + file reads + conversation context. No MCPs, no web fetches.
 - **Original preserved in git history.** Do not create an `archive/` folder or backup copy. `git show <commit>:path` recovers if needed. Redundant storage is noise.
 - **If the SPEC is partially archived** (header already says "Registro de implementación" and features are in past-tense with commit hashes, but the body still has zombie sections): this is the **most common edge case** — recurs every time someone runs an early or incomplete archival pass. Audit for these survivors:
+
   - `Verificación E2E` table (test-by-test results)
   - `Commits en orden` list separate from the header
   - `Archivos creados` / `Archivos modificados` / `Archivos NO tocados` sections (git tracks all of this)
@@ -174,6 +175,7 @@ Single atomic operation:
   - Per-feature `Qué:` / `Criterio de done:` blocks still in instruction format
 
   Then offer the user **two explicit options**:
+
   1. **Full compaction** — apply the canonical template (typically 50–80% additional reduction). Move audit findings to `Lecciones`, compact commits into header, drop file lists and test transcripts.
   2. **Minimal cleanup** — remove only obviously stale sections (e.g. `Siguiente iteración candidata`). Leave the rest.
 
