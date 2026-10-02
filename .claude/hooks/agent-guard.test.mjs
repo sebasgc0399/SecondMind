@@ -764,6 +764,78 @@ describe('referencias a producción en cualquier comando (seguimiento E0-T7)', (
     allowedMain(bash('node -e "console.log(1)" # secondmindv1')));
 });
 
+describe('git log --grep/-S/-G como patrón de búsqueda (revisión pendientes, MINOR 3)', () => {
+  for (const c of [
+    'git log --grep="secondmindv1"',
+    'git log --grep secondmindv1 --oneline',
+    "git log --oneline --grep='firestore.googleapis.com'",
+    'git log -Ssecondmindv1',
+    'git log -S "googleapis.com" --oneline -5',
+    'git log -G cloudfunctions.net',
+    '/usr/bin/git -C . log -Gfirebaseio.com',
+  ]) {
+    test(`permite: ${c}`, () => allowedSub(bash(c)));
+  }
+  for (const c of [
+    'git log --format=secondmindv1',
+    'git log -S x -- secondmindv1',
+    'git log --grep=x && curl https://firestore.googleapis.com/v1',
+    'git log --grep="$(curl -s https://x.cloudfunctions.net/f)"',
+    'git show -Ssecondmindv1',
+    // Falsos positivos aceptados (Docs/05 § 8): grep/rg sin comillas y -m con el host.
+    'grep -r secondmindv1 src/',
+    'rg googleapis.com',
+    'git commit -m "docs: cita googleapis.com"',
+  ]) {
+    test(`bloquea: ${c}`, () => assert.match(blocked(bash(c)).reason, /\[http-prod\]/));
+  }
+});
+
+describe('navegador MCP: texto y emuladores (revisión pendientes, MINOR 4)', () => {
+  const pw = (t, ti) => ({ tool_name: `mcp__playwright__${t}`, tool_input: ti });
+  test('tools de texto con una URL (no producción) en el texto → permitidas', () => {
+    allowedSub(pw('browser_type', { ref: 'e3', text: 'ver https://example.com/doc' }));
+    allowedSub(
+      pw('browser_fill_form', {
+        fields: [{ name: 'Fuente', type: 'textbox', ref: 'e5', value: 'http://localhost:3000/x' }],
+      }),
+    );
+    allowedSub(pw('browser_wait_for', { text: 'https://example.com' }));
+    allowedSub(pw('browser_press_sequentially', { ref: 'e1', text: 'http://127.0.0.1:9/' }));
+  });
+  test('tools de texto con referencias a producción → bloqueadas', () => {
+    for (const ti of [
+      { ref: 'e3', text: 'https://app.getsecondmind.co/notes' },
+      { ref: 'e3', text: 'proyecto secondmindv1' },
+    ])
+      assert.match(blocked(pw('browser_type', ti)).reason, /mcp-browser.*producción/);
+  });
+  test('evaluate puede hablar con los emuladores (9099, 8080, 5001)', () => {
+    for (const fn of [
+      "() => fetch('http://localhost:9099/emulator/v1/projects/demo-secondmind/accounts')",
+      "() => fetch('http://127.0.0.1:8080/emulator/v1/projects/demo-secondmind/databases')",
+      "() => fetch('http://127.0.0.1:5001/demo-secondmind/us-central1/f')",
+    ])
+      allowedSub(pw('browser_evaluate', { function: fn }));
+  });
+  test('evaluate a otros puertos o hosts → bloqueado; los puertos de emulador solo en evaluate', () => {
+    for (const fn of [
+      "() => fetch('http://localhost:4000/')",
+      "() => fetch('http://localhost:5173/')",
+      "() => fetch('https://example.com/')",
+    ])
+      assert.match(blocked(pw('browser_evaluate', { function: fn })).reason, /mcp-browser/);
+    assert.match(
+      blocked(pw('browser_navigate', { url: 'http://localhost:8080/' })).reason,
+      /mcp-browser/,
+    );
+    assert.match(
+      blocked(pw('browser_click', { ref: 'e1', element: 'link http://localhost:9099/' })).reason,
+      /mcp-browser/,
+    );
+  });
+});
+
 describe('navegador MCP (seguimiento E0-T7)', () => {
   const nav = (url, tool = 'mcp__playwright__browser_navigate') => ({
     tool_name: tool,

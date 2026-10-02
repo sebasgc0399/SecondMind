@@ -853,8 +853,14 @@ export const RULES = [
       const dest = input.tool_input?.url;
       if (typeof dest === 'string' && dest !== 'about:blank' && !LOCAL_APP.test(dest))
         return `${input.tool_name} a ${dest} (solo localhost:5180 o :4321; usá npm run dev:emu)`;
+      // Tools de texto (teclean, eligen o verifican texto; no navegan ni hacen requests): una
+      // URL en el texto es dato. Solo cuentan las referencias a producción (arriba).
+      const tool = input.tool_name.split('__').pop().toLowerCase();
+      if (BROWSER_TEXT_TOOLS.has(tool)) return null;
+      // evaluate corre en la página de la app: además puede hablar con los emuladores.
+      const ok = (u) => LOCAL_APP.test(u) || (tool === 'browser_evaluate' && EMULATOR.test(u));
       for (const url of text.match(/\b[a-z][a-z0-9+.-]*:\/\/[^\s"'`)\\]+/gi) ?? []) {
-        if (!LOCAL_APP.test(url))
+        if (!ok(url))
           return `${input.tool_name} a ${url} (solo localhost:5180 o :4321; usá npm run dev:emu)`;
       }
       return null;
@@ -875,6 +881,26 @@ export const RULES = [
 ];
 
 const LOCAL_APP = /^https?:\/\/(localhost|127\.0\.0\.1|\[::1\]):(5180|4321)(\/|\?|#|$)/i;
+// Puertos de emulador de `firebase.json` (auth 9099, firestore 8080, functions 5001). No
+// define `ui`, así que el puerto de la UI del emulador (4000 por defecto) no se permite.
+const EMULATOR = /^https?:\/\/(localhost|127\.0\.0\.1|\[::1\]):(9099|8080|5001)(\/|\?|#|$)/i;
+// Tools de Playwright MCP (0.0.83) que solo teclean, eligen o verifican texto.
+const BROWSER_TEXT_TOOLS = new Set([
+  'browser_type',
+  'browser_fill_form',
+  'browser_select_option',
+  'browser_press_key',
+  'browser_press_sequentially',
+  'browser_keydown',
+  'browser_keyup',
+  'browser_handle_dialog',
+  'browser_wait_for',
+  'browser_find',
+  'browser_verify_text_visible',
+  'browser_verify_value',
+  'browser_verify_element_visible',
+  'browser_verify_list_visible',
+]);
 
 function editPath(input) {
   const ti = input.tool_input ?? {};
@@ -1018,22 +1044,36 @@ const SEARCH = new Set([
 
 /**
  * Blanquea en `cmd` los argumentos con comillas de un comando de búsqueda de
- * nivel superior, para que la red cruda no tome `grep "git push"` como un push.
- * No toca destinos de redirección ni tokens con `$(…)`/backticks.
+ * nivel superior, para que la red cruda no tome `grep "git push"` como un push,
+ * y el valor de `git log --grep/-S/-G` (con o sin comillas). No toca destinos de
+ * redirección ni tokens con `$(…)`/backticks.
  */
 function maskSearchPatterns(cmd, cmds) {
   const chars = cmd.split('');
+  const blank = (argv, k) => {
+    const sp = argv.spans[k];
+    if (!sp || sp.redirect || /\$\(|`/.test(argv[k])) return;
+    for (let x = sp.start; x < sp.end; x++) if (chars[x] !== '\n') chars[x] = ' ';
+  };
   for (const argv of cmds) {
     if (!argv.spans) continue;
     const [name, args] = resolveProgram(argv);
-    const isGitGrep = name === 'git' && parseGit(args).sub === 'grep';
+    const git = name === 'git' ? parseGit(args) : null;
+    // `git log --grep X`, `--grep=X`, `-S X`/`-SX`, `-G X`/`-GX`: el valor es un patrón de
+    // búsqueda (con o sin comillas); se blanquea solo ese valor.
+    if (git && git.sub === 'log') {
+      const from = argv.length - git.rest.length;
+      for (let k = from; k < argv.length; k++) {
+        const t = argv[k];
+        if (t === '--grep' || t === '-S' || t === '-G') blank(argv, ++k);
+        else if (t.startsWith('--grep=') || /^-[SG]./.test(t)) blank(argv, k);
+      }
+      continue;
+    }
+    const isGitGrep = git !== null && git.sub === 'grep';
     if (!SEARCH.has(name) && !isGitGrep) continue;
     const from = argv.length - args.length;
-    for (let k = from; k < argv.length; k++) {
-      const sp = argv.spans[k];
-      if (!sp || !sp.quoted || sp.redirect || /\$\(|`/.test(argv[k])) continue;
-      for (let x = sp.start; x < sp.end; x++) if (chars[x] !== '\n') chars[x] = ' ';
-    }
+    for (let k = from; k < argv.length; k++) if (argv.spans[k]?.quoted) blank(argv, k);
   }
   return chars.join('');
 }
