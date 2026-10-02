@@ -84,6 +84,7 @@ Versiones específicas y notas operativas (gotchas mini que justifican la elecci
 | `@capacitor/android`            | `^8.3.0`  | Plataforma Android. `minSdk 24`, `compileSdk 36`, `targetSdk 36`                   |
 | `@capacitor/splash-screen`      | `^8.0.1`  | `launchAutoHide: false` + `SplashScreen.hide()` manual                             |
 | `@capgo/capacitor-social-login` | `^8.3.14` | Google Sign-In nativo. Sucesor oficial del abandonado `codetrix-studio`            |
+| `@playwright/test`              | `1.63.0`  | devDep (SPEC-69 T6). Smoke de UI con Chrome instalado: `npm run e2e:ui`            |
 | `@capgo/capacitor-share-target` | `^8.0.27` | Listener `shareReceived` + intent-filter SEND. Único con soporte Cap 8 free        |
 
 ---

@@ -24,6 +24,11 @@ npm run build        # Build producción (tsc + vite build)
 npm run lint         # ESLint (eslint .)
 npm test             # Vitest (unit tests — repos, tinybase, etc.)
 npm run test:rules   # Vitest sobre security rules (emulador Firestore, requiere JDK)
+npm run verify       # Suite completa de "verde": lint, tsc, unit, guard, agents, rules, functions, build (requiere JDK)
+npm run verify:quick # Igual sin rules/functions/build (sin emulador ni JDK)
+npm run dev:emu      # Emuladores demo-secondmind + seed + app en modo emulador en http://localhost:5180 (usuario e2e@secondmind.test / secondmind-e2e)
+npm run e2e:ui       # Smoke de UI con Playwright (Chrome instalado, 3 viewports) contra dev:emu; fuera de verify
+npm run test:guard   # Tests del hook agent-guard (node --test)
 npm run preview      # Preview del build local
 npm run deploy       # Build + deploy de la SPA a Firebase Hosting (target hosting:app)
 npm run build:landing     # Build de la landing Astro (npm --prefix landing run build)
@@ -91,7 +96,7 @@ Principio rector: **la síntesis no se delega**. El subagente recolecta; la deci
 Configurados en `.claude/settings.json`. Se ejecutan automáticamente sin intervención:
 
 - **PostToolUse** (tras Write/Edit/MultiEdit): Prettier + ESLint --fix sobre el archivo editado. NO correr manualmente.
-- **PreToolUse** (antes de Edit/Write): si la rama actual es `main`, la operación se bloquea con `exit 2`. Crear branch `feat/[x]` antes de codear.
+- **PreToolUse** (`.claude/hooks/agent-guard.mjs`, SPEC-69): **siempre** bloquea editar (`Edit`/`Write`/`MultiEdit`/`NotebookEdit`) con la rama en `main` (`exit 2`; crear `feat/[x]` antes de codear). Además, en **modo restringido** (llamada de un subagente, o existe el sentinel `.claude/loop.active`) bloquea push, tags `v*`, merge a `main`, deploys y todo acceso a `secondmindv1`. La sesión principal fuera del loop conserva su flujo normal. Detalle en [Docs/05](Docs/05-metodo-trabajo-autonomo.md).
 
 ### Setup específico Windows
 
@@ -119,6 +124,8 @@ Cada feature del proyecto sigue este ciclo. No improvisar: si algo no cuadra, aj
    - **Notas QA: hard-delete, nunca soft-delete** — `onNoteDeleted` solo dispara con delete real del documento; el soft-delete deja embedding/links vivos hasta que `autoPurgeTrash` venza el plazo. Hard-delete = Papelera → "Eliminar para siempre".
    - **PROHIBIDO siempre:** borrados masivos, resets, operaciones irreversibles sobre datos reales, y tocar la configuración de la cuenta.
 
+   **Para UI, preferir el modo emulador:** `npm run dev:emu` + `npm run e2e:ui` (datos seed, sin prod; ver [Docs/05 § 7](Docs/05-metodo-trabajo-autonomo.md)).
+
    Cubrir golden path + edge cases + regresión. `TaskStop` al dev server al terminar.
 
 6. **Deploy pipeline** al cerrar feature (confirmar scope al final, no paso a paso):
@@ -129,6 +136,10 @@ Cada feature del proyecto sigue este ciclo. No improvisar: si algo no cuadra, aj
    - Android: `npx cap sync android && cd android && ./gradlew.bat assembleDebug` — **opcional** si no tocaste `android/`.
 7. **Merge `--no-ff` a main** con commit de merge descriptivo. Push a origin sin preguntar.
 8. **Cerrar la feature:** convertir el SPEC a registro de implementación siguiendo el patrón de `Spec/features/SPEC-feature-{1..N}-*.md`. Aplicar la regla de escalación de gotchas (ver "Docs: jerarquía y reglas" abajo). Auditar techos antes de commitear docs.
+
+### SDD v2 — etapas, tandas y loop
+
+Para trabajo grande, el SDD se organiza en **etapas** de varias **tandas**: un orquestador delega en agentes (`tanda-writer` → `tanda-reviewer` → `tanda-fixer`, en `.claude/agents/`), cada tanda cierra con `npm run verify` y un tag local `e<N>-T<n>` (nunca `v*`), y con autorización explícita de Sebastián por etapa puede correr en `/loop` sin tocar producción. Método completo, reparto de modelos, guard y protocolo del loop → [Docs/05](Docs/05-metodo-trabajo-autonomo.md). Los pasos 1–8 de arriba siguen valiendo para features chicas.
 
 ### Docs: jerarquía y reglas
 
@@ -154,6 +165,7 @@ Docs teóricos en `Docs/00-04-*.md` — leer **solo el que aplique** a la tarea,
 | `Docs/02-flujos-ux-y-pantallas.md`           | 14 pantallas con wireframes, 5 flujos de usuario, shortcuts, breakpoints                  |
 | `Docs/03-convenciones-y-patrones.md`         | Naming, patrones TinyBase, TypeScript, Tailwind, errores, Git, Cloud Functions            |
 | `Docs/04-clean-architecture-frontend.md`     | Clean Architecture en 4 capas, factory repos F10, excepciones (auth, lectura MVP)         |
+| `Docs/05-metodo-trabajo-autonomo.md`         | SDD v2: etapas/tandas, roles de agentes, verify, entorno emulador, guard, protocolo loop  |
 
 **Escalación de gotchas al cerrar feature** (step 8 del SDD): nacen en SPEC → suben a `Spec/gotchas/<dominio>.md` (canon; indexado en ESTADO-ACTUAL) si aplican a >1 feature → suben a CLAUDE.md si aplican a toda sesión sin importar dominio. **Nunca duplicar entre niveles** — al subir un gotcha, eliminarlo del nivel anterior. Techos (200 / 300 líneas) son orientativos: el criterio es "¿aplica a este nivel?", no `wc -l`.
 
