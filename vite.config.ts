@@ -110,6 +110,12 @@ export default defineConfig({
     globals: true,
     // El test de security rules (F4) necesita el emulador de Firestore — corre
     // aparte con `npm run test:rules`, no en el `npm test` default.
-    exclude: [...configDefaults.exclude, '**/firestore.rules.test.ts', '**/*.e2e.test.ts'],
+    // Los tests del guard (hooks de Claude) usan node:test y corren con `npm run test:guard`.
+    exclude: [
+      ...configDefaults.exclude,
+      '**/firestore.rules.test.ts',
+      '**/*.e2e.test.ts',
+      '.claude/**',
+    ],
   },
 });
