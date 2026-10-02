@@ -114,7 +114,7 @@ Verificar con `git diff --stat` — deben aparecer exactamente 5 archivos, ~6 in
 En el **mismo commit del bump** (no después), decidir según el contenido del release:
 
 - **¿Tiene cambios user-facing?** → **Sí:** agregar la entrada al catálogo de novedades (Feature 59):
-  1. **Appendear** `{ version: 'X.Y.Z', key: 'v0XY' }` al **FINAL** de `CHANGELOG_ENTRIES` en `src/lib/changelog.ts`. El **orden del array = orden de release** (invariante F60): el historial consultable (`/settings/changelog`) lista el catálogo con `reverse()` = newest-first **sin `semver.compare()`**, así que el append-al-final es lo que mantiene el orden correcto. **Solo versiones LIBERADAS** en el registry — esta es la entrada de la versión que liberás ahora; nunca sembrar drafts de versiones futuras (F60 removió el viejo placeholder `v060`; ahora se **crea fresco** en su propio release 0.6.0, no se reescribe).
+  1. **Appendear** `{ version: 'X.Y.Z', key: 'v0XY' }` al **FINAL** de `CHANGELOG_ENTRIES` en `src/lib/changelog.ts`. El **orden del array = orden de release** (invariante F60): el historial consultable (`/settings/changelog`) lista el catálogo con `reverse()` = newest-first **sin `semver.compare()`**, así que el append-al-final es lo que mantiene el orden correcto. **Solo versiones LIBERADAS** en el registry — esta es la entrada de la versión que liberás ahora; nunca sembrar drafts de versiones futuras.
   2. Agregar `changelog.v0XY.title` + `changelog.v0XY.items` (los highlights reales del release) en `src/locales/es/translation.json` **y** `src/locales/en/translation.json`.
   3. Regenerar los tipos i18n con `npx i18next-cli types` (NO `extract`) y luego **correr Prettier** sobre `src/types/resources.d.ts` (el comando lo genera con comillas dobles; el repo lo quiere en formato Prettier y el hook no corre en comandos shell).
 - **No** (patch interno, sin nada visible para el usuario) → **omitir**. Sin entrada para esa versión el modal queda **mudo by design**: `useWhatsNew` hace silent-advance (avanza `lastSeenVersion` sin mostrar nada).
@@ -210,8 +210,6 @@ Además verificar manualmente:
 
 - GitHub Release creado: `https://github.com/sebasgc0399/SecondMind/releases/tag/v<X.Y.Z>` — debe tener los .msi, .nsis, y `latest.json`.
 - Firebase App Distribution: el user debería recibir notificación. Si no, revisar la consola de Firebase.
-
-> **⏳ Vigilancia one-time (remover al cumplirse):** primer deploy web que empaquete **workbox 7.4.1** (bump de vite-plugin-pwa 1.3.0 en `feat/i18n-f1`, 2026-06-11) → smoke del flujo de update en prod: `UpdateBanner` → aceptar → `SKIP_WAITING` → reload limpio con la versión nueva. No fue gate de la rama del bump — es verificación diferida a este primer release.
 
 ### Paso 10 — Cerrar
 
