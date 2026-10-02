@@ -104,11 +104,34 @@ _(una entrada por tanda: qué se hizo, commits, verificación con números, revi
 - **Correcciones aplicadas:** M1 afirmación de hooks condicionada a T2; M2 revisor sin `Agent` y con prohibiciones git/Bash explícitas; M3 decisión E0-T1-a (tags de etapa permitidos); m4 esta entrada y `scripts/check-agents.mjs`; m5 veredicto sin hallazgos exige evidencia; m6 writer con `opus` en alto riesgo; n7 writer genérico; n8 solo NITs implica APROBADA.
 - **Pendientes:** el `disallowedTools` del revisor asume que el harness lo respeta; T2 agrega el guard como segunda capa.
 
+### T2 — Guardas deterministas
+
+- **Qué se hizo:** `.claude/hooks/agent-guard-lib.mjs` (lógica pura: tabla `RULES` con `main-branch`, `protected-path`, `mcp-firebase`, `shell`; `evaluate(input, env)` exportada), `.claude/hooks/agent-guard.mjs` (wrapper stdin → exit 0/2 con fail-safe), `.claude/hooks/agent-guard.test.mjs` (`node:test`). El análisis de shell tiene dos capas: argv por comando simple (tokenizador con comillas, `&&`/`||`/`;`/`|`/saltos/`$(…)`/backticks, y re-análisis de strings anidados: `bash -c`, `powershell -Command`, `cmd /c`, heredocs) y una red de seguridad por regex sobre el texto crudo. `.claude/settings.json`: PreToolUse con matcher `Bash|PowerShell|Edit|Write|MultiEdit|NotebookEdit|mcp__.*` → `node "$CLAUDE_PROJECT_DIR/.claude/hooks/agent-guard.mjs"`; se quitó el guard inline de main (su semántica la cubre la regla `main-branch`, ahora también para MultiEdit/NotebookEdit). `.gitignore`: `.claude/loop.active`, `.claude/guard.unlock`. `package.json`: `test:guard`.
+- **Commits:** ver `git log e0-T1..HEAD` (feat(guard) hook + tests; chore(settings) registro del hook; docs(spec) esta entrada).
+- **Verificación:**
+  - `npm run test:guard`: 191 tests, 14 suites, 191 pass, 0 fail (incluye 4 end-to-end que lanzan el script real con stdin JSON y un repo git temporal como `CLAUDE_PROJECT_DIR`: push de subagente → 2, sesión principal → 0; Write en `main` → 2, en `feat/x` → 0; `loop.active` → restringido; stdin roto → 0 fuera / 2 dentro del modo restringido).
+  - Control positivo (mutaciones sobre copias en el scratchpad): sin la regla argv de `git push` → 1 fail (`g\it push`, que solo ve la capa argv); sin argv ni red de `git push` → 30 fail; regla por regla desactivada: `main-branch` 7 fail, `protected-path` 5, `mcp-firebase` 4, `shell` 116; handlers argv: `gh` 8, `firebase` 2, `curl` 1, `npm` 1, `cap` 1, `gradlew` 2, `tauri` 1, `gcloud` 0 (la red cruda lo cubre entero, es intencional).
+  - `node -e "JSON.parse(...settings.json)"`: ok.
+  - En vivo en esta sesión (subagente, hook ya registrado): `git push --dry-run origin HEAD` → BLOQUEADO (`agent-guard [shell]: [git-push]`); `git tag -l "e0-*"` → permitido (lista `e0-T0`, `e0-T1`); `Edit` sobre `.claude/settings.json` → BLOQUEADO (`protected-path`).
+  - `npx prettier --check .claude/hooks/`: ok. `npx eslint .claude/hooks/`: exit 0, pero la config solo define reglas para `ts/tsx` (sonda por stdin con `undefinedVar()` en un `.mjs` → exit 0), así que no aporta señal sobre estos archivos.
+- **Pendientes / abiertos:**
+  - En modo restringido, un mensaje de commit (o heredoc) que mencione un comando prohibido se bloquea (ver E0-T2-g): los agentes deben usar `git commit -F <archivo>`. Falta decirlo en los `.claude/agents/tanda-*.md` (no son rutas protegidas; T7 o el orquestador).
+  - Con el loop activo, nadie dentro de Claude puede borrar `.claude/loop.active` (es sentinel): salir del loop requiere que Sebastián lo borre a mano (ver Pasos manuales).
+  - El guard es un cinturón, no un sandbox: un intérprete que arma la ruta o el comando por partes (`'.cla'+'ude'`, variables) lo evade; `git apply`/`stash` sobre rutas protegidas solo se detecta si la ruta aparece en el comando. Si `node` no está en el PATH el hook sale 127 (no bloqueante).
+
 ## Decisiones del juez (a ratificar)
 
 _(numeradas E0-T<n>-a…)_
 
 - **E0-T1-a** — El corrector crea el tag local de cierre de tanda; el guard de T2 permite solo tags `^e\d+-T\d+[a-z]?$` y bloquea el resto (incl. `v*`) y todo push. Porqué: mantiene el ciclo del método (cierra quien verificó en verde) sin abrir ningún camino a release, que se dispara solo con `v*` pusheados.
+
+- **E0-T2-a** — `test:guard` usa `node --test ".claude/hooks/*.test.mjs"` y no `node --test .claude/hooks/`. Porqué: en Node 24.11 (el instalado) pasar un directorio falla con `Could not find '.claude/hooks'` (medido); desde Node 22 los argumentos son globs.
+- **E0-T2-b** — El guard se parte en `agent-guard-lib.mjs` (lógica) y `agent-guard.mjs` (wrapper) y la lib se carga con `import()` dinámico dentro de `try`. Porqué: un error de sintaxis con import estático termina en exit 1, que Claude Code trata como no bloqueante (falso negativo silencioso); así cae en el fail-safe (exit 2 en modo restringido).
+- **E0-T2-c** — `firebase emulators:*` también exige `--project demo-*` (el prompt lo exceptuaba). Porqué: I3, y un emulador con el proyecto real (default de `.firebaserc`) puede alcanzar con ADC servicios reales no emulados (p.ej. Auth si no se levanta su emulador). Los scripts existentes (`test:rules`, `test:functions`) ya pasan `--project=demo-secondmind`.
+- **E0-T2-d** — En modo restringido `git merge` se bloquea siempre (el SPEC decía "mientras HEAD es main") y el MCP de Firebase se bloquea entero, lecturas incluidas (el SPEC decía escrituras). Porqué: lo pidió así el orquestador, es más conservador y ningún rol del ciclo los necesita.
+- **E0-T2-e** — Se agregan al alcance la tool `PowerShell` (mismo análisis que `Bash`) y los `settings*.json` de `~/.claude` como rutas protegidas. Porqué: en Windows puede existir la tool PowerShell y sería un bypass directo; un `disableAllHooks` en los settings de usuario apaga el guard.
+- **E0-T2-f** — La regla `main-branch` resuelve la rama subiendo hasta el primer directorio existente. Porqué: el guard inline hacía `git -C <dir del archivo>`, que falla si el directorio aún no existe y bloqueaba crear archivos en carpetas nuevas aunque la rama no fuera `main`. Se mantiene el resto: rama `main` o irresoluble → bloquea, mismo alcance de rutas ("Proyectos VS CODE/…SecondMind…").
+- **E0-T2-g** — Los strings se re-analizan como comandos aunque sean datos (mensajes de commit, heredocs). Porqué: `bash -c "git push"` y `git commit -m "… git push …"` no se distinguen sin un parser de shell completo, y un falso positivo en modo restringido es aceptable; la salida es `git commit -F <archivo>`.
 
 ## Estacionadas para Sebastián
 
@@ -117,3 +140,5 @@ _(decisiones visuales o de producto)_
 ## Pasos manuales de Sebastián
 
 _(lo que solo un humano verifica)_
+
+- **T2:** para cerrar un loop, borrar a mano `.claude/loop.active` (el guard no deja que ningún agente ni la sesión en loop lo toque). Para una ventana de mantenimiento del guard, crear `.claude/guard.unlock` (Sebastián, o la sesión principal fuera del loop) y borrarlo al terminar.
