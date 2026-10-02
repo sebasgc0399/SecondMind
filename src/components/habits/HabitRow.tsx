@@ -5,7 +5,7 @@ interface HabitRowProps {
   habit: (typeof HABITS)[number];
   weekEntries: HabitEntry[];
   editableDates: Set<string>;
-  todayMs: number; // inicio del día de hoy, para detectar futuro
+  todayKey: string; // YYYY-MM-DD de hoy, para detectar futuro
   onToggle: (dateKey: string, habitKey: HabitKey) => void;
 }
 
@@ -13,7 +13,7 @@ export default function HabitRow({
   habit,
   weekEntries,
   editableDates,
-  todayMs,
+  todayKey,
   onToggle,
 }: HabitRowProps) {
   const habitLabels = useHabitLabels();
@@ -29,7 +29,10 @@ export default function HabitRow({
       {weekEntries.map((entry) => {
         const isDone = entry[habit.key];
         const isEditable = editableDates.has(entry.id);
-        const isFuture = entry.date > todayMs;
+        // Por clave y no por timestamp: las rows guardadas tienen `date` a las 12:00 locales
+        // (habitsRepo) y las sintetizadas a las 00:00; comparar contra el inicio de hoy
+        // marcaba como futuro el día de hoy ya guardado. YYYY-MM-DD ordena lexicográficamente.
+        const isFuture = entry.id > todayKey;
 
         let visualClass = 'block h-7 w-7 rounded border transition-colors';
         if (isDone) {

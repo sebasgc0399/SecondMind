@@ -9,7 +9,6 @@ interface HabitGridProps {
   weekEntries: HabitEntry[];
   editableDates: Set<string>;
   todayKey: string;
-  todayMs: number;
   onToggle: (dateKey: string, habitKey: HabitKey) => void;
 }
 
@@ -18,7 +17,6 @@ export default function HabitGrid({
   weekEntries,
   editableDates,
   todayKey,
-  todayMs,
   onToggle,
 }: HabitGridProps) {
   const { t, i18n } = useTranslation();
@@ -66,7 +64,7 @@ export default function HabitGrid({
               habit={habit}
               weekEntries={weekEntries}
               editableDates={editableDates}
-              todayMs={todayMs}
+              todayKey={todayKey}
               onToggle={onToggle}
             />
           ))}
