@@ -21,6 +21,17 @@ import { dirname, join } from 'node:path';
 import { initializeTestEnvironment } from '@firebase/rules-unit-testing';
 import { doc, setDoc } from 'firebase/firestore';
 
+// Versión del esquema de preferencias, leída de la fuente (src/lib/preferences.ts) para no driftear.
+export function readPreferencesSchemaVersion() {
+  const src = readFileSync(
+    join(dirname(fileURLToPath(import.meta.url)), '..', 'src', 'lib', 'preferences.ts'),
+    'utf8',
+  );
+  const m = src.match(/export const PREFERENCES_SCHEMA_VERSION\s*=\s*(\d+)/);
+  if (!m) throw new Error('[seed] no se pudo leer PREFERENCES_SCHEMA_VERSION de preferences.ts');
+  return Number(m[1]);
+}
+
 export const SEED_EMAIL = 'e2e@secondmind.test';
 export const SEED_PASSWORD = 'secondmind-e2e';
 const DAY = 86_400_000;
@@ -59,11 +70,16 @@ function buildBlock(type, parts, titleOf, attrs) {
       content.push({ type: 'text', text: p });
       plain += p;
     } else {
+      // El nodo wikilink real no tiene renderText: editor.getText() no incluye su título.
       content.push({ type: 'wikilink', attrs: { noteId: p.link, noteTitle: titleOf(p.link) } });
-      plain += titleOf(p.link);
     }
   }
   return { node: { type, ...(attrs ? { attrs } : {}), content }, plain };
+}
+
+// Texto del párrafo CON los títulos de los wikilinks (contexto del link, a diferencia de contentPlain).
+function contextOf(parts, titleOf) {
+  return parts.map((p) => (typeof p === 'string' ? p : titleOf(p.link))).join('');
 }
 
 const NOTES = [
@@ -164,6 +180,13 @@ const NOTES = [
         { link: 'nota-para' },
         ' como estructura de carpetas.',
       ],
+      [
+        'Conceptos que lo rodean: ',
+        { link: 'nota-zettelkasten' },
+        ' y ',
+        { link: 'nota-progressive-summarization' },
+        '. Esta nota funciona como hub del sistema (4 enlaces salientes).',
+      ],
     ],
   },
   {
@@ -256,7 +279,7 @@ function buildNotesAndLinks(now) {
           targetId: p.link,
           sourceTitle: n.title,
           targetTitle: titleOf(p.link),
-          context: b.plain.slice(0, 200),
+          context: contextOf(parts, titleOf).slice(0, 200),
           linkType: 'explicit',
           strength: 0,
           accepted: true,
@@ -522,7 +545,10 @@ function buildExecution(now) {
     const id = `${day.getFullYear()}-${String(day.getMonth() + 1).padStart(2, '0')}-${String(
       day.getDate(),
     ).padStart(2, '0')}`;
-    const data = { date: day.getTime(), createdAt: day.getTime(), updatedAt: day.getTime() };
+    // La app guarda el día a las 12:00 locales (habitsRepo.ts), no a medianoche.
+    const noon = new Date(day);
+    noon.setHours(12, 0, 0, 0);
+    const data = { date: noon.getTime(), createdAt: day.getTime(), updatedAt: day.getTime() };
     let done = 0;
     keys.forEach((k, i) => {
       const v = (i * 3 + back * 5) % 7 < 4; // patrón determinista y variado
@@ -584,7 +610,7 @@ export async function seed(target) {
       await put(`allowlist/${SEED_EMAIL}`, { addedAt: now });
       await put('config/app', { signupsEnabled: true, maxUsers: 100 });
       await put(`users/${uid}/settings/preferences`, {
-        _schemaVersion: 1,
+        _schemaVersion: readPreferencesSchemaVersion(),
         trashAutoPurgeDays: 30,
         distillIntroSeen: true,
         distillBannersSeen: { l1: true, l2: true, l3: true },
@@ -630,7 +656,7 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
     const { uid, counts } = await seed(target);
     console.log(`[seed] proyecto ${target.projectId}, uid ${uid}`);
     for (const [k, v] of Object.entries(counts)) console.log(`[seed]   ${k}: ${v}`);
-    console.log('[seed] + allowlist, config/app, settings/preferences (v1, onboarding visto)');
+    console.log('[seed] + allowlist, config/app, settings/preferences (onboarding visto)');
     console.log('[seed] Login en http://localhost:5180');
     console.log(`[seed]   email:    ${SEED_EMAIL}`);
     console.log(`[seed]   password: ${SEED_PASSWORD}`);

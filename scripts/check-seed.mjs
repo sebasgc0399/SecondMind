@@ -3,8 +3,31 @@
 // deshabilitadas y verifica que los datos sean coherentes con lo que la app espera.
 import { initializeTestEnvironment } from '@firebase/rules-unit-testing';
 import { collection, doc, getDoc, getDocs } from 'firebase/firestore';
-import { pathToFileURL } from 'node:url';
-import { SEED_EMAIL, resolveEmulatorTarget } from './seed-emulator.mjs';
+import { readFileSync } from 'node:fs';
+import { dirname, join } from 'node:path';
+import { fileURLToPath, pathToFileURL } from 'node:url';
+import {
+  SEED_EMAIL,
+  readPreferencesSchemaVersion,
+  resolveEmulatorTarget,
+} from './seed-emulator.mjs';
+
+// Esquema de cada colección, leído de src/stores/<x>Store.ts (E0-T5-e): el nombre de la tabla
+// TinyBase coincide con el de la colección Firestore y cada celda declara su `type`.
+const storesDir = join(dirname(fileURLToPath(import.meta.url)), '..', 'src', 'stores');
+export function readStoreSchema(collectionName) {
+  const src = readFileSync(join(storesDir, `${collectionName}Store.ts`), 'utf8');
+  const start = src.indexOf(`  ${collectionName}: {`);
+  if (start < 0) throw new Error(`[check-seed] no se halló la tabla ${collectionName}`);
+  const body = src.slice(start, src.indexOf('\n  },', start));
+  const fields = {};
+  for (const m of body.matchAll(/^\s{4}(\w+):\s*\{\s*type:\s*'(string|number|boolean)'/gm)) {
+    fields[m[1]] = m[2];
+  }
+  if (Object.keys(fields).length === 0)
+    throw new Error(`[check-seed] esquema vacío: ${collectionName}`);
+  return fields;
+}
 
 function parseIds(value) {
   try {
@@ -47,7 +70,18 @@ export async function checkSeed(target) {
       const db = ctx.firestore();
       const list = async (name) => {
         const snap = await getDocs(collection(db, `users/${uid}/${name}`));
-        return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+        const rows = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+        // Tipos por celda según el store de la app (extras como `content` no están en el schema).
+        const schema = readStoreSchema(name);
+        for (const r of rows) {
+          for (const [field, type] of Object.entries(schema)) {
+            check(
+              typeof r[field] === type,
+              `${name}/${r.id}: "${field}" debe ser ${type}, es ${typeof r[field]}`,
+            );
+          }
+        }
+        return rows;
       };
 
       const allow = await getDoc(doc(db, 'allowlist', SEED_EMAIL));
@@ -56,8 +90,8 @@ export async function checkSeed(target) {
       check(cfg.exists() && cfg.data().signupsEnabled === true, 'config/app inválido');
       const prefs = await getDoc(doc(db, `users/${uid}/settings/preferences`));
       check(
-        prefs.exists() && prefs.data()._schemaVersion === 1,
-        'preferences._schemaVersion !== 1',
+        prefs.exists() && prefs.data()._schemaVersion === readPreferencesSchemaVersion(),
+        'preferences._schemaVersion !== PREFERENCES_SCHEMA_VERSION de src/lib/preferences.ts',
       );
       check(
         prefs.exists() &&
@@ -73,6 +107,10 @@ export async function checkSeed(target) {
       check(notes.length >= 8, `se esperaban >=8 notas, hay ${notes.length}`);
       check(links.length >= 6, `se esperaban >=6 links, hay ${links.length}`);
       check(notes.filter((n) => n.deletedAt > 0).length >= 1, 'no hay ninguna nota en papelera');
+      check(
+        notes.filter((n) => !(n.deletedAt > 0) && n.linkCount >= 3).length >= 1,
+        'no hay ninguna nota viva con linkCount >= 3 (Hubs activos quedaría vacío)',
+      );
       check(notes.filter((n) => n.isFavorite === true).length >= 1, 'no hay nota favorita');
 
       // Links: extremos existentes, id canónico, sin self-link.
@@ -175,6 +213,12 @@ export async function checkSeed(target) {
         inbox.filter((i) => i.status === 'pending').length === 2,
         'se esperaban 2 inbox pendientes',
       );
+      for (const h of habits) {
+        check(
+          new Date(h.date).getHours() === 12,
+          `hábito ${h.id}: date debería ser 12:00 locales (como habitsRepo)`,
+        );
+      }
       check(habits.length === 7, `se esperaban 7 días de hábitos, hay ${habits.length}`);
 
       Object.assign(summary, {
@@ -185,6 +229,9 @@ export async function checkSeed(target) {
         objetivos: objectives.length,
         inbox: inbox.length,
         habitos: habits.length,
+        'hub linkCount': Math.max(
+          ...notes.filter((n) => !(n.deletedAt > 0)).map((n) => n.linkCount),
+        ),
       });
     });
   } finally {

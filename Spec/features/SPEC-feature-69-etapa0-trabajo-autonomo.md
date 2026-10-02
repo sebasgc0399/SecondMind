@@ -192,7 +192,13 @@ _(una entrada por tanda: qué se hizo, commits, verificación con números, revi
   - Control positivo de `check-seed`: tras sembrar, borrar por REST el link `nota-zettelkasten__nota-notas-atomicas` → FAIL (3): `incomingLinkIds`/`outgoingLinkIds` no reflejan los links y los wikilinks del content no coinciden con los links; exit 1. (Primer intento reveló un bug propio: tras el FAIL imprimía también PASS; corregido con `else`.)
   - Vivo: `npm run dev:emu` en segundo plano (build de functions, `emu-secret`, emuladores auth/firestore/functions, seed, vite en :5180). Playwright MCP: login con el usuario del seed → dashboard con Inbox 2, tarea de hoy, 2 proyectos activos, 5 notas recientes, hábitos 8/14; chip `EMULADOR · demo-secondmind` visible; sin modales (welcome/novedades); `/notes/nota-para` muestra 2 wikilinks y 2 backlinks (de "Capturar…" y "Construir un Segundo Cerebro"); clic en el wikilink navega a `/notes/nota-code`; consola: 0 errores, 0 warnings. Capturas: `.playwright-mcp/t5-dashboard.png`, `t5-nota-code.png`. Al terminar se mató el dev server y los emuladores cerraron: puertos 5180/8080/9099/5001/9150/4400 libres.
   - `npm run verify:quick`: PASS (lint 26.2s, typecheck 20.1s, typecheck:e2e 1.9s, unit 24.8s, guard 2.0s, agents 0.1s).
-- **Pendientes / abiertos:** "Hubs activos" del dashboard sale vacío con 12 links (probablemente exige más links por nota; no se investigó). El tiempo de arranque de `dev:emu` es ~1 min (build de functions + emuladores). No se agregó `seed:emu` (ver E0-T5-c).
+- **Revisión (veredicto): APROBADA CON CORRECCIONES (4 MINOR).** Correcciones aplicadas:
+  1. "Hubs activos" vacío: `useKnowledgeHubs` exige `linkCount >= 3` (salientes, `syncLinksFromEditor.ts:149`). "Construir un Segundo Cerebro" ahora enlaza a 4 notas distintas (code, para, zettelkasten, progressive-summarization); links 12 -> 14, incoming/outgoing/linkCount coherentes. `check-seed` exige >=1 nota viva con `linkCount >= 3`.
+  2. `contentPlain` ya no incluye los títulos de wikilinks (el nodo real no tiene `renderText`); el `context` del link los conserva.
+  3. Hábitos: `date` a las 12:00 locales (`setHours(12,0,0,0)`), como `habitsRepo.ts:48`; `check-seed` lo verifica.
+  4. `check-seed` valida el tipo de cada celda contra los schemas de `src/stores/*Store.ts` (parseados, ver E0-T5-e; cubre `deletedAt`, `dueDate`, `status`, claves y `date` de hábitos) y lee `PREFERENCES_SCHEMA_VERSION` de `src/lib/preferences.ts` (seed y check).
+  - Verificación: runner de emuladores (`--project demo-secondmind`) con seed + check-seed: PASS `{"notas":9,"links":14,"tareas":6,"proyectos":3,"objetivos":2,"inbox":2,"habitos":7,"hub linkCount":4}`. Controles positivos (corrupción por REST tras sembrar): `deletedAt:"123"` -> FAIL (tipo); `_schemaVersion:99` -> FAIL; hub con `linkCount:2` -> FAIL (hub + incoherencia). `npm run verify:quick`: PASS.
+- **Pendientes / abiertos:** El tiempo de arranque de `dev:emu` es ~1 min (build de functions + emuladores). No se agregó `seed:emu` (ver E0-T5-c).
 
 ## Límites aceptados del guard
 
@@ -237,11 +243,15 @@ _(numeradas E0-T<n>-a…)_
 - **E0-T5-a** — El seed escribe con `@firebase/rules-unit-testing` (`withSecurityRulesDisabled`) y no con `firebase-admin`. Porqué: es devDependency raíz y ya es el enfoque de `e2e/helpers/firestore.ts`; firebase-admin solo existe bajo `src/functions/node_modules` y habría que cargarlo con `createRequire`.
 - **E0-T5-b** — En Auth, `emailVerified` se fija con `accounts:update` del endpoint por proyecto (`/v1/projects/<id>/accounts:update`, `localId`, `Bearer owner`). Porqué: el endpoint público con `idToken` no acepta `emailVerified` (MISSING_LOCAL_ID, medido). Los scripts fijan `process.exitCode` en vez de `process.exit`: en Windows `exit` con handles abiertos dispara un assert de libuv.
 - **E0-T5-c** — Sin script `seed:emu`. Porqué: el seed exige las variables de host del runner de emuladores; un script que las fije a mano debilitaría la guarda I3. Re-sembrar = reiniciar `dev:emu` (el seed es idempotente igualmente).
+- **E0-T5-e** — `check-seed` parsea los schemas de `src/stores/<coleccion>Store.ts` (regex sobre `campo: { type: '...' }`) en vez de una tabla espejo. Porqué: sin copia que driftee; el nombre de la tabla TinyBase coincide con el de la colección. Limitación: depende del formato de esos archivos (falla ruidoso si no encuentra la tabla).
 - **E0-T5-d** — Las notas llevan `aiProcessed: true` y `aiTags` ya cargados. Porqué: las functions corren en el emulador y `autoTagNote` se dispara al sembrar (se vio en el log: terminó en 26 ms sin reescribir).
 
 ## Estacionadas para Sebastián
 
 _(decisiones visuales o de producto)_
+
+- **T5 (bug de producto, no corregido acá) — hábitos de hoy como "futuros".** `src/components/habits/HabitRow.tsx:32` compara `entry.date > todayMs` (inicio del día) mientras la app guarda `date` a las 12:00 locales (`habitsRepo.ts:48`). Probable efecto visible: los hábitos de hoy sin marcar se renderizan como "futuro" (borde punteado). Verificar y abrir fix aparte.
+- **T5 (bug de producto, no corregido acá) — hub en papelera.** `src/hooks/useKnowledgeHubs.ts` filtra `isArchived` pero no `deletedAt`. Efecto visible: una nota en la papelera con >=3 enlaces salientes podría aparecer en "Hubs activos" del dashboard. Verificar y abrir fix aparte.
 
 ## Pasos manuales de Sebastián
 
