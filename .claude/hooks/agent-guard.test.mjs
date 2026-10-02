@@ -302,7 +302,6 @@ describe('scripts de deploy / release / nativos', () => {
     'npm run build',
     'npm run test:rules',
     'npm run test:guard',
-    'npm run tauri:dev',
     'cd android && ./gradlew.bat assembleDebug',
   ]) {
     test(`permite: ${c}`, () => allowedSub(bash(c)));
@@ -660,6 +659,272 @@ describe('controles positivos de ramas sin cobertura (revisión T2, NIT 5)', () 
     assert.match(blocked(bash('npx firebase-tools emulators:start')).reason, /\[firebase\]/);
     allowedSub(bash('npx firebase-tools emulators:start --project demo-x'));
   });
+});
+
+describe('app con config de producción (seguimiento E0-T7)', () => {
+  for (const c of [
+    'npm run dev',
+    'npm run dev -- --port 5180',
+    'npm run preview',
+    'npm run tauri:dev',
+    'vite',
+    'npx vite --port 5180',
+    'node node_modules/vite/bin/vite.js',
+    'node node_modules/vite/bin/vite.js --mode production',
+    'vite --mode=development',
+    'vite preview --mode emulator',
+    'npx tauri dev',
+    'cargo tauri dev',
+  ]) {
+    test(`bloquea: ${c}`, () => assert.match(blocked(bash(c)).reason, /\[dev-prod\]/));
+  }
+  test('bloquea vite --mode dado por una variable', () =>
+    assert.match(blocked(bash('vite --mode $M')).reason, /\[dynamic\]/));
+  for (const c of [
+    'npm run dev:emu',
+    'npm run dev:emu:app',
+    'npm run e2e:ui',
+    'vite --mode emulator --port 5180 --strictPort',
+    'node node_modules/vite/bin/vite.js -m emulator',
+    'node node_modules/vite/bin/vite.js build',
+    'npx vite build --mode emulator',
+    'npm run build',
+  ]) {
+    test(`permite: ${c}`, () => allowedSub(bash(c)));
+  }
+  test('sesión principal puede correr npm run dev', () => allowedMain(bash('npm run dev')));
+});
+
+describe('vite: subcomando real, @versión y lanzadores (revisión pendientes, MINOR 2)', () => {
+  for (const c of [
+    'vite preview --outDir build',
+    'vite --force build',
+    'vite --host build',
+    'vite dev build',
+    'npx vite@8',
+    'npx --yes vite@latest',
+    'npx vite@8 --mode production',
+    'pnpm exec vite',
+    'pnpm vite',
+    'yarn exec vite',
+    'yarn vite',
+    'yarn run vite',
+    'node ./node_modules/vite/dist/node/cli.js',
+    'node "D:\\x\\node_modules\\vite\\bin\\vite.js" --port 5180',
+  ]) {
+    test(`bloquea: ${c}`, () => assert.match(blocked(bash(c)).reason, /\[dev-prod\]/));
+  }
+  for (const c of [
+    'npx vite build',
+    'vite build --outDir build',
+    'vite -c vite.config.ts build',
+    'vite --mode emulator build',
+    'vite --port 5180 optimize',
+    'npx vite@8 build',
+    'pnpm exec vite build',
+    'yarn vite build',
+    'node ./node_modules/vite/dist/node/cli.js build',
+    'npx vite@8 --mode emulator --port 5180',
+    'npm run build',
+    'npm run dev:emu',
+    'npm run e2e:ui',
+  ]) {
+    test(`permite: ${c}`, () => allowedSub(bash(c)));
+  }
+  test('programName quita @versión, también con scope', async () => {
+    const { programName } = await import('./agent-guard-lib.mjs');
+    assert.equal(programName('vite@8.0.8'), 'vite');
+    assert.equal(programName('@scope/firebase-tools@15'), 'firebase');
+    assert.equal(programName('@playwright/mcp@latest'), 'mcp');
+    assert.equal(programName('git'), 'git');
+  });
+});
+
+describe('referencias a producción en cualquier comando (seguimiento E0-T7)', () => {
+  for (const c of [
+    `node -e "fetch('https://firestore.googleapis.com/v1/projects/x/databases')"`,
+    `python -c "import urllib.request as u; u.urlopen('https://x.cloudfunctions.net/f')"`,
+    'node scripts/x.mjs --project secondmindv1',
+    `node -e "fetch('https://secondmindv1-default-rtdb.firebaseio.com/.json')"`,
+    'echo https://app.getsecondmind.co',
+    "node <<'EOF'\nfetch('https://identitytoolkit.googleapis.com/v1/accounts')\nEOF",
+  ]) {
+    test(`bloquea: ${c.split('\n')[0]}`, () =>
+      assert.match(blocked(bash(c)).reason, /\[http-prod\]/));
+  }
+  for (const c of [
+    'rg "secondmindv1" src',
+    'grep -rn "googleapis.com" src/lib',
+    `node -e "fetch('http://127.0.0.1:8080/emulator/v1/projects/demo-secondmind')"`,
+    'node scripts/seed-emulator.mjs',
+  ]) {
+    test(`permite: ${c}`, () => allowedSub(bash(c)));
+  }
+  test('sesión principal puede mencionar secondmindv1', () =>
+    allowedMain(bash('node -e "console.log(1)" # secondmindv1')));
+});
+
+describe('git log --grep/-S/-G como patrón de búsqueda (revisión pendientes, MINOR 3)', () => {
+  for (const c of [
+    'git log --grep="secondmindv1"',
+    'git log --grep secondmindv1 --oneline',
+    "git log --oneline --grep='firestore.googleapis.com'",
+    'git log -Ssecondmindv1',
+    'git log -S "googleapis.com" --oneline -5',
+    'git log -G cloudfunctions.net',
+    '/usr/bin/git -C . log -Gfirebaseio.com',
+  ]) {
+    test(`permite: ${c}`, () => allowedSub(bash(c)));
+  }
+  for (const c of [
+    'git log --format=secondmindv1',
+    'git log -S x -- secondmindv1',
+    'git log --grep=x && curl https://firestore.googleapis.com/v1',
+    'git log --grep="$(curl -s https://x.cloudfunctions.net/f)"',
+    'git show -Ssecondmindv1',
+    // Falsos positivos aceptados (Docs/05 § 8): grep/rg sin comillas y -m con el host.
+    'grep -r secondmindv1 src/',
+    'rg googleapis.com',
+    'git commit -m "docs: cita googleapis.com"',
+  ]) {
+    test(`bloquea: ${c}`, () => assert.match(blocked(bash(c)).reason, /\[http-prod\]/));
+  }
+});
+
+describe('navegador MCP: texto y emuladores (revisión pendientes, MINOR 4)', () => {
+  const pw = (t, ti) => ({ tool_name: `mcp__playwright__${t}`, tool_input: ti });
+  test('tools de texto con una URL (no producción) en el texto → permitidas', () => {
+    allowedSub(pw('browser_type', { ref: 'e3', text: 'ver https://example.com/doc' }));
+    allowedSub(
+      pw('browser_fill_form', {
+        fields: [{ name: 'Fuente', type: 'textbox', ref: 'e5', value: 'http://localhost:3000/x' }],
+      }),
+    );
+    allowedSub(pw('browser_wait_for', { text: 'https://example.com' }));
+    allowedSub(pw('browser_press_sequentially', { ref: 'e1', text: 'http://127.0.0.1:9/' }));
+  });
+  test('tools de texto con referencias a producción → bloqueadas', () => {
+    for (const ti of [
+      { ref: 'e3', text: 'https://app.getsecondmind.co/notes' },
+      { ref: 'e3', text: 'proyecto secondmindv1' },
+    ])
+      assert.match(blocked(pw('browser_type', ti)).reason, /mcp-browser.*producción/);
+  });
+  test('evaluate puede hablar con los emuladores (9099, 8080, 5001)', () => {
+    for (const fn of [
+      "() => fetch('http://localhost:9099/emulator/v1/projects/demo-secondmind/accounts')",
+      "() => fetch('http://127.0.0.1:8080/emulator/v1/projects/demo-secondmind/databases')",
+      "() => fetch('http://127.0.0.1:5001/demo-secondmind/us-central1/f')",
+    ])
+      allowedSub(pw('browser_evaluate', { function: fn }));
+  });
+  test('evaluate a otros puertos o hosts → bloqueado; los puertos de emulador solo en evaluate', () => {
+    for (const fn of [
+      "() => fetch('http://localhost:4000/')",
+      "() => fetch('http://localhost:5173/')",
+      "() => fetch('https://example.com/')",
+    ])
+      assert.match(blocked(pw('browser_evaluate', { function: fn })).reason, /mcp-browser/);
+    assert.match(
+      blocked(pw('browser_navigate', { url: 'http://localhost:8080/' })).reason,
+      /mcp-browser/,
+    );
+    assert.match(
+      blocked(pw('browser_click', { ref: 'e1', element: 'link http://localhost:9099/' })).reason,
+      /mcp-browser/,
+    );
+  });
+});
+
+describe('navegador MCP (seguimiento E0-T7)', () => {
+  const nav = (url, tool = 'mcp__playwright__browser_navigate') => ({
+    tool_name: tool,
+    tool_input: { url },
+  });
+  for (const url of [
+    'http://localhost:5173/',
+    'http://localhost:5174/notes',
+    'https://app.getsecondmind.co/',
+    'https://secondmindv1.web.app',
+    'http://localhost/',
+    'http://localhost:51800/',
+    'data:text/html,<script>fetch(1)</script>',
+    'file:///C:/x.html',
+  ]) {
+    test(`bloquea navigate a ${url}`, () => assert.match(blocked(nav(url)).reason, /mcp-browser/));
+  }
+  test('bloquea abrir una pestaña nueva a otro puerto', () =>
+    assert.match(
+      blocked({
+        tool_name: 'mcp__playwright__browser_tabs',
+        tool_input: { action: 'new', url: 'http://127.0.0.1:5173/' },
+      }).reason,
+      /mcp-browser/,
+    ));
+  test('bloquea evaluate que navega fuera del emulador', () =>
+    assert.match(
+      blocked({
+        tool_name: 'mcp__playwright__browser_evaluate',
+        tool_input: { function: "() => { location.href = 'http://localhost:5173/' }" },
+      }).reason,
+      /mcp-browser/,
+    ));
+  // run_code corre JS en el proceso del server MCP (llega al `process` real): se bloquea
+  // entero, con código en línea, ofuscado o cargado de un archivo (`filename`).
+  for (const [tool, ti] of [
+    [
+      'mcp__plugin_playwright_playwright__browser_run_code_unsafe',
+      { code: "await fetch('https://firestore.googleapis.com/v1/x')" },
+    ],
+    ['mcp__playwright__browser_run_code_unsafe', { filename: 'scratch/nav.js' }],
+    [
+      'mcp__playwright__browser_run_code_unsafe',
+      { code: "async (page) => page.goto(atob('aHR0cHM6Ly9leGFtcGxlLmNvbQ=='))" },
+    ],
+    [
+      'mcp__playwright__browser_run_code_unsafe',
+      { code: "async () => process.mainModule.require('child_process').execSync('git push')" },
+    ],
+    ['mcp__playwright__browser_run_code_unsafe', { code: 'async (page) => page.title()' }],
+    ['mcp__plugin_playwright_playwright__browser_run_code', {}],
+  ]) {
+    test(`bloquea run_code: ${tool.split('__').pop()} ${JSON.stringify(ti)}`, () =>
+      assert.match(blocked({ tool_name: tool, tool_input: ti }).reason, /mcp-browser.*run_code/));
+  }
+  test('filename de salida (screenshot, snapshot, consola, evaluate) sigue permitido', () => {
+    for (const [t, ti] of [
+      ['browser_take_screenshot', { filename: 'shots/dashboard-375.png' }],
+      ['browser_snapshot', { filename: 'snap.md' }],
+      ['browser_console_messages', { filename: 'consola.txt' }],
+      ['browser_evaluate', { function: '() => document.title', filename: 'out.json' }],
+      ['browser_file_upload', { paths: ['D:/fixtures/nota.md'] }],
+    ])
+      allowedSub({ tool_name: `mcp__playwright__${t}`, tool_input: ti });
+  });
+  test('sesión principal puede usar run_code', () =>
+    allowedMain({
+      tool_name: 'mcp__playwright__browser_run_code_unsafe',
+      tool_input: { filename: 'x.js' },
+    }));
+  for (const url of [
+    'http://localhost:5180/',
+    'http://localhost:5180/notes/abc?x=1',
+    'http://127.0.0.1:5180',
+    'http://localhost:4321/',
+    'about:blank',
+  ]) {
+    test(`permite navigate a ${url}`, () => allowedSub(nav(url)));
+  }
+  test('permite snapshot, click y evaluate locales', () => {
+    allowedSub({ tool_name: 'mcp__playwright__browser_snapshot', tool_input: {} });
+    allowedSub({ tool_name: 'mcp__playwright__browser_click', tool_input: { ref: 'e12' } });
+    allowedSub({
+      tool_name: 'mcp__playwright__browser_evaluate',
+      tool_input: { function: '() => document.title' },
+    });
+  });
+  test('sesión principal puede navegar a cualquier lado', () =>
+    allowedMain(nav('https://app.getsecondmind.co/')));
 });
 
 describe('helpers', () => {

@@ -21,12 +21,6 @@ export default function HabitsPage() {
 
   const todayKey = useMemo(() => formatDateKey(new Date()), []);
 
-  const todayMs = useMemo(() => {
-    const d = new Date();
-    d.setHours(0, 0, 0, 0);
-    return d.getTime();
-  }, []);
-
   const editableDates = useMemo(() => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
@@ -106,7 +100,6 @@ export default function HabitsPage() {
             weekEntries={weekEntries}
             editableDates={editableDates}
             todayKey={todayKey}
-            todayMs={todayMs}
             onToggle={(dateKey, habitKey) => void toggleHabit(dateKey, habitKey)}
           />
         </div>
