@@ -75,32 +75,137 @@ export function protectedKind(abs, projectDir) {
 // ---------------------------------------------------------------------------
 
 const NESTED = /[\s;&|`()]|\$\(/;
+const HEREDOC = /<<-?\s*['"]?[A-Za-z_]/;
+
+// Programas que ejecutan un string como comando de shell. El string se vuelve a
+// analizar en modo 'shell' (preciso).
+const SHELL_C = new Set(['bash', 'sh', 'zsh', 'dash', 'ksh', 'fish', 'su', 'script']);
+const JOIN_ALL = new Set([
+  'eval',
+  'iex',
+  'invoke-expression',
+  'wsl',
+  'concurrently',
+  'start-process',
+]);
+// Intérpretes cuyo argumento es código: sus literales pueden ser comandos
+// (`execSync('git push')`, `os.system("...")`), así que se analizan en modo
+// 'code' (todo token con sintaxis de shell se re-analiza, como antes de E0-T2-h).
+const CODE_FLAG = {
+  node: /^(-e|--eval|-p|--print|-pe|-ep)$/,
+  bun: /^(-e|--eval|-p|--print)$/,
+  deno: /^(eval)$/,
+  python: /^-[a-zA-Z]*c$/,
+  python3: /^-[a-zA-Z]*c$/,
+  py: /^-[a-zA-Z]*c$/,
+  perl: /^-[a-zA-Z]*[eE]$/,
+  ruby: /^-[a-zA-Z]*[eE]$/,
+};
+
+/** Strings anidados de un comando simple que deben re-analizarse. */
+function nestedSources(argv) {
+  const shell = [];
+  const code = [];
+  for (let i = 0; i < argv.length; i++) {
+    const n = programName(argv[i]);
+    const rest = argv.slice(i + 1);
+    if (SHELL_C.has(n)) {
+      const j = rest.findIndex((t) => /^-[a-zA-Z]*c[a-zA-Z]*$/.test(t));
+      if (j >= 0) shell.push(rest.slice(j + 1).join(' '));
+    } else if (n === 'powershell' || n === 'pwsh') {
+      // Todo lo que sigue a -Command (o abreviado) es el comando; sin -Command,
+      // PowerShell 5.1 ejecuta el primer argumento posicional.
+      const j = rest.findIndex((t) => /^[-/]c(o(m(m(a(n(d)?)?)?)?)?)?$/i.test(t));
+      if (j >= 0) shell.push(rest.slice(j + 1).join(' '));
+      else for (const t of rest) if (!/^[-/]/.test(t)) shell.push(t);
+    } else if (JOIN_ALL.has(n)) {
+      shell.push(rest.join(' '));
+    } else if (n === 'cmd') {
+      const j = rest.findIndex((t) => /^\/[ck]$/i.test(t));
+      if (j >= 0) shell.push(rest.slice(j + 1).join(' '));
+    } else if (CODE_FLAG[n]) {
+      rest.forEach((t, j) => {
+        if (CODE_FLAG[n].test(t) && rest[j + 1] !== undefined) code.push(rest[j + 1]);
+        const eq = t.match(/^--(eval|print)=(.*)$/s);
+        if (eq) code.push(eq[2]);
+      });
+    } else if (n === 'firebase') {
+      const j = rest.indexOf('emulators:exec');
+      if (j >= 0) {
+        for (let k = j + 1; k < rest.length; k++) {
+          if (FIREBASE_VALUE.has(rest[k])) k++;
+          else if (!rest[k].startsWith('-')) shell.push(rest[k]);
+        }
+      }
+    } else if (n === 'npx' || n === 'npm' || n === 'nodemon') {
+      rest.forEach((t, j) => {
+        if (['-c', '--call', '--exec'].includes(t) && rest[j + 1] !== undefined)
+          shell.push(rest[j + 1]);
+      });
+    }
+  }
+  // `$(…)` y backticks dentro de un token (p.ej. entre comillas dobles).
+  for (const t of argv) {
+    const k = t.search(/\$\(|`/);
+    if (k >= 0) shell.push(t.slice(k));
+  }
+  return { shell, code };
+}
 
 /**
  * Parte un string de shell en comandos simples (arrays de argv). Respeta
  * comillas simples/dobles y escapes; corta en `;`, `&`, `|`, saltos de línea,
- * paréntesis, backticks y `$(`. Los tokens que contienen sintaxis de shell
- * (p.ej. el argumento de `bash -c "..."`, `powershell -Command "..."`, un
- * `$(...)` entre comillas o un heredoc) se vuelven a analizar como comandos.
+ * paréntesis, backticks y `$(`.
+ *
+ * Re-análisis de strings anidados (E0-T2-h). En modo 'shell' solo se vuelven a
+ * analizar los strings que la shell ejecuta: el argumento de `bash/sh -c`,
+ * `powershell/pwsh`, `cmd /c`, `eval`, `firebase emulators:exec`, `npx -c`, y
+ * los cuerpos `$(…)`/backticks; el código de `node -e`/`python -c`/`perl -e`
+ * va en modo 'code'. Un patrón de búsqueda (`grep 'a|b'`) ya no se toma como
+ * comando. En modo 'code' (y si el comando trae un heredoc) se re-analiza todo
+ * token con sintaxis de shell, porque sus literales pueden ser comandos.
+ *
+ * En profundidad 0, cada argv lleva `spans` (posición en `src`, si tenía
+ * comillas/escapes y si es destino de una redirección) para enmascarar
+ * patrones de búsqueda antes de la red cruda.
  */
-export function splitCommands(src, depth = 0) {
+export function splitCommands(src, depth = 0, mode = 'shell') {
   const cmds = [];
   let argv = [];
+  let spans = [];
   let tok = '';
   let has = false;
-  const pushTok = () => {
-    if (has) argv.push(tok);
+  let start = -1;
+  let quoted = false;
+  let redirect = false;
+  const pushTok = (end) => {
+    if (has) {
+      argv.push(tok);
+      spans.push({ start, end, quoted, redirect });
+      redirect = false;
+    }
     tok = '';
     has = false;
+    start = -1;
+    quoted = false;
   };
-  const endCmd = () => {
-    pushTok();
-    if (argv.length) cmds.push(argv);
+  const endCmd = (end) => {
+    pushTok(end);
+    if (argv.length) {
+      if (depth === 0) argv.spans = spans;
+      cmds.push(argv);
+    }
     argv = [];
+    spans = [];
+    redirect = false;
   };
   let i = 0;
   while (i < src.length) {
     const c = src[i];
+    if (start < 0 && !/[\s;&|\n\r()`<>]/.test(c) && !(c === '$' && src[i + 1] === '(')) {
+      start = i;
+    }
+    if (c === "'" || c === '"' || c === '\\') quoted = true;
     if (c === "'") {
       const j = src.indexOf("'", i + 1);
       const end = j < 0 ? src.length : j;
@@ -137,22 +242,23 @@ export function splitCommands(src, depth = 0) {
       continue;
     }
     if (c === '$' && src[i + 1] === '(') {
-      endCmd();
+      endCmd(i);
       i += 2;
       continue;
     }
     if (';&|\n\r()`'.includes(c)) {
-      endCmd();
+      endCmd(i);
       i++;
       continue;
     }
     if (c === '<' || c === '>') {
-      pushTok();
+      pushTok(i);
+      if (c === '>') redirect = true;
       i++;
       continue;
     }
     if (/\s/.test(c)) {
-      pushTok();
+      pushTok(i);
       i++;
       continue;
     }
@@ -160,13 +266,20 @@ export function splitCommands(src, depth = 0) {
     has = true;
     i++;
   }
-  endCmd();
+  endCmd(src.length);
   if (depth >= 4) return cmds;
+  const generic = mode === 'code' || HEREDOC.test(src);
   const nested = [];
   for (const cmd of cmds) {
-    for (const t of cmd) {
-      if (NESTED.test(t)) nested.push(...splitCommands(t, depth + 1));
+    if (generic) {
+      for (const t of cmd) {
+        if (NESTED.test(t)) nested.push(...splitCommands(t, depth + 1, 'code'));
+      }
+      continue;
     }
+    const { shell, code } = nestedSources(cmd);
+    for (const s of shell) nested.push(...splitCommands(s, depth + 1, 'shell'));
+    for (const s of code) nested.push(...splitCommands(s, depth + 1, 'code'));
   }
   return cmds.concat(nested);
 }
@@ -347,6 +460,8 @@ function gitTagViolation(rest) {
   return null;
 }
 
+const isMainRef = (t) => t === 'main' || t === 'refs/heads/main';
+
 function ruleGit(args) {
   const { sub, rest, configs } = parseGit(args);
   // Un alias de git (`-c alias.x=push`, `git config alias.x push`) esconde el
@@ -363,6 +478,21 @@ function ruleGit(args) {
   }
   if (sub === 'merge' || sub === 'rebase' || sub === 'update-ref')
     return ['git-history', `git ${sub}`];
+  // Archivos ignorados: `.claude/loop.active` (cortaría el loop en silencio) y
+  // `.env*`. `git clean -x/-X` los borra; `git stash -u/-a` los mueve al stash.
+  const shortHas = (re) => rest.some((t) => /^-[^-]/.test(t) && re.test(t.slice(1)));
+  if (sub === 'clean' && shortHas(/[xX]/))
+    return ['git-ignored', 'git clean -x/-X (borra archivos ignorados: .env*, loop.active)'];
+  if (
+    sub === 'stash' &&
+    (shortHas(/[au]/) || rest.some((t) => t === '--all' || t === '--include-untracked'))
+  )
+    return ['git-ignored', 'git stash -u/-a (mueve archivos no versionados o ignorados)'];
+  // Refspec que escribe en main (`git fetch . HEAD:main`, `x:refs/heads/main`).
+  if (rest.some((t) => /^\+?[^:\s]*:(refs\/heads\/)?main$/.test(t)))
+    return ['git-history', `git ${sub} <refspec>:main`];
+  if (sub === 'worktree' && rest[0] === 'add' && rest.some((t) => isMainRef(t)))
+    return ['git-history', 'git worktree add … main'];
   if (
     (sub === 'checkout' || sub === 'switch') &&
     rest.some((t) => t === 'main' || t === 'refs/heads/main')
@@ -658,19 +788,185 @@ function editPath(input) {
   return ti.file_path ?? ti.notebook_path ?? null;
 }
 
+// --- Scripts de package managers (`npm run x` ejecuta el cuerpo de x) -------
+
+const MAX_SCRIPT_DEPTH = 5;
+const PM = new Set(['npm', 'pnpm', 'yarn', 'bun']);
+const NPM_RUN = new Set(['run', 'run-script', 'rum', 'urn']);
+const NPM_LIFECYCLE = {
+  start: ['start'],
+  test: ['test'],
+  t: ['test'],
+  tst: ['test'],
+  stop: ['stop'],
+  restart: ['restart', 'stop', 'start'],
+  install: ['preinstall', 'install', 'postinstall', 'prepare'],
+  i: ['preinstall', 'install', 'postinstall', 'prepare'],
+  ci: ['preinstall', 'install', 'postinstall', 'prepare'],
+  add: ['preinstall', 'install', 'postinstall', 'prepare'],
+  rebuild: ['preinstall', 'install', 'postinstall', 'prepare'],
+};
+const DYNAMIC_WORD = /[$%`~]/;
+
+/**
+ * Qué scripts de package.json corre un `npm|pnpm|yarn|bun …`: { dir, names }
+ * o { unverifiable: motivo } o null si no corre ninguno.
+ */
+function pmScripts(name, args) {
+  let dir = null;
+  const positional = [];
+  for (let i = 0; i < args.length; i++) {
+    const t = args[i];
+    if (t === '--') break;
+    const eq = t.match(/^(--[a-z-]+)=(.*)$/);
+    if (eq) {
+      if (['--prefix', '--dir', '--cwd'].includes(eq[1])) dir = eq[2];
+      if (['--workspace', '--filter'].includes(eq[1]))
+        return { unverifiable: `${name} ${eq[1]} (scripts de otros paquetes)` };
+      continue;
+    }
+    if (['--prefix', '-C', '--dir', '--cwd'].includes(t)) {
+      dir = args[++i] ?? '';
+      continue;
+    }
+    if (
+      ['--workspace', '-w', '--workspaces', '-ws', '--filter', '-F', '-r', '--recursive'].includes(
+        t,
+      )
+    )
+      return { unverifiable: `${name} ${t} (scripts de otros paquetes)` };
+    if (t.startsWith('-')) continue;
+    positional.push(t);
+  }
+  const [sub, arg] = positional;
+  if (!sub) return null;
+  let names;
+  if (NPM_RUN.has(sub)) names = arg ? [arg] : [];
+  else if (NPM_LIFECYCLE[sub]) names = NPM_LIFECYCLE[sub];
+  else if (name !== 'npm') names = [sub]; // `yarn x`, `pnpm x`, `bun x` corren el script x
+  else return null;
+  if (!names.length) return null;
+  if (names.some((s) => DYNAMIC_WORD.test(s)) || (dir !== null && DYNAMIC_WORD.test(dir)))
+    return { unverifiable: `${name} con script o directorio dado por variable` };
+  const all = new Set();
+  for (const s of names) for (const x of [`pre${s}`, s, `post${s}`]) all.add(x);
+  return { dir, names: [...all] };
+}
+
+/** Resuelve el package.json (el de `dir` o el más cercano subiendo desde cwd). */
+function findScripts(env, base, dir) {
+  if (dir !== null) {
+    const d = normalizePath(dir, base);
+    return { dir: d, scripts: env.readScripts(d) };
+  }
+  let d = base;
+  for (let k = 0; k < 40 && d; k++) {
+    const scripts = env.readScripts(d);
+    if (scripts) return { dir: d, scripts };
+    const parent = d.replace(/\/[^/]*$/, '');
+    if (parent === d || !parent.includes('/')) break;
+    d = parent;
+  }
+  return { dir: base, scripts: null };
+}
+
+function checkScripts(name, args, env, cwd, depth) {
+  const target = pmScripts(name, args);
+  if (!target) return null;
+  if (target.unverifiable) return `[npm-script] ${target.unverifiable} (no verificable)`;
+  if (cwd === null) return `[npm-script] ${name} tras un cd no verificable`;
+  if (typeof env.readScripts !== 'function')
+    return `[npm-script] ${name}: no hay lector de package.json (no verificable)`;
+  if (depth >= MAX_SCRIPT_DEPTH)
+    return `[npm-script] scripts anidados más de ${MAX_SCRIPT_DEPTH} niveles (no verificable)`;
+  let found;
+  try {
+    found = findScripts(env, cwd, target.dir);
+  } catch (err) {
+    return `[npm-script] package.json ilegible (${err instanceof Error ? err.message : err})`;
+  }
+  if (!found.scripts) return null;
+  for (const s of target.names) {
+    const body = found.scripts[s];
+    if (typeof body !== 'string') continue;
+    const why = checkShell(body, env, found.dir, depth + 1);
+    if (why) return `[npm-script] script "${s}" (${found.dir}) → ${why}`;
+  }
+  return null;
+}
+
+// --- Patrones de búsqueda (grep/rg/findstr/Select-String) ------------------
+
+const SEARCH = new Set([
+  'grep',
+  'egrep',
+  'fgrep',
+  'rg',
+  'ag',
+  'ack',
+  'findstr',
+  'select-string',
+  'sls',
+]);
+
+/**
+ * Blanquea en `cmd` los argumentos con comillas de un comando de búsqueda de
+ * nivel superior, para que la red cruda no tome `grep "git push"` como un push.
+ * No toca destinos de redirección ni tokens con `$(…)`/backticks.
+ */
+function maskSearchPatterns(cmd, cmds) {
+  const chars = cmd.split('');
+  for (const argv of cmds) {
+    if (!argv.spans) continue;
+    const [name, args] = resolveProgram(argv);
+    const isGitGrep = name === 'git' && parseGit(args).sub === 'grep';
+    if (!SEARCH.has(name) && !isGitGrep) continue;
+    const from = argv.length - args.length;
+    for (let k = from; k < argv.length; k++) {
+      const sp = argv.spans[k];
+      if (!sp || !sp.quoted || sp.redirect || /\$\(|`/.test(argv[k])) continue;
+      for (let x = sp.start; x < sp.end; x++) if (chars[x] !== '\n') chars[x] = ' ';
+    }
+  }
+  return chars.join('');
+}
+
+// --- Archivos .env* --------------------------------------------------------
+
+const ENV_FILE = /(^|[\s/=:,(])\.env/;
+const DELETE_VERBS =
+  /\b(rm|mv|unlink|rmdir|shred|del|erase|move|ren|rename|remove-item|ri|move-item|mi|rename-item|rni)\b|\s-delete\b/;
+
 /** Devuelve "[regla] motivo" si el comando debe bloquearse, si no null. */
-export function checkShell(cmd, env, cwd) {
-  for (const argv of splitCommands(cmd)) {
+export function checkShell(cmd, env, cwd, depth = 0) {
+  const cmds = splitCommands(cmd);
+  // cwd efectivo para resolver `npm run`: sigue los `cd`; null = no verificable.
+  let cur = normalizePath(cwd || env.projectDir);
+  for (const argv of cmds) {
     const [name, args, tok] = resolveProgram(argv);
     if (!name) continue;
     if (/^\$/.test(tok)) return '[dynamic] programa dado por una variable (no verificable)';
     const rule = PROGRAM_RULES[name];
     const hit = rule ? rule(args, name) : null;
     if (hit) return `[${hit[0]}] ${hit[1]}`;
+    if (['cd', 'pushd', 'chdir', 'set-location', 'sl'].includes(name)) {
+      const dests = args.filter((t) => !t.startsWith('-') && !/^\/d$/i.test(t));
+      const d = dests[0];
+      cur = !d || DYNAMIC_WORD.test(d) || cur === null ? null : normalizePath(d, cur);
+    }
+    if (PM.has(name)) {
+      const why = checkScripts(name, args, env, cur, depth);
+      if (why) return why;
+    }
   }
-  const flat = cmd.replace(/\\/g, '/').replace(/["'`]/g, '').toLowerCase();
+  const flat = maskSearchPatterns(cmd, cmds)
+    .replace(/\\/g, '/')
+    .replace(/["'`]/g, '')
+    .toLowerCase();
   const net = rawNet(flat);
   if (net) return `[${net[0]}] ${net[1]}`;
+  if (ENV_FILE.test(flat) && DELETE_VERBS.test(flat))
+    return '[env-file] borrar o mover archivos .env* desde la shell';
   const root = normalizePath(env.projectDir);
   const cwdN = cwd ? normalizePath(cwd) : '';
   const cwdInClaude =
@@ -686,6 +982,7 @@ export function checkShell(cmd, env, cwd) {
  *   loopActive  existe `.claude/loop.active`
  *   unlocked    existe `.claude/guard.unlock`
  *   getBranch   (rutaAbsNormalizada) => nombre de rama | null
+ *   readScripts (dirNormalizado) => scripts del package.json | null (lanza si es ilegible)
  * Devuelve { block: boolean, rule?, reason? }.
  */
 export function evaluate(input, env) {

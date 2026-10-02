@@ -61,6 +61,17 @@ function getBranch(abs) {
   }
 }
 
+/**
+ * `scripts` del package.json de `dir`, o null si no hay package.json. Un JSON
+ * ilegible lanza: la lib lo trata como no verificable y bloquea.
+ */
+function readScripts(dir) {
+  const file = path.join(dir, 'package.json');
+  if (!existsSync(file)) return null;
+  const pkg = JSON.parse(readFileSync(file, 'utf8'));
+  return pkg && typeof pkg.scripts === 'object' && pkg.scripts ? pkg.scripts : {};
+}
+
 try {
   raw = readFileSync(0, 'utf8');
 } catch {
@@ -81,7 +92,7 @@ restricted = loopActive || Boolean(input.agent_id);
 
 try {
   const { evaluate } = await import('./agent-guard-lib.mjs');
-  const result = evaluate(input, { projectDir, loopActive, unlocked, getBranch });
+  const result = evaluate(input, { projectDir, loopActive, unlocked, getBranch, readScripts });
   if (result.block) {
     process.stderr.write(`${result.reason}\n`);
     process.exit(2);

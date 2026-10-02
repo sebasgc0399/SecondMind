@@ -5,7 +5,7 @@
 import { test, describe, after } from 'node:test';
 import assert from 'node:assert/strict';
 import { spawnSync, execFileSync } from 'node:child_process';
-import { mkdtempSync, writeFileSync, rmSync, mkdirSync } from 'node:fs';
+import { mkdtempSync, writeFileSync, rmSync, mkdirSync, existsSync, readFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -13,6 +13,29 @@ import { evaluate, splitCommands, normalizePath } from './agent-guard-lib.mjs';
 
 const PROJECT = 'D:/Proyectos VS CODE/SecondMind';
 const HERE = path.dirname(fileURLToPath(import.meta.url));
+// Raíz real del repo (o del worktree) donde corre la suite: los scripts de
+// npm se leen de los package.json reales, así test:rules/test:functions y
+// src/functions `serve` se verifican tal como están hoy.
+const REAL_ROOT = path.resolve(HERE, '..', '..');
+
+/** Lee scripts reales mapeando PROJECT → REAL_ROOT. */
+function realScripts(dir) {
+  const p = normalizePath(PROJECT);
+  const rel = dir === p ? '' : dir.startsWith(`${p}/`) ? dir.slice(p.length + 1) : null;
+  if (rel === null) return null;
+  const file = path.join(REAL_ROOT, rel, 'package.json');
+  if (!existsSync(file)) return null;
+  return JSON.parse(readFileSync(file, 'utf8')).scripts ?? {};
+}
+
+/** Lector falso: { 'dir relativo a PROJECT': { script: cuerpo } }. */
+function fakeScripts(map) {
+  const p = normalizePath(PROJECT);
+  return (dir) => {
+    const rel = dir === p ? '' : dir.startsWith(`${p}/`) ? dir.slice(p.length + 1) : null;
+    return rel !== null && map[rel] ? map[rel] : null;
+  };
+}
 
 function env(over = {}) {
   return {
@@ -20,6 +43,7 @@ function env(over = {}) {
     loopActive: false,
     unlocked: false,
     getBranch: () => 'feat/x',
+    readScripts: realScripts,
     ...over,
   };
 }
@@ -414,6 +438,230 @@ describe('main-branch (siempre, todos los modos)', () => {
   test('Bash no lo dispara (igual que antes)', () => allowedMain(bash('git status'), onMain));
 });
 
+describe('archivos ignorados y .env* (revisión T2, MAJOR 1)', () => {
+  for (const c of [
+    'git clean -fdX',
+    'git clean -xdf',
+    'git clean -x -f -d',
+    'git clean --force -x',
+    'git clean -X -n',
+    'git -C . clean -fdx',
+    'git stash -u',
+    'git stash --include-untracked',
+    'git stash -a',
+    'git stash --all',
+    'git stash push -u -m wip',
+    'git stash save -a',
+  ]) {
+    test(`bloquea: ${c}`, () => assert.match(blocked(bash(c)).reason, /git-ignored/));
+  }
+  for (const c of [
+    'rm .env.local',
+    'rm -f ./.env',
+    'mv .env.local /tmp/x',
+    'Remove-Item .env.local',
+    'del .env',
+    'git rm --cached .env.example',
+    'find . -name ".env*" -delete',
+    'rm -rf dist && rm .env.production',
+  ]) {
+    test(`bloquea: ${c}`, () => assert.match(blocked(bash(c)).reason, /env-file/));
+  }
+  for (const c of [
+    'git clean -fd',
+    'git clean -n',
+    'git stash',
+    'git stash -m "wip"',
+    'git stash pop',
+    'git stash list',
+    'rm src/env.ts',
+    'node -e "console.log(process.env.HOME)"',
+  ]) {
+    test(`permite: ${c}`, () => allowedSub(bash(c)));
+  }
+});
+
+describe('scripts de npm/pnpm/yarn (revisión T2, MAJOR 2)', () => {
+  // Contra los package.json reales del repo.
+  for (const c of [
+    'npm --prefix src/functions run serve',
+    'npm --prefix=src/functions run serve',
+    'npm -C src/functions run serve',
+    'npm run logs:functions',
+    'npm --prefix src/functions run logs',
+    'cd src/functions && npm run serve',
+    'cd src/functions; npm run logs',
+    'bash -c "cd src/functions && npm run serve"',
+  ]) {
+    test(`bloquea (package.json real): ${c}`, () =>
+      assert.match(blocked(bash(c)).reason, /npm-script.*\[firebase\]/));
+  }
+  test('desde cwd = src/functions, `npm run serve` resuelve ese package.json', () =>
+    assert.match(
+      blocked(bash('npm run serve', { cwd: `${PROJECT}/src/functions` })).reason,
+      /npm-script/,
+    ));
+  for (const c of [
+    'npm run test:rules',
+    'npm run test:functions',
+    'npm run test:guard',
+    'npm run lint',
+    'npm run build',
+    'npm test',
+    'npm run build:landing',
+    'npm --prefix src/functions run build',
+    'npm run no-existe',
+  ]) {
+    test(`permite (package.json real): ${c}`, () => allowedSub(bash(c)));
+  }
+
+  const fake = env({
+    readScripts: fakeScripts({
+      '': {
+        a: 'npm run b',
+        b: 'npm run c',
+        c: 'firebase emulators:start',
+        hidden: 'echo ok',
+        prehidden: 'git push',
+        start: 'gh release create v1',
+        t1: 'npm run t2',
+        t2: 'npm run t3',
+        t3: 'npm run t4',
+        t4: 'npm run t5',
+        t5: 'npm run t6',
+        t6: 'echo fin',
+        ok: 'vitest run',
+        loop: 'npm run loop',
+      },
+      sub: { s: 'git checkout main' },
+    }),
+  });
+  for (const [c, re] of [
+    ['npm run a', /npm-script.*firebase/],
+    ['yarn a', /npm-script.*firebase/],
+    ['pnpm run a', /npm-script.*firebase/],
+    ['npm run-script c', /npm-script/],
+    ['npm run hidden', /npm-script.*prehidden.*git-push/],
+    ['npm start', /npm-script.*\[gh\]/],
+    ['npm --prefix sub run s', /npm-script.*git-history/],
+    ['npm run t1', /npm-script.*más de 5 niveles/],
+    ['npm run loop', /npm-script.*más de 5 niveles/],
+    ['npm run $X', /npm-script.*variable/],
+    ['cd $DIR && npm run ok', /npm-script.*cd no verificable/],
+    ['npm -w pkg run ok', /npm-script.*otros paquetes/],
+    ['pnpm -r run ok', /npm-script.*otros paquetes/],
+  ]) {
+    test(`bloquea (scripts falsos): ${c}`, () => assert.match(blocked(bash(c), fake).reason, re));
+  }
+  test('permite (scripts falsos): npm run ok, npm run t2 (5 niveles exactos)', () => {
+    allowedSub(bash('npm run ok'), fake);
+    allowedSub(bash('npm run t2'), fake);
+  });
+  test('package.json ilegible → bloquea; sin lector → bloquea', () => {
+    const roto = env({
+      readScripts: () => {
+        throw new Error('Unexpected token');
+      },
+    });
+    assert.match(blocked(bash('npm run x'), roto).reason, /ilegible/);
+    assert.match(blocked(bash('npm run x'), env({ readScripts: undefined })).reason, /npm-script/);
+  });
+  test('la sesión principal sigue pudiendo correr cualquier script (I4)', () =>
+    allowedMain(bash('npm run logs:functions')));
+});
+
+describe('refspecs y worktrees sobre main (revisión T2, MINOR 3)', () => {
+  for (const c of [
+    'git fetch . HEAD:main',
+    'git fetch origin feat/x:main',
+    'git fetch origin +HEAD:refs/heads/main',
+    'git fetch . :main',
+    'git worktree add ../wt main',
+    'git worktree add -B main ../wt',
+    'git worktree add ../wt refs/heads/main',
+  ]) {
+    test(`bloquea: ${c}`, () => assert.match(blocked(bash(c)).reason, /git-history/));
+  }
+  test('bloquea: git push . x:main (push, cualquiera sea el refspec)', () =>
+    assert.match(blocked(bash('git push . x:main')).reason, /git-push/));
+  for (const c of [
+    'git fetch origin',
+    'git fetch origin main',
+    'git fetch origin main:refs/remotes/origin/main',
+    'git worktree add ../wt feat/x',
+    'git worktree add -b feat/y ../wt',
+    'git worktree list',
+    'git show HEAD:src/main.tsx',
+  ]) {
+    test(`permite: ${c}`, () => allowedSub(bash(c)));
+  }
+});
+
+describe('patrones de búsqueda vs strings ejecutables (revisión T2, MINOR 4)', () => {
+  for (const c of [
+    "grep -rn 'firebase\\|deploy' src",
+    'rg "firebase|tauri" src',
+    'rg -n "git push|firebase deploy" .claude/agents',
+    "grep -rn 'git push' Spec/",
+    'grep -rn "npm run deploy" Spec/ | head -5',
+    'findstr /s /i "firebase deploy" *.md',
+    'Select-String -Pattern "git checkout main" -Path Spec/*.md',
+    "grep -rn 'rm -rf' .claude/hooks",
+    'git grep -n "gcloud auth"',
+    'git log --oneline | grep "merge|rebase"',
+    'git commit -F msg.txt',
+  ]) {
+    test(`permite: ${c}`, () => allowedSub(bash(c)));
+  }
+  for (const [c, re] of [
+    ['bash -c "git checkout main"', /git-history/],
+    ["sh -c 'firebase emulators:start'", /\[firebase\]/],
+    ['bash -lc "gh pr merge 3"', /\[gh\]/],
+    ['pwsh -Command "gh release create v1"', /\[gh\]/],
+    ['powershell -NoProfile -c "git merge x"', /git-history/],
+    ['cmd /c "git rebase main"', /git-history/],
+    ['eval "git checkout main"', /dynamic/],
+    ["node -e \"require('child_process').execSync('git checkout main')\"", /git-history/],
+    ['python -c "import os; os.system(\'gh release create v1\')"', /\[gh\]/],
+    ['echo "$(git checkout main)"', /git-history/],
+    ['echo "`gh pr merge 1`"', /\[gh\]/],
+    ['firebase emulators:exec --project demo-x "git checkout main"', /git-history/],
+    ['npx -c "git checkout main"', /git-history/],
+    ['grep x "$(git checkout main)"', /git-history/],
+    ['grep "x" f > .claude/settings.json', /protected-path/],
+    ['grep "x" f; echo "git push"', /git-push/],
+    ['grep -rn "x" src && git push', /git-push/],
+  ]) {
+    test(`bloquea: ${c}`, () => assert.match(blocked(bash(c)).reason, re));
+  }
+});
+
+describe('controles positivos de ramas sin cobertura (revisión T2, NIT 5)', () => {
+  test('cwd dentro de .claude: escritura relativa a un archivo NO protegido por nombre → bloquea', () => {
+    const inClaude = { cwd: `${PROJECT}/.claude` };
+    assert.match(blocked(bash('rm notas.txt', inClaude)).reason, /protected-path/);
+    assert.match(blocked(bash('echo x > notas.txt', inClaude)).reason, /protected-path/);
+    allowedSub(bash('rm notas.txt', { cwd: `${PROJECT}/src` }));
+  });
+  test('[dynamic]: programa dado por una variable', () => {
+    assert.match(blocked(bash('$CMD --version')).reason, /\[dynamic\]/);
+    assert.match(blocked(bash('"$TOOL" status')).reason, /\[dynamic\]/);
+  });
+  test('node como prefijo: firebase.js de firebase-tools sin proyecto demo → bloquea', () => {
+    assert.match(
+      blocked(bash('node node_modules/firebase-tools/lib/bin/firebase.js emulators:start')).reason,
+      /\[firebase\]/,
+    );
+    allowedSub(
+      bash('node node_modules/firebase-tools/lib/bin/firebase.js emulators:start --project demo-x'),
+    );
+  });
+  test('alias firebase-tools: npx firebase-tools sin proyecto demo → bloquea', () => {
+    assert.match(blocked(bash('npx firebase-tools emulators:start')).reason, /\[firebase\]/);
+    allowedSub(bash('npx firebase-tools emulators:start --project demo-x'));
+  });
+});
+
 describe('helpers', () => {
   test('normalizePath', () => {
     assert.equal(normalizePath('/d/A/./b/../C'), 'd:/a/c');
@@ -497,6 +745,25 @@ describe('end-to-end (agent-guard.mjs)', () => {
 
   test('stdin roto de un subagente (agent_id en el texto) → exit 2', () => {
     assert.equal(run('{"agent_id":"a1", roto').status, 2);
+  });
+
+  test('el wrapper lee el package.json real: npm run x → firebase sin demo → exit 2', () => {
+    writeFileSync(
+      path.join(tmp, 'package.json'),
+      JSON.stringify({ scripts: { x: 'firebase emulators:start', ok: 'node -v' } }),
+    );
+    try {
+      const sub = (command) =>
+        run({ tool_name: 'Bash', tool_input: { command }, cwd: tmp, agent_id: 'a1' });
+      const b = sub('npm run x');
+      assert.equal(b.status, 2);
+      assert.match(b.stderr, /npm-script/);
+      assert.equal(sub('npm run ok').status, 0);
+      writeFileSync(path.join(tmp, 'package.json'), '{roto');
+      assert.equal(sub('npm run ok').status, 2);
+    } finally {
+      rmSync(path.join(tmp, 'package.json'));
+    }
   });
 
   after(() => rmSync(tmp, { recursive: true, force: true }));
