@@ -71,3 +71,6 @@ temp/
 # agent-guard (SPEC-69 T2): sentinels locales del loop y de la ventana de mantenimiento
 .claude/loop.active
 .claude/guard.unlock
+
+# verify (SPEC-69 T3): logs locales
+.verify/
