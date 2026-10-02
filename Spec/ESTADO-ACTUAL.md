@@ -161,7 +161,7 @@ Cada feature comprimida a 1 línea con pointer al SPEC archivado. Para detalles 
 ## Gotchas por dominio (índice)
 
 > Cada gotcha vive como `## <título>` en su archivo de dominio. Para detalle (cuerpo, código, paths), abrir el archivo correspondiente.
-> Para búsqueda BM25 sobre el corpus, usar la skill local `gotchas-search` (CLI Python — `python ~/.claude/skills/gotchas-search/search.py <query>`).
+> Para búsqueda BM25 sobre el corpus, usar la skill local `gotchas-search` (CLI Python — `python .claude/skills/gotchas-search/search.py <query>` desde la raíz del repo).
 
 ### Hosting + dominio — [`gotchas/hosting-dominio.md`](gotchas/hosting-dominio.md)
 

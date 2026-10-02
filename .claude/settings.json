@@ -127,9 +127,8 @@
       "Bash(gcloud firestore *)",
       "Bash(curl -s \"https://firestore.googleapis.com/v1/projects/secondmindv1/databases/\\(default\\)/documents/users/gYPP7NIo5JanxIbPqMe6nC3SQfE3/embeddings/12c98cd6-ec4e-4439-a3c6-9dbc215d20a3\")",
       "Bash(firebase functions:log --only onNoteDeleted -n 5)",
-      "Bash(python \"$USERPROFILE/.claude/skills/gotchas-search/reindex.py\")",
-      "Bash(python \"C:/Users/sebas/.claude/skills/gotchas-search/reindex.py\")",
-      "Bash(python \"C:/Users/sebas/.claude/skills/gotchas-search/search.py\":*)"
+      "Bash(python .claude/skills/gotchas-search/reindex.py)",
+      "Bash(python .claude/skills/gotchas-search/search.py:*)"
     ],
     "additionalDirectories": [
       "C:\\Users\\sebas\\.claude",
@@ -158,7 +157,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "fp=$(jq -r '.tool_input.file_path // empty'); case \"$fp\" in *\"Spec/gotchas/\"*\".md\"|*\"Spec\\\\gotchas\\\\\"*\".md\") python \"$USERPROFILE/.claude/skills/gotchas-search/reindex.py\" >/dev/null 2>&1 || true ;; esac"
+            "command": "fp=$(jq -r '.tool_input.file_path // empty'); case \"$fp\" in *\"Spec/gotchas/\"*\".md\"|*\"Spec\\\\gotchas\\\\\"*\".md\") cd \"$CLAUDE_PROJECT_DIR\" && python .claude/skills/gotchas-search/reindex.py >/dev/null 2>&1 || true ;; esac"
           }
         ]
       }
