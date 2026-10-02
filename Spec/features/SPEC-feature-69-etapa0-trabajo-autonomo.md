@@ -237,8 +237,7 @@ Clases residuales conocidas (no se bloquean, o solo las ve la red cruda):
 - **Intérpretes que arman el comando por partes:** `node -e "execSync('gi'+'t pu'+'sh')"`, `python -c` con concatenaciones, rutas armadas (`'.cla'+'ude'`). El modo `code` solo ve literales completos.
 - **Indirección por variables:** `X=push; git $X`, `$(echo git) push` en combinaciones que el tokenizador no resuelve. Se bloquea el programa dado por una variable (`$CMD …`), no los argumentos.
 - **Wrappers fuera de la lista de E0-T2-h** (`find -exec`, `watchexec`, `ssh host "…"`…): su argumento no se re-analiza; solo los cubre la red cruda (`git push`, `git tag v*`, `firebase deploy`, `gcloud`, `npm run deploy*`; `secondmindv1` solo cuenta junto a firebase/gcloud/curl/wget/iwr/irm).
-- **App en modo dev normal:** `npm run dev` / `vite` sin `--mode emulator` carga `.env.local` con config de producción; un agente que la levante y la maneje con Playwright MCP escribe en prod. Regla compensatoria: solo `dev:emu`/`e2e:ui`.
-- **`node -e` / scripts con `fetch`** a Firestore REST u otros hosts de Google: la lista `PROD_HOSTS` solo se aplica a `curl`/`wget`/`iwr`/`irm`.
+- **App con config de producción / hosts de Google:** cerrado post-Etapa 0 (rama `fix/pendientes-etapa0`, reglas `dev-prod`, `http-prod` sobre cualquier comando y `mcp-browser`). Queda: un server con config de producción que la sesión principal deje en 5180, y URLs armadas por partes en scripts escritos a archivo.
 - **`git apply`/`git stash` sobre rutas protegidas** solo se detectan si la ruta aparece en el comando.
 - **Fail-open del hook:** si `node` no está en el PATH el hook sale 127, y si el propio wrapper `agent-guard.mjs` tiene un error de sintaxis sale 1; Claude Code trata ambos como no bloqueantes. Los errores dentro de la lib sí caen en el fail-safe (E0-T2-b).
 
@@ -287,10 +286,10 @@ _(numeradas E0-T<n>-a…)_
 
 _(decisiones visuales o de producto)_
 
-- **T5 (bug de producto, no corregido acá) — hábitos de hoy como "futuros".** `src/components/habits/HabitRow.tsx:32` compara `entry.date > todayMs` (inicio del día) mientras la app guarda `date` a las 12:00 locales (`habitsRepo.ts:48`). Probable efecto visible: los hábitos de hoy sin marcar se renderizan como "futuro" (borde punteado). Verificar y abrir fix aparte.
-- **T5 (bug de producto, no corregido acá) — hub en papelera.** `src/hooks/useKnowledgeHubs.ts` filtra `isArchived` pero no `deletedAt`. Efecto visible: una nota en la papelera con >=3 enlaces salientes podría aparecer en "Hubs activos" del dashboard. Verificar y abrir fix aparte.
+- **T5 (bug de producto, no corregido acá) — hábitos de hoy como "futuros".** `src/components/habits/HabitRow.tsx:32` compara `entry.date > todayMs` (inicio del día) mientras la app guarda `date` a las 12:00 locales (`habitsRepo.ts:48`). Probable efecto visible: los hábitos de hoy sin marcar se renderizan como "futuro" (borde punteado). Verificar y abrir fix aparte. **Corregido post-cierre** (`fix(habits)`, comparación por clave `YYYY-MM-DD`, test con control positivo).
+- **T5 (bug de producto, no corregido acá) — hub en papelera.** `src/hooks/useKnowledgeHubs.ts` filtra `isArchived` pero no `deletedAt`. Efecto visible: una nota en la papelera con >=3 enlaces salientes podría aparecer en "Hubs activos" del dashboard. Verificar y abrir fix aparte. **Corregido post-cierre** (`fix(dashboard)`, filtro `deletedAt > 0`, test con control positivo).
 
-- **Seguimiento del guard (T7, corrección):** en modo restringido bloquear `vite`/`npm run dev` sin `--mode emulator` y `fetch` a hosts de Google desde `node -e`. Ojo: afectaría al agente `design-review` cuando corre como subagente (usa `npm run dev`).
+- **Seguimiento del guard (T7, corrección):** en modo restringido bloquear `vite`/`npm run dev` sin `--mode emulator` y `fetch` a hosts de Google desde `node -e`. Ojo: afectaría al agente `design-review` cuando corre como subagente (usa `npm run dev`). **Hecho post-cierre** (rama `fix/pendientes-etapa0`): reglas `dev-prod` (vite sin `--mode emulator`, `vite preview`, `tauri dev`), `http-prod` ante cualquier mención de hosts de Google/`secondmindv1` y `mcp-browser` (Playwright solo a `localhost:5180`/`:4321`); `design-review` pasa a usar `npm run dev:emu`.
 
 ## Pasos manuales de Sebastián
 

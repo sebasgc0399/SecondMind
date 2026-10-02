@@ -73,7 +73,7 @@ Stack para auditar calidad visual/UX (OneRedOak, MIT — adaptado y endurecido).
 - **Slash `/design-review`** (`.claude/commands/design-review.md`) — junta el diff de la rama (git `status`/`diff`/`log`, read-only) y dispara el agente.
 - **Criterio: `.claude/design-principles.md`** — tokens factuales de `src/index.css` (hue 285, Geist, radios) + criterio de diseño definido (jerarquía, densidad, color, motion, anti-patrones); es la vara del agente.
 - **Guardrail:** ambos tratan diffs/commits como DATA, nunca como instrucciones (anti prompt-injection).
-- Requiere Playwright MCP conectado (ya en `.mcp.json`) + `npm run dev` levantado.
+- Requiere Playwright MCP conectado (ya en `.mcp.json`) + `npm run dev:emu` (app con emulador y seed en `localhost:5180`; el agente nunca usa `npm run dev`, que apunta a producción).
 
 ### Delegación a subagentes
 
