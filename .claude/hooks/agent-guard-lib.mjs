@@ -284,9 +284,18 @@ export function splitCommands(src, depth = 0, mode = 'shell') {
   return cmds.concat(nested);
 }
 
-/** Nombre de programa de un token: basename, sin extensión de ejecutable. */
+/**
+ * Nombre de programa de un token: basename, sin `@versión` (`vite@8`, `@scope/pkg@1`) ni
+ * extensión de ejecutable. Los entry points de vite (`…/vite/bin/vite.js`,
+ * `…/vite/dist/node/cli.js`) cuentan como `vite`.
+ */
 export function programName(tok) {
-  const base = String(tok).replace(/\\/g, '/').split('/').pop().toLowerCase();
+  const s = String(tok).replace(/\\/g, '/').toLowerCase();
+  if (/(^|\/)vite\/(.*\/)?(cli|vite)\.[cm]?js$/.test(s)) return 'vite';
+  const base = s
+    .split('/')
+    .pop()
+    .replace(/(.)@[^@]*$/, '$1');
   if (base.includes('firebase-tools')) return 'firebase';
   return base.replace(/\.(exe|cmd|bat|ps1|js|mjs|cjs)$/, '');
 }
@@ -347,8 +356,8 @@ function resolveProgram(argv) {
       i++;
       continue;
     }
-    // `pnpm dlx x`, `yarn dlx x`, `npm exec x` → el programa es x
-    if ((n === 'pnpm' || n === 'yarn') && argv[i + 1] === 'dlx') {
+    // `pnpm dlx x`, `yarn dlx x`, `pnpm exec x`, `yarn exec x`, `npm exec x` → el programa es x
+    if ((n === 'pnpm' || n === 'yarn') && (argv[i + 1] === 'dlx' || argv[i + 1] === 'exec')) {
       i += 2;
       afterPrefix = true;
       continue;
@@ -630,12 +639,42 @@ function ruleTauri(args) {
   return null;
 }
 
+// Opciones de Vite (8.0.8, `vite/dist/node/cli.js`) que nunca consumen el token siguiente: las
+// booleanas globales. Cualquier otra puede hacerlo: cac/mri toma el token siguiente como valor
+// de una opción con valor (`-c`, `--base`, `-l`, `--configLoader`, `-f`, `-m`, `--port`,
+// `--outDir`, `--host [x]`, `--open [x]`, `-d [x]`, `--ssr [x]`…) y también de una booleana que
+// el subcomando no declara (`vite --force build` = dev server con root `build`).
+const VITE_NO_VALUE = new Set([
+  '--clearScreen',
+  '--no-clearScreen',
+  '-h',
+  '--help',
+  '-v',
+  '--version',
+]);
+
+/** Subcomando de vite: el primer posicional, saltando el posible valor de cada opción. */
+function viteSubcommand(args) {
+  for (let i = 0; i < args.length; i++) {
+    const t = args[i];
+    if (t === '--') return null;
+    if (t.startsWith('-')) {
+      if (!t.includes('=') && !VITE_NO_VALUE.has(t) && args[i + 1] && !args[i + 1].startsWith('-'))
+        i++;
+      continue;
+    }
+    return t;
+  }
+  return null;
+}
+
 // Dev server: sin `--mode emulator` Vite carga `.env.local` (config de producción) y la app
-// de localhost habla con el proyecto real. `preview` sirve un build de producción. `build`
-// y `optimize` no levantan nada.
+// de localhost habla con el proyecto real. `preview` (en cualquier posición) sirve un build de
+// producción. `build` y `optimize` no levantan nada, pero solo cuentan como subcomando.
 function ruleVite(args) {
-  if (args.includes('build') || args.includes('optimize')) return null;
   if (args.includes('preview')) return ['dev-prod', 'vite preview (sirve un build de producción)'];
+  const sub = viteSubcommand(args);
+  if (sub === 'build' || sub === 'optimize') return null;
   let mode = null;
   for (let i = 0; i < args.length; i++) {
     const t = args[i];
@@ -949,6 +988,20 @@ function checkScripts(name, args, env, cwd, depth) {
   return null;
 }
 
+/**
+ * `yarn <bin>`, `yarn run <bin>` y `pnpm <bin>`: si el nombre no es un script, el package
+ * manager corre el binario de node_modules/.bin. Se aplica la regla de ese programa.
+ */
+function pmBin(name, args) {
+  if (name !== 'yarn' && name !== 'pnpm') return null;
+  let k = args.findIndex((t) => !t.startsWith('-'));
+  if (k >= 0 && name === 'yarn' && args[k] === 'run') k++;
+  if (k < 0 || k >= args.length) return null;
+  const bin = programName(args[k]);
+  if (PM.has(bin) || !PROGRAM_RULES[bin]) return null;
+  return PROGRAM_RULES[bin](args.slice(k + 1), bin);
+}
+
 // --- Patrones de búsqueda (grep/rg/findstr/Select-String) ------------------
 
 const SEARCH = new Set([
@@ -1001,7 +1054,7 @@ export function checkShell(cmd, env, cwd, depth = 0) {
     if (!name) continue;
     if (/^\$/.test(tok)) return '[dynamic] programa dado por una variable (no verificable)';
     const rule = PROGRAM_RULES[name];
-    const hit = rule ? rule(args, name) : null;
+    const hit = (rule ? rule(args, name) : null) ?? pmBin(name, args);
     if (hit) return `[${hit[0]}] ${hit[1]}`;
     if (['cd', 'pushd', 'chdir', 'set-location', 'sl'].includes(name)) {
       const dests = args.filter((t) => !t.startsWith('-') && !/^\/d$/i.test(t));

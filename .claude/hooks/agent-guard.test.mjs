@@ -695,6 +695,51 @@ describe('app con config de producción (seguimiento E0-T7)', () => {
   test('sesión principal puede correr npm run dev', () => allowedMain(bash('npm run dev')));
 });
 
+describe('vite: subcomando real, @versión y lanzadores (revisión pendientes, MINOR 2)', () => {
+  for (const c of [
+    'vite preview --outDir build',
+    'vite --force build',
+    'vite --host build',
+    'vite dev build',
+    'npx vite@8',
+    'npx --yes vite@latest',
+    'npx vite@8 --mode production',
+    'pnpm exec vite',
+    'pnpm vite',
+    'yarn exec vite',
+    'yarn vite',
+    'yarn run vite',
+    'node ./node_modules/vite/dist/node/cli.js',
+    'node "D:\\x\\node_modules\\vite\\bin\\vite.js" --port 5180',
+  ]) {
+    test(`bloquea: ${c}`, () => assert.match(blocked(bash(c)).reason, /\[dev-prod\]/));
+  }
+  for (const c of [
+    'npx vite build',
+    'vite build --outDir build',
+    'vite -c vite.config.ts build',
+    'vite --mode emulator build',
+    'vite --port 5180 optimize',
+    'npx vite@8 build',
+    'pnpm exec vite build',
+    'yarn vite build',
+    'node ./node_modules/vite/dist/node/cli.js build',
+    'npx vite@8 --mode emulator --port 5180',
+    'npm run build',
+    'npm run dev:emu',
+    'npm run e2e:ui',
+  ]) {
+    test(`permite: ${c}`, () => allowedSub(bash(c)));
+  }
+  test('programName quita @versión, también con scope', async () => {
+    const { programName } = await import('./agent-guard-lib.mjs');
+    assert.equal(programName('vite@8.0.8'), 'vite');
+    assert.equal(programName('@scope/firebase-tools@15'), 'firebase');
+    assert.equal(programName('@playwright/mcp@latest'), 'mcp');
+    assert.equal(programName('git'), 'git');
+  });
+});
+
 describe('referencias a producción en cualquier comando (seguimiento E0-T7)', () => {
   for (const c of [
     `node -e "fetch('https://firestore.googleapis.com/v1/projects/x/databases')"`,
