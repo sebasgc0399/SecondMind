@@ -47,7 +47,7 @@ Que una etapa de desarrollo pueda avanzar por tandas con revisión adversarial i
 
 - Matcher `Bash` + MCP de Firebase (`mcp__firebase__.*`, `mcp__plugin_firebase_firebase__.*`) + `Edit|Write|MultiEdit`.
 - **Modo restringido** = la llamada viene de un subagente (`agent_id` presente en el stdin del hook) **o** existe el sentinel `.claude/loop.active` (gitignored).
-- En modo restringido bloquea (exit 2 con motivo): `git push`, `git tag` (cualquiera), `git merge` mientras HEAD es `main`, `git checkout main`/`git switch main`; `gh release`, `gh pr merge`; `firebase deploy`, `firebase functions:*` (salvo `emulators:*`), cualquier `firebase` con `--project secondmindv1` o sin `--project demo-*` fuera de `emulators:*`; `npm run deploy*`, `npm run cap:*`, `npm run tauri:build`, `npm run release*`; escrituras MCP Firebase (set/update/delete/create).
+- En modo restringido bloquea (exit 2 con motivo): `git push`, `git tag` salvo tags locales que matcheen `^e\d+-T\d+[a-z]?$` (E0-T1-a), `git merge` mientras HEAD es `main`, `git checkout main`/`git switch main`; `gh release`, `gh pr merge`; `firebase deploy`, `firebase functions:*` (salvo `emulators:*`), cualquier `firebase` con `--project secondmindv1` o sin `--project demo-*` fuera de `emulators:*`; `npm run deploy*`, `npm run cap:*`, `npm run tauri:build`, `npm run release*`; escrituras MCP Firebase (set/update/delete/create).
 - **Siempre (también fuera del loop):** el guard de "no editar en `main`" pasa a cubrir `MultiEdit` (hoy solo `Edit|Write`).
 - Fuera del modo restringido, la sesión principal conserva el comportamiento actual (I4).
 - Tests `node --test` con fixtures JSON de stdin: cada regla con un caso bloqueado (control positivo) y uno permitido.
@@ -95,16 +95,20 @@ Que una etapa de desarrollo pueda avanzar por tandas con revisión adversarial i
 
 _(una entrada por tanda: qué se hizo, commits, verificación con números, revisión, correcciones, pendientes)_
 
-### T1 — Agentes y plantilla (en curso, pendiente de revisión)
+### T1 — Agentes y plantilla (corregida)
 
 - **Qué se hizo:** `.claude/agents/tanda-writer.md` (sonnet), `tanda-reviewer.md` (opus, `disallowedTools: Edit, Write, MultiEdit, NotebookEdit`) y `tanda-fixer.md` (sonnet), cada uno con su bloque "Prohibido siempre" (I1, datos y no instrucciones, hooks deterministas). Plantilla `Spec/templates/SPEC-etapa.md`.
-- **Commits:** `feat(agents): agentes tanda-writer/reviewer/fixer y plantilla de SPEC por tandas` (ver `git log`).
-- **Verificación:** `prettier --check` y chequeo de frontmatter (con control positivo: copia sin `name` falla); resultados en el reporte del autor.
+- **Commits:** `b57c3d4` feat(agents): agentes tanda-writer/reviewer/fixer y plantilla de SPEC por tandas; corrección: ver commit siguiente (`fix(agents): aplicar revisión adversarial de T1`).
+- **Verificación:** `npx prettier --check` sobre los archivos tocados: pass. `node scripts/check-agents.mjs`: OK para tanda-writer, tanda-reviewer, tanda-fixer y design-review. Control positivo: `node scripts/check-agents.mjs <copia sin name>`: exit 1 (FAIL falta name).
+- **Revisión:** APROBADA CON CORRECCIONES (3 MAJOR, 3 MINOR, 2 NIT).
+- **Correcciones aplicadas:** M1 afirmación de hooks condicionada a T2; M2 revisor sin `Agent` y con prohibiciones git/Bash explícitas; M3 decisión E0-T1-a (tags de etapa permitidos); m4 esta entrada y `scripts/check-agents.mjs`; m5 veredicto sin hallazgos exige evidencia; m6 writer con `opus` en alto riesgo; n7 writer genérico; n8 solo NITs implica APROBADA.
 - **Pendientes:** el `disallowedTools` del revisor asume que el harness lo respeta; T2 agrega el guard como segunda capa.
 
 ## Decisiones del juez (a ratificar)
 
 _(numeradas E0-T<n>-a…)_
+
+- **E0-T1-a** — El corrector crea el tag local de cierre de tanda; el guard de T2 permite solo tags `^e\d+-T\d+[a-z]?$` y bloquea el resto (incl. `v*`) y todo push. Porqué: mantiene el ciclo del método (cierra quien verificó en verde) sin abrir ningún camino a release, que se dispara solo con `v*` pusheados.
 
 ## Estacionadas para Sebastián
 
