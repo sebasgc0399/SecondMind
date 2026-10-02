@@ -59,6 +59,10 @@ jobs:
       - name: Type-check e2e harness
         run: npm run typecheck:e2e
 
+      # SPEC-69 T6 — type-check del smoke de UI (e2e-ui/, tsconfig.e2e-ui.json standalone).
+      - name: Type-check e2e-ui
+        run: npm run typecheck:e2e-ui
+
       # vitest detecta CI=true (lo setea GitHub Actions) y corre una sola vez,
       # sin watch mode. Cubre los tests unit (repos, tinybase, saveQueue, etc).
       - name: Test

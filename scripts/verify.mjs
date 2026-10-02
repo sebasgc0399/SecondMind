@@ -14,6 +14,7 @@ const STEPS = [
   { name: 'lint', cmd: 'npm run lint' },
   { name: 'typecheck', cmd: 'node node_modules/typescript/bin/tsc -b' },
   { name: 'typecheck:e2e', cmd: 'npm run typecheck:e2e' },
+  { name: 'typecheck:e2e-ui', cmd: 'npm run typecheck:e2e-ui' },
   { name: 'unit', cmd: 'node node_modules/vitest/vitest.mjs run' },
   { name: 'guard', cmd: 'npm run test:guard' },
   { name: 'agents', cmd: 'node scripts/check-agents.mjs' },

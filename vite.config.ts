@@ -122,6 +122,8 @@ export default defineConfig(({ command, mode, isPreview }) => {
         '**/firestore.rules.test.ts',
         '**/*.e2e.test.ts',
         '.claude/**',
+        // SPEC-69 T6: specs de Playwright (`npm run e2e:ui`), no de vitest.
+        'e2e-ui/**',
       ],
     },
   };
