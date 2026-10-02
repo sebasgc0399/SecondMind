@@ -218,6 +218,14 @@ _(una entrada por tanda: qué se hizo, commits, verificación con números, revi
   - `npm run e2e:ui`: 3 passed (1.5 m), puertos libres al terminar.
 - **Pendientes / abiertos:** `e2e:ui` no está en `verify` (ver E0-T6-b).
 
+### T7 — Canon del método
+
+- **Qué se hizo:** `Docs/05-metodo-trabajo-autonomo.md` (175 líneas, español): roles y paths de agentes, reparto de modelos con reglas de ajuste, etapas/tandas y ciclo writer → reviewer → fixer → verify → tag `e<N>-T<n>`, juez vs estacionadas, verificación (`verify`/`verify:quick`/`--only`, Java, control positivo), entorno emulador (`dev:emu`, seed, chip, `e2e:ui`, por qué no llega a prod), guard (modo restringido, bloqueos, `guard.unlock`, límites, ruleset), protocolo del loop (autorización por etapa, sentinel, parada, latido), comunicación y plantillas de prompt por rol. Adaptado a lo implementado: el original ajeno (otro proyecto) no se copió; se omitió lo que acá no existe (guardas de datos de usuario, modo ahorro como regla fija). `CLAUDE.md`: 5 comandos nuevos, hook PreToolUse actualizado al guard, bloque "SDD v2", QA de UI por modo emulador, fila de Docs/05. `Spec/ESTADO-ACTUAL.md`: entrada de SPEC-69. `Docs/01` (donde viven las dependencias): fila `@playwright/test`.
+- **Commits:** `02bb820` docs(metodo): canon del metodo de trabajo autonomo (Docs/05); `80e97be` docs(claude): SDD v2, comandos de verify/emulador y hook de guard en CLAUDE.md; + el docs(spec) de esta entrada.
+- **Verificación:** `npx prettier --check` sobre los 4 archivos de docs: pass. Comandos y paths citados cotejados contra `package.json`, `scripts/verify.mjs` (pasos y `--quick`) y el árbol (`.claude/agents/*.md`, `.claude/hooks/`, `scripts/`, `e2e-ui/`, `Spec/templates/SPEC-etapa.md`). `npm run verify:quick`: PASS (lint 24.3 s, typecheck 20.2 s, typecheck:e2e 2.1 s, typecheck:e2e-ui 2.1 s, unit 22.9 s, guard 2.0 s, agents 0.1 s; rules/functions/build SKIP). Solo docs: sin chequeos nuevos, así que no aplica control positivo.
+- **Pendientes / abiertos:** la memoria de `~/.claude` (reparto de modelos + autorización del loop) la hace el orquestador. Resumen de cierre de la etapa: del orquestador. Ver E0-T7-a.
+- **Hallazgo:** el guard bloquea (falso positivo, en modo restringido) un comando de shell con heredoc o `printf` cuyo texto mencione rutas protegidas del propio guard, aunque el comando no las toque; se rodeó escribiendo los mensajes de commit y los textos con Write/Edit y usando `git commit -F`. Coherente con E0-T2-g, no se tocó el guard.
+
 ## Límites aceptados del guard
 
 **Modelo de amenaza:** el guard evita **accidentes de agentes bienintencionados** (un subagente o el loop que, por error o por una instrucción inyectada en un archivo, intenta publicar, deployar o tocar `secondmindv1`). **No** es un sandbox contra un actor malicioso que busca evadirlo a propósito. La defensa final es del lado del servidor: el ruleset de GitHub sobre `main` y los tags `v*` (ver Pasos manuales), los permisos de Firebase y que los agentes no tengan credenciales distintas de las de Sebastián.
@@ -269,6 +277,8 @@ _(numeradas E0-T<n>-a…)_
 - **E0-T6-c** — Sin `globalTeardown`: no hace falta. Porqué: medido, tras cada corrida (verde, con fallo y con timeout) los 7 puertos quedan libres.
 - **E0-T6-e** — `reuseExistingServer` es opt-in (`E2E_REUSE=1`), por defecto falso, y el spec comprueba el badge de emulador antes de teclear credenciales. Porqué (I1, prod intocable): con reuse siempre activo, cualquier server en 5180 (p.ej. un dev server con config de producción) recibiría las credenciales seed; el badge solo existe con `isEmulatorMode`. Costo: no se reutiliza un `dev:emu` ya corriendo salvo que se pida.
 - **E0-T6-d** — `locale: 'es-ES'` en el `use` de Playwright. Porqué: la app detecta el idioma del navegador y el login no tiene preferencias guardadas; sin esto los locators en español no encuentran nada (medido).
+
+- **E0-T7-a** — La dependencia `@playwright/test` se registra como fila en `Docs/01` (§ Dependencias clave con historia) y no en una sección de `ESTADO-ACTUAL`. Porqué: `ESTADO-ACTUAL § Dependencias clave` es solo un pointer a esa tabla (la movieron ahí para que el snapshot no crezca); duplicarla rompería "nunca duplicar entre niveles".
 
 ## Estacionadas para Sebastián
 
