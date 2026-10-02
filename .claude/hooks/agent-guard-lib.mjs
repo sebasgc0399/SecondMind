@@ -625,6 +625,30 @@ function ruleGradle(args) {
 
 function ruleTauri(args) {
   if (args.includes('build')) return ['scripts-prod', 'tauri build'];
+  // `tauri dev` abre la app nativa con la config real (`.env.local`).
+  if (args.includes('dev')) return ['dev-prod', 'tauri dev (app con la config de producción)'];
+  return null;
+}
+
+// Dev server: sin `--mode emulator` Vite carga `.env.local` (config de producción) y la app
+// de localhost habla con el proyecto real. `preview` sirve un build de producción. `build`
+// y `optimize` no levantan nada.
+function ruleVite(args) {
+  if (args.includes('build') || args.includes('optimize')) return null;
+  if (args.includes('preview')) return ['dev-prod', 'vite preview (sirve un build de producción)'];
+  let mode = null;
+  for (let i = 0; i < args.length; i++) {
+    const t = args[i];
+    if (t === '--mode' || t === '-m') mode = args[i + 1] ?? '';
+    else if (t.startsWith('--mode=')) mode = t.slice('--mode='.length);
+  }
+  if (mode !== null && DYNAMIC_WORD.test(mode))
+    return ['dynamic', 'vite --mode dado por una variable (no verificable)'];
+  if (mode !== 'emulator')
+    return [
+      'dev-prod',
+      'vite dev server sin --mode emulator (config de producción); usá npm run dev:emu',
+    ];
   return null;
 }
 
@@ -648,6 +672,7 @@ const PROGRAM_RULES = {
   gradlew: ruleGradle,
   tauri: ruleTauri,
   cargo: (a) => (a[0] === 'tauri' ? ruleTauri(a.slice(1)) : null),
+  vite: ruleVite,
   eval: () => ['dynamic', 'eval (comando no verificable)'],
 };
 
@@ -671,14 +696,16 @@ const RAW_NETS = [
   ],
 ];
 
+// Hosts de Google/Firebase y el proyecto real. Cualquier mención en un comando se bloquea,
+// también dentro de `node -e`, `python -c` o un heredoc (`fetch('https://firestore.googleapis.com/…')`).
+// Los patrones de búsqueda entre comillas ya llegan blanqueados (maskSearchPatterns).
+export const PROD_REFS =
+  /googleapis\.com|cloudfunctions\.net|firebaseio\.com|secondmindv1|getsecondmind\.co/i;
+
 function rawNet(flat) {
   for (const [id, re, why] of RAW_NETS) if (re.test(flat)) return [id, why];
-  if (
-    /secondmindv1/.test(flat) &&
-    /\b(firebase|gcloud|curl|wget|invoke-webrequest|invoke-restmethod|iwr|irm)\b/.test(flat)
-  ) {
-    return ['firebase', 'comando con secondmindv1 (proyecto real)'];
-  }
+  if (PROD_REFS.test(flat))
+    return ['http-prod', 'referencia a hosts de Google o al proyecto real (secondmindv1)'];
   return null;
 }
 
@@ -770,6 +797,26 @@ export const RULES = [
     },
   },
   {
+    id: 'mcp-browser',
+    description:
+      'Restringido: el navegador MCP (Playwright) solo abre la app del emulador (:5180) o la landing (:4321).',
+    restrictedOnly: true,
+    match({ input }) {
+      if (!/^mcp__.*playwright/i.test(input.tool_name ?? '')) return null;
+      const text = JSON.stringify(input.tool_input ?? {});
+      if (PROD_REFS.test(text)) return `${input.tool_name} con una referencia a producción`;
+      // navigate/tabs: el destino es exactamente la app local (data:/file:/javascript: no tienen `://`).
+      const dest = input.tool_input?.url;
+      if (typeof dest === 'string' && dest !== 'about:blank' && !LOCAL_APP.test(dest))
+        return `${input.tool_name} a ${dest} (solo localhost:5180 o :4321; usá npm run dev:emu)`;
+      for (const url of text.match(/\b[a-z][a-z0-9+.-]*:\/\/[^\s"'`)\\]+/gi) ?? []) {
+        if (!LOCAL_APP.test(url))
+          return `${input.tool_name} a ${url} (solo localhost:5180 o :4321; usá npm run dev:emu)`;
+      }
+      return null;
+    },
+  },
+  {
     id: 'shell',
     description:
       'Restringido: comandos de shell que publican, deployan, reescriben historia o tocan rutas protegidas.',
@@ -782,6 +829,8 @@ export const RULES = [
     },
   },
 ];
+
+const LOCAL_APP = /^https?:\/\/(localhost|127\.0\.0\.1|\[::1\]):(5180|4321)(\/|\?|#|$)/i;
 
 function editPath(input) {
   const ti = input.tool_input ?? {};
