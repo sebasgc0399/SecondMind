@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "dev:emu": "npm --prefix src/functions run build && node scripts/emu-secret.mjs && firebase emulators:exec --project demo-secondmind --only auth,firestore,functions \"node scripts/seed-emulator.mjs && node node_modules/vite/bin/vite.js --mode emulator --port 5180 --strictPort\"",
     "dev:emu:app": "vite --mode emulator --port 5180 --strictPort",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
