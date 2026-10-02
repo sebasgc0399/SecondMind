@@ -317,3 +317,24 @@ _(lo que solo un humano verifica)_
   3. Comprobación sin riesgo: en **Settings → Rules → Rulesets → release-tags → Insights** (o al intentar crear un tag `v*` desde una cuenta sin bypass) se ve el rechazo. No hace falta pushear nada para probarlo.
 - **T5 — Probar el entorno local.** En una terminal (Java 21 instalado): `npm run dev:emu`; tarda ~1 min (build de functions + emuladores) y termina con `VITE … ready` y el resumen del seed. Abrir http://localhost:5180, ingresar con `e2e@secondmind.test` / `secondmind-e2e` (credenciales de emulador, no secretos). _Qué deberías ver:_ chip rojo `EMULADOR · demo-secondmind` arriba, dashboard con Inbox 2, una tarea de hoy, 2 proyectos activos y notas recientes; sin modal de bienvenida ni de novedades; Notas con 8 notas (+1 en Papelera); abrir "Método PARA", clic en un wikilink navega a esa nota y el panel de backlinks lista a las notas que la enlazan. Cerrar con Ctrl+C (los datos se pierden al apagar: es lo esperado). Los datos de producción no se tocan.
 - **T6 — Smoke de UI.** Con Java 21 y Google Chrome instalados, y sin nada escuchando en 5180/8080/9099: `npm run e2e:ui` (tarda ~1.5 a 2.5 min la primera vez: arranca `dev:emu` solo y lo apaga al terminar). _Qué deberías ver:_ `3 passed` (desktop-1280, tablet-768, mobile-375) y las capturas en `test-results/…/`; `npx playwright show-report` abre el reporte HTML. Por seguridad (I1) NO reutiliza nada que ya escuche en 5180: si está ocupado, Playwright se niega a arrancar (cerrá ese proceso). Para iterar con tu propio `npm run dev:emu`: `E2E_REUSE=1 npm run e2e:ui` (el test igual exige el chip `EMULADOR · demo-secondmind` antes de teclear credenciales). Para ver el control positivo: `E2E_CANARY=1 npm run e2e:ui` debe terminar en rojo. Mirá a ojo una captura por viewport (juicio visual: solo vos).
+
+## Resumen de cierre
+
+**Estado:** Etapa 0 completa en `feat/etapa0-trabajo-autonomo` (38 commits sobre `main`, tags locales `e0-T0`…`e0-T7`). Sin push ni merge: **el merge es de Sebastián** tras su review.
+
+**Qué quedó (T1–T7):** agentes `tanda-writer`/`tanda-reviewer`/`tanda-fixer` + plantilla de etapa; guard determinista `agent-guard.mjs` (modo restringido para subagentes y loop, tests en CI); `npm run verify`/`verify:quick`; modo emulador (`--mode emulator`, config falsa `demo-secondmind`, chip, imposible en build de prod); seed + `npm run dev:emu`; smoke de UI `npm run e2e:ui` (Playwright, Chrome instalado, 3 viewports, chip exigido antes del login); canon del método en `Docs/05-metodo-trabajo-autonomo.md` + `CLAUDE.md` (SDD v2).
+
+**Verificación de la etapa (orquestador, sobre `e0-T7`):**
+
+- `npm run verify`: PASS 10/10 (lint 26.9 s, typecheck 22.5 s, typecheck:e2e 2.3 s, typecheck:e2e-ui 2.1 s, unit 26.2 s, guard 2.1 s, agents 0.1 s, rules 13.6 s, functions 114.4 s, build 28.6 s).
+- Guard en vivo desde un subagente: `git tag v0.0.0-guard-demo` → BLOQUEADO (`[git-tag]`, no se creó el tag); `git push --dry-run origin HEAD` → BLOQUEADO (`[git-push]`).
+- `npm run e2e:ui`: 3 passed (T6, tras la corrección); I2 verificado en T4 (`vite build --mode emulator` y `NODE_ENV=production` rechazados; 0 rastros del emulador en el bundle de prod).
+- Cada tanda pasó por revisión adversarial (opus) y una pasada de corrección; hallazgos y correcciones en § Avance.
+
+**Para Sebastián:**
+
+1. Ratificar las decisiones del juez E0-T1-a … E0-T7-a (o marcar las que no).
+2. Pasos manuales: ruleset de GitHub (`v*` + `main`), review de `validateProviderKey.ts` antes del próximo `deploy:functions`, probar `dev:emu` y `e2e:ui` y mirar las capturas.
+3. Estacionadas: 2 bugs de producto (HabitRow "futuro", hub en papelera) y el seguimiento del guard (`npm run dev`/`fetch` en modo restringido).
+4. Opcional: sumar `e2e:ui` a CI (hoy fuera por Java + Chrome + tiempo, E0-T6-b).
+5. Merge `--no-ff` a `main` y push. Para la Etapa 1 en `/loop`: autorización explícita de esa etapa (Docs/05 § protocolo del loop).
