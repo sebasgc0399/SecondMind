@@ -64,3 +64,6 @@ android/app/release.keystore
 
 # Screenshots y artefactos temporales de QA/debug — no commitear
 temp/
+
+# gotchas-search: índice BM25 generado por reindex.py
+.claude/skills/gotchas-search/corpus.json

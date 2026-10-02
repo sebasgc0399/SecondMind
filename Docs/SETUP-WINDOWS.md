@@ -49,7 +49,7 @@ El skill instala symlinks en `~/.claude/plugins/cache/ui-ux-pro-max-skill/.../sk
 
 Los scripts reales viven en `src/ui-ux-pro-max/scripts/search.py` — útil saberlo si querés inspeccionar sin resolver los symlinks.
 
-> **Prerequisito: Python 3 en PATH.** Las skills de búsqueda BM25 corren scripts Python: `ui-ux-pro-max` (`search.py`) y `gotchas-search` (`~/.claude/skills/gotchas-search/search.py`, F37). Sin `python` en PATH, ambas fallan.
+> **Prerequisito: Python 3 en PATH.** Las skills de búsqueda BM25 corren scripts Python: `ui-ux-pro-max` (`search.py`) y `gotchas-search` (`.claude/skills/gotchas-search/search.py`, versionada en el repo). Sin `python` en PATH, ambas fallan.
 
 ---
 
