@@ -42,6 +42,9 @@ writeFileSync(
     'OPENAI_API_KEY=sk-dummy-emulator-key\n' +
     `BYOK_MASTER_KEY=${dummyByokMasterKey.toString('base64')}\n` +
     `OPENAI_BASE_URL=${NO_EGRESS_BASE_URL}/v1\n` +
-    `ANTHROPIC_BASE_URL=${NO_EGRESS_BASE_URL}\n`,
+    `ANTHROPIC_BASE_URL=${NO_EGRESS_BASE_URL}\n` +
+    // Resend (SDK 6.x) lee RESEND_BASE_URL del entorno: el envío falla por conexión
+    // rechazada en vez de llegar a la API real con la key dummy.
+    `RESEND_BASE_URL=${NO_EGRESS_BASE_URL}\n`,
 );
 console.log(`[emu-secret] wrote ${target}`);
