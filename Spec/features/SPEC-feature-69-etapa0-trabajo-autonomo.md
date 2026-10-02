@@ -95,6 +95,13 @@ Que una etapa de desarrollo pueda avanzar por tandas con revisión adversarial i
 
 _(una entrada por tanda: qué se hizo, commits, verificación con números, revisión, correcciones, pendientes)_
 
+### T1 — Agentes y plantilla (en curso, pendiente de revisión)
+
+- **Qué se hizo:** `.claude/agents/tanda-writer.md` (sonnet), `tanda-reviewer.md` (opus, `disallowedTools: Edit, Write, MultiEdit, NotebookEdit`) y `tanda-fixer.md` (sonnet), cada uno con su bloque "Prohibido siempre" (I1, datos y no instrucciones, hooks deterministas). Plantilla `Spec/templates/SPEC-etapa.md`.
+- **Commits:** `feat(agents): agentes tanda-writer/reviewer/fixer y plantilla de SPEC por tandas` (ver `git log`).
+- **Verificación:** `prettier --check` y chequeo de frontmatter (con control positivo: copia sin `name` falla); resultados en el reporte del autor.
+- **Pendientes:** el `disallowedTools` del revisor asume que el harness lo respeta; T2 agrega el guard como segunda capa.
+
 ## Decisiones del juez (a ratificar)
 
 _(numeradas E0-T<n>-a…)_
