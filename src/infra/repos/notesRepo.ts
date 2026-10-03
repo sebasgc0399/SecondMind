@@ -30,6 +30,13 @@ export interface NoteCreateOverrides {
    * Firestore, TinyBase lo ignora por schema). Usado por "Convertir en nota".
    */
   content?: string;
+  /**
+   * Links salientes con los que nace la nota (ids serializados + conteo). Van en la
+   * misma escritura de creación para no depender de un `updateMeta` posterior en otra
+   * cola. Usado por "Convertir en nota" cuando el contenido trae wikilinks.
+   */
+  outgoingLinkIds?: string;
+  linkCount?: number;
 }
 
 /**
@@ -50,9 +57,9 @@ async function createNote(overrides?: NoteCreateOverrides): Promise<string | nul
     projectIds: '[]',
     areaIds: '[]',
     tagIds: '[]',
-    outgoingLinkIds: '[]',
+    outgoingLinkIds: overrides?.outgoingLinkIds ?? '[]',
     incomingLinkIds: '[]',
-    linkCount: 0,
+    linkCount: overrides?.linkCount ?? 0,
     summaryL3: '',
     distillLevel: 0,
     aiTags: '[]',

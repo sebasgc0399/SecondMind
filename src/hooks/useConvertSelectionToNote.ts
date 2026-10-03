@@ -34,10 +34,18 @@ export async function convertSelectionToNote(
   if (!draft) return 'noop';
 
   const content = JSON.stringify(draft.contentJson);
+  // Los links salientes viajan en la misma escritura de creación (sin updateMeta aparte en
+  // otra cola que un reintento fuera de orden podría pisar). Mismo dedupe por destino que
+  // computeLinksDiff; la nota nueva no puede enlazarse a sí misma.
+  const newLinks = extractLinks(draft.contentJson);
+  const outgoingLinkIds = Array.from(new Set(newLinks.map((link) => link.targetId)));
   const newNoteId = await notesRepo.createNote({
     title: draft.title,
     contentPlain: draft.contentPlain,
     content,
+    ...(outgoingLinkIds.length > 0
+      ? { outgoingLinkIds: stringifyIds(outgoingLinkIds), linkCount: outgoingLinkIds.length }
+      : {}),
   });
   if (!newNoteId) return 'error';
 
@@ -63,23 +71,25 @@ export async function convertSelectionToNote(
     .focus()
     .run();
 
-  const newLinks = extractLinks(draft.contentJson);
+  // Sin await: offline, linksRepo.syncLinks espera la confirmación del servidor y el
+  // resultado ('done') quedaría colgado. La conversión ya está hecha; si el sync falla,
+  // los links se reconcilian al guardar la nota nueva.
   if (userId && newLinks.length > 0) {
-    try {
-      const { outgoingLinkIds, linkCount } = await syncLinksFromEditor({
-        sourceId: newNoteId,
-        sourceTitle: draft.title,
-        userId,
-        newLinks,
+    syncLinksFromEditor({
+      sourceId: newNoteId,
+      sourceTitle: draft.title,
+      userId,
+      newLinks,
+    }).catch((error: unknown) => {
+      // Solo el código/nombre: el error crudo puede arrastrar contenido del usuario.
+      const code =
+        (error as { code?: unknown } | null)?.code ??
+        (error instanceof Error ? error.name : 'unknown');
+      console.error('[convertSelectionToNote] syncLinks de la nota nueva falló', {
+        noteId: newNoteId,
+        code: String(code),
       });
-      await notesRepo.updateMeta(newNoteId, {
-        outgoingLinkIds: stringifyIds(outgoingLinkIds),
-        linkCount,
-      });
-    } catch (error) {
-      // La nota y el reemplazo ya están hechos; los links se reconcilian al guardar la nota.
-      console.error('[convertSelectionToNote] syncLinks de la nota nueva falló', error);
-    }
+    });
   }
 
   return 'done';

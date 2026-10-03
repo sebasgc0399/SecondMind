@@ -2,8 +2,11 @@
 import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { Editor, type JSONContent } from '@tiptap/core';
 import StarterKit from '@tiptap/starter-kit';
+import { act, renderHook } from '@testing-library/react';
 import Wikilink from '@/components/editor/extensions/wikilink';
-import { convertSelectionToNote } from '@/hooks/useConvertSelectionToNote';
+import useConvertSelectionToNote, {
+  convertSelectionToNote,
+} from '@/hooks/useConvertSelectionToNote';
 
 // Editor TipTap real; repo y sync de links mockeados (I3: la escritura pasa por el repo).
 
@@ -210,10 +213,26 @@ describe('convertSelectionToNote (Editor real)', () => {
     expect(input.sourceId).toBe('new-note');
     expect(input.userId).toBe('u1');
     expect(input.newLinks).toEqual([expect.objectContaining({ targetId: 'x1' })]);
-    expect(updateMetaMock).toHaveBeenCalledWith('new-note', {
-      outgoingLinkIds: JSON.stringify(['x1']),
-      linkCount: 1,
-    });
+    // Los links salientes nacen con la nota, en la misma escritura (sin updateMeta aparte).
+    const args = createNoteMock.mock.calls[0]![0]!;
+    expect(args.outgoingLinkIds).toBe(JSON.stringify(['x1']));
+    expect(args.linkCount).toBe(1);
+    expect(updateMetaMock).not.toHaveBeenCalled();
+  });
+
+  it('wikilinks repetidos al mismo destino cuentan una vez', async () => {
+    const link = { type: 'wikilink', attrs: { noteId: 'x1', noteTitle: 'Idea X' } };
+    const editor = mount([
+      { type: 'paragraph', content: [{ type: 'text', text: 'a ' }, link] },
+      { type: 'paragraph', content: [{ type: 'text', text: 'b ' }, link] },
+    ]);
+    editor.commands.selectAll();
+
+    await convertSelectionToNote(editor, 'u1');
+
+    const args = createNoteMock.mock.calls[0]![0]!;
+    expect(args.outgoingLinkIds).toBe(JSON.stringify(['x1']));
+    expect(args.linkCount).toBe(1);
   });
 
   it('sin wikilinks dentro no toca links', async () => {
@@ -221,5 +240,138 @@ describe('convertSelectionToNote (Editor real)', () => {
     select(editor, 'mundo');
     await convertSelectionToNote(editor, 'u1');
     expect(syncLinksMock).not.toHaveBeenCalled();
+    const args = createNoteMock.mock.calls[0]![0]!;
+    expect(args.outgoingLinkIds).toBeUndefined();
+    expect(args.linkCount).toBeUndefined();
+  });
+
+  it('offline (el sync de links nunca resuelve): igual devuelve done', async () => {
+    syncLinksMock.mockImplementation(() => new Promise(() => {}));
+    const editor = mount([
+      {
+        type: 'paragraph',
+        content: [
+          { type: 'text', text: 'ver ' },
+          { type: 'wikilink', attrs: { noteId: 'x1', noteTitle: 'Idea X' } },
+        ],
+      },
+    ]);
+    editor.commands.selectAll();
+
+    const result = await Promise.race([
+      convertSelectionToNote(editor, 'u1'),
+      new Promise((resolve) => setTimeout(() => resolve('colgado'), 50)),
+    ]);
+
+    expect(result).toBe('done');
+    expect(syncLinksMock).toHaveBeenCalledOnce();
+  });
+
+  it('si el sync de links falla, la conversión queda hecha y el log no lleva el error crudo', async () => {
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
+    syncLinksMock.mockRejectedValue(
+      Object.assign(new Error('contenido privado del usuario'), { code: 'unavailable' }),
+    );
+    const editor = mount([
+      {
+        type: 'paragraph',
+        content: [
+          { type: 'text', text: 'ver ' },
+          { type: 'wikilink', attrs: { noteId: 'x1', noteTitle: 'Idea X' } },
+        ],
+      },
+    ]);
+    editor.commands.selectAll();
+
+    await expect(convertSelectionToNote(editor, 'u1')).resolves.toBe('done');
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    expect(consoleError).toHaveBeenCalledOnce();
+    const logged = JSON.stringify(consoleError.mock.calls[0]);
+    expect(logged).toContain('unavailable');
+    expect(logged).not.toContain('contenido privado');
+    consoleError.mockRestore();
+  });
+
+  it('si el documento cambió solo después del rango, igual reemplaza (done)', async () => {
+    const editor = mount([para('hola mundo cruel')]);
+    select(editor, 'mundo');
+    createNoteMock.mockImplementation(async () => {
+      // Edición posterior al rango: las posiciones [from, to] siguen valiendo lo mismo.
+      editor.commands.insertContentAt(editor.state.doc.content.size - 1, ' y más');
+      return 'new-note';
+    });
+
+    await expect(convertSelectionToNote(editor, 'u1')).resolves.toBe('done');
+
+    expect(editor.getJSON().content![0]!.content).toEqual([
+      { type: 'text', text: 'hola ' },
+      { type: 'wikilink', attrs: { noteId: 'new-note', noteTitle: 'mundo' } },
+      { type: 'text', text: ' cruel y más' },
+    ]);
+  });
+});
+
+describe('useConvertSelectionToNote (hook)', () => {
+  it('dos clicks mientras la primera creación sigue pendiente: crea una sola nota', async () => {
+    let resolveCreate: (id: string | null) => void = () => {};
+    createNoteMock.mockImplementation(
+      () =>
+        new Promise<string | null>((resolve) => {
+          resolveCreate = resolve;
+        }),
+    );
+    const editor = mount([para('hola mundo cruel')]);
+    select(editor, 'mundo');
+    const onResult = vi.fn();
+    const { result } = renderHook(() => useConvertSelectionToNote(editor, onResult));
+
+    let first: Promise<void> = Promise.resolve();
+    await act(async () => {
+      first = result.current();
+      void result.current();
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
+    expect(createNoteMock).toHaveBeenCalledTimes(1);
+
+    await act(async () => {
+      resolveCreate('new-note');
+      await first;
+    });
+    expect(onResult).toHaveBeenCalledTimes(1);
+    expect(onResult).toHaveBeenCalledWith('done');
+  });
+
+  it('offline (sync de links colgado): avisa done y un segundo click vuelve a funcionar', async () => {
+    syncLinksMock.mockImplementation(() => new Promise(() => {}));
+    const editor = mount([
+      {
+        type: 'paragraph',
+        content: [
+          { type: 'text', text: 'ver ' },
+          { type: 'wikilink', attrs: { noteId: 'x1', noteTitle: 'Idea X' } },
+        ],
+      },
+      para('otro parrafo'),
+    ]);
+    const onResult = vi.fn();
+    const { result } = renderHook(() => useConvertSelectionToNote(editor, onResult));
+
+    editor.commands.setTextSelection({ from: 1, to: editor.state.doc.child(0).nodeSize - 1 });
+    await act(async () => {
+      void result.current();
+      await new Promise((resolve) => setTimeout(resolve, 20));
+    });
+    expect(onResult).toHaveBeenCalledWith('done');
+
+    createNoteMock.mockClear();
+    createNoteMock.mockResolvedValue('new-note-2');
+    select(editor, 'otro', 'parrafo');
+    await act(async () => {
+      void result.current();
+      await new Promise((resolve) => setTimeout(resolve, 20));
+    });
+    expect(createNoteMock).toHaveBeenCalledTimes(1);
+    expect(onResult).toHaveBeenCalledTimes(2);
   });
 });
