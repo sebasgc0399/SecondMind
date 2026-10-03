@@ -1,17 +1,28 @@
+import { useMemo } from 'react';
 import { Link } from 'react-router';
-import { Sparkles } from 'lucide-react';
+import { Link2, Sparkles } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import { useCell } from 'tinybase/ui-react';
 import useOnlineStatus from '@/hooks/useOnlineStatus';
 import useSimilarNotes from '@/hooks/useSimilarNotes';
+import useInsertSimilarLink from '@/hooks/useInsertSimilarLink';
+import { parseIds } from '@/lib/tinybase';
+import type { Editor } from '@tiptap/core';
 
 interface SimilarNotesPanelProps {
   noteId: string;
+  // Instancia del editor de la nota actual; null mientras no está lista.
+  editor: Editor | null;
 }
 
-export default function SimilarNotesPanel({ noteId }: SimilarNotesPanelProps) {
+export default function SimilarNotesPanel({ noteId, editor }: SimilarNotesPanelProps) {
   const { t } = useTranslation();
   const { notes, isLoading, noEmbedding, disabled } = useSimilarNotes(noteId);
   const isOnline = useOnlineStatus();
+  const insertLink = useInsertSimilarLink(editor);
+  const outgoingLinkIdsRaw =
+    (useCell('notes', noteId, 'outgoingLinkIds') as string | undefined) ?? '[]';
+  const linkedIds = useMemo(() => new Set(parseIds(outgoingLinkIdsRaw)), [outgoingLinkIdsRaw]);
 
   return (
     <div className="mt-4 border-t border-border pt-4">
@@ -56,19 +67,35 @@ export default function SimilarNotesPanel({ noteId }: SimilarNotesPanelProps) {
 
       {isOnline && !isLoading && notes.length > 0 && (
         <ul className="flex flex-col gap-1">
-          {notes.map((note) => (
-            <li key={note.noteId}>
-              <Link
-                to={`/notes/${note.noteId}`}
-                className="flex items-center justify-between rounded-md px-2 py-1.5 text-sm transition-colors hover:bg-accent"
-              >
-                <span className="truncate text-foreground">{note.title}</span>
-                <span className="ml-2 shrink-0 text-xs text-muted-foreground">
-                  {Math.round(note.score * 100)}%
-                </span>
-              </Link>
-            </li>
-          ))}
+          {notes.map((note) => {
+            const isLinked = linkedIds.has(note.noteId);
+            const label = isLinked
+              ? t('editor.similar.alreadyLinked', 'Ya enlazada')
+              : t('editor.similar.insertLink', 'Insertar enlace');
+            return (
+              <li key={note.noteId} className="flex items-center gap-1">
+                <Link
+                  to={`/notes/${note.noteId}`}
+                  className="flex min-w-0 flex-1 items-center justify-between rounded-md px-2 py-1.5 text-sm transition-colors hover:bg-accent"
+                >
+                  <span className="truncate text-foreground">{note.title}</span>
+                  <span className="ml-2 shrink-0 text-xs text-muted-foreground">
+                    {Math.round(note.score * 100)}%
+                  </span>
+                </Link>
+                <button
+                  type="button"
+                  onClick={() => insertLink(note.noteId, note.title)}
+                  disabled={isLinked || !editor}
+                  aria-label={label}
+                  title={label}
+                  className="inline-flex shrink-0 items-center justify-center rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground disabled:pointer-events-auto disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent"
+                >
+                  <Link2 className="h-4 w-4" aria-hidden />
+                </button>
+              </li>
+            );
+          })}
         </ul>
       )}
     </div>

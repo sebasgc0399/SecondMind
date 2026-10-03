@@ -1,4 +1,4 @@
-import { useCallback } from 'react';
+import { useCallback, useEffect } from 'react';
 import { useNavigate } from 'react-router';
 import { Check } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
@@ -22,7 +22,7 @@ import EditorSuggestionBanner from '@/components/editor/EditorSuggestionBanner';
 import SaveErrorBanner from '@/components/editor/SaveErrorBanner';
 import SummaryL3 from '@/components/editor/SummaryL3';
 import useNoteSave, { type SaveStatus } from '@/hooks/useNoteSave';
-import type { JSONContent } from '@tiptap/core';
+import type { Editor, JSONContent } from '@tiptap/core';
 
 interface NoteEditorProps {
   noteId: string;
@@ -33,6 +33,8 @@ interface NoteEditorProps {
   summaryTextareaRef: React.RefObject<HTMLTextAreaElement | null>;
   headerSlot?: React.ReactNode;
   onDiscardSaveError: () => void;
+  // Expone la instancia del editor al contenedor (T2: Notas similares inserta enlaces).
+  onEditorReady?: (editor: Editor | null) => void;
 }
 
 export default function NoteEditor({
@@ -44,6 +46,7 @@ export default function NoteEditor({
   summaryTextareaRef,
   headerSlot,
   onDiscardSaveError,
+  onEditorReady,
 }: NoteEditorProps) {
   const { t } = useTranslation();
   const navigate = useNavigate();
@@ -82,6 +85,11 @@ export default function NoteEditor({
       transformPastedHTML: (html) => html.replace(/\s(style|class)=["'][^"']*["']/gi, ''),
     },
   });
+
+  useEffect(() => {
+    onEditorReady?.(editor);
+    return () => onEditorReady?.(null);
+  }, [editor, onEditorReady]);
 
   const { status, summaryL3, setSummaryL3 } = useNoteSave(noteId, editor, initialSummaryL3);
 

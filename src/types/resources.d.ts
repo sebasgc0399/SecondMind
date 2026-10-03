@@ -317,7 +317,9 @@ export default interface Resources {
         title: 'No pudimos guardar tu última edición';
       };
       similar: {
+        alreadyLinked: 'Ya enlazada';
         empty: 'Sin notas similares aún.';
+        insertLink: 'Insertar enlace';
         noEmbedding: 'Guarda la nota para ver sugerencias.';
         offline: 'Disponible cuando vuelva la conexión.';
         title: 'Notas similares';

@@ -310,7 +310,9 @@
       "title": "We couldn't save your last edit"
     },
     "similar": {
+      "alreadyLinked": "Already linked",
       "empty": "No similar notes yet.",
+      "insertLink": "Insert link",
       "noEmbedding": "Save the note to see suggestions.",
       "offline": "Available when you're back online.",
       "title": "Similar notes"
