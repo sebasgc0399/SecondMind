@@ -104,12 +104,35 @@ Modelos (Docs/05 § 3): todas las tandas son de riesgo bajo → writer y fixer `
 - **Desviación:** NIT i18n — no existe ningún `vi.mock('react-i18next')` en el repo; el patrón vigente es inicializar la instancia real con `initTestI18n()` (`src/test/i18n.ts`, usado en `HabitRow.test.tsx` y otros). Se usó ese en vez de un mock.
 - **Verificación correcciones:** control positivo — los 2 tests nuevos de reactividad fallan contra el código previo (`expected [viva] to deeply equal []` y `expected ['viva'] to deeply equal ['papelera','purgada','viva']`), con `user` ya fijo. `vitest run` de los 3 archivos: 10/10, 0 líneas "Maximum update depth" / "i18next instance". `npm run verify` PASS a la primera (unit 63 archivos / 463 tests, rules, functions, build).
 
+### T2 — Migración al helper (en curso)
+
+- **Hecho:** los consumidores de vista usan `isTrashedNote` en vez de las variantes sueltas: `useGraph`, `useKnowledgeHubs`, `useReviewQueue`, `useGlobalSearch` (2 sitios), `useOnboarding`, `useHybridSearch.getNoteDoc`, `useTrashNotes` (inversa: `!isTrashedNote(row)` y luego `row.deletedAt as number`), `useNoteSearch` (3 sitios), `RecentNotesCard`, `wikilink-suggestion`. Sin cambio de dependencias de memos ni de infraestructura (I3).
+- **I4 — equivalencia (viejo -> helper, `true` = papelera):**
+
+| valor | `typeof n && > 0` (Graph/Hubs/Review) | `(x as number) > 0` (GlobalSearch) | `!row.deletedAt` (Onboarding) | `=== 0` viva (Orama) | `<= 0` con coerción (Trash) | helper |
+| --- | --- | --- | --- | --- | --- | --- |
+| `undefined` | no | no | no | n/a (Orama da 0) | no | no |
+| `0` | no | no | no | no | no | no |
+| `> 0` | si | si | si | si | si | si |
+| `null` | no | no | no | n/a | no | no |
+| `'5'` | no | **si** | **si** | n/a (Orama da 5: si) | no | no |
+| `NaN` | no | no | no | n/a (Orama da 0) | **si** | no |
+| `-1` | no | no | **si** | **si** | no | no |
+
+  Las filas con valor no numérico o negativo no pueden existir hoy: verificado ejecutando `setCell` contra un store con el schema `deletedAt: { type: 'number', default: 0 }` — `NaN`, `'5'`, `null` e `Infinity` se rechazan (queda 0); solo `-1` se almacena, y los timestamps son positivos. Las variantes divergentes solo difieren en esos valores imposibles. Se adopta el helper en todos.
+- **Verificación:** `npm run verify` PASS a la primera (lint, typecheck x3, unit, guard, agents, rules, functions 120.7s, build). Sin flake de `functions`. Se agregaron `useGraph.test.tsx`, `useTrashNotes.test.tsx` y `useGlobalSearch.test.tsx` (los tres consumidores no tenían cobertura de papelera).
+- **`deletedAt` restante en `src/hooks`/`src/components` (sin tests):** comentarios en `useKnowledgeHubs`/`useReviewQueue`/`useOnboarding`; `useNote.ts:97-98` (lectura one-shot de Firestore al abrir la nota, no es vista sobre el store; fuera de alcance); `useTrashNotes` (valor `deletedAt` para días restantes/orden, el criterio ya usa el helper); `wikilink-suggestion.ts:34` (normalización `Number(row.deletedAt) || 0` al armar el doc de Orama).
+- **Control positivo:** helper con `> 0` -> `>= 0`: fallan tests de `useKnowledgeHubs`, `useReviewQueue`, `useGraph`, `useGlobalSearch`, `useTrashNotes` (5 consumidores migrados distintos, además de `useBacklinks`, `useProjectNotes`, `useSimilarNotes` y `noteGuards`).
+
 _(una entrada por tanda, ver plantilla)_
 
 ## Decisiones del juez (a ratificar)
 
 - **E1-T1-a** — `useSimilarNotes` excluye también notas sin row en `notesStore` (embedding de nota purgada), no solo papelera/archivada: es el mismo criterio de `useHybridSearch.getNoteDoc` (row vacía → null) y evita mostrar un "Sin título" fantasma que lleva a "no encontrada".
 - **E1-T1-b** — `isTrashedNote` acepta `null`/`undefined` además de una row (devuelve false); permite usarlo sobre `notesTable[id]` posiblemente ausente sin guardas extra. `useBacklinks` trata la ausencia aparte (la descarta) porque un origen inexistente no es un backlink válido.
+- **E1-T2-a** — Los consumidores sobre el doc de Orama (`useNoteSearch`, `RecentNotesCard`, `wikilink-suggestion`, y `useHybridSearch.getNoteDoc`) también usan el helper: el helper acepta cualquier objeto con `deletedAt?: unknown`, y el doc normalizado por `rowToOramaDoc` (`Number(...) || 0`) tiene `deletedAt: number`, así que `isTrashedNote(doc)` equivale a `doc.deletedAt > 0` y unifica el criterio. Diferencia con el `=== 0` viejo solo para negativos, que no existen.
+- **E1-T2-b** — I4: las variantes viejas divergen del helper solo en valores que el schema de TinyBase no permite almacenar (`'5'`, `NaN`, `null`) o que no son timestamps (negativos); se adopta el comportamiento del helper en todos (tabla en § Avance T2).
+- **E1-T2-c** — `useTrashNotes` se migra con el helper pese a I3 (el contenido de la tab Papelera no cambia): el criterio es idéntico para todo valor almacenable; solo `NaN` pasaba antes por el `<= 0`, y TinyBase no lo guarda.
 
 ## Estacionadas para Sebastián
 
