@@ -1,6 +1,6 @@
 # SPEC — Etapa 2: Editor productivo
 
-> **Estado:** En curso (rama `feat/etapa2-editor`).
+> **Estado:** Cerrada (tags locales `e2-T0..T4`); pendiente de la aprobación de Sebastián para mergear a `main`.
 > **Origen / autorización:** Sebastián, 2026-10-03, eligió la opción 1 ("Editor productivo") de la propuesta de Etapa 2: _"y si tomare tu recomendacion"_ / _"Si procedamos"_. **Loop autorizado** (2026-10-03, cita textual): _"Apruebo el SPEC-71. Autorizado el loop para la Etapa 2, rama feat/etapa2-editor, commits y tags locales, sin push."_ > **Etiquetas:** locales `e2-T<n>`. **Nunca** `v*` (dispara `release.yml`). Sin push dentro de la etapa; al cerrar, el orquestador mergea a `main` con la aprobación de Sebastián (Docs/05 § 10).
 > **Rama:** `feat/etapa2-editor`.
 > **Release:** junto con la Etapa 1 (SPEC-70) forma el próximo release **0.6.1** (el release —tag, CI, deploy, changelog— es un paso aparte, a pedido de Sebastián).
@@ -199,4 +199,36 @@ _(una entrada por tanda, formato de `Spec/templates/SPEC-etapa.md`)_
 
 ## Resumen de cierre
 
-_(lo escribe el orquestador al cerrar la etapa)_
+**Qué quedó (2026-10-03, rama `feat/etapa2-editor`, tags `e2-T0..T4`):**
+
+- **T1:** en una línea vacía con el cursor aparece "Escribe / para ver comandos"; la nota vacía conserva "Escribe una idea...".
+- **T2:** botón "Insertar enlace" en Notas similares; inserta el wikilink donde estaba el cursor, se deshabilita si la nota ya está enlazada.
+- **T3:** "Convertir en nota" en el bubble menu: crea la nota con el contenido seleccionado y deja un wikilink en su lugar.
+- **T4:** los items de tarea pueden crear una tarea real ("Crear tarea") y quedan sincronizados en las dos direcciones con `/tasks`; el export usa el estado de la tarea.
+
+**Cada revisión encontró fallas reales, todas corregidas con control positivo:**
+
+- **T1:** pista en la posición equivocada.
+- **T2:** foco en móvil; un bloque de código que se partía en dos.
+- **T3:** cuelgue offline; selecciones de código o celdas; carrera de doble click.
+- **T4:** Enter al inicio de un item vinculado, que movía el vínculo; dos tests que no probaban nada; export con el check viejo.
+
+**Verificación:**
+
+- **`npm run verify`:** PASS en `e2-T4` (605 tests unitarios).
+- **`npm run e2e:ui`:** 3/3 verde. El primer intento falló en `desktop-1280` por timeout de `page.goto` con Vite en frío; el segundo pasó completo sin cambios.
+- **Recorrido en el emulador (1280/768/375):**
+  - pista de nota vacía y de línea vacía;
+  - "Crear tarea" (aparece con hover; `:has()` verificado en Chrome);
+  - tarea visible en `/tasks`; completarla ahí marca el check en la nota, y desmarcarlo en la nota la reabre en `/tasks`;
+  - Enter al inicio de un item vinculado conserva el vínculo con el texto;
+  - "Convertir en nota" muestra el aviso "Nota creada y enlazada" y deja el wikilink.
+- **Límites del recorrido:**
+  - **T2 sin probar en vivo:** el emulador no tiene la búsqueda semántica activa (el panel pide activarla), así que T2 queda cubierta por sus tests.
+  - **Touch no emulado:** el botón siempre visible en touch (`pointer: coarse`) no se emuló.
+  - **Árbol del DOM:** queda `ul > div.react-renderer > li` (NodeView de React); el árbol de accesibilidad sigue mostrando `list > listitem`, así que no se cambió.
+
+**Pendiente:**
+
+- Las decisiones E2-T1..T4 y las 3 estacionadas, para Sebastián.
+- El paso manual en Android, tras 0.6.1.
