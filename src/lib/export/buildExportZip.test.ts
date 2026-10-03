@@ -76,6 +76,35 @@ const data: ExportData = {
 };
 
 describe('buildExportZip', () => {
+  it('items de tarea vinculados: el check sale del estado de la tarea exportada', async () => {
+    const linked: ExportData = {
+      ...data,
+      notes: [
+        note('n3', 'Con tareas', {
+          type: 'doc',
+          content: [
+            {
+              type: 'taskList',
+              content: [
+                {
+                  type: 'taskItem',
+                  // `checked` persistido viejo (E2-T4-b): la tarea t2 está completada.
+                  attrs: { checked: false, taskId: 't2' },
+                  content: [{ type: 'paragraph', content: [{ type: 'text', text: 'vinculada' }] }],
+                },
+              ],
+            },
+          ],
+        }),
+      ],
+      tasks: [{ ...data.tasks[0]!, id: 't2', status: 'completed' }],
+      noteRefs: [{ id: 'n3', title: 'Con tareas' }],
+    };
+    const zip = await JSZip.loadAsync(await buildExportZip(linked, t));
+    const md = await zip.file('notas/Con tareas.md')!.async('string');
+    expect(md).toContain('- [x] vinculada');
+  });
+
   it('arma el zip con la estructura esperada y contenido correcto', async () => {
     const bytes = await buildExportZip(data, t);
     expect(bytes).toBeInstanceOf(Uint8Array);

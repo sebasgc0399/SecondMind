@@ -6,7 +6,8 @@ import StarterKit from '@tiptap/starter-kit';
 import TaskList from '@tiptap/extension-task-list';
 import { exportExtensions } from '@/lib/export/exportExtensions';
 import TaskItemLinked from '@/components/editor/extensions/task-item-linked';
-import { serializeNoteContent } from '@/lib/export/serializeNote';
+import { buildTaskCompletionLookup, serializeNoteContent } from '@/lib/export/serializeNote';
+import type { ExportTask } from '@/lib/export/exportTypes';
 
 // Extensión de schema compartida editor/export (SPEC-71 T4, I8): atributo `taskId`.
 
@@ -28,6 +29,22 @@ const item = (text: string, attrs: Record<string, unknown> = {}): JSONContent =>
   type: 'taskItem',
   attrs: { checked: false, ...attrs },
   content: [{ type: 'paragraph', content: [{ type: 'text', text }] }],
+});
+
+const exportTask = (id: string, status: string): ExportTask => ({
+  id,
+  name: id,
+  description: '',
+  status,
+  priority: 'medium',
+  dueDate: 0,
+  completedAt: 0,
+  projectId: '',
+  areaId: '',
+  objectiveId: '',
+  noteIds: [],
+  isArchived: false,
+  createdAt: 1,
 });
 
 const doc = (...items: JSONContent[]): JSONContent => ({
@@ -175,5 +192,26 @@ describe('export (I8) con el atributo taskId', () => {
         noResolve,
       ).trim(),
     ).toBe('- [x] hecho\n- [ ] pendiente');
+  });
+
+  it('con la tarea exportada: el check sale de su estado, no del `checked` persistido', () => {
+    const isTaskCompleted = buildTaskCompletionLookup([
+      exportTask('t-done', 'completed'),
+      exportTask('t-open', 'in-progress'),
+    ]);
+    expect(
+      serializeNoteContent(
+        doc(
+          // Persistidos viejos (E2-T4-b): al revés que sus tareas.
+          item('completada en tasks', { checked: false, taskId: 't-done' }),
+          item('reabierta en tasks', { checked: true, taskId: 't-open' }),
+          // Tarea borrada (no está en el export): el persistido.
+          item('tarea borrada', { checked: true, taskId: 't-gone' }),
+          item('local', { checked: true }),
+        ),
+        noResolve,
+        isTaskCompleted,
+      ).trim(),
+    ).toBe('- [x] completada en tasks\n- [ ] reabierta en tasks\n- [x] tarea borrada\n- [x] local');
   });
 });
