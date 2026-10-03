@@ -1,4 +1,5 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import { useTable } from 'tinybase/ui-react';
 import i18n from '@/lib/i18n';
 import { notesStore } from '@/stores/notesStore';
 import { isTrashedNote } from '@/lib/noteGuards';
@@ -29,10 +30,18 @@ interface UseSimilarNotesReturn {
 const SIMILARITY_THRESHOLD = 0.5;
 const MAX_RESULTS = 5;
 
+// Candidato puntuado sobre el umbral, sin filtrar por estado de la nota: el filtro
+// (papelera/archivada/sin row) se aplica al derivar contra la tabla reactiva.
+interface ScoredCandidate {
+  noteId: string;
+  score: number;
+}
+
 export default function useSimilarNotes(noteId: string): UseSimilarNotesReturn {
   const { user } = useAuth();
   const { consent, isLoaded: consentLoaded } = useSemanticConsent();
-  const [notes, setNotes] = useState<SimilarNote[]>([]);
+  const notesTable = useTable('notes', notesStore);
+  const [candidates, setCandidates] = useState<ScoredCandidate[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [noEmbedding, setNoEmbedding] = useState(false);
 
@@ -49,7 +58,7 @@ export default function useSimilarNotes(noteId: string): UseSimilarNotesReturn {
       // autoritativo). Sin consentimiento, los embeddings están purgados/ausentes:
       // no computamos similares y señalamos `disabled` para el prompt de activación.
       if (consentLoaded && !consent.enabled) {
-        setNotes([]);
+        setCandidates([]);
         setNoEmbedding(false);
         setIsLoading(false);
         return;
@@ -63,7 +72,7 @@ export default function useSimilarNotes(noteId: string): UseSimilarNotesReturn {
 
       if (!currentVector) {
         setNoEmbedding(true);
-        setNotes([]);
+        setCandidates([]);
         setIsLoading(false);
         return;
       }
@@ -73,23 +82,16 @@ export default function useSimilarNotes(noteId: string): UseSimilarNotesReturn {
 
       updateEmbeddingInCache(noteId, currentVector);
 
-      const scored: SimilarNote[] = [];
+      const scored: ScoredCandidate[] = [];
       for (const [otherId, otherVector] of cache) {
         if (otherId === noteId) continue;
         const score = cosineSimilarity(currentVector, otherVector);
-        if (score >= SIMILARITY_THRESHOLD) {
-          // Mismo criterio que useHybridSearch: el soft-delete no borra el embedding,
-          // así que se filtran papelera, archivadas y notas que ya no existen.
-          const row = notesStore.getRow('notes', otherId);
-          if (Object.keys(row).length === 0 || row.isArchived || isTrashedNote(row)) continue;
-          const title = (row.title as string) || i18n.t('common.untitled', 'Sin título');
-          scored.push({ noteId: otherId, title, score });
-        }
+        if (score >= SIMILARITY_THRESHOLD) scored.push({ noteId: otherId, score });
       }
 
       scored.sort((a, b) => b.score - a.score);
       if (!cancelled) {
-        setNotes(scored.slice(0, MAX_RESULTS));
+        setCandidates(scored);
         setIsLoading(false);
       }
     }
@@ -99,6 +101,22 @@ export default function useSimilarNotes(noteId: string): UseSimilarNotesReturn {
       cancelled = true;
     };
   }, [noteId, user, consent.enabled, consentLoaded]);
+
+  // Mismo criterio que useHybridSearch: el soft-delete no borra el embedding, así
+  // que se filtran papelera, archivadas y notas que ya no existen. Deriva de la
+  // tabla reactiva: si una similar va a la papelera (o se restaura) por sync, la
+  // lista se actualiza. El top-N se corta después de filtrar.
+  const notes = useMemo<SimilarNote[]>(() => {
+    const out: SimilarNote[] = [];
+    for (const { noteId: otherId, score } of candidates) {
+      const row = notesTable[otherId];
+      if (!row || row.isArchived || isTrashedNote(row)) continue;
+      const title = (row.title as string) || i18n.t('common.untitled', 'Sin título');
+      out.push({ noteId: otherId, title, score });
+      if (out.length === MAX_RESULTS) break;
+    }
+    return out;
+  }, [candidates, notesTable]);
 
   return { notes, isLoading, noEmbedding, disabled };
 }
