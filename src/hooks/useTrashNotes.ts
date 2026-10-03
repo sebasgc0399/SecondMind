@@ -2,6 +2,7 @@ import { useMemo } from 'react';
 import { useTable } from 'tinybase/ui-react';
 import { useStoreHydration } from '@/hooks/useStoreHydration';
 import usePreferences from '@/hooks/usePreferences';
+import { isTrashedNote } from '@/lib/noteGuards';
 import type { TrashNote } from '@/types/note';
 
 interface UseTrashNotesOpts {
@@ -36,8 +37,8 @@ export default function useTrashNotes(opts?: UseTrashNotesOpts): UseTrashNotesRe
     const allIds: string[] = [];
     const collected: TrashNote[] = [];
     for (const [noteId, row] of Object.entries(table)) {
-      const deletedAt = typeof row.deletedAt === 'number' ? row.deletedAt : 0;
-      if (deletedAt <= 0) continue;
+      if (!isTrashedNote(row)) continue;
+      const deletedAt = row.deletedAt as number;
 
       allIds.push(noteId);
 

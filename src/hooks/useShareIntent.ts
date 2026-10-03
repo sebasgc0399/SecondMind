@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
 import { isCapacitor } from '@/lib/capacitor';
+import { buildSharedContent } from '@/lib/buildSharedContent';
 import useQuickCapture from '@/hooks/useQuickCapture';
 
 export default function useShareIntent(): void {
@@ -15,16 +16,12 @@ export default function useShareIntent(): void {
       const { CapacitorShareTarget } = await import('@capgo/capacitor-share-target');
       if (cancelled) return;
       listenerHandle = await CapacitorShareTarget.addListener('shareReceived', (event) => {
-        const text = event.texts?.[0]?.trim() ?? '';
-        if (!text) return;
-        const isUrl = /^https?:\/\//i.test(text);
-        if (isUrl) {
-          const title = event.title?.trim();
-          const content = title && title !== text ? `${title}\n${text}` : text;
-          open(content, { source: 'share-intent', sourceUrl: text });
-        } else {
-          open(text, { source: 'share-intent' });
-        }
+        const shared = buildSharedContent(event);
+        if (!shared) return;
+        open(shared.content, {
+          source: 'share-intent',
+          ...(shared.sourceUrl ? { sourceUrl: shared.sourceUrl } : {}),
+        });
       });
     })();
 

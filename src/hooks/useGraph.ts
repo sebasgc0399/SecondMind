@@ -4,6 +4,7 @@ import useTheme from '@/hooks/useTheme';
 import i18n from '@/lib/i18n';
 import { getGraphColors } from '@/lib/theme-colors';
 import type { ParaType, NoteType } from '@/types/common';
+import { isTrashedNote } from '@/lib/noteGuards';
 import type { GraphNode, GraphEdge } from 'reagraph';
 
 function truncate(str: string, max: number): string {
@@ -41,7 +42,7 @@ export default function useGraph(filters: GraphFilters = DEFAULT_FILTERS): Graph
 
     for (const [noteId, row] of Object.entries(notesTable)) {
       if (row.isArchived === true || row.isArchived === 1) continue;
-      if (typeof row.deletedAt === 'number' && row.deletedAt > 0) continue;
+      if (isTrashedNote(row)) continue;
 
       const title =
         typeof row.title === 'string' && row.title

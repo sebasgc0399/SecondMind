@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import { useTable } from 'tinybase/ui-react';
 import { useStoreHydration } from '@/hooks/useStoreHydration';
+import { isTrashedNote } from '@/lib/noteGuards';
 
 export interface HubItem {
   noteId: string;
@@ -28,8 +29,8 @@ export default function useKnowledgeHubs(): {
 
     for (const [noteId, row] of Object.entries(table)) {
       if (row.isArchived === true || row.isArchived === 1) continue;
-      // Papelera: deletedAt > 0 (mismo criterio que useGraph); 0/ausente = no borrada.
-      if (typeof row.deletedAt === 'number' && row.deletedAt > 0) continue;
+      // Papelera: isTrashedNote (mismo criterio que useReviewQueue); 0/ausente = no borrada.
+      if (isTrashedNote(row)) continue;
       const linkCount = typeof row.linkCount === 'number' ? row.linkCount : 0;
       if (linkCount < MIN_HUB_LINKS) continue;
       const title = (typeof row.title === 'string' && row.title) || 'Sin título';

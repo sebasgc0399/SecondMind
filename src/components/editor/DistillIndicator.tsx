@@ -112,8 +112,8 @@ export default function DistillIndicator({ noteId, onOpenSummary }: DistillIndic
         </span>
       </Popover.Trigger>
       <Popover.Portal>
-        <Popover.Positioner sideOffset={8} align="end">
-          <Popover.Popup className="z-50 w-72 rounded-lg border border-border bg-card p-4 text-sm shadow-lg outline-none transition-[opacity,transform,scale] duration-200 data-ending-style:scale-95 data-ending-style:opacity-0 data-starting-style:scale-95 data-starting-style:opacity-0">
+        <Popover.Positioner sideOffset={8} align="end" className="z-50">
+          <Popover.Popup className="w-72 rounded-lg border border-border bg-card p-4 text-sm shadow-lg outline-none transition-[opacity,transform,scale] duration-200 data-ending-style:scale-95 data-ending-style:opacity-0 data-starting-style:scale-95 data-starting-style:opacity-0">
             <Popover.Title className="flex items-center gap-2 font-semibold text-foreground">
               <span
                 className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase ${meta.badgeClass}`}

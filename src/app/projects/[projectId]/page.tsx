@@ -9,10 +9,11 @@ import { notesRepo } from '@/infra/repos/notesRepo';
 import useAuth from '@/hooks/useAuth';
 import useProjects from '@/hooks/useProjects';
 import useTasks from '@/hooks/useTasks';
+import useProjectNotes from '@/hooks/useProjectNotes';
 import { useStoreHydration } from '@/hooks/useStoreHydration';
 import TaskCard from '@/components/tasks/TaskCard';
 import TaskInlineCreate from '@/components/tasks/TaskInlineCreate';
-import ProjectNoteList, { type LinkedNote } from '@/components/projects/ProjectNoteList';
+import ProjectNoteList from '@/components/projects/ProjectNoteList';
 import NoteLinkModal from '@/components/projects/NoteLinkModal';
 import { usePriorityLabels, useProjectStatusLabels } from '@/lib/entityLabels';
 import type { Priority, ProjectStatus } from '@/types/common';
@@ -26,7 +27,6 @@ export default function ProjectDetailPage() {
   const { user } = useAuth();
   const { projects, updateProject } = useProjects();
   const { tasks, createTask, updateTask, completeTask } = useTasks();
-  const notesTable = useTable('notes');
   const projectsTable = useTable('projects', 'projects');
   const [linkModalOpen, setLinkModalOpen] = useState(false);
   // Signal real de hidratación de stores. Reemplaza el grace arbitrario de
@@ -64,23 +64,8 @@ export default function ProjectDetailPage() {
     return map;
   }, [projectOptions]);
 
-  // Notas vinculadas: iterar notesTable y filtrar por projectIds
-  const linkedNotes = useMemo<LinkedNote[]>(() => {
-    if (!projectId) return [];
-    const out: LinkedNote[] = [];
-    for (const [id, row] of Object.entries(notesTable)) {
-      const projectIds = parseIds(row.projectIds as string | undefined);
-      if (!projectIds.includes(projectId)) continue;
-      out.push({
-        id,
-        title: ((row.title as string) || '').trim() || t('common.untitled', 'Sin título'),
-        paraType: (row.paraType as string) || 'resource',
-        noteType: (row.noteType as string) || 'fleeting',
-        updatedAt: Number(row.updatedAt) || 0,
-      });
-    }
-    return out.sort((a, b) => b.updatedAt - a.updatedAt);
-  }, [notesTable, projectId, t]);
+  // Notas vinculadas (sin las de la papelera)
+  const { linkedNotes, hasAnyNotes } = useProjectNotes(projectId);
 
   const linkedNoteIds = useMemo(() => linkedNotes.map((n) => n.id), [linkedNotes]);
 
@@ -88,9 +73,6 @@ export default function ProjectDetailPage() {
   const completed = projectTasks.filter((t) => t.status === 'completed').length;
   const total = projectTasks.length;
   const percent = total > 0 ? Math.round((completed / total) * 100) : 0;
-
-  // ¿Hay notas en el sistema? Si no, deshabilitar botón vincular
-  const hasAnyNotes = Object.keys(notesTable).length > 0;
 
   // Mientras los stores hidratan y todavía no aparece, mostramos skeleton.
   // Si terminaron de hidratar y sigue sin aparecer, el useEffect de arriba
