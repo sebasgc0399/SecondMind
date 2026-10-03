@@ -151,6 +151,14 @@ Los tres van en Portal (se renderizan en `body`), así que no hace falta wrapper
 - **Correcciones:** ninguna (aprobada sin fixer; tag puesto por el orquestador).
 - **Pendientes:** los 4 NITs de arriba.
 
+### T4 — Share intent con entidades HTML (en curso)
+
+- **Hecho:** `src/lib/decodeHtmlEntities.ts` (numéricas dec/hex `&#34;`/`&#x22;`/`&#X22;` y `quot amp lt gt apos nbsp`, una sola pasada con un `replace`, `String.fromCodePoint`, sin `DOMParser`; `&#0;`, `>0x10FFFF`, surrogates sueltos y nombres desconocidos quedan tal cual). `src/lib/buildSharedContent.ts`: función pura con la misma lógica que tenía `useShareIntent` (URL = `^https?://`, `content` = `título\nURL` salvo título vacío/igual a la URL, `sourceUrl` solo si es URL) más decodificación del título y del texto no-URL; devuelve `null` sin texto. El hook solo llama a la función y a `open` (sin otros cambios; nada en `android/`).
+- **Tipo del evento:** `@capgo/capacitor-share-target` declara `title: string` y `texts: string[]`; la función acepta además `undefined`/`null`.
+- **Commits:** ver `git log e1-T3..HEAD`.
+- **Control positivo (FAIL observado):** `buildSharedContent` con `decodeHtmlEntities` reemplazado por `String` (sin decodificar): fallan "decodifica entidades en el título de una URL compartida" y "texto que no es URL: decodifica…" (2/6). Decoder mutado a recursivo (loop hasta punto fijo): falla "decodifica una sola pasada (no recursivo)". Restaurado.
+- **Verificación:** `npm run verify` PASS a la primera (lint, typecheck x3, unit, guard, agents, rules, functions 130.7s, build). Sin flake. Sin procesos de emulador vivos tras el verify.
+
 _(una entrada por tanda, ver plantilla)_
 
 ## Decisiones del juez (a ratificar)
@@ -163,6 +171,9 @@ _(una entrada por tanda, ver plantilla)_
 
 - **E1-T3-a** — Los tres `Positioner` van en `Portal`, así que no se agrega wrapper `relative z-50` (aplica solo a elementos no portaleados como `TableToolbar`); el `z-50` en el Positioner basta porque el sidebar floating es z-30 y el Portal cuelga de `body`.
 - **E1-T3-b** — El chequeo estático exige solo "alguna clase `z-` en el `className` del Positioner" (incluye variantes `md:z-…`): verifica la causa de 22f7f3a sin fijar un valor concreto (I6).
+
+- **E1-T4-a** — La URL compartida NO se decodifica (ni `content` ni `sourceUrl`; solo el título y el texto no-URL). Chrome Android manda la URL cruda en `texts[0]`; las entidades aparecen en el título porque sale del `<title>` HTML. Decodificar la URL solo podría romper una query legítima (`?a=1&amp;b=2` literal) y cambiaría el `sourceUrl` guardado, que el SPEC pide mantener igual. Sin evidencia de URLs escapadas en el evento; si apareciera, se reabre. Fijado por el test "no decodifica la URL".
+- **E1-T4-b** — Texto no-URL compartido se decodifica tal como pide el SPEC, aunque un texto plano con un `&amp;` literal (raro) pasaría a `&`.
 
 ## Estacionadas para Sebastián
 
