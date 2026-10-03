@@ -1,7 +1,11 @@
 import { getText, getTextSerializersFromSchema, type JSONContent } from '@tiptap/core';
-import type { Node as ProseMirrorNode } from '@tiptap/pm/model';
+import { AllSelection, TextSelection, type EditorState } from '@tiptap/pm/state';
+import type { Node as ProseMirrorNode, ResolvedPos } from '@tiptap/pm/model';
 
-export const NOTE_TITLE_MAX_LENGTH = 80;
+// Mismo límite y misma forma de recorte que el guardado normal (`useNoteSave`:
+// `firstLine.slice(0, 200) || 'Sin título'`), así el título no cambia al primer guardado.
+export const NOTE_TITLE_MAX_LENGTH = 200;
+export const UNTITLED_NOTE_TITLE = 'Sin título';
 
 export interface SelectionNoteDraft {
   title: string;
@@ -10,10 +14,14 @@ export interface SelectionNoteDraft {
 }
 
 function truncateTitle(text: string): string {
-  // Array.from respeta pares sustitutos: no corta un emoji a la mitad.
-  const chars = Array.from(text);
-  if (chars.length <= NOTE_TITLE_MAX_LENGTH) return text;
-  return chars.slice(0, NOTE_TITLE_MAX_LENGTH).join('').trimEnd();
+  // Unidades UTF-16 como `useNoteSave` (`slice`), sin `trimEnd` para no divergir. Única
+  // diferencia: si el corte cae en medio de un emoji se descarta la mitad suelta.
+  const sliced = text.slice(0, NOTE_TITLE_MAX_LENGTH);
+  const lastCode = sliced.charCodeAt(sliced.length - 1);
+  if (sliced.length < text.length && lastCode >= 0xd800 && lastCode <= 0xdbff) {
+    return sliced.slice(0, -1);
+  }
+  return sliced;
 }
 
 function isEmptyParagraph(node: JSONContent): boolean {
@@ -29,18 +37,45 @@ function trimEmptyEdges(blocks: JSONContent[]): JSONContent[] {
   return blocks.slice(start, end);
 }
 
-function firstWikilinkTitle(blocks: JSONContent[]): string {
-  for (const block of blocks) {
-    if (block.type === 'wikilink') {
-      const title = (block.attrs?.noteTitle as string | undefined)?.trim();
-      if (title) return title;
-    }
-    if (Array.isArray(block.content)) {
-      const nested = firstWikilinkTitle(block.content);
-      if (nested) return nested;
-    }
+function hasWikilink(blocks: JSONContent[]): boolean {
+  return blocks.some(
+    (block) =>
+      (block.type === 'wikilink' && Boolean(block.attrs?.noteId)) ||
+      (Array.isArray(block.content) && hasWikilink(block.content)),
+  );
+}
+
+function cellDepth($pos: ResolvedPos): number {
+  for (let depth = $pos.depth; depth > 0; depth -= 1) {
+    const role = $pos.node(depth).type.spec.tableRole as string | undefined;
+    if (role === 'cell' || role === 'header_cell') return depth;
   }
-  return '';
+  return -1;
+}
+
+/**
+ * ¿La selección se puede convertir en nota? Solo texto (o toda la nota) no vacío que no
+ * toque un bloque de código (el reemplazo uniría el código al párrafo) y que no cruce
+ * celdas distintas de una tabla (el reemplazo borraría celdas). Una selección de nodo o
+ * de celdas (`CellSelection`) no es convertible.
+ */
+export function canConvertSelection(state: EditorState): boolean {
+  const { selection, doc } = state;
+  if (selection.empty) return false;
+  if (!(selection instanceof TextSelection) && !(selection instanceof AllSelection)) return false;
+
+  let touchesCode = false;
+  doc.nodesBetween(selection.from, selection.to, (node) => {
+    if (node.type.spec.code) touchesCode = true;
+    return !touchesCode;
+  });
+  if (touchesCode) return false;
+
+  const fromCell = cellDepth(selection.$from);
+  const toCell = cellDepth(selection.$to);
+  if (fromCell < 0 && toCell < 0) return true;
+  if (fromCell < 0 || toCell < 0) return false;
+  return selection.$from.before(fromCell) === selection.$to.before(toCell);
 }
 
 function hasTableAncestor(doc: ProseMirrorNode, pos: number): boolean {
@@ -53,7 +88,7 @@ function hasTableAncestor(doc: ProseMirrorNode, pos: number): boolean {
 
 /**
  * Convierte la selección [from, to] del documento en el borrador de una nota nueva:
- * título (primera línea de texto, máx. 80 caracteres), contenido TipTap JSON (conserva
+ * título (primera línea de texto, máx. 200 caracteres), contenido TipTap JSON (conserva
  * formato, listas y wikilinks) y texto plano derivado igual que en el guardado normal.
  *
  * - `slice(from, to, true)` incluye los padres, así un slice abierto (selección que
@@ -116,8 +151,9 @@ export function selectionToNoteDraft(
     .split('\n')
     .map((line) => line.trim())
     .find((line) => line.length > 0);
-  const rawTitle = firstLine ?? firstWikilinkTitle(blocks);
-  if (!rawTitle) return null;
-
-  return { title: truncateTitle(rawTitle), contentJson, contentPlain };
+  if (firstLine) return { title: truncateTitle(firstLine), contentJson, contentPlain };
+  // Solo wikilinks (sin texto propio): el wikilink no aporta texto a getText, así que el
+  // guardado normal titularía la nota 'Sin título'. Se usa ese mismo título desde el inicio.
+  if (hasWikilink(blocks)) return { title: UNTITLED_NOTE_TITLE, contentJson, contentPlain };
+  return null;
 }

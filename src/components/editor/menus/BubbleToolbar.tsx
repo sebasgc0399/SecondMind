@@ -14,9 +14,9 @@ import {
   Unlink,
   FilePlus2,
 } from 'lucide-react';
-import { AllSelection, TextSelection } from '@tiptap/pm/state';
 import { CellSelection } from '@tiptap/pm/tables';
 import LinkInput from '@/components/editor/menus/LinkInput';
+import { canConvertSelection } from '@/components/editor/extensions/selection-to-note';
 import useConvertSelectionToNote, {
   type ConvertSelectionResult,
 } from '@/hooks/useConvertSelectionToNote';
@@ -56,12 +56,8 @@ export default function BubbleToolbar({ editor, onConvertResult }: BubbleToolbar
       isLink: editor?.isActive('link') ?? false,
       linkHref: (editor?.getAttributes('link').href as string | undefined) ?? '',
       selectionEmpty: editor?.state.selection.empty ?? true,
-      // Solo texto (o toda la nota): una selección de nodo/celdas no es convertible.
-      canConvert:
-        !!editor &&
-        !editor.state.selection.empty &&
-        (editor.state.selection instanceof TextSelection ||
-          editor.state.selection instanceof AllSelection),
+      // Solo texto (o toda la nota) sin código ni celdas distintas de tabla (E2-T3-g).
+      canConvert: !!editor && canConvertSelection(editor.state),
     }),
   });
 

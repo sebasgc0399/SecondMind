@@ -4,9 +4,13 @@ import StarterKit from '@tiptap/starter-kit';
 import TaskList from '@tiptap/extension-task-list';
 import TaskItem from '@tiptap/extension-task-item';
 import { TableKit } from '@tiptap/extension-table';
+import { AllSelection, EditorState, NodeSelection, TextSelection } from '@tiptap/pm/state';
+import { CellSelection } from '@tiptap/pm/tables';
 import Wikilink from '@/components/editor/extensions/wikilink';
 import {
   NOTE_TITLE_MAX_LENGTH,
+  UNTITLED_NOTE_TITLE,
+  canConvertSelection,
   selectionToNoteDraft,
 } from '@/components/editor/extensions/selection-to-note';
 import type { Node as ProseMirrorNode } from '@tiptap/pm/model';
@@ -121,32 +125,43 @@ describe('selectionToNoteDraft', () => {
     expect(draft.title).toBe('ver esto y  fin');
   });
 
-  it('selección que es solo un wikilink: el título sale de la nota enlazada', () => {
+  it('selección que es solo un wikilink: título "Sin título", igual que el guardado normal', () => {
     const doc = build(
       p(text('a '), { type: 'wikilink', attrs: { noteId: 'x1', noteTitle: 'Idea X' } }),
     );
     const draft = selectionToNoteDraft(doc, posOf(doc, 'a ', 2), doc.content.size - 1)!;
-    expect(draft.title).toBe('Idea X');
+    // El wikilink no aporta texto: useNoteSave calcularía `'' || 'Sin título'`.
+    expect(draft.contentPlain).toBe('');
+    expect(draft.title).toBe(UNTITLED_NOTE_TITLE);
+    expect(UNTITLED_NOTE_TITLE).toBe('Sin título');
   });
 
-  it('recorta el título a 80 caracteres', () => {
-    const long = 'x'.repeat(200);
+  it('recorta el título a 200 caracteres', () => {
+    const long = 'x'.repeat(300);
     const doc = build(p(text(long)));
     const draft = selectionToNoteDraft(doc, 1, 1 + long.length)!;
     expect(draft.title).toHaveLength(NOTE_TITLE_MAX_LENGTH);
-    expect(NOTE_TITLE_MAX_LENGTH).toBe(80);
+    expect(NOTE_TITLE_MAX_LENGTH).toBe(200);
     // El contenido NO se recorta: solo el título.
-    expect(draft.contentPlain).toHaveLength(200);
+    expect(draft.contentPlain).toHaveLength(300);
   });
 
-  it('el recorte no parte un emoji ni deja espacio final', () => {
-    const value = 'a'.repeat(79) + '😀 resto';
+  it('el título coincide con el que calcula useNoteSave (firstLine.slice(0, 200))', () => {
+    // Fórmula de useNoteSave.save: primera línea de getText, trim, slice(0, 200).
+    const saveTitle = (plain: string) =>
+      (plain.split('\n', 1)[0]?.trim() ?? '').slice(0, 200) || 'Sin título';
+    for (const value of ['  corto  ', 'b'.repeat(199) + ' c', 'palabra '.repeat(40)]) {
+      const doc = build(p(text(value)), p(text('segunda línea')));
+      const draft = selectionToNoteDraft(doc, 0, doc.content.size)!;
+      expect(draft.title).toBe(saveTitle(draft.contentPlain));
+    }
+  });
+
+  it('el recorte no parte un emoji a la mitad', () => {
+    const value = 'a'.repeat(199) + '😀 resto';
     const doc = build(p(text(value)));
     const draft = selectionToNoteDraft(doc, 1, 1 + value.length)!;
-    expect(draft.title).toBe('a'.repeat(79) + '😀');
-    const spaced = 'b'.repeat(79) + ' c';
-    const doc2 = build(p(text(spaced)));
-    expect(selectionToNoteDraft(doc2, 1, 1 + spaced.length)!.title).toBe('b'.repeat(79));
+    expect(draft.title).toBe('a'.repeat(199));
   });
 
   it('el título es la primera línea con texto, no el primer párrafo vacío', () => {
@@ -191,5 +206,98 @@ describe('selectionToNoteDraft', () => {
     const doc = build(p(text('hola   mundo')));
     expect(selectionToNoteDraft(doc, 3, 3)).toBeNull();
     expect(selectionToNoteDraft(doc, 6, 8)).toBeNull();
+  });
+});
+
+describe('canConvertSelection (visibilidad del botón)', () => {
+  const cell = (value: string): JSONContent => ({ type: 'tableCell', content: [p(text(value))] });
+  const table = (...rows: JSONContent[][]): JSONContent => ({
+    type: 'table',
+    content: rows.map((cells) => ({ type: 'tableRow', content: cells })),
+  });
+  const code = (value: string): JSONContent => ({ type: 'codeBlock', content: [text(value)] });
+  const withText = (doc: ProseMirrorNode, from: number, to: number) =>
+    EditorState.create({ doc, selection: TextSelection.create(doc, from, to) });
+
+  it('texto dentro de un párrafo: visible', () => {
+    const doc = build(p(text('hola mundo')));
+    const [from, to] = rangeOf(doc, 'mundo');
+    expect(canConvertSelection(withText(doc, from, to))).toBe(true);
+  });
+
+  it('selección vacía: oculto', () => {
+    const doc = build(p(text('hola')));
+    expect(canConvertSelection(withText(doc, 2, 2))).toBe(false);
+  });
+
+  it('párrafo hasta la mitad de un bloque de código: oculto', () => {
+    const doc = build(p(text('texto normal')), code('const x = 1;'));
+    expect(canConvertSelection(withText(doc, posOf(doc, 'normal'), posOf(doc, 'const', 5)))).toBe(
+      false,
+    );
+  });
+
+  it('párrafos que envuelven un bloque de código entero: oculto', () => {
+    const doc = build(p(text('antes')), code('x'), p(text('después')));
+    expect(canConvertSelection(withText(doc, posOf(doc, 'antes'), posOf(doc, 'después', 3)))).toBe(
+      false,
+    );
+  });
+
+  it('dentro de una misma celda: visible', () => {
+    const doc = build(table([cell('alfa uno'), cell('beta dos')]));
+    const [from, to] = rangeOf(doc, 'uno');
+    expect(canConvertSelection(withText(doc, from, to))).toBe(true);
+  });
+
+  it('entre dos celdas de la misma fila: oculto', () => {
+    const doc = build(table([cell('alfa uno'), cell('beta dos')]), p(text('después')));
+    expect(canConvertSelection(withText(doc, posOf(doc, 'uno'), posOf(doc, 'beta', 4)))).toBe(
+      false,
+    );
+  });
+
+  it('entre celdas de filas distintas: oculto', () => {
+    const doc = build(table([cell('a1'), cell('b1')], [cell('a2'), cell('b2')]));
+    expect(canConvertSelection(withText(doc, posOf(doc, 'b1'), posOf(doc, 'a2', 2)))).toBe(false);
+  });
+
+  it('desde una celda hasta el párrafo de después: oculto', () => {
+    const doc = build(
+      p(text('antes')),
+      table([cell('alfa uno'), cell('beta dos')]),
+      p(text('después fin')),
+    );
+    expect(canConvertSelection(withText(doc, posOf(doc, 'uno'), posOf(doc, 'después', 7)))).toBe(
+      false,
+    );
+  });
+
+  it('selección de nodo y de celdas: oculto', () => {
+    const doc = build(p(text('uno')), table([cell('a1'), cell('b1')]));
+    const tablePos = doc.child(0).nodeSize;
+    const nodeState = EditorState.create({ doc, selection: NodeSelection.create(doc, tablePos) });
+    expect(canConvertSelection(nodeState)).toBe(false);
+
+    const firstCell = doc.resolve(tablePos + 2);
+    const secondCell = doc.resolve(tablePos + 2 + doc.child(1).child(0).child(0).nodeSize);
+    const cellState = EditorState.create({
+      doc,
+      selection: new CellSelection(firstCell, secondCell),
+    });
+    expect(canConvertSelection(cellState)).toBe(false);
+  });
+
+  it('toda la nota (AllSelection) sin código: visible; con código: oculto', () => {
+    const plain = build(p(text('uno')), p(text('dos')));
+    expect(
+      canConvertSelection(EditorState.create({ doc: plain, selection: new AllSelection(plain) })),
+    ).toBe(true);
+    const withCode = build(p(text('uno')), code('x'));
+    expect(
+      canConvertSelection(
+        EditorState.create({ doc: withCode, selection: new AllSelection(withCode) }),
+      ),
+    ).toBe(false);
   });
 });
