@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect } from 'react';
 import { useNavigate } from 'react-router';
 import { Check } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
@@ -22,11 +22,10 @@ import DistillLevelBanner from '@/components/editor/DistillLevelBanner';
 import EditorSuggestionBanner from '@/components/editor/EditorSuggestionBanner';
 import SaveErrorBanner from '@/components/editor/SaveErrorBanner';
 import SummaryL3 from '@/components/editor/SummaryL3';
+import ConvertNotice from '@/components/editor/ConvertNotice';
 import useNoteSave, { type SaveStatus } from '@/hooks/useNoteSave';
-import type { ConvertSelectionResult } from '@/hooks/useConvertSelectionToNote';
+import useConvertNotice from '@/hooks/useConvertNotice';
 import type { Editor, JSONContent } from '@tiptap/core';
-
-const CONVERT_NOTICE_MS = 3000;
 
 interface NoteEditorProps {
   noteId: string;
@@ -99,17 +98,7 @@ export default function NoteEditor({
 
   const { status, summaryL3, setSummaryL3 } = useNoteSave(noteId, editor, initialSummaryL3);
 
-  // Aviso efímero de "Convertir en nota" (no hay librería de toasts: mismo patrón que
-  // el badge "Guardado", estado + timer). 'noop' no avisa.
-  const [convertNotice, setConvertNotice] = useState<'done' | 'error' | null>(null);
-  const handleConvertResult = useCallback((result: ConvertSelectionResult) => {
-    setConvertNotice(result === 'noop' ? null : result);
-  }, []);
-  useEffect(() => {
-    if (!convertNotice) return;
-    const timerId = window.setTimeout(() => setConvertNotice(null), CONVERT_NOTICE_MS);
-    return () => window.clearTimeout(timerId);
-  }, [convertNotice]);
+  const { notice: convertNotice, handleConvertResult } = useConvertNotice();
 
   const handleClick = useCallback(
     (event: React.MouseEvent<HTMLDivElement>) => {
@@ -129,19 +118,7 @@ export default function NoteEditor({
       <div className="mx-auto flex w-full max-w-180 items-center justify-between gap-3 px-4 py-2">
         <div className="flex min-w-0 items-center gap-2">{headerSlot}</div>
         <div className="flex shrink-0 items-center gap-3">
-          <div role="status" aria-live="polite">
-            {convertNotice === 'done' && (
-              <span className="inline-flex items-center gap-1 text-xs text-primary">
-                <Check className="h-3 w-3" aria-hidden />
-                {t('editor.bubble.convertToNoteDone', 'Nota creada y enlazada')}
-              </span>
-            )}
-            {convertNotice === 'error' && (
-              <span className="text-xs text-destructive">
-                {t('editor.save.error', 'Error al guardar')}
-              </span>
-            )}
-          </div>
+          <ConvertNotice notice={convertNotice} />
           <SaveIndicator status={status} />
         </div>
       </div>
