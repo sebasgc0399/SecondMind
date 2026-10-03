@@ -1,8 +1,7 @@
 # SPEC — Etapa 2: Editor productivo
 
 > **Estado:** En curso (rama `feat/etapa2-editor`).
-> **Origen / autorización:** Sebastián, 2026-10-03, eligió la opción 1 ("Editor productivo") de la propuesta de Etapa 2: _"y si tomare tu recomendacion"_ / _"Si procedamos"_. **Loop autorizado** (2026-10-03, cita textual): _"Apruebo el SPEC-71. Autorizado el loop para la Etapa 2, rama feat/etapa2-editor, commits y tags locales, sin push."_
-> **Etiquetas:** locales `e2-T<n>`. **Nunca** `v*` (dispara `release.yml`). Sin push dentro de la etapa; al cerrar, el orquestador mergea a `main` con la aprobación de Sebastián (Docs/05 § 10).
+> **Origen / autorización:** Sebastián, 2026-10-03, eligió la opción 1 ("Editor productivo") de la propuesta de Etapa 2: _"y si tomare tu recomendacion"_ / _"Si procedamos"_. **Loop autorizado** (2026-10-03, cita textual): _"Apruebo el SPEC-71. Autorizado el loop para la Etapa 2, rama feat/etapa2-editor, commits y tags locales, sin push."_ > **Etiquetas:** locales `e2-T<n>`. **Nunca** `v*` (dispara `release.yml`). Sin push dentro de la etapa; al cerrar, el orquestador mergea a `main` con la aprobación de Sebastián (Docs/05 § 10).
 > **Rama:** `feat/etapa2-editor`.
 > **Release:** junto con la Etapa 1 (SPEC-70) forma el próximo release **0.6.1** (el release —tag, CI, deploy, changelog— es un paso aparte, a pedido de Sebastián).
 
@@ -105,13 +104,14 @@ Modelos (Docs/05 § 3): T1–T2 writer y fixer `sonnet`; T3 writer `sonnet`, fix
 
 _(una entrada por tanda, formato de `Spec/templates/SPEC-etapa.md`)_
 
-### T1 — Pista de comandos en líneas vacías (en curso)
+### T1 — Pista de comandos en líneas vacías (e2-T1)
 
 - **Qué se hizo:** `Placeholder` usa una función por nodo delegada a `resolvePlaceholderText` (`extensions/placeholder-text.ts`, pura): nota vacía → `editor.placeholder`; párrafo vacío de primer nivel con el cursor en nota con contenido → `editor.placeholderEmptyLine`; headings, código, tablas, listas, citas e items de tarea → `''`. CSS: `p.is-empty::before` solo con `.ProseMirror-focused`; el de nota vacía queda siempre visible. Claves es/en y `resources.d.ts` regenerado.
 - **Commits:** `c794a4f` feat(editor): pista de comandos '/' en líneas vacías.
 - **Verificación:** `vitest placeholder-text.test.ts`: 7/7 PASS. Control positivo por mutación: línea vacía devolviendo `''` (comportamiento anterior) → FAIL "párrafo vacío en nota con contenido"; sin guard de primer nivel → 3 FAIL (tabla, taskItem, lista/cita); sin guard `paragraph` → 2 FAIL (heading, codeBlock); archivo restaurado. `npm run verify`: PASS (lint, typecheck x3, unit, guard, agents, rules, functions, build).
-- **Revisión:** _(pendiente)_
-- **Correcciones:** _(pendiente)_
+- **Revisión:** APROBADA CON CORRECCIONES. MINOR: nota con solo párrafos vacíos (`[p, p]`, cursor en la 2ª) mostraba el texto de nota vacía en la línea 2 y nunca la pista "/". NIT: `resources.d.ts` sin formato. NIT: faltaba prueba de integración con un `Editor` real.
+- **Correcciones:** (1) `resolvePlaceholderText` devuelve el texto de nota vacía solo si `pos === 0`; el resto cae en la regla de párrafo de primer nivel. Test unitario nuevo `[p, p]` segunda línea; control positivo: sin el arreglo FAIL (`expected 'DOC' to be 'LINE'`), con el arreglo PASS. (2) `prettier --write` a `resources.d.ts` (diff vs `e2-T0`: solo las claves reales; incluye 2 claves de export que el generador ya traía desactualizadas). (3) Test de integración `placeholder-integration.test.ts` con `Editor` real en jsdom (stubs de `elementFromPoint`, `Range.getClientRects/getBoundingClientRect`): nota vacía, `[p, p]`, línea tras contenido, celda de tabla y taskItem sin decoración, `getJSON()` sin rastro. Para compartir la config se extrajo `createPlaceholderExtension` a `extensions/placeholder-config.ts` (sin cambio de comportamiento; `NoteEditor` la usa). Control positivo de la integración: revirtiendo el fix, FAIL en `[p, p]` (más el unitario).
+- **Verificación (post-correcciones):** `npm run verify` PASS (lint, typecheck x3, unit 503/503 en 76 archivos, guard, agents, rules, functions, build).
 - **Pendientes:** verificación visual en emulador (375/768/1280) NO hecha: el MCP de Playwright no conectó en esta sesión; queda para el cierre de etapa (I7). Revisar mobile con teclado virtual y que la pista no aparezca en modo solo-lectura (`showOnlyWhenEditable` de la extensión lo cubre por defecto).
 
 ## Decisiones del juez (a ratificar)

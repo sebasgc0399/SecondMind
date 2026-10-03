@@ -27,7 +27,9 @@ export function resolvePlaceholderText({
   isEmptyDoc,
   texts,
 }: ResolvePlaceholderArgs): string {
-  if (isEmptyDoc) return texts.emptyDoc;
+  // Nota vacía: el texto de "idea" solo va en el primer bloque; las demás líneas
+  // vacías caen en la regla de párrafo de primer nivel.
+  if (isEmptyDoc && pos === 0) return texts.emptyDoc;
   // Solo párrafos de primer nivel: nunca dentro de bloques de código, tablas,
   // items de tarea, listas o citas, ni en headings vacíos.
   if (node.type.name !== 'paragraph') return '';

@@ -49,6 +49,20 @@ describe('resolvePlaceholderText', () => {
     expect(resolveFor(doc, 'paragraph', false)).toBe('LINE');
   });
 
+  it('solo párrafos vacíos, segunda línea → pista de línea, no la de nota vacía', () => {
+    const doc = docOf([{ type: 'paragraph' }, { type: 'paragraph' }]);
+    const second = doc.child(0).nodeSize;
+    expect(
+      resolvePlaceholderText({
+        node: doc.child(1),
+        pos: second,
+        doc,
+        isEmptyDoc: true,
+        texts,
+      }),
+    ).toBe('LINE');
+  });
+
   it('heading vacío → sin pista', () => {
     const doc = docOf([textParagraph, { type: 'heading', attrs: { level: 2 } }]);
     expect(resolveFor(doc, 'heading', false)).toBe('');
