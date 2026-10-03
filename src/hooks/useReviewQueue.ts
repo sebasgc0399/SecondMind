@@ -21,7 +21,7 @@ export default function useReviewQueue(): {
 
     for (const [id, row] of Object.entries(table)) {
       if (row.isArchived === true || row.isArchived === 1) continue;
-      // Papelera: deletedAt > 0 (mismo criterio que useKnowledgeHubs); 0/ausente = no borrada.
+      // Papelera: isTrashedNote (mismo criterio que useKnowledgeHubs); 0/ausente = no borrada.
       if (isTrashedNote(row)) continue;
       const fsrsDue = typeof row.fsrsDue === 'number' ? row.fsrsDue : 0;
       if (fsrsDue <= 0 || fsrsDue > todayEnd) continue;

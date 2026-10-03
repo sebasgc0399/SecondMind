@@ -29,7 +29,7 @@ export default function useKnowledgeHubs(): {
 
     for (const [noteId, row] of Object.entries(table)) {
       if (row.isArchived === true || row.isArchived === 1) continue;
-      // Papelera: deletedAt > 0 (mismo criterio que useGraph); 0/ausente = no borrada.
+      // Papelera: isTrashedNote (mismo criterio que useReviewQueue); 0/ausente = no borrada.
       if (isTrashedNote(row)) continue;
       const linkCount = typeof row.linkCount === 'number' ? row.linkCount : 0;
       if (linkCount < MIN_HUB_LINKS) continue;
