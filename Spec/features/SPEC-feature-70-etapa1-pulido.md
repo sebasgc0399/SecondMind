@@ -88,13 +88,21 @@ Modelos (Docs/05 § 3): todas las tandas son de riesgo bajo → writer y fixer `
 
 ## Avance
 
-### T1 — Papelera: helper y fugas (en curso)
+### T1 — Papelera: helper y fugas (e1-T1)
 
 - **Hecho:** `src/lib/noteGuards.ts` (`isTrashedNote`/`isLiveNote`, no-número = viva). Proyecto: derivación extraída a `useProjectNotes` (excluye papelera; `hasAnyNotes` solo vivas), la página lo consume. `useBacklinks`: salta orígenes en papelera o ausentes de `notes` (ya dependía de `useTable('notes')`, así que restaurar reaparece; panel y contador del toggle usan el mismo hook, `NoteEditorContainer.tsx:46,156`). `useSimilarNotes`: excluye papelera, archivadas y notas sin row. No se migraron otros consumidores (T2).
 - **Commits:** 874f540 (helper), 5a880f1 (proyecto), 5974580 (backlinks), a97cfc6 (similares).
 - **Verificación:** `npm run verify` PASS (unit 63 archivos / 461 tests; rules, functions 62 tests, build). Un primer verify falló solo en `functions` por timeout de carga de funciones del emulador ("Timeout after 10000", sin tocar `src/functions`); `test:functions` aislado pasó 62/62 y el verify completo repetido PASS.
 - **Controles positivos (FAIL observado):** helper con `> 0` → `>= 0`: 1 test falla; `useProjectNotes` sin filtro: 3/3 fallan; `useBacklinks` sin el chequeo de papelera (manteniendo el de ausente): fallan "papelera" y "restaurar"; `useSimilarNotes` sin filtro papelera/archivada: recibe `papelera` y `archivada`; sin chequeo de row vacía: recibe `purgada`.
 - **Pendientes:** ninguno de T1. T2 migra el resto de variantes.
+- **Revisión:** APROBADA CON CORRECCIONES (2 MINOR + 2 NIT).
+  - MINOR 1 — `useSimilarNotes.test.tsx`: el mock de `useAuth` creaba un `user` por render → bucle de renders ("Maximum update depth").
+  - MINOR 2 — `useSimilarNotes.ts`: el filtro de papelera leía `notesStore` una vez; no reaccionaba a papelera/restauración por sync.
+  - NIT — `useBacklinks.ts:33`: `notesTable[sourceId]?.title` → `sourceRow.title`.
+  - NIT — `useProjectNotes.test.tsx`: aviso de react-i18next por falta de instancia.
+- **Correcciones:** a6453be (`user` fijo vía `vi.hoisted`; candidatos id+score sobre el umbral en estado, filtro papelera/archivada/sin row al derivar con `useTable('notes', notesStore)`, top-N cortado después de filtrar; 2 tests de reactividad), db7c44a (backlinks), f0e29b3 (i18n).
+- **Desviación:** NIT i18n — no existe ningún `vi.mock('react-i18next')` en el repo; el patrón vigente es inicializar la instancia real con `initTestI18n()` (`src/test/i18n.ts`, usado en `HabitRow.test.tsx` y otros). Se usó ese en vez de un mock.
+- **Verificación correcciones:** control positivo — los 2 tests nuevos de reactividad fallan contra el código previo (`expected [viva] to deeply equal []` y `expected ['viva'] to deeply equal ['papelera','purgada','viva']`), con `user` ya fijo. `vitest run` de los 3 archivos: 10/10, 0 líneas "Maximum update depth" / "i18next instance". `npm run verify` PASS a la primera (unit 63 archivos / 463 tests, rules, functions, build).
 
 _(una entrada por tanda, ver plantilla)_
 
