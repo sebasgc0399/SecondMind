@@ -109,17 +109,18 @@ Modelos (Docs/05 § 3): todas las tandas son de riesgo bajo → writer y fixer `
 - **Hecho:** los consumidores de vista usan `isTrashedNote` en vez de las variantes sueltas: `useGraph`, `useKnowledgeHubs`, `useReviewQueue`, `useGlobalSearch` (2 sitios), `useOnboarding`, `useHybridSearch.getNoteDoc`, `useTrashNotes` (inversa: `!isTrashedNote(row)` y luego `row.deletedAt as number`), `useNoteSearch` (3 sitios), `RecentNotesCard`, `wikilink-suggestion`. Sin cambio de dependencias de memos ni de infraestructura (I3).
 - **I4 — equivalencia (viejo -> helper, `true` = papelera):**
 
-| valor | `typeof n && > 0` (Graph/Hubs/Review) | `(x as number) > 0` (GlobalSearch) | `!row.deletedAt` (Onboarding) | `=== 0` viva (Orama) | `<= 0` con coerción (Trash) | helper |
-| --- | --- | --- | --- | --- | --- | --- |
-| `undefined` | no | no | no | n/a (Orama da 0) | no | no |
-| `0` | no | no | no | no | no | no |
-| `> 0` | si | si | si | si | si | si |
-| `null` | no | no | no | n/a | no | no |
-| `'5'` | no | **si** | **si** | n/a (Orama da 5: si) | no | no |
-| `NaN` | no | no | no | n/a (Orama da 0) | **si** | no |
-| `-1` | no | no | **si** | **si** | no | no |
+| valor       | `typeof n && > 0` (Graph/Hubs/Review) | `(x as number) > 0` (GlobalSearch) | `!row.deletedAt` (Onboarding) | `=== 0` viva (Orama) | `<= 0` con coerción (Trash) | helper |
+| ----------- | ------------------------------------- | ---------------------------------- | ----------------------------- | -------------------- | --------------------------- | ------ |
+| `undefined` | no                                    | no                                 | no                            | n/a (Orama da 0)     | no                          | no     |
+| `0`         | no                                    | no                                 | no                            | no                   | no                          | no     |
+| `> 0`       | si                                    | si                                 | si                            | si                   | si                          | si     |
+| `null`      | no                                    | no                                 | no                            | n/a                  | no                          | no     |
+| `'5'`       | no                                    | **si**                             | **si**                        | n/a (Orama da 5: si) | no                          | no     |
+| `NaN`       | no                                    | no                                 | no                            | n/a (Orama da 0)     | **si**                      | no     |
+| `-1`        | no                                    | no                                 | **si**                        | **si**               | no                          | no     |
 
-  Las filas con valor no numérico o negativo no pueden existir hoy: verificado ejecutando `setCell` contra un store con el schema `deletedAt: { type: 'number', default: 0 }` — `NaN`, `'5'`, `null` e `Infinity` se rechazan (queda 0); solo `-1` se almacena, y los timestamps son positivos. Las variantes divergentes solo difieren en esos valores imposibles. Se adopta el helper en todos.
+Las filas con valor no numérico o negativo no pueden existir hoy: verificado ejecutando `setCell` contra un store con el schema `deletedAt: { type: 'number', default: 0 }` — `NaN`, `'5'`, `null` e `Infinity` se rechazan (queda 0); solo `-1` se almacena, y los timestamps son positivos. Las variantes divergentes solo difieren en esos valores imposibles. Se adopta el helper en todos.
+
 - **Verificación:** `npm run verify` PASS a la primera (lint, typecheck x3, unit, guard, agents, rules, functions 120.7s, build). Sin flake de `functions`. Se agregaron `useGraph.test.tsx`, `useTrashNotes.test.tsx` y `useGlobalSearch.test.tsx` (los tres consumidores no tenían cobertura de papelera).
 - **`deletedAt` restante en `src/hooks`/`src/components` (sin tests):** comentarios en `useKnowledgeHubs`/`useReviewQueue`/`useOnboarding`; `useNote.ts:97-98` (lectura one-shot de Firestore al abrir la nota, no es vista sobre el store; fuera de alcance); `useTrashNotes` (valor `deletedAt` para días restantes/orden, el criterio ya usa el helper); `wikilink-suggestion.ts:34` (normalización `Number(row.deletedAt) || 0` al armar el doc de Orama).
 - **Control positivo:** helper con `> 0` -> `>= 0`: fallan tests de `useKnowledgeHubs`, `useReviewQueue`, `useGraph`, `useGlobalSearch`, `useTrashNotes` (5 consumidores migrados distintos, además de `useBacklinks`, `useProjectNotes`, `useSimilarNotes` y `noteGuards`).
@@ -130,6 +131,21 @@ Modelos (Docs/05 § 3): todas las tandas son de riesgo bajo → writer y fixer `
 - **Control positivo (inversión `!isTrashedNote` -> `isTrashedNote` por sitio, FAIL y restaurado):** `useOnboarding.ts:68` FAIL (`expected true to be false`); `useHybridSearch.ts:44` FAIL (`expected ['papelera'] to deeply equal ['viva']`); `useNoteSearch.ts:42` FAIL (test con query); `useNoteSearch.ts:65` FAIL (test sin query); `useNoteSearch.ts:81` FAIL (test con query); `RecentNotesCard.tsx:21` FAIL; `wikilink-suggestion.ts:38` FAIL.
 - **Verificación correcciones:** `npx vitest run`: 71 archivos / 473 tests pasan. Primer `npm run verify` FAIL solo en lint (`import/order` en `useOnboarding.test.tsx`, corregido con `eslint --fix`); segunda corrida `npm run verify` PASS (lint, typecheck x3, unit, guard, agents, rules, functions 115.2s, build). Sin flake de `functions`.
 
+### T3 — Popovers detrás del sidebar (en curso)
+
+- **Hecho:** `DistillIndicator.tsx`: `z-50` movido del `Popover.Popup` al `Popover.Positioner`. Barrido de `*.Positioner` en `src/components` y `src/app` (los tres existentes; `src/components/ui/` y `src/app/` no tienen ninguno):
+
+| archivo                                     | z-index                     | Portal | acción               |
+| ------------------------------------------- | --------------------------- | ------ | -------------------- |
+| `editor/DistillIndicator.tsx:115`           | estaba en el Popup (inerte) | si     | movido al Positioner |
+| `layout/PendingSyncIndicator.tsx:155`       | Positioner `z-50`           | si     | sin cambios          |
+| `editor/nodeviews/CodeBlockNodeView.tsx:70` | Positioner `z-50`           | si     | sin cambios          |
+
+Los tres van en Portal (se renderizan en `body`), así que no hace falta wrapper `relative z-50` (patrón de `TableToolbar`, que no aplica a popups portaleados). Test estático `src/components/positioners.test.ts`: lee los `.tsx` de `src/components` y `src/app` (sin `ui/`) y falla con `archivo:línea` si un `<X.Positioner` no tiene clase `z-` en su `className` (respeta tags multilínea y llaves).
+
+- **Verificación visual (emulador, 1280x800, nota `nota-zettelkasten`, sidebar de 256px visible):** el popup de Distill auto-abre sobre la nota y se superpone con el sidebar de forma natural (popup `left=73, w=288`, sidebar `0..256`), sin forzar viewport. Grilla 3x3 de `elementFromPoint` sobre el popup: SIN el arreglo, 6/9 puntos (las dos columnas izquierdas) devuelven elementos del sidebar (`H3`, `A`, `SPAN`); CON el arreglo (HMR), 9/9 dentro del popup, `z-index` computado del Positioner = 50. Captura "después": `distill-after.png` en el scratchpad (la captura "antes" no se pudo guardar: Playwright restringe la ruta de salida; la medición numérica de "antes" sí quedó registrada).
+- **Control positivo:** test estático contra `DistillIndicator` original: FAIL `src/components/editor/DistillIndicator.tsx:115`; con el arreglo, 2/2.
+
 _(una entrada por tanda, ver plantilla)_
 
 ## Decisiones del juez (a ratificar)
@@ -139,6 +155,9 @@ _(una entrada por tanda, ver plantilla)_
 - **E1-T2-a** — Los consumidores sobre el doc de Orama (`useNoteSearch`, `RecentNotesCard`, `wikilink-suggestion`, y `useHybridSearch.getNoteDoc`) también usan el helper: el helper acepta cualquier objeto con `deletedAt?: unknown`, y el doc normalizado por `rowToOramaDoc` (`Number(...) || 0`) tiene `deletedAt: number`, así que `isTrashedNote(doc)` equivale a `doc.deletedAt > 0` y unifica el criterio. Diferencia con el `=== 0` viejo solo para negativos, que no existen.
 - **E1-T2-b** — I4: las variantes viejas divergen del helper solo en valores que el schema de TinyBase no permite almacenar (`'5'`, `NaN`, `null`) o que no son timestamps (negativos); se adopta el comportamiento del helper en todos (tabla en § Avance T2).
 - **E1-T2-c** — `useTrashNotes` se migra con el helper pese a I3 (el contenido de la tab Papelera no cambia): el criterio es idéntico para todo valor almacenable; solo `NaN` pasaba antes por el `<= 0`, y TinyBase no lo guarda.
+
+- **E1-T3-a** — Los tres `Positioner` van en `Portal`, así que no se agrega wrapper `relative z-50` (aplica solo a elementos no portaleados como `TableToolbar`); el `z-50` en el Positioner basta porque el sidebar floating es z-30 y el Portal cuelga de `body`.
+- **E1-T3-b** — El chequeo estático exige solo "alguna clase `z-` en el `className` del Positioner" (incluye variantes `md:z-…`): verifica la causa de 22f7f3a sin fijar un valor concreto (I6).
 
 ## Estacionadas para Sebastián
 
