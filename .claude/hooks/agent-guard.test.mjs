@@ -1033,3 +1033,90 @@ describe('end-to-end (agent-guard.mjs)', () => {
 
   after(() => rmSync(tmp, { recursive: true, force: true }));
 });
+
+describe('cierre del loop por la sesión principal (post Etapa 1)', () => {
+  const loop = env({ loopActive: true });
+  for (const c of [
+    'rm .claude/loop.active',
+    'rm -f .claude/loop.active',
+    'rm "D:/Proyectos VS CODE/SecondMind/.claude/loop.active"',
+    'Remove-Item .claude\\loop.active',
+  ]) {
+    test(`sesión principal con loop activo puede: ${c}`, () => allowedMain(bash(c), loop));
+  }
+  test('desde cwd = .claude, ruta relativa', () =>
+    allowedMain(bash('rm loop.active', { cwd: `${PROJECT}/.claude` }), loop));
+  test('un subagente nunca puede cerrar el loop', () => {
+    assert.match(blocked(bash('rm .claude/loop.active'), loop).reason, /protected-path/);
+    assert.match(blocked(bash('rm -f .claude/loop.active'), env()).reason, /protected-path/);
+  });
+  for (const c of [
+    'rm .claude/loop.active && git push',
+    'rm .claude/loop.active; npm run deploy',
+    'rm .claude/loop.active .claude/settings.json',
+    'rm .claude/guard.unlock',
+    'rm -rf .claude',
+    'rm .claude/*.active',
+    'rm other/.claude/loop.active',
+    // Revisión: lista con coma que vuelve con `..` al sentinel y borra otro archivo.
+    'Remove-Item .claude/hooks/agent-guard.mjs,x/../../loop.active',
+    'rm .claude/hooks/../loop.active',
+    // Revisión: programa con ruta o extensión no es el `rm` literal.
+    './tools/rm .claude/loop.active',
+    'D:/x/del.bat .claude/loop.active',
+    'rm.cmd .claude/loop.active',
+  ]) {
+    test(`con loop activo sigue bloqueado para la sesión principal: ${c}`, () =>
+      assert.equal(evaluate(bash(c), loop).block, true));
+  }
+});
+
+describe('falsos positivos de la Etapa 1', () => {
+  test('heredoc a src/hooks/ con cd src → permitido', () =>
+    allowedSub(
+      bash(
+        "cd src && cat > hooks/useFoo.test.ts <<'EOF'\nimport { x } from '@/hooks/useFoo';\nEOF",
+      ),
+    ));
+  test('hooks/ relativo sigue bloqueado si el comando entra en .claude o el cd es dinámico', () => {
+    assert.match(blocked(bash('cd .claude && rm hooks/x.mjs')).reason, /protected-path/);
+    assert.match(blocked(bash('cd $D && rm hooks/x.mjs')).reason, /protected-path/);
+    // Revisión: cd con glob o backslash, y borrados recursivos/find por nombre.
+    assert.match(blocked(bash('cd .cl* && rm -rf hooks')).reason, /protected-path/);
+    assert.match(blocked(bash('cd .clau\\de && rm -rf hooks')).reason, /protected-path/);
+    assert.match(
+      blocked(bash('find . -type d -name hooks -exec rm -rf {} +')).reason,
+      /protected-path/,
+    );
+    assert.match(
+      blocked(bash('rm hooks/x.mjs', { cwd: `${PROJECT}/.claude` })).reason,
+      /protected-path/,
+    );
+  });
+  test('PowerShell: $_ y foreach($p in …) no son programas dados por variable', () => {
+    allowedSub(
+      bash(
+        'powershell -NoProfile -Command "foreach($p in 5180,8080){ Get-NetTCPConnection -LocalPort $p -ErrorAction SilentlyContinue | % { $_.OwningProcess } }"',
+      ),
+    );
+    allowedSub(bash('powershell -Command "Get-Process | Select-Object @{n=\'id\';e={$_.Id}}"'));
+  });
+  test('PowerShell: & $x / . $x siguen siendo [dynamic]', () => {
+    assert.match(blocked(bash('powershell -Command "& $cmd push"')).reason, /\[dynamic\]/);
+    assert.match(blocked(bash('pwsh -c ". $script"')).reason, /\[dynamic\]/);
+    // Revisión: con comillas o paréntesis entre el operador y la variable.
+    assert.match(blocked(bash(`powershell -Command '& "$x" push'`)).reason, /\[dynamic\]/);
+    assert.match(blocked(bash(`powershell -Command '&($x) push'`)).reason, /\[dynamic\]/);
+  });
+  test('heredoc + bash -c con $CMD como programa sigue siendo [dynamic] (revisión)', () =>
+    assert.match(
+      blocked(bash("cat > /tmp/n.txt <<EOF\nhola\nEOF\nbash -c '$CMD push'")).reason,
+      /\[dynamic\]/,
+    ));
+  test('$var dentro de código (node -e, cuerpo de heredoc) no es [dynamic]', () => {
+    allowedSub(bash(`node -e "const f='$f'; console.log(f)"`));
+    allowedSub(bash('cat > /tmp/m.sh <<\'EOF\'\necho "== $6 ($1:$2)"\nEOF'));
+  });
+  test('shell real: $CMD como programa sigue bloqueado', () =>
+    assert.match(blocked(bash('x=1; $CMD --version')).reason, /\[dynamic\]/));
+});
