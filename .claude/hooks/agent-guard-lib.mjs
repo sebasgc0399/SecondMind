@@ -106,6 +106,7 @@ const CODE_FLAG = {
 function nestedSources(argv) {
   const shell = [];
   const code = [];
+  const ps = [];
   for (let i = 0; i < argv.length; i++) {
     const n = programName(argv[i]);
     const rest = argv.slice(i + 1);
@@ -116,8 +117,8 @@ function nestedSources(argv) {
       // Todo lo que sigue a -Command (o abreviado) es el comando; sin -Command,
       // PowerShell 5.1 ejecuta el primer argumento posicional.
       const j = rest.findIndex((t) => /^[-/]c(o(m(m(a(n(d)?)?)?)?)?)?$/i.test(t));
-      if (j >= 0) shell.push(rest.slice(j + 1).join(' '));
-      else for (const t of rest) if (!/^[-/]/.test(t)) shell.push(t);
+      if (j >= 0) ps.push(rest.slice(j + 1).join(' '));
+      else for (const t of rest) if (!/^[-/]/.test(t)) ps.push(t);
     } else if (JOIN_ALL.has(n)) {
       shell.push(rest.join(' '));
     } else if (n === 'cmd') {
@@ -149,7 +150,7 @@ function nestedSources(argv) {
     const k = t.search(/\$\(|`/);
     if (k >= 0) shell.push(t.slice(k));
   }
-  return { shell, code };
+  return { shell, code, ps };
 }
 
 /**
@@ -170,6 +171,8 @@ function nestedSources(argv) {
  * patrones de búsqueda antes de la red cruda.
  */
 export function splitCommands(src, depth = 0, mode = 'shell') {
+  // PowerShell: `& $x` / `. $x` invocan lo que diga la variable.
+  const psCall = mode === 'ps' && /(^|[\s;|{(])[&.]\s*\$/.test(src);
   const cmds = [];
   let argv = [];
   let spans = [];
@@ -193,6 +196,8 @@ export function splitCommands(src, depth = 0, mode = 'shell') {
     pushTok(end);
     if (argv.length) {
       if (depth === 0) argv.spans = spans;
+      argv.mode = mode;
+      if (psCall) argv.psCall = true;
       cmds.push(argv);
     }
     argv = [];
@@ -277,9 +282,10 @@ export function splitCommands(src, depth = 0, mode = 'shell') {
       }
       continue;
     }
-    const { shell, code } = nestedSources(cmd);
+    const { shell, code, ps } = nestedSources(cmd);
     for (const s of shell) nested.push(...splitCommands(s, depth + 1, 'shell'));
     for (const s of code) nested.push(...splitCommands(s, depth + 1, 'code'));
+    for (const s of ps) nested.push(...splitCommands(s, depth + 1, 'ps'));
   }
   return cmds.concat(nested);
 }
@@ -752,6 +758,12 @@ function rawNet(flat) {
 
 const P_ALL =
   /\.claude\/(hooks\b|settings(\.local)?\.json|loop\.active|guard\.unlock)|\.claude\/?(\*|\s|$)|(^|[\s=])(settings(\.local)?\.json|loop\.active|guard\.unlock)\b|agent-guard|(^|\s)hooks(\/|\s|$)/;
+// Igual sin `hooks/` suelto: un relativo `hooks/…` solo llega a `.claude/hooks` si el
+// comando está (o entra) en `.claude`; desde `src` es `src/hooks/` (código de la app).
+const P_NO_BARE_HOOKS =
+  /\.claude\/(hooks\b|settings(\.local)?\.json|loop\.active|guard\.unlock)|\.claude\/?(\*|\s|$)|(^|[\s=])(settings(\.local)?\.json|loop\.active|guard\.unlock)\b|agent-guard/;
+// `cd` a un destino no verificable (variable, `~`): el `hooks/` relativo podría ser el del guard.
+const CD_DYNAMIC = /(^|[\s;&|(])(cd|pushd|chdir|set-location|sl)\s+[^;&|\n]*[$%`~]/;
 const P_SENTINELS = /loop\.active|guard\.unlock|\.claude\/?(\*|\s|$)/;
 const WRITE_VERBS =
   /\b(rm|rmdir|mv|cp|tee|truncate|chmod|chown|ln|touch|install|dd|unlink|new-item|remove-item|set-content|add-content|out-file|copy-item|move-item|rename-item|ni|ri|del|erase|move|copy|ren)\b|\bsed\b[^;&|\n]*\s(-\w*i|--in-place)|\bperl\b[^;&|\n]*\s-\w*i|\bgit\b[^;&|\n]*\b(checkout|restore|rm|mv|apply|stash|reset|am)\b/;
@@ -759,7 +771,8 @@ const INTERP_WRITE =
   /\b(node|python3?|py|perl|ruby|deno|bun|pwsh|powershell)\b[\s\S]*(writefile|appendfile|unlink|rmsync|rmdir|rename|copyfile|createwritestream|open\(|set-content|out-file|shutil|os\.remove|write_text|write_bytes)/;
 
 function shellWritesProtected(flat, unlocked, cwdInClaude) {
-  const P = unlocked ? P_SENTINELS : P_ALL;
+  const bareHooks = cwdInClaude || /\.claude/.test(flat) || CD_DYNAMIC.test(flat);
+  const P = unlocked ? P_SENTINELS : bareHooks ? P_ALL : P_NO_BARE_HOOKS;
   // Redirecciones: el destino de `>`/`>>` es protegido (`2>&1` no cuenta).
   const redirect = /(^|[^0-9&])\d?>{1,2}\|?\s*([^\s;&|<>]+)/g;
   let m;
@@ -1084,6 +1097,19 @@ const ENV_FILE = /(^|[\s/=:,(])\.env/;
 const DELETE_VERBS =
   /\b(rm|mv|unlink|rmdir|shred|del|erase|move|ren|rename|remove-item|ri|move-item|mi|rename-item|rni)\b|\s-delete\b/;
 
+/**
+ * ¿Un argv que empieza con `$x` ejecuta un programa dado por variable? En shell sí.
+ * En modo 'code' (literales de `node -e`, tokens de un comando con heredoc) es texto:
+ * `$f`/`$1` de un script no se ejecutan, y una ejecución real por variable
+ * (`execSync(cmd)`) igual no sería verificable. En PowerShell `$x …` es una expresión
+ * (`foreach($p in …)`, `% { $_.Id }`); solo invoca con `& $x` / `. $x`.
+ */
+function dynamicProgram(argv) {
+  if (argv.mode === 'code') return false;
+  if (argv.mode === 'ps') return Boolean(argv.psCall);
+  return true;
+}
+
 /** Devuelve "[regla] motivo" si el comando debe bloquearse, si no null. */
 export function checkShell(cmd, env, cwd, depth = 0) {
   const cmds = splitCommands(cmd);
@@ -1092,7 +1118,8 @@ export function checkShell(cmd, env, cwd, depth = 0) {
   for (const argv of cmds) {
     const [name, args, tok] = resolveProgram(argv);
     if (!name) continue;
-    if (/^\$/.test(tok)) return '[dynamic] programa dado por una variable (no verificable)';
+    if (/^\$/.test(tok) && dynamicProgram(argv))
+      return '[dynamic] programa dado por una variable (no verificable)';
     const rule = PROGRAM_RULES[name];
     const hit = (rule ? rule(args, name) : null) ?? pmBin(name, args);
     if (hit) return `[${hit[0]}] ${hit[1]}`;
@@ -1133,6 +1160,7 @@ export function checkShell(cmd, env, cwd, depth = 0) {
  * Devuelve { block: boolean, rule?, reason? }.
  */
 export function evaluate(input, env) {
+  if (isLoopClose(input, env)) return { block: false };
   const restricted = isRestricted(input, env);
   for (const rule of RULES) {
     if (rule.restrictedOnly && !restricted) continue;
@@ -1143,6 +1171,33 @@ export function evaluate(input, env) {
     }
   }
   return { block: false };
+}
+
+const RM_PROGRAMS = new Set(['rm', 'del', 'erase', 'remove-item', 'ri']);
+
+/**
+ * Cierre del loop: la sesión principal (nunca un subagente) borra `.claude/loop.active`
+ * con un comando suelto y literal (`rm [-f] <ruta>`, `Remove-Item <ruta>`), sin nada
+ * más en la línea. Así el orquestador cierra la etapa sin que Sebastián intervenga;
+ * un subagente sigue sin poder salir del modo restringido.
+ */
+export function isLoopClose(input, env) {
+  if (!input || input.agent_id || !env.loopActive || !SHELL_TOOLS.has(input.tool_name))
+    return false;
+  const cmd = input.tool_input?.command;
+  if (typeof cmd !== 'string' || /[;&|<>`$\n\r()*?]/.test(cmd.trim())) return false;
+  // Sin metacaracteres, `\` solo puede ser separador de ruta de Windows.
+  const cmds = splitCommands(cmd.trim().replace(/\\/g, '/'));
+  if (cmds.length !== 1) return false;
+  const [prog, ...args] = cmds[0];
+  if (!RM_PROGRAMS.has(programName(prog))) return false;
+  const paths = args.filter((t) => !/^-(f|force)$/i.test(t));
+  if (paths.length !== 1 || paths[0].startsWith('-')) return false;
+  const root = normalizePath(env.projectDir);
+  return (
+    Boolean(root) &&
+    normalizePath(paths[0], input.cwd || env.projectDir) === `${root}/.claude/loop.active`
+  );
 }
 
 /** Modo restringido: la llamada viene de un subagente o el loop está activo. */
