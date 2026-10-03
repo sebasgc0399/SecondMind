@@ -2,7 +2,7 @@
 
 > **Estado:** Borrador | En curso (rama `<rama>`) | Cerrada.
 > **Origen / autorización:** <de dónde sale la etapa, quién la autorizó y cuándo, con la cita textual si existe. Si el loop autónomo está autorizado, decirlo acá: etapa, rama, "commits y tags locales; push no".>
-> **Etiquetas:** locales `e<N>-T<n>`. **Nunca** `v*` (dispara `release.yml`). Sin push dentro de la etapa; el merge a `main` lo hace Sebastián al revisar.
+> **Etiquetas:** locales `e<N>-T<n>`. **Nunca** `v*` (dispara `release.yml`). Sin push dentro de la etapa; al cerrar, el orquestador mergea a `main` con la aprobación de Sebastián (Docs/05 § 10).
 > **Rama:** `feat/<nombre-corto>`.
 
 ---
