@@ -5,6 +5,7 @@ import useNoteSearch from '@/hooks/useNoteSearch';
 import useSemanticConsent from '@/hooks/useSemanticConsent';
 import { cosineSimilarity, embedQueryText, getEmbeddingsCache } from '@/lib/embeddings';
 import { rowToOramaDoc, type NoteOramaDoc } from '@/lib/orama';
+import { isTrashedNote } from '@/lib/noteGuards';
 
 export interface SemanticResult {
   note: NoteOramaDoc;
@@ -40,7 +41,7 @@ function getNoteDoc(id: string): NoteOramaDoc | null {
   if (!row || Object.keys(row).length === 0) return null;
   const doc = rowToOramaDoc(id, row);
   if (doc.isArchived) return null;
-  if (doc.deletedAt > 0) return null;
+  if (isTrashedNote(doc)) return null;
   return doc;
 }
 

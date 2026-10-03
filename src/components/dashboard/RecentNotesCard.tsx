@@ -6,6 +6,7 @@ import { useTable } from 'tinybase/ui-react';
 import { rowToOramaDoc, type NoteOramaDoc } from '@/lib/orama';
 import { formatRelative } from '@/lib/formatDate';
 import { useStoreHydration } from '@/hooks/useStoreHydration';
+import { isTrashedNote } from '@/lib/noteGuards';
 
 const RECENT_LIMIT = 5;
 
@@ -17,7 +18,7 @@ export default function RecentNotesCard() {
   const recent = useMemo<NoteOramaDoc[]>(() => {
     return Object.entries(table)
       .map(([id, row]) => rowToOramaDoc(id, row))
-      .filter((doc) => !doc.isArchived && doc.deletedAt === 0)
+      .filter((doc) => !doc.isArchived && !isTrashedNote(doc))
       .sort((a, b) => b.updatedAt - a.updatedAt)
       .slice(0, RECENT_LIMIT);
   }, [table]);

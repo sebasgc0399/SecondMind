@@ -3,6 +3,7 @@ import { useTable } from 'tinybase/ui-react';
 import { useStoreHydration } from '@/hooks/useStoreHydration';
 import { rowToOramaDoc, type NoteOramaDoc } from '@/lib/orama';
 import { endOfDay } from '@/lib/formatDate';
+import { isTrashedNote } from '@/lib/noteGuards';
 
 export type ReviewItem = NoteOramaDoc & { fsrsDue: number };
 
@@ -21,7 +22,7 @@ export default function useReviewQueue(): {
     for (const [id, row] of Object.entries(table)) {
       if (row.isArchived === true || row.isArchived === 1) continue;
       // Papelera: deletedAt > 0 (mismo criterio que useKnowledgeHubs); 0/ausente = no borrada.
-      if (typeof row.deletedAt === 'number' && row.deletedAt > 0) continue;
+      if (isTrashedNote(row)) continue;
       const fsrsDue = typeof row.fsrsDue === 'number' ? row.fsrsDue : 0;
       if (fsrsDue <= 0 || fsrsDue > todayEnd) continue;
       result.push({ ...rowToOramaDoc(id, row), fsrsDue });

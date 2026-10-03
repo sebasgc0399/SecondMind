@@ -1,6 +1,7 @@
 import { PluginKey } from '@tiptap/pm/state';
 import { notesStore } from '@/stores/notesStore';
 import i18n from '@/lib/i18n';
+import { isTrashedNote } from '@/lib/noteGuards';
 import type { PopupListener } from '@/components/editor/hooks/useEditorPopup';
 import type { Editor, Range } from '@tiptap/core';
 import type { SuggestionOptions } from '@tiptap/suggestion';
@@ -34,7 +35,7 @@ export function queryWikilinkItems(query: string, excludeId?: string): WikilinkS
   }));
 
   return rows
-    .filter((row) => !row.isArchived && row.deletedAt === 0)
+    .filter((row) => !row.isArchived && !isTrashedNote(row))
     .filter((row) => !excludeId || row.id !== excludeId)
     .filter((row) => queryLower === '' || row.title.toLowerCase().includes(queryLower))
     .sort((a, b) => b.updatedAt - a.updatedAt)

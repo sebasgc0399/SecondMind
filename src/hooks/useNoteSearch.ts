@@ -9,6 +9,7 @@ import {
 import { notesStore } from '@/stores/notesStore';
 import { createNotesIndex, rowToOramaDoc, type NoteOramaDoc } from '@/lib/orama';
 import { useStoreHydration } from '@/hooks/useStoreHydration';
+import { isTrashedNote } from '@/lib/noteGuards';
 
 interface UseNoteSearchReturn {
   query: string;
@@ -38,7 +39,7 @@ export default function useNoteSearch(): UseNoteSearchReturn {
       // que aparezcan tras un cambio que no dispare el filter post-search.
       const docs = Object.entries(table)
         .map(([id, row]) => rowToOramaDoc(id, row))
-        .filter((doc) => doc.deletedAt === 0);
+        .filter((doc) => !isTrashedNote(doc));
       if (docs.length > 0) insertMultiple(db, docs);
       dbRef.current = db;
       setVersion((v) => v + 1);
@@ -61,7 +62,7 @@ export default function useNoteSearch(): UseNoteSearchReturn {
       const table = notesStore.getTable('notes');
       return Object.entries(table)
         .map(([id, row]) => rowToOramaDoc(id, row))
-        .filter((doc) => !doc.isArchived && doc.deletedAt === 0)
+        .filter((doc) => !doc.isArchived && !isTrashedNote(doc))
         .sort((a, b) => b.updatedAt - a.updatedAt);
     }
 
@@ -77,7 +78,7 @@ export default function useNoteSearch(): UseNoteSearchReturn {
 
     return result.hits
       .map((hit) => hit.document as unknown as NoteOramaDoc)
-      .filter((doc) => !doc.isArchived && doc.deletedAt === 0);
+      .filter((doc) => !doc.isArchived && !isTrashedNote(doc));
     // eslint-disable-next-line react-hooks/exhaustive-deps -- 'version' es counter explícito para invalidar el memo tras Orama rebuild
   }, [query, version]);
 

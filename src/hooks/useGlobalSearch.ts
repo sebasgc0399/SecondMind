@@ -9,6 +9,7 @@ import {
 import { notesStore } from '@/stores/notesStore';
 import { tasksStore } from '@/stores/tasksStore';
 import { projectsStore } from '@/stores/projectsStore';
+import { isTrashedNote } from '@/lib/noteGuards';
 import {
   createGlobalIndex,
   noteRowToGlobalDoc,
@@ -45,7 +46,7 @@ export default function useGlobalSearch(query: string): SearchResult[] {
       const notesTable = notesStore.getTable('notes');
       for (const [id, row] of Object.entries(notesTable)) {
         if (row.isArchived) continue;
-        if ((row.deletedAt as number) > 0) continue;
+        if (isTrashedNote(row)) continue;
         docs.push(noteRowToGlobalDoc(id, row));
       }
 
@@ -119,7 +120,7 @@ function getRecents(): SearchResult[] {
   const notesTable = notesStore.getTable('notes');
   for (const [id, row] of Object.entries(notesTable)) {
     if (row.isArchived) continue;
-    if ((row.deletedAt as number) > 0) continue;
+    if (isTrashedNote(row)) continue;
     all.push({
       id,
       type: 'note',

@@ -7,6 +7,7 @@ import usePreferences from '@/hooks/usePreferences';
 import useQuickCapture from '@/hooks/useQuickCapture';
 import { useStoreHydration } from '@/hooks/useStoreHydration';
 import { setPreferences } from '@/lib/preferences';
+import { isTrashedNote } from '@/lib/noteGuards';
 
 export type OnboardingStepId = 'apiKey' | 'firstNote' | 'inboxAi' | 'firstTask';
 
@@ -62,9 +63,9 @@ export default function useOnboarding(): UseOnboardingReturn {
   const apiKeyDone = apiKeys.anthropic.configured;
 
   // Hito ②: ≥1 nota activa (no archivada, no en papelera). Mismo criterio que
-  // RecentNotesCard. `!row.deletedAt` cubre 0/ausente = no borrada.
+  // RecentNotesCard. `!isTrashedNote(row)` cubre 0/ausente = no borrada.
   const firstNoteDone = useMemo(
-    () => Object.values(notesTable).some((row) => row.isArchived !== true && !row.deletedAt),
+    () => Object.values(notesTable).some((row) => row.isArchived !== true && !isTrashedNote(row)),
     [notesTable],
   );
 
