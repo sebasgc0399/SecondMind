@@ -141,6 +141,18 @@ Cada feature del proyecto sigue este ciclo. No improvisar: si algo no cuadra, aj
 
 Para trabajo grande, el SDD se organiza en **etapas** de varias **tandas**: un orquestador delega en agentes (`tanda-writer` → `tanda-reviewer` → `tanda-fixer`, en `.claude/agents/`), cada tanda cierra con `npm run verify` y un tag local `e<N>-T<n>` (nunca `v*`), y con autorización explícita de Sebastián por etapa puede correr en `/loop` sin tocar producción. Método completo, reparto de modelos, guard y protocolo del loop → [Docs/05](Docs/05-metodo-trabajo-autonomo.md). Los pasos 1–8 de arriba siguen valiendo para features chicas.
 
+**Cierre sin trabas (pedido de Sebastián, 2026-10-03; vale en toda sesión sobre este proyecto, con o sin loop, etapa o feature):** Sebastián aprueba, no ejecuta pasos mecánicos.
+
+1. Claude cierra el loop él mismo, borrando `.claude/loop.active` desde la sesión principal.
+2. Le muestra las decisiones a ratificar en una lista corta y en lenguaje simple, con su recomendación.
+3. Con su OK, Claude:
+   - marca las decisiones en el SPEC;
+   - actualiza `Spec/ESTADO-ACTUAL.md`;
+   - mergea `--no-ff` a `main`;
+   - corre `verify:quick` y hace push.
+
+Sin OK no hay merge. Los pasos manuales no bloquean y quedan en el SPEC para otro día. Deploy y release, solo a pedido.
+
 ### Docs: jerarquía y reglas
 
 Siete niveles de docs, cada uno con propósito único. **Fuente primaria para estado de features = `Spec/ESTADO-ACTUAL.md`** — siempre arrancar ahí, nunca duplicar su contenido en CLAUDE.md.
