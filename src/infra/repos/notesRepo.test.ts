@@ -298,6 +298,33 @@ describe('notesRepo', () => {
     });
   });
 
+  describe('createNote con content (Convertir en nota)', () => {
+    it('la nota nace con content en Firestore y título/plain en la row; TinyBase no guarda content', async () => {
+      const content = JSON.stringify({
+        type: 'doc',
+        content: [{ type: 'paragraph', content: [{ type: 'text', text: 'idea' }] }],
+      });
+
+      const noteId = await notesRepo.createNote({ title: 'idea', contentPlain: 'idea', content });
+
+      expect(noteId).toBeTruthy();
+      const row = notesStore.getRow('notes', noteId!);
+      expect(row.title).toBe('idea');
+      expect(row.noteType).toBe('fleeting');
+      expect(row.content).toBeUndefined();
+      const payload = setDocMock.mock.calls[0]![1] as Record<string, unknown>;
+      expect(payload.content).toBe(content);
+      expect(payload.contentPlain).toBe('idea');
+      expect(payload.title).toBe('idea');
+    });
+
+    it('sin content el payload no lo trae (createNote regular intacto)', async () => {
+      await notesRepo.createNote({ title: 'vacía' });
+      const payload = setDocMock.mock.calls[0]![1] as Record<string, unknown>;
+      expect('content' in payload).toBe(false);
+    });
+  });
+
   describe('createFromInbox', () => {
     it('persiste content (TipTap JSON) en Firestore aunque NO esté en schema TinyBase', async () => {
       setDocMock.mockResolvedValue(undefined);

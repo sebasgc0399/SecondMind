@@ -25,6 +25,11 @@ export interface NoteCreateOverrides {
   contentPlain?: string;
   paraType?: string;
   source?: string;
+  /**
+   * TipTap JSON serializado. Si viene, la nota nace con contenido (va solo a
+   * Firestore, TinyBase lo ignora por schema). Usado por "Convertir en nota".
+   */
+  content?: string;
 }
 
 /**
@@ -64,9 +69,15 @@ async function createNote(overrides?: NoteCreateOverrides): Promise<string | nul
     fsrsDue: 0,
     fsrsLastReview: 0,
   };
+  // content (opcional) sigue el mismo camino que createFromInbox: lo lleva el
+  // factory al executor del createsQueue; TinyBase lo descarta por schema.
+  const row =
+    overrides?.content !== undefined
+      ? ({ ...defaults, content: overrides.content } as NoteRow & { content: string })
+      : defaults;
 
   try {
-    return await repo.create(defaults);
+    return await repo.create(row);
   } catch (error) {
     console.error('[notesRepo] createNote failed', error);
     return null;
