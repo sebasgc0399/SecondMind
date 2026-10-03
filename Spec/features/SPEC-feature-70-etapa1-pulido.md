@@ -131,7 +131,7 @@ Las filas con valor no numérico o negativo no pueden existir hoy: verificado ej
 - **Control positivo (inversión `!isTrashedNote` -> `isTrashedNote` por sitio, FAIL y restaurado):** `useOnboarding.ts:68` FAIL (`expected true to be false`); `useHybridSearch.ts:44` FAIL (`expected ['papelera'] to deeply equal ['viva']`); `useNoteSearch.ts:42` FAIL (test con query); `useNoteSearch.ts:65` FAIL (test sin query); `useNoteSearch.ts:81` FAIL (test con query); `RecentNotesCard.tsx:21` FAIL; `wikilink-suggestion.ts:38` FAIL.
 - **Verificación correcciones:** `npx vitest run`: 71 archivos / 473 tests pasan. Primer `npm run verify` FAIL solo en lint (`import/order` en `useOnboarding.test.tsx`, corregido con `eslint --fix`); segunda corrida `npm run verify` PASS (lint, typecheck x3, unit, guard, agents, rules, functions 115.2s, build). Sin flake de `functions`.
 
-### T3 — Popovers detrás del sidebar (en curso)
+### T3 — Popovers detrás del sidebar (e1-T3)
 
 - **Hecho:** `DistillIndicator.tsx`: `z-50` movido del `Popover.Popup` al `Popover.Positioner`. Barrido de `*.Positioner` en `src/components` y `src/app` (los tres existentes; `src/components/ui/` y `src/app/` no tienen ninguno):
 
@@ -145,6 +145,11 @@ Los tres van en Portal (se renderizan en `body`), así que no hace falta wrapper
 
 - **Verificación visual (emulador, 1280x800, nota `nota-zettelkasten`, sidebar de 256px visible):** el popup de Distill auto-abre sobre la nota y se superpone con el sidebar de forma natural (popup `left=73, w=288`, sidebar `0..256`), sin forzar viewport. Grilla 3x3 de `elementFromPoint` sobre el popup: SIN el arreglo, 6/9 puntos (las dos columnas izquierdas) devuelven elementos del sidebar (`H3`, `A`, `SPAN`); CON el arreglo (HMR), 9/9 dentro del popup, `z-index` computado del Positioner = 50. Captura "después": `distill-after.png` en el scratchpad (la captura "antes" no se pudo guardar: Playwright restringe la ruta de salida; la medición numérica de "antes" sí quedó registrada).
 - **Control positivo:** test estático contra `DistillIndicator` original: FAIL `src/components/editor/DistillIndicator.tsx:115`; con el arreglo, 2/2.
+- **Commits:** 1ae8fef (fix z-index Distill), 11616e1 (test estático), 9e39ac1 (avance).
+- **Verificación:** el `npm run verify` del writer murió por memoria agotada del sistema (8/10 PASS; `functions` y `build` FAIL por entorno: emulador sin cargar funciones y Vite `0xC0000142`). Causa: el server MCP de Playwright + su Chrome crecieron a ~6 GB y quedaron emuladores `demo-secondmind` huérfanos; el orquestador los terminó (8 GB libres) y re-corrió `npm run verify`: **PASS 10/10** (unit, guard, rules, functions 138 s, build 74 s).
+- **Revisión:** APROBADA (sin BLOCKER/MAJOR/MINOR). NITs como seguimiento: (1) el test acepta cualquier `z-` (también `z-0`/`z-10`, que quedaría bajo el sidebar `z-30`; consecuencia aceptada de E1-T3-b); (2) un `className` dentro de la prop `render` confunde al test; (3) el regex no ve `<Positioner` sin prefijo, alias con dígitos ni namespaces anidados (base-ui 1.3.0 solo lo exporta en namespace); (4) no escanea `.tsx` fuera de `src/components` y `src/app`. Controles del revisor: falla con Distill de `e1-T2` (`:115`), con `CodeBlockNodeView` sin z (`:70`) y con un `Menu.Positioner` multilínea nuevo en `src/app/`; 3 Positioners en todo `src/`; Dialog/Backdrop son `fixed` con z propio (sin el bug).
+- **Correcciones:** ninguna (aprobada sin fixer; tag puesto por el orquestador).
+- **Pendientes:** los 4 NITs de arriba.
 
 _(una entrada por tanda, ver plantilla)_
 
