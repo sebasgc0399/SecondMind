@@ -117,7 +117,7 @@ describe('store → checkbox', () => {
     editor.destroy();
   });
 
-  it('el sync no dispara `update` (no autosave) ni entra al historial', async () => {
+  it('el sync no dispara `update` (no autosave)', async () => {
     setTask('t1', 'in-progress');
     const editor = await mount(item('a', { taskId: 't1' }));
     const onUpdate = vi.fn();
@@ -126,9 +126,23 @@ describe('store → checkbox', () => {
     store.setCell('tasks', 't1', 'status', 'completed');
     expect(items(editor)[0]!.checked).toBe(true);
     expect(onUpdate).not.toHaveBeenCalled();
-    // Deshacer no tiene nada que revertir: el check sigue.
-    editor.commands.undo();
+    editor.destroy();
+  });
+
+  it('el sync no entra al historial: deshacer revierte el texto y conserva el check', async () => {
+    setTask('t1', 'in-progress');
+    const editor = await mount(item('a', { taskId: 't1' }));
+    // Edición real del usuario (va al historial): texto al final del item.
+    // pos del item + 1 (entra al item) + 1 (entra al párrafo) + 'a'.length.
+    editor.commands.insertContentAt(items(editor)[0]!.pos + 3, 'bc');
+    expect(items(editor)[0]).toMatchObject({ text: 'abc', checked: false });
+
+    store.setCell('tasks', 't1', 'status', 'completed');
     expect(items(editor)[0]!.checked).toBe(true);
+
+    // Deshacer revierte la edición del usuario, no el sync.
+    editor.commands.undo();
+    expect(items(editor)[0]).toMatchObject({ text: 'a', checked: true });
     editor.destroy();
   });
 
