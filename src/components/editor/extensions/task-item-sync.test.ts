@@ -179,6 +179,41 @@ describe('store → checkbox', () => {
   });
 });
 
+// El plugin no recorre el doc mientras no haya items vinculados (NIT de la
+// revisión de T4); estas pruebas cuidan que el atajo no se salte un vínculo nuevo.
+describe('sync de un vínculo que llega a una nota sin vínculos', () => {
+  it('pegar un item vinculado con `checked` viejo lo corrige en el acto', async () => {
+    setTask('t1', 'completed');
+    const editor = await mount(item('local'));
+    editor.commands.insertContentAt(
+      editor.state.doc.content.size,
+      list(item('pegado', { checked: false, taskId: 't1' })),
+    );
+    expect(items(editor).find((i) => i.taskId === 't1')).toMatchObject({
+      text: 'pegado',
+      checked: true,
+    });
+    editor.destroy();
+  });
+
+  it('poner `taskId` como atributo (sin rango en el mapa del paso) también sincroniza', async () => {
+    setTask('t1', 'completed');
+    const editor = await mount(item('local'));
+    editor.view.dispatch(editor.state.tr.setNodeAttribute(items(editor)[0]!.pos, 'taskId', 't1'));
+    expect(items(editor)[0]).toMatchObject({ taskId: 't1', checked: true });
+    editor.destroy();
+  });
+
+  it('nota sin vínculos: escribir no corre el recorrido del sync', async () => {
+    const editor = await mount(item('local'));
+    const descendants = vi.spyOn(editor.state.doc.constructor.prototype, 'descendants');
+    editor.commands.insertContentAt(3, 'x');
+    expect(descendants).not.toHaveBeenCalled();
+    descendants.mockRestore();
+    editor.destroy();
+  });
+});
+
 describe('checkbox → repo', () => {
   it('marcar un item vinculado llama al repo; si el repo no escribió, el nodo no cambia', async () => {
     setTask('t1', 'in-progress');

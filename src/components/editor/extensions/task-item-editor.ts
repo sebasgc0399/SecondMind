@@ -4,7 +4,9 @@ import TaskItemLinked, { TASK_SYNC_META } from '@/components/editor/extensions/t
 import {
   buildCheckedSyncTransaction,
   createStoreTaskLookup,
+  docHasLinkedTaskItem,
   syncTaskItemsFromStore,
+  transactionMayAddLinkedTaskItem,
   type TaskItemSyncStorage,
 } from '@/components/editor/extensions/task-item-sync';
 import TaskItemNodeView from '@/components/editor/nodeviews/TaskItemNodeView';
@@ -20,7 +22,7 @@ export interface TaskItemEditorOptions extends TaskItemOptions {
   getTaskStore: () => Store;
 }
 
-const taskItemSyncKey = new PluginKey('taskItemSync');
+const taskItemSyncKey = new PluginKey<boolean>('taskItemSync');
 
 /**
  * `TaskItemLinked` (mismo schema que el export) + lo que solo existe en el
@@ -51,13 +53,23 @@ const TaskItemEditor = TaskItemLinked.extend<TaskItemEditorOptions, TaskItemSync
   addProseMirrorPlugins() {
     const lookup = createStoreTaskLookup(this.options.getTaskStore());
     return [
-      new Plugin({
+      new Plugin<boolean>({
         key: taskItemSyncKey,
+        // "Puede haber items vinculados": se calcula una vez al crear el estado y
+        // después solo mirando lo que cambió cada transacción. Es pegajosa (no
+        // vuelve a false): es solo un atajo; sin items vinculados el recorrido de
+        // `buildCheckedSyncTransaction` daría `null` de todos modos.
+        state: {
+          init: (_config, state) => docHasLinkedTaskItem(state.doc),
+          apply: (tr, mayHaveLinked) =>
+            mayHaveLinked || (tr.docChanged && transactionMayAddLinkedTaskItem(tr)),
+        },
         // Un cambio del doc puede traer un item vinculado con `checked` viejo
         // (rehacer el vínculo, pegar un item copiado): se corrige en el acto.
         appendTransaction: (transactions, _oldState, newState) => {
           if (!transactions.some((tr) => tr.docChanged)) return null;
           if (transactions.every((tr) => tr.getMeta(TASK_SYNC_META) === true)) return null;
+          if (!taskItemSyncKey.getState(newState)) return null;
           return buildCheckedSyncTransaction(newState, lookup);
         },
       }),

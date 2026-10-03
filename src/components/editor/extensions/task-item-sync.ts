@@ -1,3 +1,4 @@
+import { AttrStep } from '@tiptap/pm/transform';
 import {
   SKIP_AUTOSAVE_META,
   TASK_SYNC_META,
@@ -5,6 +6,7 @@ import {
 } from '@/components/editor/extensions/task-item-linked';
 import type { CreateTaskOptions } from '@/infra/repos/tasksRepo';
 import type { Editor } from '@tiptap/core';
+import type { Node as ProseMirrorNode } from '@tiptap/pm/model';
 import type { EditorState, Transaction } from '@tiptap/pm/state';
 import type { Store } from 'tinybase';
 
@@ -64,6 +66,51 @@ export function buildCheckedSyncTransaction(
   sync.setMeta('addToHistory', false);
   sync.setMeta(TASK_SYNC_META, true);
   return sync;
+}
+
+function isLinkedTaskItem(node: ProseMirrorNode): boolean {
+  return node.type.name === TASK_ITEM && getTaskItemTaskId(node.attrs) !== null;
+}
+
+/** Recorre el doc entero; solo al crear el estado del plugin. */
+export function docHasLinkedTaskItem(doc: ProseMirrorNode): boolean {
+  let found = false;
+  doc.descendants((node) => {
+    if (found) return false;
+    if (isLinkedTaskItem(node)) found = true;
+    return !found;
+  });
+  return found;
+}
+
+/**
+ * ¿Esta transacción pudo dejar un item vinculado en el doc? Mira solo los rangos
+ * que cambió (en el doc final) y los `AttrStep` de `taskId` (p. ej. "Crear tarea",
+ * deshacer/rehacer del vínculo), que no tienen rango en su mapa. Así, mientras la
+ * nota no tenga items vinculados, el plugin de sync no recorre el doc en cada tecla.
+ */
+export function transactionMayAddLinkedTaskItem(tr: Transaction): boolean {
+  const doc = tr.doc;
+  let found = false;
+  tr.steps.forEach((step, index) => {
+    if (found) return;
+    const after = tr.mapping.slice(index + 1);
+    if (step instanceof AttrStep) {
+      if (step.attr === 'taskId' && typeof step.value === 'string' && step.value) found = true;
+      return;
+    }
+    step.getMap().forEach((_oldStart, _oldEnd, newStart, newEnd) => {
+      if (found) return;
+      const from = Math.max(0, after.map(newStart, -1));
+      const to = Math.min(doc.content.size, after.map(newEnd, 1));
+      doc.nodesBetween(from, to, (node) => {
+        if (found) return false;
+        if (isLinkedTaskItem(node)) found = true;
+        return !found;
+      });
+    });
+  });
+  return found;
 }
 
 /**
