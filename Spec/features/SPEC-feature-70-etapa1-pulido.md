@@ -151,13 +151,18 @@ Los tres van en Portal (se renderizan en `body`), así que no hace falta wrapper
 - **Correcciones:** ninguna (aprobada sin fixer; tag puesto por el orquestador).
 - **Pendientes:** los 4 NITs de arriba.
 
-### T4 — Share intent con entidades HTML (en curso)
+### T4 — Share intent con entidades HTML (e1-T4)
 
 - **Hecho:** `src/lib/decodeHtmlEntities.ts` (numéricas dec/hex `&#34;`/`&#x22;`/`&#X22;` y `quot amp lt gt apos nbsp`, una sola pasada con un `replace`, `String.fromCodePoint`, sin `DOMParser`; `&#0;`, `>0x10FFFF`, surrogates sueltos y nombres desconocidos quedan tal cual). `src/lib/buildSharedContent.ts`: función pura con la misma lógica que tenía `useShareIntent` (URL = `^https?://`, `content` = `título\nURL` salvo título vacío/igual a la URL, `sourceUrl` solo si es URL) más decodificación del título y del texto no-URL; devuelve `null` sin texto. El hook solo llama a la función y a `open` (sin otros cambios; nada en `android/`).
 - **Tipo del evento:** `@capgo/capacitor-share-target` declara `title: string` y `texts: string[]`; la función acepta además `undefined`/`null`.
 - **Commits:** ver `git log e1-T3..HEAD`.
 - **Control positivo (FAIL observado):** `buildSharedContent` con `decodeHtmlEntities` reemplazado por `String` (sin decodificar): fallan "decodifica entidades en el título de una URL compartida" y "texto que no es URL: decodifica…" (2/6). Decoder mutado a recursivo (loop hasta punto fijo): falla "decodifica una sola pasada (no recursivo)". Restaurado.
 - **Verificación:** `npm run verify` PASS a la primera (lint, typecheck x3, unit, guard, agents, rules, functions 130.7s, build). Sin flake. Sin procesos de emulador vivos tras el verify.
+- **Revisión:** APROBADA CON CORRECCIONES. MINOR 1: ningún test usaba una URL `http://` (el regex a solo `https:` dejaba todo verde). NIT 1: sin test del orden decodificar→recortar del título. NIT 2 y NIT 3: seguimiento (abajo).
+- **Correcciones:** MINOR 1: caso `{ title: 'T &amp; U', texts: ['http://a.com'] }` → `'T & U
+http://a.com'` con `sourceUrl`; con el regex mutado a `https:` FALLA (1 failed / 7 passed). NIT 1: caso `{ title: '&nbsp;', texts: ['https://a.com'] }` → `content`/`sourceUrl` `'https://a.com'`; con `decodeHtmlEntities(title.trim())` FALLA (1 failed / 7 passed). Mutaciones revertidas; solo tests, sin cambios de producción.
+- **Pendientes:** NIT 2: `useShareIntent` sin test del armado de opciones. NIT 3: diferencias del decoder con HTML estándar: mayúsculas (`&AMP;`), más de 8 dígitos, rango C1 128-159, y el límite `{1,8}` sin test.
+- **Verificación final:** `vitest` buildSharedContent + decodeHtmlEntities 14/14; `npm run verify` PASS (lint, typecheck x3, unit, guard, agents, rules, functions 117.5s, build). Sin puertos de emulador en LISTEN (5001/8080/9099/4400).
 
 _(una entrada por tanda, ver plantilla)_
 
