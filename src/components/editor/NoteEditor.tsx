@@ -5,7 +5,6 @@ import { useTranslation } from 'react-i18next';
 import { EditorContent, useEditor } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import TaskList from '@tiptap/extension-task-list';
-import TaskItem from '@tiptap/extension-task-item';
 import Highlight from '@tiptap/extension-highlight';
 import { TableKit } from '@tiptap/extension-table';
 import TextAlign from '@tiptap/extension-text-align';
@@ -14,6 +13,7 @@ import SlashCommand from '@/components/editor/extensions/slash-command';
 import CodeBlockLowlight from '@/components/editor/extensions/code-block-lowlight';
 import { createPlaceholderExtension } from '@/components/editor/extensions/placeholder-config';
 import FocusTracking from '@/components/editor/extensions/focus-tracking';
+import TaskItemEditor from '@/components/editor/extensions/task-item-editor';
 import WikilinkMenu from '@/components/editor/menus/WikilinkMenu';
 import SlashMenu from '@/components/editor/menus/SlashMenu';
 import BubbleToolbar from '@/components/editor/menus/BubbleToolbar';
@@ -71,7 +71,8 @@ export default function NoteEditor({
         underline: false,
       }),
       TaskList,
-      TaskItem.configure({ nested: true }),
+      // T4: items vinculables a tareas reales (mismo schema que el export).
+      TaskItemEditor.configure({ nested: true, noteId }),
       Highlight,
       TableKit.configure({ table: { resizable: true } }),
       TextAlign.configure({ types: ['heading', 'paragraph'] }),

@@ -413,6 +413,10 @@ export default interface Resources {
         toggleHeaderColumn: 'Columna de encabezado';
         toggleHeaderRow: 'Fila de encabezado';
       };
+      task: {
+        createTask: 'Crear tarea';
+        linked: 'Vinculada a Tareas';
+      };
       templates: {
         literature: {
           inMyWordsHeading: 'En mis palabras';

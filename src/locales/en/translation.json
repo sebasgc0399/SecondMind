@@ -406,6 +406,10 @@
       "toggleHeaderColumn": "Header column",
       "toggleHeaderRow": "Header row"
     },
+    "task": {
+      "createTask": "Create task",
+      "linked": "Linked to Tasks"
+    },
     "templates": {
       "literature": {
         "inMyWordsHeading": "In my own words",

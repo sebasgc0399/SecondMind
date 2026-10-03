@@ -473,6 +473,31 @@
   text-decoration: line-through;
 }
 
+/* SPEC-71 T4 — acciones del item de tarea (NodeView). "Crear tarea" aparece al
+   pasar el mouse por SU item (no por un sub-item anidado: `:has`), con foco de
+   teclado, y siempre en pantallas táctiles (sin hover). */
+.note-editor .ProseMirror ul[data-type='taskList'] li > .task-item-action,
+.note-editor .ProseMirror ul[data-type='taskList'] li > .task-item-linked {
+  flex-shrink: 0;
+  user-select: none;
+}
+
+.note-editor .ProseMirror ul[data-type='taskList'] li > .task-item-action {
+  opacity: 0;
+  transition: opacity 0.15s ease;
+}
+
+.note-editor .ProseMirror ul[data-type='taskList'] li:hover:not(:has(li:hover)) > .task-item-action,
+.note-editor .ProseMirror ul[data-type='taskList'] li > .task-item-action:focus-within {
+  opacity: 1;
+}
+
+@media (pointer: coarse) {
+  .note-editor .ProseMirror ul[data-type='taskList'] li > .task-item-action {
+    opacity: 1;
+  }
+}
+
 /* Tablas (F62) — TipTap TableKit. ProseMirror EXIGE estos estilos: sin ellos la
    tabla no muestra bordes ni el handle de resize de columna. Las variables
    semánticas (--border/--muted/--primary) ya cambian en .dark, así que el modo
