@@ -276,6 +276,7 @@
       "noResultsQuery": "No results for \"{{query}}\""
     },
     "placeholder": "Type an idea...",
+    "placeholderEmptyLine": "Type / for commands",
     "review": {
       "activate": "Activate periodic review",
       "again": "I need to review it",

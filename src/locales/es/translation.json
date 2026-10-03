@@ -278,6 +278,7 @@
       "noResultsQuery": "Sin resultados para \"{{query}}\""
     },
     "placeholder": "Escribe una idea...",
+    "placeholderEmptyLine": "Escribe / para ver comandos",
     "review": {
       "activate": "Activar revisión periódica",
       "again": "Necesito repasarla",

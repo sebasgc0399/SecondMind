@@ -13,6 +13,7 @@ import TextAlign from '@tiptap/extension-text-align';
 import Wikilink from '@/components/editor/extensions/wikilink';
 import SlashCommand from '@/components/editor/extensions/slash-command';
 import CodeBlockLowlight from '@/components/editor/extensions/code-block-lowlight';
+import { resolvePlaceholderText } from '@/components/editor/extensions/placeholder-text';
 import WikilinkMenu from '@/components/editor/menus/WikilinkMenu';
 import SlashMenu from '@/components/editor/menus/SlashMenu';
 import BubbleToolbar from '@/components/editor/menus/BubbleToolbar';
@@ -70,7 +71,19 @@ export default function NoteEditor({
       TableKit.configure({ table: { resizable: true } }),
       TextAlign.configure({ types: ['heading', 'paragraph'] }),
       CodeBlockLowlight,
-      Placeholder.configure({ placeholder: t('editor.placeholder', 'Escribe una idea...') }),
+      Placeholder.configure({
+        placeholder: ({ editor: currentEditor, node, pos }) =>
+          resolvePlaceholderText({
+            node,
+            pos,
+            doc: currentEditor.state.doc,
+            isEmptyDoc: currentEditor.isEmpty,
+            texts: {
+              emptyDoc: t('editor.placeholder', 'Escribe una idea...'),
+              emptyLine: t('editor.placeholderEmptyLine', 'Escribe / para ver comandos'),
+            },
+          }),
+      }),
       Wikilink.configure({ noteId }),
       SlashCommand.configure({ noteId }),
     ],
