@@ -239,6 +239,10 @@
       "empty": "Sin backlinks aún. Las notas que enlacen a esta aparecerán acá.",
       "hide": "Ocultar backlinks"
     },
+    "bubble": {
+      "convertToNote": "Convertir en nota",
+      "convertToNoteDone": "Nota creada y enlazada"
+    },
     "codeBlock": {
       "copied": "Código copiado",
       "copy": "Copiar código"
@@ -278,6 +282,7 @@
       "noResultsQuery": "Sin resultados para \"{{query}}\""
     },
     "placeholder": "Escribe una idea...",
+    "placeholderEmptyLine": "Escribe / para ver comandos",
     "review": {
       "activate": "Activar revisión periódica",
       "again": "Necesito repasarla",
@@ -314,7 +319,9 @@
       "title": "No pudimos guardar tu última edición"
     },
     "similar": {
+      "alreadyLinked": "Ya enlazada",
       "empty": "Sin notas similares aún.",
+      "insertLink": "Insertar enlace",
       "noEmbedding": "Guarda la nota para ver sugerencias.",
       "offline": "Disponible cuando vuelva la conexión.",
       "title": "Notas similares"
@@ -403,6 +410,13 @@
       "mergeOrSplit": "Combinar o dividir celdas",
       "toggleHeaderColumn": "Columna de encabezado",
       "toggleHeaderRow": "Fila de encabezado"
+    },
+    "task": {
+      "createTask": "Crear tarea",
+      "linked": "Vinculada a Tareas",
+      "completeAria": "Completar «{{name}}»",
+      "markPendingAria": "Marcar «{{name}}» como pendiente",
+      "createError": "No se pudo crear la tarea"
     },
     "templates": {
       "literature": {

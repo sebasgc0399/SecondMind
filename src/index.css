@@ -393,7 +393,10 @@
   background: oklch(0.85 0.15 85 / 0.22);
 }
 
-.note-editor .ProseMirror p.is-editor-empty:first-child::before {
+/* Nota vacía: siempre visible. Línea vacía en nota con contenido (pista "/"):
+   solo con el editor enfocado. La función de texto devuelve '' donde no aplica. */
+.note-editor .ProseMirror p.is-editor-empty:first-child::before,
+.note-editor .ProseMirror.ProseMirror-focused p.is-empty::before {
   content: attr(data-placeholder);
   color: var(--muted-foreground);
   float: left;
@@ -468,6 +471,31 @@
 .note-editor .ProseMirror ul[data-type='taskList'] li[data-checked='true'] > div {
   opacity: 0.6;
   text-decoration: line-through;
+}
+
+/* SPEC-71 T4 — acciones del item de tarea (NodeView). "Crear tarea" aparece al
+   pasar el mouse por SU item (no por un sub-item anidado: `:has`), con foco de
+   teclado, y siempre en pantallas táctiles (sin hover). */
+.note-editor .ProseMirror ul[data-type='taskList'] li > .task-item-action,
+.note-editor .ProseMirror ul[data-type='taskList'] li > .task-item-linked {
+  flex-shrink: 0;
+  user-select: none;
+}
+
+.note-editor .ProseMirror ul[data-type='taskList'] li > .task-item-action {
+  opacity: 0;
+  transition: opacity 0.15s ease;
+}
+
+.note-editor .ProseMirror ul[data-type='taskList'] li:hover:not(:has(li:hover)) > .task-item-action,
+.note-editor .ProseMirror ul[data-type='taskList'] li > .task-item-action:focus-within {
+  opacity: 1;
+}
+
+@media (pointer: coarse) {
+  .note-editor .ProseMirror ul[data-type='taskList'] li > .task-item-action {
+    opacity: 1;
+  }
 }
 
 /* Tablas (F62) — TipTap TableKit. ProseMirror EXIGE estos estilos: sin ellos la

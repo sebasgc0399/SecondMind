@@ -9,10 +9,12 @@
 // default cae a HTML crudo) y el escape de pipes en celdas de tabla.
 
 import { renderToMarkdown } from '@tiptap/static-renderer/pm/markdown';
+import { getTaskItemTaskId } from '@/components/editor/extensions/task-item-linked';
 import { exportExtensions } from './exportExtensions';
 import type { JSONContent } from '@tiptap/core';
 import type { Node as PMNode } from '@tiptap/pm/model';
 import type { WikilinkResolver } from './wikilinkResolver';
+import type { ExportTask } from './exportTypes';
 
 type Children = string | string[] | undefined;
 
@@ -50,9 +52,35 @@ function codeFence(code: string, language: string): string {
   return `${fence}${language}\n${code}\n${fence}`;
 }
 
+/**
+ * Estado de una tarea exportada por id: `true` completada, `false` no, y
+ * `undefined` si la tarea no está en el export (borrada).
+ */
+export type TaskCompletionLookup = (taskId: string) => boolean | undefined;
+
+export function buildTaskCompletionLookup(tasks: ExportTask[]): TaskCompletionLookup {
+  const statusById = new Map(tasks.map((task) => [task.id, task.status]));
+  return (taskId) => {
+    const status = statusById.get(taskId);
+    return status === undefined ? undefined : status === 'completed';
+  };
+}
+
+/**
+ * `checked` de un item de tarea para el export. Con `taskId` de una tarea
+ * exportada manda la tarea (E2-T4-b: el `checked` persistido en la nota puede
+ * estar viejo); sin vínculo, o si la tarea no existe, el persistido.
+ */
+function resolveTaskItemChecked(node: PMNode, isTaskCompleted?: TaskCompletionLookup): boolean {
+  const taskId = getTaskItemTaskId(node.attrs ?? {});
+  const fromTask = taskId ? isTaskCompleted?.(taskId) : undefined;
+  return fromTask ?? node.attrs?.checked === true;
+}
+
 export function serializeNoteContent(
   content: JSONContent,
   resolveWikilink: WikilinkResolver,
+  isTaskCompleted?: TaskCompletionLookup,
 ): string {
   return renderToMarkdown({
     content,
@@ -74,7 +102,7 @@ export function serializeNoteContent(
         // taskList/taskItem: el default cae a HTML crudo → GFM checklist.
         taskList: ({ children }: NodeCtx) => `\n${joinLines(children)}\n`,
         taskItem: ({ node, children }: NodeCtx) => {
-          const checked = node.attrs?.checked === true;
+          const checked = resolveTaskItemChecked(node, isTaskCompleted);
           const inner = asText(children).trim().replace(/\n/g, '\n  '); // indentar sub-tasks
           return `- [${checked ? 'x' : ' '}] ${inner}`;
         },

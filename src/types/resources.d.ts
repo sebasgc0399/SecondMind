@@ -145,7 +145,7 @@ export default interface Resources {
       v060: {
         items: [
           'Estrenamos la búsqueda semántica: encuentra notas relacionadas por su significado, aunque no usen las mismas palabras. La primera vez que la uses verás un aviso sobre cómo se tratan tus datos; al aceptarlo se activa, y puedes apagarla cuando quieras desde Ajustes. Mientras tanto, la búsqueda por palabras sigue funcionando igual.',
-          'Ya puedes descargar una copia de todo tu contenido —notas, tareas, proyectos, objetivos, hábitos e inbox— en un ZIP de archivos Markdown listo para abrir en Obsidian, Logseq u otro editor, desde Ajustes → Exportar mis datos. Tus notas conservan el formato, los enlaces [[entre notas]] y las tablas.',
+          'Ya puedes descargar una copia de todo tu contenido —notas, tareas, proyectos, objetivos, hábitos e inbox— en un ZIP de archivos Markdown listo para abrir en Obsidian, Logseq u otro editor, desde Ajustes → Exportar mis datos. Tus notas conservan el formato, los enlaces entre notas y las tablas.',
         ];
         title: 'Novedades de la 0.6.0';
       };
@@ -241,6 +241,10 @@ export default interface Resources {
         empty: 'Sin backlinks aún. Las notas que enlacen a esta aparecerán acá.';
         hide: 'Ocultar backlinks';
       };
+      bubble: {
+        convertToNote: 'Convertir en nota';
+        convertToNoteDone: 'Nota creada y enlazada';
+      };
       codeBlock: {
         copied: 'Código copiado';
         copy: 'Copiar código';
@@ -280,6 +284,7 @@ export default interface Resources {
         noResultsQuery: 'Sin resultados para "{{query}}"';
       };
       placeholder: 'Escribe una idea...';
+      placeholderEmptyLine: 'Escribe / para ver comandos';
       review: {
         activate: 'Activar revisión periódica';
         again: 'Necesito repasarla';
@@ -316,7 +321,9 @@ export default interface Resources {
         title: 'No pudimos guardar tu última edición';
       };
       similar: {
+        alreadyLinked: 'Ya enlazada';
         empty: 'Sin notas similares aún.';
+        insertLink: 'Insertar enlace';
         noEmbedding: 'Guarda la nota para ver sugerencias.';
         offline: 'Disponible cuando vuelva la conexión.';
         title: 'Notas similares';
@@ -405,6 +412,13 @@ export default interface Resources {
         mergeOrSplit: 'Combinar o dividir celdas';
         toggleHeaderColumn: 'Columna de encabezado';
         toggleHeaderRow: 'Fila de encabezado';
+      };
+      task: {
+        completeAria: 'Completar «{{name}}»';
+        createError: 'No se pudo crear la tarea';
+        createTask: 'Crear tarea';
+        linked: 'Vinculada a Tareas';
+        markPendingAria: 'Marcar «{{name}}» como pendiente';
       };
       templates: {
         literature: {
@@ -651,7 +665,7 @@ export default interface Resources {
         filesEntities: 'el resto de tu contenido';
         filesNotes: 'una nota por archivo `.md`';
         filesTitle: 'Qué hay en este archivo';
-        intro: 'Esta es una copia de tu Contenido en Markdown. Las notas usan wikilinks `[[...]]` entre sí; importá la carpeta en Obsidian, Logseq u otro editor compatible.';
+        intro: 'Esta es una copia de tu Contenido en Markdown. Las notas se enlazan entre sí; importá la carpeta en Obsidian, Logseq u otro editor compatible para navegar los enlaces.';
         title: 'Exportación de SecondMind';
       };
       section: {

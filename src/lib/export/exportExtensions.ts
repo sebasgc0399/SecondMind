@@ -15,13 +15,13 @@
 
 import StarterKit from '@tiptap/starter-kit';
 import TaskList from '@tiptap/extension-task-list';
-import TaskItem from '@tiptap/extension-task-item';
 import Highlight from '@tiptap/extension-highlight';
 import { TableKit } from '@tiptap/extension-table';
 import TextAlign from '@tiptap/extension-text-align';
 import CodeBlockLowlight from '@tiptap/extension-code-block-lowlight';
 import { createLowlight } from 'lowlight';
 import Wikilink from '@/components/editor/extensions/wikilink';
+import TaskItemLinked from '@/components/editor/extensions/task-item-linked';
 import type { Extensions } from '@tiptap/core';
 
 const WikilinkSchema = Wikilink.extend({ addProseMirrorPlugins: () => [] });
@@ -38,7 +38,8 @@ export const exportExtensions: Extensions = [
     },
   }),
   TaskList,
-  TaskItem.configure({ nested: true }),
+  // Mismo schema que el editor (atributo `taskId`, SPEC-71 T4); sin NodeView ni sync.
+  TaskItemLinked.configure({ nested: true }),
   Highlight,
   TableKit.configure({ table: { resizable: true } }),
   TextAlign.configure({ types: ['heading', 'paragraph'] }),

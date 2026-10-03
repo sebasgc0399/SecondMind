@@ -237,6 +237,10 @@
       "empty": "No backlinks yet. Notes that link here will appear here.",
       "hide": "Hide backlinks"
     },
+    "bubble": {
+      "convertToNote": "Convert to note",
+      "convertToNoteDone": "Note created and linked"
+    },
     "codeBlock": {
       "copied": "Code copied",
       "copy": "Copy code"
@@ -276,6 +280,7 @@
       "noResultsQuery": "No results for \"{{query}}\""
     },
     "placeholder": "Type an idea...",
+    "placeholderEmptyLine": "Type / for commands",
     "review": {
       "activate": "Activate periodic review",
       "again": "I need to review it",
@@ -309,7 +314,9 @@
       "title": "We couldn't save your last edit"
     },
     "similar": {
+      "alreadyLinked": "Already linked",
       "empty": "No similar notes yet.",
+      "insertLink": "Insert link",
       "noEmbedding": "Save the note to see suggestions.",
       "offline": "Available when you're back online.",
       "title": "Similar notes"
@@ -398,6 +405,13 @@
       "mergeOrSplit": "Merge or split cells",
       "toggleHeaderColumn": "Header column",
       "toggleHeaderRow": "Header row"
+    },
+    "task": {
+      "createTask": "Create task",
+      "linked": "Linked to Tasks",
+      "completeAria": "Complete \"{{name}}\"",
+      "markPendingAria": "Mark \"{{name}}\" as pending",
+      "createError": "Could not create the task"
     },
     "templates": {
       "literature": {

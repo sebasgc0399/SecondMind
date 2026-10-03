@@ -96,6 +96,26 @@ describe('tasksRepo.createTask', () => {
     expect(id).toBeTruthy();
     expect(firstPayload()).toMatchObject({ priority: 'high', projectId: 'p1', areaId: 'a1' });
   });
+
+  it('noteIds (E2 T4): se serializa en la row optimista y en el payload', async () => {
+    // Offline: el setDoc no confirma nunca; createTask igual devuelve el id (optimista).
+    setDocMock.mockReturnValue(new Promise(() => {}));
+    const id = await tasksRepo.createTask('Desde nota', { noteIds: ['n1'] });
+    expect(id).toBeTruthy();
+    expect(tasksStore.getCell('tasks', id!, 'noteIds')).toBe('["n1"]');
+
+    await vi.advanceTimersByTimeAsync(250);
+    expect(firstPayload()).toMatchObject({ noteIds: '["n1"]', status: 'in-progress' });
+  });
+
+  it('status completed (E2-T4-c): nace completada con completedAt', async () => {
+    const id = await tasksRepo.createTask('Ya hecha', { status: 'completed' });
+    await vi.advanceTimersByTimeAsync(250);
+
+    expect(tasksStore.getCell('tasks', id!, 'status')).toBe('completed');
+    expect(firstPayload()).toMatchObject({ status: 'completed' });
+    expect(firstPayload().completedAt as number).toBeGreaterThan(0);
+  });
 });
 
 describe('tasksRepo.updateTask (loop serialización skip-by-key + stringifyIds)', () => {

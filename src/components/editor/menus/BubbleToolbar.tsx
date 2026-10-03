@@ -12,9 +12,14 @@ import {
   ExternalLink,
   Pencil,
   Unlink,
+  FilePlus2,
 } from 'lucide-react';
 import { CellSelection } from '@tiptap/pm/tables';
 import LinkInput from '@/components/editor/menus/LinkInput';
+import { canConvertSelection } from '@/components/editor/extensions/selection-to-note';
+import useConvertSelectionToNote, {
+  type ConvertSelectionResult,
+} from '@/hooks/useConvertSelectionToNote';
 import type { EditorState } from '@tiptap/pm/state';
 
 function shouldShow({ editor, state }: { editor: Editor; state: EditorState }): boolean {
@@ -31,11 +36,14 @@ type ToolbarMode = 'default' | 'link-edit';
 
 interface BubbleToolbarProps {
   editor: Editor | null;
+  // Resultado de "Convertir en nota" (el aviso lo muestra el contenedor: el bubble se oculta al reemplazar).
+  onConvertResult?: (result: ConvertSelectionResult) => void;
 }
 
-export default function BubbleToolbar({ editor }: BubbleToolbarProps) {
+export default function BubbleToolbar({ editor, onConvertResult }: BubbleToolbarProps) {
   const { t } = useTranslation();
   const [mode, setMode] = useState<ToolbarMode>('default');
+  const convertToNote = useConvertSelectionToNote(editor, onConvertResult);
 
   const state = useEditorState({
     editor,
@@ -48,6 +56,8 @@ export default function BubbleToolbar({ editor }: BubbleToolbarProps) {
       isLink: editor?.isActive('link') ?? false,
       linkHref: (editor?.getAttributes('link').href as string | undefined) ?? '',
       selectionEmpty: editor?.state.selection.empty ?? true,
+      // Solo texto (o toda la nota) sin código ni celdas distintas de tabla (E2-T3-g).
+      canConvert: !!editor && canConvertSelection(editor.state),
     }),
   });
 
@@ -167,6 +177,18 @@ export default function BubbleToolbar({ editor }: BubbleToolbarProps) {
             >
               <LinkIcon className="h-4 w-4" />
             </ToolbarButton>
+            {state.canConvert && (
+              <>
+                <span aria-hidden className="mx-0.5 h-5 w-px bg-border" />
+                <ToolbarButton
+                  active={false}
+                  onClick={() => void convertToNote()}
+                  label={t('editor.bubble.convertToNote', 'Convertir en nota')}
+                >
+                  <FilePlus2 className="h-4 w-4" />
+                </ToolbarButton>
+              </>
+            )}
           </div>
         )}
       </div>

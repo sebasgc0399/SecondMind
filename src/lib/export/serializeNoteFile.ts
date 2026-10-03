@@ -3,7 +3,7 @@
 // título H1, summaryL3 como blockquote al inicio (D4: patrón TL;DR), y el cuerpo
 // serializado por serializeNoteContent (F1/F2).
 
-import { serializeNoteContent } from './serializeNote';
+import { serializeNoteContent, type TaskCompletionLookup } from './serializeNote';
 import { type ExportLabels, labelOr } from './exportLabels';
 import { formatDate, joinSections, oneLine, yamlList, yamlScalar } from './exportMarkdown';
 import type { TFunction } from 'i18next';
@@ -15,13 +15,14 @@ export function serializeNoteFile(
   resolveWikilink: WikilinkResolver,
   labels: ExportLabels,
   t: TFunction,
+  isTaskCompleted?: TaskCompletionLookup,
 ): string {
   const frontmatter = buildFrontmatter(note, labels, t);
   const title = `# ${note.title.trim() || t('export.note.untitled', 'Sin título')}`;
   const summary = note.summaryL3.trim()
     ? `> **${t('export.note.summary', 'Resumen')}:** ${oneLine(note.summaryL3)}`
     : '';
-  const body = serializeNoteContent(note.contentDoc, resolveWikilink).trim();
+  const body = serializeNoteContent(note.contentDoc, resolveWikilink, isTaskCompleted).trim();
 
   return `${joinSections([frontmatter, title, summary, body])}\n`;
 }

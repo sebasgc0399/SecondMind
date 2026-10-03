@@ -8,6 +8,7 @@ import { buildExportLabels } from './exportLabels';
 import { buildFilenameMap } from './filenames';
 import { buildWikilinkResolver } from './wikilinkResolver';
 import { serializeNoteFile } from './serializeNoteFile';
+import { buildTaskCompletionLookup } from './serializeNote';
 import {
   buildLeeme,
   serializeHabits,
@@ -25,6 +26,8 @@ export async function buildExportZip(data: ExportData, t: TFunction): Promise<Ui
   const labels = buildExportLabels(t);
   const filenameMap = buildFilenameMap(data.noteRefs);
   const resolveWikilink = buildWikilinkResolver(data.noteRefs);
+  // Los items de tarea vinculados se exportan con el estado de su tarea (E2-T4-b).
+  const isTaskCompleted = buildTaskCompletionLookup(data.tasks);
 
   const zip = new JSZip();
   zip.file('LEEME.md', buildLeeme(labels, t));
@@ -32,7 +35,10 @@ export async function buildExportZip(data: ExportData, t: TFunction): Promise<Ui
   const notas = zip.folder('notas');
   for (const note of data.notes) {
     const basename = filenameMap.get(note.id) ?? note.id;
-    notas?.file(`${basename}.md`, serializeNoteFile(note, resolveWikilink, labels, t));
+    notas?.file(
+      `${basename}.md`,
+      serializeNoteFile(note, resolveWikilink, labels, t, isTaskCompleted),
+    );
   }
 
   zip.file('tareas.md', serializeTasks(data.tasks, labels, t));

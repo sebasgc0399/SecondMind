@@ -10,6 +10,7 @@ import SimilarNotesPanel from '@/components/editor/SimilarNotesPanel';
 import { useBreakpoint } from '@/hooks/useMediaQuery';
 import useNote from '@/hooks/useNote';
 import useBacklinks from '@/hooks/useBacklinks';
+import type { Editor } from '@tiptap/core';
 
 interface NoteEditorContainerProps {
   noteId: string;
@@ -48,6 +49,7 @@ export default function NoteEditorContainer({
   const [summaryIsOpen, setSummaryIsOpen] = useState<boolean>(
     () => initialSummaryL3.trim().length > 0,
   );
+  const [editor, setEditor] = useState<Editor | null>(null);
   const summaryTextareaRef = useRef<HTMLTextAreaElement | null>(null);
 
   // F46.6: detección de split activo + toggle handler. Mismo patrón que
@@ -149,6 +151,7 @@ export default function NoteEditorContainer({
           onSummaryToggle={handleToggleSummary}
           summaryTextareaRef={summaryTextareaRef}
           onDiscardSaveError={handleDiscardSaveError}
+          onEditorReady={setEditor}
           headerSlot={
             <>
               <DistillIndicator noteId={noteId} onOpenSummary={handleOpenSummary} />
@@ -185,7 +188,7 @@ export default function NoteEditorContainer({
       {renderSidePanel && (
         <div className="w-full lg:w-72 lg:shrink-0">
           <BacklinksPanel noteId={noteId} onClose={() => setIsPanelOpen(false)} />
-          <SimilarNotesPanel noteId={noteId} />
+          <SimilarNotesPanel noteId={noteId} editor={editor} />
         </div>
       )}
     </div>

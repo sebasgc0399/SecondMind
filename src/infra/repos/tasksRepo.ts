@@ -10,6 +10,10 @@ export interface CreateTaskOptions {
   priority?: Priority;
   areaId?: string;
   projectId?: string;
+  // Notas vinculadas (E2 T4: tareas creadas desde un item de tarea del editor).
+  noteIds?: string[];
+  // Estado inicial (E2-T4-c): un item ya marcado nace como tarea completada.
+  status?: TaskStatus;
 }
 
 const repo = createFirestoreRepo<TaskRow>({
@@ -32,20 +36,21 @@ async function createTask(name: string, options?: CreateTaskOptions): Promise<st
   if (!trimmed) return null;
 
   const now = Date.now();
+  const status = options?.status ?? 'in-progress';
   const defaults: TaskRow = {
     name: trimmed,
-    status: 'in-progress',
+    status,
     priority: options?.priority ?? 'medium',
     dueDate: now,
     projectId: options?.projectId ?? '',
     areaId: options?.areaId ?? '',
     objectiveId: '',
-    noteIds: '[]',
+    noteIds: stringifyIds(options?.noteIds ?? []),
     description: '',
     isArchived: false,
     createdAt: now,
     updatedAt: now,
-    completedAt: 0,
+    completedAt: status === 'completed' ? now : 0,
   };
 
   try {
