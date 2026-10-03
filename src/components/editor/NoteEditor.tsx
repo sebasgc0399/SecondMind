@@ -13,6 +13,7 @@ import Wikilink from '@/components/editor/extensions/wikilink';
 import SlashCommand from '@/components/editor/extensions/slash-command';
 import CodeBlockLowlight from '@/components/editor/extensions/code-block-lowlight';
 import { createPlaceholderExtension } from '@/components/editor/extensions/placeholder-config';
+import FocusTracking from '@/components/editor/extensions/focus-tracking';
 import WikilinkMenu from '@/components/editor/menus/WikilinkMenu';
 import SlashMenu from '@/components/editor/menus/SlashMenu';
 import BubbleToolbar from '@/components/editor/menus/BubbleToolbar';
@@ -79,6 +80,8 @@ export default function NoteEditor({
       }),
       Wikilink.configure({ noteId }),
       SlashCommand.configure({ noteId }),
+      // Marca "tuvo foco" para Notas similares (E2-T2-a), aunque el panel no esté montado.
+      FocusTracking,
     ],
     content: initialContent ?? undefined,
     editorProps: {

@@ -7,6 +7,7 @@ import { createStore } from 'tinybase';
 import { Editor, type JSONContent } from '@tiptap/core';
 import StarterKit from '@tiptap/starter-kit';
 import Wikilink from '@/components/editor/extensions/wikilink';
+import FocusTracking from '@/components/editor/extensions/focus-tracking';
 import SimilarNotesPanel from '@/components/editor/SimilarNotesPanel';
 import { initTestI18n, tEs } from '@/test/i18n';
 
@@ -60,7 +61,7 @@ function mountEditor(content: JSONContent[]): Editor {
   document.body.appendChild(element);
   return new Editor({
     element,
-    extensions: [StarterKit, Wikilink.configure({ noteId: 'cur' })],
+    extensions: [StarterKit, Wikilink.configure({ noteId: 'cur' }), FocusTracking],
     content: { type: 'doc', content },
   });
 }
@@ -94,6 +95,7 @@ function setup(editor: Editor | null, outgoing = '[]') {
 
 const insertLabel = () => tEs('editor.similar.insertLink');
 const linkedLabel = () => tEs('editor.similar.alreadyLinked');
+const isUnavailable = (b: HTMLElement) => b.getAttribute('aria-disabled') === 'true';
 
 describe('SimilarNotesPanel — insertar enlace', () => {
   let editor: Editor;
@@ -142,14 +144,23 @@ describe('SimilarNotesPanel — insertar enlace', () => {
   it('queda deshabilitado con tooltip "Ya enlazada" si está en outgoingLinkIds', () => {
     setup(editor, JSON.stringify(['n1']));
     const linked = screen.getByRole('button', { name: linkedLabel() }) as HTMLButtonElement;
-    expect(linked.disabled).toBe(true);
+    expect(isUnavailable(linked)).toBe(true);
     expect(linked.title).toBe(linkedLabel());
     fireEvent.click(linked);
     expect(wikilinks(editor)).toEqual([]);
     // la otra sigue habilitada
-    expect(
-      (screen.getByRole('button', { name: insertLabel() }) as HTMLButtonElement).disabled,
-    ).toBe(false);
+    expect(isUnavailable(screen.getByRole('button', { name: insertLabel() }))).toBe(false);
+  });
+
+  it('"Ya enlazada" sigue enfocable con teclado (aria-disabled, no disabled)', () => {
+    setup(editor, JSON.stringify(['n1']));
+    const linked = screen.getByRole('button', { name: linkedLabel() }) as HTMLButtonElement;
+    expect(linked.disabled).toBe(false);
+    expect(linked.getAttribute('aria-disabled')).toBe('true');
+    linked.focus();
+    expect(document.activeElement).toBe(linked);
+    fireEvent.click(linked);
+    expect(wikilinks(editor)).toEqual([]);
   });
 
   it('reacciona si cambia outgoingLinkIds', () => {
@@ -158,9 +169,7 @@ describe('SimilarNotesPanel — insertar enlace', () => {
     act(() => {
       store.setCell('notes', 'cur', 'outgoingLinkIds', JSON.stringify(['n2']));
     });
-    expect(
-      (screen.getByRole('button', { name: linkedLabel() }) as HTMLButtonElement).disabled,
-    ).toBe(true);
+    expect(isUnavailable(screen.getByRole('button', { name: linkedLabel() }))).toBe(true);
     act(() => {
       store.setCell('notes', 'cur', 'outgoingLinkIds', '[]');
     });
@@ -175,7 +184,69 @@ describe('SimilarNotesPanel — insertar enlace', () => {
   it('sin editor los botones están deshabilitados', () => {
     setup(null);
     for (const b of screen.getAllByRole('button', { name: insertLabel() })) {
-      expect((b as HTMLButtonElement).disabled).toBe(true);
+      expect(isUnavailable(b)).toBe(true);
     }
+  });
+
+  it('panel montado después de enfocar el editor: inserta en el cursor (mobile)', () => {
+    // El usuario escribe con el panel cerrado y deja el cursor a mitad de párrafo.
+    act(() => {
+      editor.view.dom.dispatchEvent(new FocusEvent('focus'));
+      editor.commands.setTextSelection(5); // "hola| mundo"
+    });
+    setup(editor); // recién ahora se abre el panel
+    fireEvent.click(screen.getAllByRole('button', { name: insertLabel() }).at(0) as HTMLElement);
+    const para1 = editor.state.doc.firstChild;
+    expect(para1?.child(0).text).toBe('hola');
+    expect(para1?.child(1).type.name).toBe('wikilink');
+    expect(para1?.child(2).text).toBe(' mundo');
+  });
+
+  it('se deshabilita si el doc ya tiene un wikilink a esa nota (antes del guardado)', () => {
+    setup(editor);
+    const first = screen.getAllByRole('button', { name: insertLabel() }).at(0) as HTMLElement;
+    fireEvent.click(first);
+    expect(wikilinks(editor)).toHaveLength(1);
+    const linked = screen.getByRole('button', { name: linkedLabel() });
+    expect(isUnavailable(linked)).toBe(true);
+    fireEvent.click(linked);
+    expect(wikilinks(editor)).toHaveLength(1);
+    // reactivo: si el enlace sale del doc, se vuelve a habilitar
+    act(() => {
+      editor.commands.setContent({ type: 'doc', content: [para('x')] });
+    });
+    expect(screen.queryByRole('button', { name: linkedLabel() })).toBeNull();
+  });
+});
+
+describe('SimilarNotesPanel — cursor dentro de un bloque de código', () => {
+  afterEach(() => cleanup());
+
+  it('no parte el codeBlock: el enlace va en un párrafo nuevo después del bloque', () => {
+    const editor = mountEditor([
+      para('antes'),
+      { type: 'codeBlock', content: [{ type: 'text', text: 'const x = 1;' }] },
+    ]);
+    setup(editor);
+    act(() => {
+      editor.view.dom.dispatchEvent(new FocusEvent('focus'));
+      editor.commands.setTextSelection(12); // dentro del código
+    });
+    fireEvent.click(screen.getAllByRole('button', { name: insertLabel() }).at(0) as HTMLElement);
+    const doc = editor.state.doc;
+    // (StarterKit agrega un párrafo vacío final tras un codeBlock: TrailingNode.)
+    const codeBlocks: string[] = [];
+    doc.forEach((node) => {
+      if (node.type.name === 'codeBlock') codeBlocks.push(node.textContent);
+    });
+    expect(codeBlocks).toEqual(['const x = 1;']);
+    expect(doc.child(1).type.name).toBe('codeBlock');
+    expect(doc.child(1).textContent).toBe('const x = 1;');
+    expect(doc.child(2).type.name).toBe('paragraph');
+    expect(doc.child(2).firstChild?.type.name).toBe('wikilink');
+    expect(wikilinks(editor)).toEqual([{ noteId: 'n1', noteTitle: 'Nota uno' }]);
+    const host = editor.view.dom.parentElement;
+    editor.destroy();
+    host?.remove();
   });
 });

@@ -6,6 +6,7 @@ import { useCell } from 'tinybase/ui-react';
 import useOnlineStatus from '@/hooks/useOnlineStatus';
 import useSimilarNotes from '@/hooks/useSimilarNotes';
 import useInsertSimilarLink from '@/hooks/useInsertSimilarLink';
+import useEditorWikilinkIds from '@/hooks/useEditorWikilinkIds';
 import { parseIds } from '@/lib/tinybase';
 import type { Editor } from '@tiptap/core';
 
@@ -23,6 +24,8 @@ export default function SimilarNotesPanel({ noteId, editor }: SimilarNotesPanelP
   const outgoingLinkIdsRaw =
     (useCell('notes', noteId, 'outgoingLinkIds') as string | undefined) ?? '[]';
   const linkedIds = useMemo(() => new Set(parseIds(outgoingLinkIdsRaw)), [outgoingLinkIdsRaw]);
+  // Wikilinks ya presentes en el doc: cubren el lapso hasta el guardado debounced.
+  const docLinkedIds = useEditorWikilinkIds(editor);
 
   return (
     <div className="mt-4 border-t border-border pt-4">
@@ -68,7 +71,8 @@ export default function SimilarNotesPanel({ noteId, editor }: SimilarNotesPanelP
       {isOnline && !isLoading && notes.length > 0 && (
         <ul className="flex flex-col gap-1">
           {notes.map((note) => {
-            const isLinked = linkedIds.has(note.noteId);
+            const isLinked = linkedIds.has(note.noteId) || docLinkedIds.has(note.noteId);
+            const isUnavailable = isLinked || !editor;
             const label = isLinked
               ? t('editor.similar.alreadyLinked', 'Ya enlazada')
               : t('editor.similar.insertLink', 'Insertar enlace');
@@ -85,11 +89,16 @@ export default function SimilarNotesPanel({ noteId, editor }: SimilarNotesPanelP
                 </Link>
                 <button
                   type="button"
-                  onClick={() => insertLink(note.noteId, note.title)}
-                  disabled={isLinked || !editor}
+                  onClick={() => {
+                    // aria-disabled (no `disabled`): sigue enfocable y anuncia el motivo.
+                    if (isUnavailable) return;
+                    insertLink(note.noteId, note.title);
+                  }}
+                  aria-disabled={isUnavailable ? 'true' : undefined}
                   aria-label={label}
                   title={label}
-                  className="inline-flex shrink-0 items-center justify-center rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground disabled:pointer-events-auto disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent"
+                  // after:: área táctil de 40x40 sin cambiar el tamaño visible (28px).
+                  className="relative inline-flex shrink-0 items-center justify-center rounded-md p-1.5 text-muted-foreground transition-colors after:absolute after:-inset-y-1.5 after:-right-2 after:-left-1 after:content-[''] hover:bg-accent hover:text-foreground aria-disabled:cursor-not-allowed aria-disabled:opacity-40 aria-disabled:hover:bg-transparent"
                 >
                   <Link2 className="h-4 w-4" aria-hidden />
                 </button>
