@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
-import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { ReactNode } from 'react';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { renderHook } from '@testing-library/react';
 import { Provider } from 'tinybase/ui-react';
 import { notesStore } from '@/stores/notesStore';
