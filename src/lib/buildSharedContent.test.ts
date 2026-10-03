@@ -31,6 +31,20 @@ describe('buildSharedContent', () => {
     });
   });
 
+  it('URL http:// (no solo https) también es URL: sourceUrl y título decodificado', () => {
+    expect(buildSharedContent({ title: 'T &amp; U', texts: ['http://a.com'] })).toEqual({
+      content: 'T & U\nhttp://a.com',
+      sourceUrl: 'http://a.com',
+    });
+  });
+
+  it('título que decodifica a espacio (&nbsp;) se recorta después de decodificar', () => {
+    expect(buildSharedContent({ title: '&nbsp;', texts: ['https://a.com'] })).toEqual({
+      content: 'https://a.com',
+      sourceUrl: 'https://a.com',
+    });
+  });
+
   it('texto que no es URL: decodifica y no manda sourceUrl', () => {
     const result = buildSharedContent({ title: 'ignorado', texts: ['  Dijo &quot;hola&quot;  '] });
     expect(result).toEqual({ content: 'Dijo "hola"' });
