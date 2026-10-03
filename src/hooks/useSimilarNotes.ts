@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import i18n from '@/lib/i18n';
 import { notesStore } from '@/stores/notesStore';
+import { isTrashedNote } from '@/lib/noteGuards';
 import useAuth from '@/hooks/useAuth';
 import useSemanticConsent from '@/hooks/useSemanticConsent';
 import {
@@ -77,9 +78,11 @@ export default function useSimilarNotes(noteId: string): UseSimilarNotesReturn {
         if (otherId === noteId) continue;
         const score = cosineSimilarity(currentVector, otherVector);
         if (score >= SIMILARITY_THRESHOLD) {
-          const title =
-            (notesStore.getCell('notes', otherId, 'title') as string) ||
-            i18n.t('common.untitled', 'Sin título');
+          // Mismo criterio que useHybridSearch: el soft-delete no borra el embedding,
+          // así que se filtran papelera, archivadas y notas que ya no existen.
+          const row = notesStore.getRow('notes', otherId);
+          if (Object.keys(row).length === 0 || row.isArchived || isTrashedNote(row)) continue;
+          const title = (row.title as string) || i18n.t('common.untitled', 'Sin título');
           scored.push({ noteId: otherId, title, score });
         }
       }
