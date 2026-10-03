@@ -1,6 +1,6 @@
 # SPEC — Etapa 1: Pulido y deuda
 
-> **Estado:** En curso (rama `feat/etapa1-pulido`), loop activo. Base: tag `e1-T0` (commit del SPEC).
+> **Estado:** Cerrada (rama `feat/etapa1-pulido`, tags `e1-T0`…`e1-T4`), pendiente de review y merge de Sebastián.
 > **Origen / autorización:** Sebastián, 2026-10-02: _"Etapa 1 = pulido y deuda (opción 2). Armá el borrador del SPEC."_ Es la primera etapa que estrena el método de [Docs/05](../../Docs/05-metodo-trabajo-autonomo.md) con `/loop`. **Loop autorizado** (2026-10-02, cita textual): _"Apruebo el SPEC-70. Autorizado el loop para la Etapa 1, rama feat/etapa1-pulido, commits y tags locales, sin push."_ > **Etiquetas:** locales `e1-T<n>`. **Nunca** `v*` (dispara `release.yml`). Sin push dentro de la etapa; el merge a `main` lo hace Sebastián al revisar.
 > **Rama:** `feat/etapa1-pulido`.
 
@@ -195,4 +195,17 @@ _(vacío)_
 
 ## Resumen de cierre
 
-_(lo escribe el autor de la última tanda)_
+_(escrito por el orquestador, 2026-10-03)_
+
+- **Etiquetas:** `e1-T0` (base, SPEC) · `e1-T1` · `e1-T2` · `e1-T3` · `e1-T4` (HEAD). 35 archivos, +951/−66.
+- **Verificación de la etapa:** `npm run verify` PASS en cada tanda (T3 tras re-correr por el incidente de memoria); `npm run e2e:ui`: **3 passed** (desktop-1280, tablet-768, mobile-375; 1.9 min; puertos del emulador libres al terminar). Grep final de `deletedAt` en `src/hooks` + `src/components` (sin tests): solo `useNote.ts:97-98` (lectura one-shot de Firestore), `useTrashNotes` (días restantes/orden, criterio vía helper), `wikilink-suggestion.ts:34` (normalización del doc de Orama) y un comentario de tareas en `useOnboarding.ts:81`.
+- **Revisiones:** T1, T2 y T4 APROBADA CON CORRECCIONES (solo MINOR/NIT; una pasada de fixer cada una); T3 APROBADA sin fixer. Ningún BLOCKER ni MAJOR en la etapa.
+- **Decisiones a ratificar:** E1-T1-a/b, E1-T2-a/b/c, E1-T3-a/b, E1-T4-a/b (§ Decisiones del juez).
+- **Estacionadas:** ninguna.
+- **Incidentes:** en T3 el sistema se quedó sin memoria (~300 MB libres de 16 GB): el server MCP de Playwright y su Chrome crecieron a ~6 GB y quedaron emuladores `demo-secondmind` huérfanos de un `verify` cortado. El orquestador los terminó (solo procesos de automatización/emulador) y re-corrió `verify`. El MCP de Playwright quedó desconectado el resto de la sesión (T4 y `e2e:ui` no lo usan).
+- **Seguimientos conocidos:**
+  - Guard (fuera del loop, requiere `guard.unlock`): un heredoc de shell que escribe en `src/hooks/` se bloquea como "ruta protegida" (el patrón `(^|\s)hooks(\/|\s|$)` de `agent-guard-lib.mjs` no distingue `src/hooks/` de `.claude/hooks/`); `$_` de PowerShell (`Select-Object @{e={$_...}}`) se bloquea como "programa dado por una variable". Salidas usadas: Write/Edit y `netstat`/`tasklist`/`wmic`.
+  - Método: el MCP de Playwright puede crecer sin límite en sesiones largas; cerrar el navegador (`browser_close`) al terminar cada verificación visual y no correr `verify` con el emulador del `dev:emu` todavía arriba.
+  - T3 NITs: el test de Positioner acepta cualquier `z-` (incluido `z-0`/`z-10`); `className` dentro de `render`; regex sin `<Positioner` suelto/alias con dígitos; no escanea `.tsx` fuera de `src/components`/`src/app`.
+  - T4 NITs: `useShareIntent` sin test del armado de opciones; diferencias del decoder con HTML estándar (`&AMP;` mayúsculas, >8 dígitos, C1 128–159).
+- **Para Sebastián:** borrar `.claude/loop.active`; revisar y mergear `feat/etapa1-pulido` a `main`; los cambios son 100% cliente (hosting) — deploy cuando quieras; pasos manuales arriba.
