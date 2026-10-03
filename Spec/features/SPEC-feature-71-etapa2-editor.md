@@ -105,9 +105,20 @@ Modelos (Docs/05 § 3): T1–T2 writer y fixer `sonnet`; T3 writer `sonnet`, fix
 
 _(una entrada por tanda, formato de `Spec/templates/SPEC-etapa.md`)_
 
+### T1 — Pista de comandos en líneas vacías (en curso)
+
+- **Qué se hizo:** `Placeholder` usa una función por nodo delegada a `resolvePlaceholderText` (`extensions/placeholder-text.ts`, pura): nota vacía → `editor.placeholder`; párrafo vacío de primer nivel con el cursor en nota con contenido → `editor.placeholderEmptyLine`; headings, código, tablas, listas, citas e items de tarea → `''`. CSS: `p.is-empty::before` solo con `.ProseMirror-focused`; el de nota vacía queda siempre visible. Claves es/en y `resources.d.ts` regenerado.
+- **Commits:** `c794a4f` feat(editor): pista de comandos '/' en líneas vacías.
+- **Verificación:** `vitest placeholder-text.test.ts`: 7/7 PASS. Control positivo por mutación: línea vacía devolviendo `''` (comportamiento anterior) → FAIL "párrafo vacío en nota con contenido"; sin guard de primer nivel → 3 FAIL (tabla, taskItem, lista/cita); sin guard `paragraph` → 2 FAIL (heading, codeBlock); archivo restaurado. `npm run verify`: PASS (lint, typecheck x3, unit, guard, agents, rules, functions, build).
+- **Revisión:** _(pendiente)_
+- **Correcciones:** _(pendiente)_
+- **Pendientes:** verificación visual en emulador (375/768/1280) NO hecha: el MCP de Playwright no conectó en esta sesión; queda para el cierre de etapa (I7). Revisar mobile con teclado virtual y que la pista no aparezca en modo solo-lectura (`showOnlyWhenEditable` de la extensión lo cubre por defecto).
+
 ## Decisiones del juez (a ratificar)
 
-_(vacío)_
+- **E2-T1-a — Copy sin backticks.** Porqué: un placeholder es texto de atributo CSS (`content: attr(data-placeholder)`), no renderiza markdown; los backticks se verían literales. Queda "Escribe / para ver comandos" / "Type / for commands".
+- **E2-T1-b — La pista de línea solo con el editor enfocado (CSS).** Porqué: Placeholder decora el nodo vacío bajo `selection.anchor` aunque el editor no tenga foco; el SPEC pide "párrafo vacío con el cursor". La nota vacía conserva visibilidad sin foco (comportamiento previo).
+- **E2-T1-c — Sin `includeChildren`; solo párrafos de primer nivel.** Porqué: verificado en `buildPlaceholderDecorations` (v3.26.1) que con `showOnlyCurrent` y sin `includeChildren` solo se evalúa `resolved.node(1)`, así que celdas de tabla e items de tarea ya quedaban excluidos; la función además lo exige explícito (guard `parent === doc`) como defensa, y excluye headings.
 
 ## Estacionadas para Sebastián
 
