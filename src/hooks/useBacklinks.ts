@@ -29,8 +29,7 @@ export default function useBacklinks(noteId: string | undefined): Backlink[] {
       const sourceRow = notesTable[sourceId];
       if (!sourceRow || isTrashedNote(sourceRow)) continue;
       const cachedTitle = (row.sourceTitle as string) ?? '';
-      const freshTitle =
-        ((notesTable[sourceId]?.title as string) || '').trim() || cachedTitle || 'Sin título';
+      const freshTitle = ((sourceRow.title as string) || '').trim() || cachedTitle || 'Sin título';
       out.push({
         linkId,
         sourceId,
