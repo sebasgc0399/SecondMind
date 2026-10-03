@@ -237,6 +237,10 @@
       "empty": "No backlinks yet. Notes that link here will appear here.",
       "hide": "Hide backlinks"
     },
+    "bubble": {
+      "convertToNote": "Convert to note",
+      "convertToNoteDone": "Note created and linked"
+    },
     "codeBlock": {
       "copied": "Code copied",
       "copy": "Copy code"

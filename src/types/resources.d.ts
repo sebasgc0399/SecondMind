@@ -241,6 +241,10 @@ export default interface Resources {
         empty: 'Sin backlinks aún. Las notas que enlacen a esta aparecerán acá.';
         hide: 'Ocultar backlinks';
       };
+      bubble: {
+        convertToNote: 'Convertir en nota';
+        convertToNoteDone: 'Nota creada y enlazada';
+      };
       codeBlock: {
         copied: 'Código copiado';
         copy: 'Copiar código';
