@@ -1,7 +1,7 @@
 # SPEC — Etapa 2: Editor productivo
 
-> **Estado:** Borrador (rama `feat/etapa2-editor`), pendiente de aprobación de Sebastián.
-> **Origen / autorización:** Sebastián, 2026-10-03, eligió la opción 1 ("Editor productivo") de la propuesta de Etapa 2: _"y si tomare tu recomendacion"_ / _"Si procedamos"_. El loop **no** está autorizado todavía: requiere su aprobación explícita de este SPEC y del loop.
+> **Estado:** En curso (rama `feat/etapa2-editor`).
+> **Origen / autorización:** Sebastián, 2026-10-03, eligió la opción 1 ("Editor productivo") de la propuesta de Etapa 2: _"y si tomare tu recomendacion"_ / _"Si procedamos"_. **Loop autorizado** (2026-10-03, cita textual): _"Apruebo el SPEC-71. Autorizado el loop para la Etapa 2, rama feat/etapa2-editor, commits y tags locales, sin push."_
 > **Etiquetas:** locales `e2-T<n>`. **Nunca** `v*` (dispara `release.yml`). Sin push dentro de la etapa; al cerrar, el orquestador mergea a `main` con la aprobación de Sebastián (Docs/05 § 10).
 > **Rama:** `feat/etapa2-editor`.
 > **Release:** junto con la Etapa 1 (SPEC-70) forma el próximo release **0.6.1** (el release —tag, CI, deploy, changelog— es un paso aparte, a pedido de Sebastián).
