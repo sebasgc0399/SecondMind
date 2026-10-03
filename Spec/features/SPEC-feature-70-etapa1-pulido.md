@@ -104,7 +104,7 @@ Modelos (Docs/05 § 3): todas las tandas son de riesgo bajo → writer y fixer `
 - **Desviación:** NIT i18n — no existe ningún `vi.mock('react-i18next')` en el repo; el patrón vigente es inicializar la instancia real con `initTestI18n()` (`src/test/i18n.ts`, usado en `HabitRow.test.tsx` y otros). Se usó ese en vez de un mock.
 - **Verificación correcciones:** control positivo — los 2 tests nuevos de reactividad fallan contra el código previo (`expected [viva] to deeply equal []` y `expected ['viva'] to deeply equal ['papelera','purgada','viva']`), con `user` ya fijo. `vitest run` de los 3 archivos: 10/10, 0 líneas "Maximum update depth" / "i18next instance". `npm run verify` PASS a la primera (unit 63 archivos / 463 tests, rules, functions, build).
 
-### T2 — Migración al helper (en curso)
+### T2 — Migración al helper (e1-T2)
 
 - **Hecho:** los consumidores de vista usan `isTrashedNote` en vez de las variantes sueltas: `useGraph`, `useKnowledgeHubs`, `useReviewQueue`, `useGlobalSearch` (2 sitios), `useOnboarding`, `useHybridSearch.getNoteDoc`, `useTrashNotes` (inversa: `!isTrashedNote(row)` y luego `row.deletedAt as number`), `useNoteSearch` (3 sitios), `RecentNotesCard`, `wikilink-suggestion`. Sin cambio de dependencias de memos ni de infraestructura (I3).
 - **I4 — equivalencia (viejo -> helper, `true` = papelera):**
@@ -123,6 +123,12 @@ Modelos (Docs/05 § 3): todas las tandas son de riesgo bajo → writer y fixer `
 - **Verificación:** `npm run verify` PASS a la primera (lint, typecheck x3, unit, guard, agents, rules, functions 120.7s, build). Sin flake de `functions`. Se agregaron `useGraph.test.tsx`, `useTrashNotes.test.tsx` y `useGlobalSearch.test.tsx` (los tres consumidores no tenían cobertura de papelera).
 - **`deletedAt` restante en `src/hooks`/`src/components` (sin tests):** comentarios en `useKnowledgeHubs`/`useReviewQueue`/`useOnboarding`; `useNote.ts:97-98` (lectura one-shot de Firestore al abrir la nota, no es vista sobre el store; fuera de alcance); `useTrashNotes` (valor `deletedAt` para días restantes/orden, el criterio ya usa el helper); `wikilink-suggestion.ts:34` (normalización `Number(row.deletedAt) || 0` al armar el doc de Orama).
 - **Control positivo:** helper con `> 0` -> `>= 0`: fallan tests de `useKnowledgeHubs`, `useReviewQueue`, `useGraph`, `useGlobalSearch`, `useTrashNotes` (5 consumidores migrados distintos, además de `useBacklinks`, `useProjectNotes`, `useSimilarNotes` y `noteGuards`).
+- **Revisión:** APROBADA CON CORRECCIONES.
+  - MINOR 1 — 7 sitios migrados sin test que detectara una inversión del filtro (`useOnboarding`, `useHybridSearch.getNoteDoc`, `useNoteSearch` x3, `RecentNotesCard`, `wikilink-suggestion`).
+  - NIT 1 — comentarios de `useKnowledgeHubs.ts:32` y `useReviewQueue.ts:24` describían la condición vieja.
+- **Correcciones:** d041ac9 (tests nuevos: `wikilink-suggestion.test.ts`, `useNoteSearch.test.tsx`, `useOnboarding.test.tsx`, `useHybridSearch.test.tsx`, `RecentNotesCard.test.tsx`; nota viva + nota en papelera), d3efd0f (comentarios nombran `isTrashedNote`). `getNoteDoc` no se exporta: se cubre a través de `useHybridSearch` con `useAuth`/`useSemanticConsent`/`embeddings` mockeados y un embedding por nota.
+- **Control positivo (inversión `!isTrashedNote` -> `isTrashedNote` por sitio, FAIL y restaurado):** `useOnboarding.ts:68` FAIL (`expected true to be false`); `useHybridSearch.ts:44` FAIL (`expected ['papelera'] to deeply equal ['viva']`); `useNoteSearch.ts:42` FAIL (test con query); `useNoteSearch.ts:65` FAIL (test sin query); `useNoteSearch.ts:81` FAIL (test con query); `RecentNotesCard.tsx:21` FAIL; `wikilink-suggestion.ts:38` FAIL.
+- **Verificación correcciones:** `npx vitest run`: 71 archivos / 473 tests pasan. Primer `npm run verify` FAIL solo en lint (`import/order` en `useOnboarding.test.tsx`, corregido con `eslint --fix`); segunda corrida `npm run verify` PASS (lint, typecheck x3, unit, guard, agents, rules, functions 115.2s, build). Sin flake de `functions`.
 
 _(una entrada por tanda, ver plantilla)_
 
