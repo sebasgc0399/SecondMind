@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useRef, useSyncExternalStore } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import { useHasRow } from 'tinybase/ui-react';
 import { getTaskItemTaskId } from '@/components/editor/extensions/task-item-linked';
 import {
@@ -27,9 +27,14 @@ interface UseTaskItemLinkReturn {
   // "Crear tarea" disponible: editable, con texto y sin tarea viva vinculada.
   canCreate: boolean;
   isEditable: boolean;
+  // El último "Crear tarea" falló; se limpia solo tras CREATE_ERROR_MS.
+  hasCreateError: boolean;
   handleToggle: (checked: boolean) => void;
   handleCreate: () => Promise<void>;
 }
+
+// Mismo tiempo que el aviso de "Convertir en nota" (useConvertNotice).
+export const CREATE_ERROR_MS = 3000;
 
 // `setEditable` no despacha transacciones (solo emite `update`): se escucha
 // ese evento para que el botón desaparezca en modo solo-lectura.
@@ -69,6 +74,14 @@ export default function useTaskItemLink({
   const isEditable = useEditorIsEditable(editor);
   const lookup = useMemo(() => createStoreTaskLookup(taskStore), [taskStore]);
   const isBusyRef = useRef(false);
+  // Cada fallo es un evento nuevo: reinicia el timer aunque el aviso ya esté visible.
+  const [createErrorId, setCreateErrorId] = useState(0);
+
+  useEffect(() => {
+    if (createErrorId === 0) return;
+    const timer = setTimeout(() => setCreateErrorId(0), CREATE_ERROR_MS);
+    return () => clearTimeout(timer);
+  }, [createErrorId]);
 
   const isLinked = Boolean(taskId) && exists;
   const hasText = (node.firstChild?.textContent ?? '').trim().length > 0;
@@ -97,13 +110,15 @@ export default function useTaskItemLink({
     if (isBusyRef.current) return;
     isBusyRef.current = true;
     try {
-      await createLinkedTask({
+      const result = await createLinkedTask({
         editor,
         getPos,
         noteId,
         lookup,
         createTask: tasksRepo.createTask,
       });
+      if (result === 'error') setCreateErrorId((id) => id + 1);
+      else setCreateErrorId(0);
     } finally {
       isBusyRef.current = false;
     }
@@ -114,6 +129,7 @@ export default function useTaskItemLink({
     isLinked,
     canCreate,
     isEditable,
+    hasCreateError: createErrorId > 0,
     handleToggle,
     handleCreate,
   };

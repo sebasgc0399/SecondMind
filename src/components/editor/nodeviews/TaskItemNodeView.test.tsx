@@ -163,16 +163,44 @@ describe('TaskItemNodeView', () => {
     await renderEditor([item('x', { taskId: 't1' })]);
     const checkbox = screen.getByRole('checkbox') as HTMLInputElement;
     expect(checkbox.checked).toBe(false);
-    expect(checkbox.getAttribute('aria-label')).toBe(tEs('tasks.card.completeAria'));
+    expect(checkbox.getAttribute('aria-label')).toBe('Completar «x»');
 
     act(() => {
       store.setCell('tasks', 't1', 'status', 'completed');
     });
     expect((screen.getByRole('checkbox') as HTMLInputElement).checked).toBe(true);
     expect(screen.getByRole('checkbox').getAttribute('aria-label')).toBe(
-      tEs('tasks.card.markPendingAria'),
+      'Marcar «x» como pendiente',
     );
     expect(completeTaskMock).not.toHaveBeenCalled();
+  });
+
+  it('checkbox de un item sin texto: label genérico', async () => {
+    await renderEditor([item('')]);
+    expect(screen.getByRole('checkbox').getAttribute('aria-label')).toBe(
+      tEs('tasks.card.completeAria'),
+    );
+  });
+
+  it('si crear la tarea falla: aviso de error que se va solo y el botón sigue', async () => {
+    createTaskMock.mockResolvedValueOnce(null as unknown as string);
+    await renderEditor([item('Llamar a Ana')]);
+    vi.useFakeTimers();
+    try {
+      await act(async () => {
+        fireEvent.click(screen.getByRole('button', { name: createLabel() }));
+      });
+      expect(screen.getByRole('alert').textContent).toBe(tEs('editor.task.createError'));
+      expect(taskItemNodes()).toEqual([{ checked: false, taskId: null }]);
+      expect(screen.getByRole('button', { name: createLabel() })).toBeTruthy();
+
+      act(() => {
+        vi.advanceTimersByTime(3000);
+      });
+      expect(screen.queryByRole('alert')).toBeNull();
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it('checkbox → repo: marcar completa la tarea una sola vez y queda marcado', async () => {

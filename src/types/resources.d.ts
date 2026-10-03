@@ -414,8 +414,11 @@ export default interface Resources {
         toggleHeaderRow: 'Fila de encabezado';
       };
       task: {
+        completeAria: 'Completar «{{name}}»';
+        createError: 'No se pudo crear la tarea';
         createTask: 'Crear tarea';
         linked: 'Vinculada a Tareas';
+        markPendingAria: 'Marcar «{{name}}» como pendiente';
       };
       templates: {
         literature: {

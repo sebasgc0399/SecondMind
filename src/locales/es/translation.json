@@ -413,7 +413,10 @@
     },
     "task": {
       "createTask": "Crear tarea",
-      "linked": "Vinculada a Tareas"
+      "linked": "Vinculada a Tareas",
+      "completeAria": "Completar «{{name}}»",
+      "markPendingAria": "Marcar «{{name}}» como pendiente",
+      "createError": "No se pudo crear la tarea"
     },
     "templates": {
       "literature": {

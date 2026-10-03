@@ -408,7 +408,10 @@
     },
     "task": {
       "createTask": "Create task",
-      "linked": "Linked to Tasks"
+      "linked": "Linked to Tasks",
+      "completeAria": "Complete \"{{name}}\"",
+      "markPendingAria": "Mark \"{{name}}\" as pending",
+      "createError": "Could not create the task"
     },
     "templates": {
       "literature": {

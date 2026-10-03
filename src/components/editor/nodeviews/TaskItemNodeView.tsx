@@ -15,7 +15,7 @@ export default function TaskItemNodeView({ node, editor, getPos, extension }: Re
   const { t } = useTranslation();
   const navigate = useNavigate();
   const options = extension.options as TaskItemEditorOptions;
-  const { isChecked, isLinked, canCreate, isEditable, handleToggle, handleCreate } =
+  const { isChecked, isLinked, canCreate, isEditable, hasCreateError, handleToggle, handleCreate } =
     useTaskItemLink({
       editor,
       node,
@@ -24,6 +24,15 @@ export default function TaskItemNodeView({ node, editor, getPos, extension }: Re
       taskStore: options.getTaskStore(),
     });
   const taskId = (node.attrs.taskId as string | null) ?? undefined;
+  // El lector de pantalla nombra la tarea; sin texto, el label genérico.
+  const itemName = (node.firstChild?.textContent ?? '').trim();
+  const checkboxLabel = itemName
+    ? isChecked
+      ? t('editor.task.markPendingAria', { name: itemName })
+      : t('editor.task.completeAria', { name: itemName })
+    : isChecked
+    ? t('tasks.card.markPendingAria', 'Marcar pendiente')
+    : t('tasks.card.completeAria', 'Completar tarea');
 
   return (
     <NodeViewWrapper
@@ -40,15 +49,20 @@ export default function TaskItemNodeView({ node, editor, getPos, extension }: Re
           onMouseDown={(event) => event.preventDefault()}
           onChange={(event) => handleToggle(event.target.checked)}
           disabled={!isEditable}
-          aria-label={
-            isChecked
-              ? t('tasks.card.markPendingAria', 'Marcar pendiente')
-              : t('tasks.card.completeAria', 'Completar tarea')
-          }
+          aria-label={checkboxLabel}
         />
         <span />
       </label>
       <NodeViewContent as="div" />
+      {hasCreateError ? (
+        <span
+          contentEditable={false}
+          role="alert"
+          className="task-item-error self-center text-xs text-destructive"
+        >
+          {t('editor.task.createError')}
+        </span>
+      ) : null}
       {isLinked ? (
         <span contentEditable={false} className="task-item-linked">
           <button
