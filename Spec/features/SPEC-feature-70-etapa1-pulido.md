@@ -88,11 +88,20 @@ Modelos (Docs/05 § 3): todas las tandas son de riesgo bajo → writer y fixer `
 
 ## Avance
 
+### T1 — Papelera: helper y fugas (en curso)
+
+- **Hecho:** `src/lib/noteGuards.ts` (`isTrashedNote`/`isLiveNote`, no-número = viva). Proyecto: derivación extraída a `useProjectNotes` (excluye papelera; `hasAnyNotes` solo vivas), la página lo consume. `useBacklinks`: salta orígenes en papelera o ausentes de `notes` (ya dependía de `useTable('notes')`, así que restaurar reaparece; panel y contador del toggle usan el mismo hook, `NoteEditorContainer.tsx:46,156`). `useSimilarNotes`: excluye papelera, archivadas y notas sin row. No se migraron otros consumidores (T2).
+- **Commits:** 874f540 (helper), 5a880f1 (proyecto), 5974580 (backlinks), a97cfc6 (similares).
+- **Verificación:** `npm run verify` PASS (unit 63 archivos / 461 tests; rules, functions 62 tests, build). Un primer verify falló solo en `functions` por timeout de carga de funciones del emulador ("Timeout after 10000", sin tocar `src/functions`); `test:functions` aislado pasó 62/62 y el verify completo repetido PASS.
+- **Controles positivos (FAIL observado):** helper con `> 0` → `>= 0`: 1 test falla; `useProjectNotes` sin filtro: 3/3 fallan; `useBacklinks` sin el chequeo de papelera (manteniendo el de ausente): fallan "papelera" y "restaurar"; `useSimilarNotes` sin filtro papelera/archivada: recibe `papelera` y `archivada`; sin chequeo de row vacía: recibe `purgada`.
+- **Pendientes:** ninguno de T1. T2 migra el resto de variantes.
+
 _(una entrada por tanda, ver plantilla)_
 
 ## Decisiones del juez (a ratificar)
 
-_(vacío)_
+- **E1-T1-a** — `useSimilarNotes` excluye también notas sin row en `notesStore` (embedding de nota purgada), no solo papelera/archivada: es el mismo criterio de `useHybridSearch.getNoteDoc` (row vacía → null) y evita mostrar un "Sin título" fantasma que lleva a "no encontrada".
+- **E1-T1-b** — `isTrashedNote` acepta `null`/`undefined` además de una row (devuelve false); permite usarlo sobre `notesTable[id]` posiblemente ausente sin guardas extra. `useBacklinks` trata la ausencia aparte (la descarta) porque un origen inexistente no es un backlink válido.
 
 ## Estacionadas para Sebastián
 
