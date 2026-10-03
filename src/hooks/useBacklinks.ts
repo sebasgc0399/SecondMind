@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
 import { useTable } from 'tinybase/ui-react';
+import { isTrashedNote } from '@/lib/noteGuards';
 
 export interface Backlink {
   linkId: string;
@@ -23,6 +24,10 @@ export default function useBacklinks(noteId: string | undefined): Backlink[] {
     for (const [linkId, row] of Object.entries(linksTable)) {
       if (row.targetId !== noteId) continue;
       const sourceId = (row.sourceId as string) ?? '';
+      // Origen en papelera o inexistente: no es un backlink visible. Depende de
+      // notesTable, así que restaurar la nota origen la hace reaparecer.
+      const sourceRow = notesTable[sourceId];
+      if (!sourceRow || isTrashedNote(sourceRow)) continue;
       const cachedTitle = (row.sourceTitle as string) ?? '';
       const freshTitle =
         ((notesTable[sourceId]?.title as string) || '').trim() || cachedTitle || 'Sin título';
