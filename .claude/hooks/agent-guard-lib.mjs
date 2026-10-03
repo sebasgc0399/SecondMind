@@ -172,7 +172,7 @@ function nestedSources(argv) {
  */
 export function splitCommands(src, depth = 0, mode = 'shell') {
   // PowerShell: `& $x` / `. $x` invocan lo que diga la variable.
-  const psCall = mode === 'ps' && /(^|[\s;|{(])[&.]\s*\$/.test(src);
+  const psCall = mode === 'ps' && /(^|[\s;|{(])[&.]\s*["'(]*\$/.test(src);
   const cmds = [];
   let argv = [];
   let spans = [];
@@ -276,13 +276,17 @@ export function splitCommands(src, depth = 0, mode = 'shell') {
   const generic = mode === 'code' || HEREDOC.test(src);
   const nested = [];
   for (const cmd of cmds) {
+    const { shell, code, ps } = nestedSources(cmd);
     if (generic) {
       for (const t of cmd) {
         if (NESTED.test(t)) nested.push(...splitCommands(t, depth + 1, 'code'));
       }
+      // Lo que la shell ejecuta (`bash -c`, `eval`, `powershell`) sigue siendo shell aunque
+      // haya heredoc: ahí un `$x` como programa sí es [dynamic].
+      for (const s of shell) nested.push(...splitCommands(s, depth + 1, 'shell'));
+      for (const s of ps) nested.push(...splitCommands(s, depth + 1, 'ps'));
       continue;
     }
-    const { shell, code, ps } = nestedSources(cmd);
     for (const s of shell) nested.push(...splitCommands(s, depth + 1, 'shell'));
     for (const s of code) nested.push(...splitCommands(s, depth + 1, 'code'));
     for (const s of ps) nested.push(...splitCommands(s, depth + 1, 'ps'));
@@ -763,15 +767,19 @@ const P_ALL =
 const P_NO_BARE_HOOKS =
   /\.claude\/(hooks\b|settings(\.local)?\.json|loop\.active|guard\.unlock)|\.claude\/?(\*|\s|$)|(^|[\s=])(settings(\.local)?\.json|loop\.active|guard\.unlock)\b|agent-guard/;
 // `cd` a un destino no verificable (variable, `~`): el `hooks/` relativo podría ser el del guard.
-const CD_DYNAMIC = /(^|[\s;&|(])(cd|pushd|chdir|set-location|sl)\s+[^;&|\n]*[$%`~]/;
+// Se mira sobre el comando crudo: `cd .cl*`, `cd .clau\de` también cuentan.
+const CD_DYNAMIC = /(^|[\s;&|(])(cd|pushd|chdir|set-location|sl)\s+[^;&|\n]*[$%`~*?[\\]/i;
+// Borrados recursivos o `find`: un `hooks` suelto puede alcanzar `.claude/hooks` sin nombrarlo.
+const RECURSIVE = /(^|[\s;&|(])find\s|\s-[a-z]*r[a-z]*\b|\s--recursive\b|\s-recurse\b/;
 const P_SENTINELS = /loop\.active|guard\.unlock|\.claude\/?(\*|\s|$)/;
 const WRITE_VERBS =
   /\b(rm|rmdir|mv|cp|tee|truncate|chmod|chown|ln|touch|install|dd|unlink|new-item|remove-item|set-content|add-content|out-file|copy-item|move-item|rename-item|ni|ri|del|erase|move|copy|ren)\b|\bsed\b[^;&|\n]*\s(-\w*i|--in-place)|\bperl\b[^;&|\n]*\s-\w*i|\bgit\b[^;&|\n]*\b(checkout|restore|rm|mv|apply|stash|reset|am)\b/;
 const INTERP_WRITE =
   /\b(node|python3?|py|perl|ruby|deno|bun|pwsh|powershell)\b[\s\S]*(writefile|appendfile|unlink|rmsync|rmdir|rename|copyfile|createwritestream|open\(|set-content|out-file|shutil|os\.remove|write_text|write_bytes)/;
 
-function shellWritesProtected(flat, unlocked, cwdInClaude) {
-  const bareHooks = cwdInClaude || /\.claude/.test(flat) || CD_DYNAMIC.test(flat);
+function shellWritesProtected(flat, unlocked, cwdInClaude, raw) {
+  const bareHooks =
+    cwdInClaude || /\.claude/.test(flat) || CD_DYNAMIC.test(raw) || RECURSIVE.test(flat);
   const P = unlocked ? P_SENTINELS : bareHooks ? P_ALL : P_NO_BARE_HOOKS;
   // Redirecciones: el destino de `>`/`>>` es protegido (`2>&1` no cuenta).
   const redirect = /(^|[^0-9&])\d?>{1,2}\|?\s*([^\s;&|<>]+)/g;
@@ -1145,7 +1153,7 @@ export function checkShell(cmd, env, cwd, depth = 0) {
   const cwdN = cwd ? normalizePath(cwd) : '';
   const cwdInClaude =
     Boolean(root) && (cwdN === `${root}/.claude` || cwdN.startsWith(`${root}/.claude/`));
-  if (shellWritesProtected(flat, env.unlocked, cwdInClaude))
+  if (shellWritesProtected(flat, env.unlocked, cwdInClaude, cmd))
     return '[protected-path] escritura a una ruta protegida del guard desde la shell';
   return null;
 }
@@ -1185,14 +1193,17 @@ export function isLoopClose(input, env) {
   if (!input || input.agent_id || !env.loopActive || !SHELL_TOOLS.has(input.tool_name))
     return false;
   const cmd = input.tool_input?.command;
-  if (typeof cmd !== 'string' || /[;&|<>`$\n\r()*?]/.test(cmd.trim())) return false;
+  // Sin metacaracteres de shell ni listas/globs de PowerShell (`a,b`, `{}`, `[]`).
+  if (typeof cmd !== 'string' || /[;&|<>`$\n\r()*?,{}[\]]/.test(cmd.trim())) return false;
   // Sin metacaracteres, `\` solo puede ser separador de ruta de Windows.
   const cmds = splitCommands(cmd.trim().replace(/\\/g, '/'));
   if (cmds.length !== 1) return false;
   const [prog, ...args] = cmds[0];
-  if (!RM_PROGRAMS.has(programName(prog))) return false;
+  // El programa literal (sin ruta ni extensión): `./tools/rm` o `del.bat` no cuentan.
+  if (!RM_PROGRAMS.has(String(prog).toLowerCase())) return false;
   const paths = args.filter((t) => !/^-(f|force)$/i.test(t));
   if (paths.length !== 1 || paths[0].startsWith('-')) return false;
+  if (paths[0].split('/').includes('..')) return false;
   const root = normalizePath(env.projectDir);
   return (
     Boolean(root) &&

@@ -1058,6 +1058,13 @@ describe('cierre del loop por la sesión principal (post Etapa 1)', () => {
     'rm -rf .claude',
     'rm .claude/*.active',
     'rm other/.claude/loop.active',
+    // Revisión: lista con coma que vuelve con `..` al sentinel y borra otro archivo.
+    'Remove-Item .claude/hooks/agent-guard.mjs,x/../../loop.active',
+    'rm .claude/hooks/../loop.active',
+    // Revisión: programa con ruta o extensión no es el `rm` literal.
+    './tools/rm .claude/loop.active',
+    'D:/x/del.bat .claude/loop.active',
+    'rm.cmd .claude/loop.active',
   ]) {
     test(`con loop activo sigue bloqueado para la sesión principal: ${c}`, () =>
       assert.equal(evaluate(bash(c), loop).block, true));
@@ -1072,8 +1079,15 @@ describe('falsos positivos de la Etapa 1', () => {
       ),
     ));
   test('hooks/ relativo sigue bloqueado si el comando entra en .claude o el cd es dinámico', () => {
-    assert.match(blocked(bash('cd .claude && rm hooks/agent-guard.mjs')).reason, /protected-path/);
+    assert.match(blocked(bash('cd .claude && rm hooks/x.mjs')).reason, /protected-path/);
     assert.match(blocked(bash('cd $D && rm hooks/x.mjs')).reason, /protected-path/);
+    // Revisión: cd con glob o backslash, y borrados recursivos/find por nombre.
+    assert.match(blocked(bash('cd .cl* && rm -rf hooks')).reason, /protected-path/);
+    assert.match(blocked(bash('cd .clau\\de && rm -rf hooks')).reason, /protected-path/);
+    assert.match(
+      blocked(bash('find . -type d -name hooks -exec rm -rf {} +')).reason,
+      /protected-path/,
+    );
     assert.match(
       blocked(bash('rm hooks/x.mjs', { cwd: `${PROJECT}/.claude` })).reason,
       /protected-path/,
@@ -1090,7 +1104,15 @@ describe('falsos positivos de la Etapa 1', () => {
   test('PowerShell: & $x / . $x siguen siendo [dynamic]', () => {
     assert.match(blocked(bash('powershell -Command "& $cmd push"')).reason, /\[dynamic\]/);
     assert.match(blocked(bash('pwsh -c ". $script"')).reason, /\[dynamic\]/);
+    // Revisión: con comillas o paréntesis entre el operador y la variable.
+    assert.match(blocked(bash(`powershell -Command '& "$x" push'`)).reason, /\[dynamic\]/);
+    assert.match(blocked(bash(`powershell -Command '&($x) push'`)).reason, /\[dynamic\]/);
   });
+  test('heredoc + bash -c con $CMD como programa sigue siendo [dynamic] (revisión)', () =>
+    assert.match(
+      blocked(bash("cat > /tmp/n.txt <<EOF\nhola\nEOF\nbash -c '$CMD push'")).reason,
+      /\[dynamic\]/,
+    ));
   test('$var dentro de código (node -e, cuerpo de heredoc) no es [dynamic]', () => {
     allowedSub(bash(`node -e "const f='$f'; console.log(f)"`));
     allowedSub(bash('cat > /tmp/m.sh <<\'EOF\'\necho "== $6 ($1:$2)"\nEOF'));
