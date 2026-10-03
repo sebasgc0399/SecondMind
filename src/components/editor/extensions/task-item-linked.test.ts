@@ -54,6 +54,13 @@ function taskItems(editor: Editor): Array<Record<string, unknown>> {
   return out;
 }
 
+// Enter real sobre el DOM del editor (camino de keydown de ProseMirror). No se usa
+// `commands.keyboardShortcut`: re-aplica los pasos capturados y en este caso perdía
+// los cambios de atributos del handler (medido en 3.26.1).
+function pressEnter(editor: Editor): void {
+  editor.view.dom.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+}
+
 describe('TaskItemLinked — atributo taskId', () => {
   it('round-trip en JSON: taskId se conserva y el default es null', () => {
     const editor = mount(doc(item('vinculada', { taskId: 't1' }), item('local')));
@@ -82,6 +89,41 @@ describe('TaskItemLinked — atributo taskId', () => {
     expect(taskItems(editor)).toEqual([
       { checked: false, taskId: 't1', text: 'vinculada' },
       { checked: false, taskId: null, text: 'nueva' },
+    ]);
+    editor.destroy();
+  });
+
+  it('Enter al INICIO de un item vinculado: el vínculo y el check bajan con el texto (un undo)', () => {
+    const editor = mount(doc(item('Comprar pan', { checked: true, taskId: 't1' })));
+    let start = -1;
+    editor.state.doc.descendants((node, pos) => {
+      if (node.isText && start < 0) start = pos;
+    });
+    editor.commands.setTextSelection(start);
+    pressEnter(editor);
+
+    expect(taskItems(editor)).toEqual([
+      { checked: false, taskId: null, text: '' },
+      { checked: true, taskId: 't1', text: 'Comprar pan' },
+    ]);
+    // Un solo paso de deshacer vuelve al item original.
+    editor.commands.undo();
+    expect(taskItems(editor)).toEqual([{ checked: true, taskId: 't1', text: 'Comprar pan' }]);
+    editor.destroy();
+  });
+
+  it('Enter en medio de un item vinculado: comportamiento heredado (el vínculo queda arriba)', () => {
+    const editor = mount(doc(item('Comprar pan', { taskId: 't1' })));
+    let start = -1;
+    editor.state.doc.descendants((node, pos) => {
+      if (node.isText && start < 0) start = pos;
+    });
+    editor.commands.setTextSelection(start + 'Comprar'.length);
+    pressEnter(editor);
+
+    expect(taskItems(editor)).toEqual([
+      { checked: false, taskId: 't1', text: 'Comprar' },
+      { checked: false, taskId: null, text: ' pan' },
     ]);
     editor.destroy();
   });
