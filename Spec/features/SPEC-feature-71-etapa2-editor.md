@@ -1,6 +1,6 @@
 # SPEC — Etapa 2: Editor productivo
 
-> **Estado:** Cerrada (tags locales `e2-T0..T4`); pendiente de la aprobación de Sebastián para mergear a `main`.
+> **Estado:** Cerrada y mergeada a `main` (2026-10-03; tags `e2-T0`…`e2-T4`). Decisiones del juez y estacionadas ratificadas por Sebastián (2026-10-03: _"ok"_ a la lista con las recomendaciones del orquestador).
 > **Origen / autorización:** Sebastián, 2026-10-03, eligió la opción 1 ("Editor productivo") de la propuesta de Etapa 2: _"y si tomare tu recomendacion"_ / _"Si procedamos"_. **Loop autorizado** (2026-10-03, cita textual): _"Apruebo el SPEC-71. Autorizado el loop para la Etapa 2, rama feat/etapa2-editor, commits y tags locales, sin push."_ > **Etiquetas:** locales `e2-T<n>`. **Nunca** `v*` (dispara `release.yml`). Sin push dentro de la etapa; al cerrar, el orquestador mergea a `main` con la aprobación de Sebastián (Docs/05 § 10).
 > **Rama:** `feat/etapa2-editor`.
 > **Release:** junto con la Etapa 1 (SPEC-70) forma el próximo release **0.6.1** (el release —tag, CI, deploy, changelog— es un paso aparte, a pedido de Sebastián).
@@ -155,7 +155,7 @@ _(una entrada por tanda, formato de `Spec/templates/SPEC-etapa.md`)_
   - NIT → `8565ce1`. El plugin de sync tiene estado `mayHaveLinked` (pegajoso): `init` recorre el doc una vez; `apply` solo mira los rangos cambiados de cada transacción (`nodesBetween`) y los `AttrStep` de `taskId` (sin rango en su mapa). `appendTransaction` sale antes si es `false`; sin items vinculados el recorrido daba `null` igual, así que la semántica no cambia. Tests: pegar un item vinculado con `checked` viejo en una nota sin vínculos lo corrige; `setNodeAttribute('taskId')` sincroniza; escribir en una nota sin vínculos no llama a `descendants`. Controles: sin el early return → FAIL "no corre el recorrido"; `apply` que nunca actualiza → 3 FAIL (pegar, atributo, rehacer tras completar); sin la rama `AttrStep` → 2 FAIL (atributo, rehacer tras completar).
 - **Verificación de la corrección:** `npm run verify` PASS (lint, typecheck x3, unit 605/605 en 84 archivos, guard, agents, rules, functions, build).
 
-## Decisiones del juez (a ratificar)
+## Decisiones del juez (ratificadas 2026-10-03)
 
 - **E2-T1-a — Copy sin backticks.** Porqué: un placeholder es texto de atributo CSS (`content: attr(data-placeholder)`), no renderiza markdown; los backticks se verían literales. Queda "Escribe / para ver comandos" / "Type / for commands".
 - **E2-T1-b — La pista de línea solo con el editor enfocado (CSS).** Porqué: Placeholder decora el nodo vacío bajo `selection.anchor` aunque el editor no tenga foco; el SPEC pide "párrafo vacío con el cursor". La nota vacía conserva visibilidad sin foco (comportamiento previo).
@@ -181,16 +181,16 @@ _(una entrada por tanda, formato de `Spec/templates/SPEC-etapa.md`)_
 - **E2-T4-f — "Tarea borrada" = sin row en `tasksStore` con el store ya hidratado.** Porqué: durante la hidratación una tarea viva parece faltar; limpiar el `taskId` ahí rompería vínculos. Con `taskId` de una tarea borrada el item vuelve a ofrecer "Crear tarea", y marcarlo lo deja local y limpia el `taskId` en esa misma transacción (deshacible).
 - **E2-T4-g — Botón oculto en solo-lectura y en items sin texto; checkbox `disabled` en solo-lectura.** Porqué: `createTask` rechaza nombres vacíos (el botón no haría nada) y en solo-lectura no se escribe. El NodeView nativo revertía el click en solo-lectura; `disabled` es lo mismo, explícito.
 - **E2-T4-h — `data-task-id` se emite y se lee en HTML.** Porqué: el portapapeles de ProseMirror pasa por HTML; sin el atributo, cortar y pegar un item para moverlo perdería el vínculo. Copiar y pegar duplica el vínculo (dos items, una tarea): ambos siguen al store y no se crea nada.
-- **E2-T4-i — `aria-label` del checkbox con claves existentes `tasks.card.completeAria` / `tasks.card.markPendingAria`.** Porqué: el § Copy no trae texto para el checkbox; el NodeView nativo tenía un label fijo en inglés. Se reusa copy ya traducido de la tarjeta de tareas, sin inventar textos (ver Estacionadas).
+- **E2-T4-i — `aria-label` del checkbox con claves existentes `tasks.card.completeAria` / `tasks.card.markPendingAria`.** Porqué: el § Copy no trae texto para el checkbox; el NodeView nativo tenía un label fijo en inglés. Se reusa copy ya traducido de la tarjeta de tareas, sin inventar textos (ver Estacionadas). **Reemplazada al ratificar:** el label nombra el item (ver Estacionadas resueltas).
 - **E2-T4-j — El acceso a `/tasks` es un `<button>` con `navigate`, no un `<Link>`, y los íconos tienen `pointer-events: none`.** Porqué: `NodeView.stopEvent` de TipTap solo aísla de ProseMirror los eventos cuyo target es `INPUT`/`BUTTON`/`SELECT`/`TEXTAREA`; un mousedown sobre un `<a>` o un `<svg>` lo procesaría ProseMirror como click de selección del item.
 - **E2-T4-k — `noteIds` se fija solo al crear.** Porqué: el SPEC no pide mantenerlo; mover el item a otra nota (cortar/pegar, "Convertir en nota" de T3) no lo actualiza, igual que borrarlo no borra la tarea.
 - **E2-T4-l — El store se inyecta como función (`getTaskStore`) y no como objeto.** Porqué: `configure` de TipTap mezcla opciones con `mergeDeep` y copiaba el objeto store (medido: `options.taskStore !== store`); una función se asigna tal cual.
 
-## Estacionadas para Sebastián
+## Estacionadas (resueltas por Sebastián 2026-10-03)
 
-- **Copy de error de "Convertir en nota" (T3).** Hoy muestra "Error al guardar" (`editor.save.error`) si la creación falla. Opciones: (a) dejarlo; (b) copy propio, p. ej. "No se pudo crear la nota" / "Could not create the note". Y el aviso de éxito es texto inline junto al indicador de guardado, no un toast flotante (no existe sistema de toasts): confirmar si se prefiere un toast global en otra etapa.
-- **Texto del checkbox de un item de tarea (T4).** Hoy el `aria-label` (solo lectores de pantalla) es "Completar tarea" / "Marcar pendiente" (claves de la tarjeta de `/tasks`, E2-T4-i). Opciones: (a) dejarlo; (b) incluir el texto del item, p. ej. "Completar {{name}}" (ya existe `dashboard.tasks.completeAria`) y un par nuevo para desmarcar.
-- **Error al crear una tarea desde el editor (T4).** Si `createTask` falla (sin sesión), hoy no se muestra nada (solo `console.error` del repo) y el botón sigue ahí. Opciones: (a) dejarlo; (b) aviso inline como el de "Convertir en nota" con copy nuevo, p. ej. "No se pudo crear la tarea" / "Could not create the task".
+- **Copy de error de "Convertir en nota" (T3):** se queda "Error al guardar" (`editor.save.error`) y el aviso inline (sin toast global).
+- **Texto del checkbox de un item de tarea (T4):** el `aria-label` nombra el item: "Completar «{{name}}»" / "Marcar «{{name}}» como pendiente" (`editor.task.completeAria` / `editor.task.markPendingAria`, es/en); un item sin texto conserva el label genérico de `tasks.card.*`. Reemplaza E2-T4-i.
+- **Error al crear una tarea desde el editor (T4):** aviso inline en el item, `role="alert"`, "No se pudo crear la tarea" / "Could not create the task" (`editor.task.createError`), se va solo a los 3 s (como el de "Convertir en nota"); el botón sigue disponible. Test en `TaskItemNodeView.test.tsx`; control: con la rama de error mutada → FAIL "si crear la tarea falla".
 
 ## Pasos manuales de Sebastián
 
@@ -230,5 +230,5 @@ _(una entrada por tanda, formato de `Spec/templates/SPEC-etapa.md`)_
 
 **Pendiente:**
 
-- Las decisiones E2-T1..T4 y las 3 estacionadas, para Sebastián.
+- Decisiones y estacionadas: ratificadas (ver arriba).
 - El paso manual en Android, tras 0.6.1.
