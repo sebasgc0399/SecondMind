@@ -1,10 +1,11 @@
 // @vitest-environment jsdom
 import type { ReactNode } from 'react';
-import { describe, expect, it } from 'vitest';
+import { beforeAll, describe, expect, it } from 'vitest';
 import { act, renderHook } from '@testing-library/react';
 import { Provider } from 'tinybase/ui-react';
 import { createStore } from 'tinybase';
 import useProjectNotes from '@/hooks/useProjectNotes';
+import { initTestI18n } from '@/test/i18n';
 
 type Rows = Record<string, Record<string, string | number | boolean>>;
 
@@ -19,6 +20,12 @@ function renderWithNotes(notes: Rows, projectId = 'p1') {
 const TRASHED = 1_700_000_000_000;
 
 describe('useProjectNotes', () => {
+  // Inicializa la instancia i18n real (patrón del repo) para que useTranslation no
+  // avise por falta de instancia.
+  beforeAll(async () => {
+    await initTestI18n();
+  });
+
   it('lista solo las notas vivas vinculadas al proyecto', () => {
     const { result } = renderWithNotes({
       viva: { title: 'Viva', projectIds: '["p1"]', deletedAt: 0, updatedAt: 2 },
