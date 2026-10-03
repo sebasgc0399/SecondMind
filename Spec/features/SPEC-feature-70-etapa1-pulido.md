@@ -1,8 +1,7 @@
 # SPEC — Etapa 1: Pulido y deuda
 
-> **Estado:** Borrador (rama `feat/etapa1-pulido`), pendiente de aprobación de Sebastián.
-> **Origen / autorización:** Sebastián, 2026-10-02: _"Etapa 1 = pulido y deuda (opción 2). Armá el borrador del SPEC."_ Es la primera etapa que estrena el método de [Docs/05](../../Docs/05-metodo-trabajo-autonomo.md) con `/loop`. **Loop todavía NO autorizado:** requiere la frase explícita de Sebastián (etapa, rama, "commits y tags locales; push no").
-> **Etiquetas:** locales `e1-T<n>`. **Nunca** `v*` (dispara `release.yml`). Sin push dentro de la etapa; el merge a `main` lo hace Sebastián al revisar.
+> **Estado:** En curso (rama `feat/etapa1-pulido`), loop activo. Base: tag `e1-T0` (commit del SPEC).
+> **Origen / autorización:** Sebastián, 2026-10-02: _"Etapa 1 = pulido y deuda (opción 2). Armá el borrador del SPEC."_ Es la primera etapa que estrena el método de [Docs/05](../../Docs/05-metodo-trabajo-autonomo.md) con `/loop`. **Loop autorizado** (2026-10-02, cita textual): _"Apruebo el SPEC-70. Autorizado el loop para la Etapa 1, rama feat/etapa1-pulido, commits y tags locales, sin push."_ > **Etiquetas:** locales `e1-T<n>`. **Nunca** `v*` (dispara `release.yml`). Sin push dentro de la etapa; el merge a `main` lo hace Sebastián al revisar.
 > **Rama:** `feat/etapa1-pulido`.
 
 ---
