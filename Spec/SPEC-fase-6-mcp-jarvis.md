@@ -5,7 +5,7 @@
 > Estimado: 1-2 semanas solo dev
 > Stack relevante: Node.js + TypeScript, `@modelcontextprotocol/sdk`, Firebase Admin SDK, Cloud Run (GCP)
 
-> **Historial:** Rev. 2 (oct 2026) — Jarvis pasa a ser un proyecto independiente (repo `jarvis`, Hermes Agent + Claude). Salen de este SPEC: F6 (OpenClaw + MiniMax), F7 (12 skills de briefings + BriefingCard), `save_briefing`, D4, D5 y los gotchas de OpenClaw/MiniMax. La conexión de Jarvis a este MCP vive en el repo `jarvis`. El nombre del archivo se conserva para no romper referencias. La Rev. 1 queda en el historial de git.
+> **Historial:** Rev. 2 (oct 2026) — Jarvis pasa a ser un proyecto independiente (repo `jarvis`, Hermes Agent + Claude). Salen de este SPEC: F6 (OpenClaw + MiniMax), F7 (12 skills de briefings + BriefingCard), `save_briefing`, los D4 y D5 de la Rev. 1 (OpenClaw vs Claude Routines y elección de MiniMax M2.7; los D4 y D5 actuales son nuevos) y los gotchas de OpenClaw/MiniMax. La conexión de Jarvis a este MCP vive en el repo `jarvis`. El nombre del archivo se conserva para no romper referencias. La Rev. 1 queda en el historial de git.
 
 ---
 
