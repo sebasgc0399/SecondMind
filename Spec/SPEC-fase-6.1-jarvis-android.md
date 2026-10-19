@@ -1,5 +1,7 @@
 # SPEC — SecondMind · Fase 6.1: Jarvis Android Voice Assistant
 
+> ⚠️ **Reemplazado (oct 2026).** Jarvis pasó a ser un proyecto independiente (repo `jarvis`, Hermes Agent + Claude). Este SPEC (OpenClaw + MiniMax) queda como registro histórico y no se implementa. La integración de Jarvis con SecondMind ocurre consumiendo el MCP de la Fase 6.
+
 > Alcance: Fork, auditoría, customización y build del app Android `openclaw-assistant` como cliente de voz "Jarvis" conectado al gateway OpenClaw en VPS — con wake word offline, VoiceInteractionService, y acceso completo a SecondMind via MCP
 > Dependencias: Fase 6 completada (MCP server deployed en Cloud Run + OpenClaw gateway en VPS)
 > Estimado: 1 semana (incluye auditoría de código + customización + testing en device)
